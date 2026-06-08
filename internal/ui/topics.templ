@@ -1,0 +1,106 @@
+package ui
+
+import (
+	"fmt"
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+)
+
+// TopicsPage renders the full page shell wrapping the topics content.
+templ TopicsPage(topics []services.TopicRow, query, lang, theme string) {
+	@Layout(T(lang, "topics.title"), "topics", lang, theme, topicsContent(topics, query, lang))
+}
+
+// TopicsPartial renders only the topics content (no HTML shell).
+// Used when HTMX requests a partial update.
+templ TopicsPartial(topics []services.TopicRow, query, lang string) {
+	@topicsContent(topics, query, lang)
+}
+
+// topicsContent is the shared topics body used by both full-page and partial renders.
+templ topicsContent(topics []services.TopicRow, query, lang string) {
+	<div>
+		<div class="page-header">
+			<h1>{ T(lang, "topics.title") }</h1>
+			<p>
+				{ T(lang, "topics.descriptionPart1") }
+				<code>topic_key</code>
+				{ T(lang, "topics.descriptionPart2") }
+			</p>
+		</div>
+		<div class="card filter-bar">
+			<div class="card-body">
+				<input
+					class="input"
+					type="search"
+					name="q"
+					value={ query }
+					placeholder={ T(lang, "topics.filterPlaceholder") }
+					hx-get="/topics/list"
+					hx-trigger="keyup changed delay:300ms"
+					hx-target="#topics-table-container"
+					hx-include="[name='q']"
+				/>
+			</div>
+		</div>
+		<div class="card">
+			<div class="card-header">
+				<h2>{ T(lang, "topics.listTitle") }</h2>
+				<p>{ T(lang, "topics.entries", "count", fmt.Sprintf("%d", len(topics))) }</p>
+			</div>
+			<div class="card-body p-0" id="topics-table-container">
+				@TopicsTable(topics, lang)
+			</div>
+		</div>
+	</div>
+}
+
+// TopicsTable renders the topics table (or empty state).
+// This is the HTMX swap target for the filter input.
+templ TopicsTable(topics []services.TopicRow, lang string) {
+	if len(topics) == 0 {
+		@EmptyState(T(lang, "topics.empty"))
+	} else {
+		<table class="data-table">
+			<thead>
+				<tr>
+					<th>topic_key</th>
+					<th>{ T(lang, "observations.labels.project") }</th>
+					<th>{ T(lang, "topics.obsCount", "count", "") }</th>
+					<th>{ T(lang, "topics.revisions", "count", "") }</th>
+					<th>{ T(lang, "topics.lastUpdated") }</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, t := range topics {
+					<tr>
+						<td class="mono">
+							<a href={ templ.SafeURL("/observations?topic_key=" + t.TopicKey) }>
+								{ t.TopicKey }
+							</a>
+						</td>
+						<td class="muted">
+							if t.Project != nil && *t.Project != "" {
+								{ *t.Project }
+							} else {
+								{ T(lang, "common.noProject") }
+							}
+						</td>
+						<td class="muted">
+							<span class="badge badge-accent">{ fmt.Sprintf("%d", t.ObsCount) }</span>
+						</td>
+						<td class="muted">
+							<span class="badge badge-neutral">{ fmt.Sprintf("%d", t.Revisions) }</span>
+						</td>
+						<td class="muted">
+							if t.LastUpdated != nil {
+								{ *t.LastUpdated }
+							} else {
+								{ "—" }
+							}
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}

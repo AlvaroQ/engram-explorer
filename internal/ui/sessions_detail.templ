@@ -1,0 +1,146 @@
+package ui
+
+import (
+	"fmt"
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+)
+
+// SessionDetailPage renders the full page shell for a session detail view.
+templ SessionDetailPage(sess *services.SessionDetailResponse, lang, theme string) {
+	@Layout(T(lang, "sessions.session")+" — "+sess.Session.ID, "sessions", lang, theme, sessionDetailContent(sess, lang))
+}
+
+// SessionDetailPartial renders only the content (no HTML shell) for HTMX.
+templ SessionDetailPartial(sess *services.SessionDetailResponse, lang string) {
+	@sessionDetailContent(sess, lang)
+}
+
+// sessionDetailContent is the shared body for session detail (full-page + partial).
+templ sessionDetailContent(sess *services.SessionDetailResponse, lang string) {
+	<div>
+		<div class="page-header">
+			<div class="page-header-back">
+				<a href="/sessions">← { T(lang, "common.back") }</a>
+			</div>
+			<h1 class="mono">{ sess.Session.ID }</h1>
+		</div>
+		<div class="detail-grid">
+			<!-- Session metadata card -->
+			<div class="card">
+				<div class="card-header">
+					<h2>{ T(lang, "sessions.session") }</h2>
+				</div>
+				<div class="card-body">
+					@detailRow(T(lang, "sessions.fields.project"), nilStr(sess.Session.Project))
+					@detailRow(T(lang, "sessions.fields.directory"), nilStr(sess.Session.Directory))
+					@detailRow(T(lang, "sessions.fields.started"), nilStr(sess.Session.StartedAt))
+					@detailRow(T(lang, "sessions.fields.ended"), nilStr(sess.Session.EndedAt))
+				</div>
+			</div>
+			<!-- Counts card -->
+			<div class="card">
+				<div class="card-header">
+					<h2>{ T(lang, "sessions.counts") }</h2>
+				</div>
+				<div class="card-body">
+					@detailRow(T(lang, "sessions.fields.observations"), fmt.Sprintf("%d", sess.Stats.ObsTotal))
+					@detailRow(T(lang, "sessions.fields.prompts"), fmt.Sprintf("%d", sess.Stats.PromptsTotal))
+					if len(sess.Stats.ByType) > 0 {
+						<div class="badge-list">
+							for _, tc := range sess.Stats.ByType {
+								<span class="badge badge-neutral">{ tc.Type } · { fmt.Sprintf("%d", tc.Count) }</span>
+							}
+						</div>
+					}
+				</div>
+			</div>
+			<!-- Summary card -->
+			<div class="card">
+				<div class="card-header">
+					<h2>{ T(lang, "sessions.summaryCard") }</h2>
+				</div>
+				<div class="card-body">
+					if sess.Session.Summary != nil && *sess.Session.Summary != "" {
+						<pre class="summary-pre">{ *sess.Session.Summary }</pre>
+					} else {
+						<p class="muted">{ T(lang, "sessions.summaryEmpty") }</p>
+					}
+				</div>
+			</div>
+		</div>
+		<!-- Timeline card -->
+		<div class="card" style="margin-top: 1rem;">
+			<div class="card-header">
+				<h2>{ T(lang, "sessions.timeline") }</h2>
+				<p>{ T(lang, "sessions.timelineDesc", "count", fmt.Sprintf("%d", len(sess.Events))) }</p>
+			</div>
+			<div class="card-body">
+				@sessionTimeline(sess.Events, lang)
+			</div>
+		</div>
+	</div>
+}
+
+// sessionTimeline renders the event list using <details> for expandable events.
+// No JS required — pure HTML/CSS expand/collapse.
+templ sessionTimeline(events []services.SessionEvent, lang string) {
+	if len(events) == 0 {
+		<p class="muted">{ T(lang, "sessions.noEvents") }</p>
+	} else {
+		<div class="timeline">
+			for i, ev := range events {
+				<details class={ "timeline-event", "timeline-event--"+ev.Kind }>
+					<summary class="timeline-event-summary">
+						<span class={ "badge", "badge-"+eventBadgeTone(ev.Kind) }>{ ev.Kind }</span>
+						if ev.Type != nil {
+							<span class="badge badge-neutral">{ *ev.Type }</span>
+						}
+						if ev.ToolName != nil {
+							<span class="badge badge-neutral">{ *ev.ToolName }</span>
+						}
+						<span class="timeline-event-at muted mono">{ nilStr(ev.At) }</span>
+						if ev.Title != nil {
+							<span class="timeline-event-title">{ *ev.Title }</span>
+						}
+						<span class="timeline-event-index muted">{ fmt.Sprintf("#%d", i+1) }</span>
+					</summary>
+					<div class="timeline-event-body">
+						if ev.Title != nil {
+							<p class="event-title-full">{ *ev.Title }</p>
+						}
+						if ev.Content != nil {
+							<pre class="event-content">{ *ev.Content }</pre>
+						}
+						if ev.Kind == "observation" {
+							<a href="/observations" class="event-link">{ T(lang, "sessions.openInObservations") }</a>
+						}
+					</div>
+				</details>
+			}
+		</div>
+	}
+}
+
+// detailRow renders a label/value pair in the detail cards.
+templ detailRow(label, value string) {
+	<div class="detail-row">
+		<span class="muted">{ label }</span>
+		<span class="mono detail-value">{ value }</span>
+	</div>
+}
+
+// nilStr dereferences a *string; returns "—" when nil.
+func nilStr(s *string) string {
+	if s == nil {
+		return "—"
+	}
+	return *s
+}
+
+// eventBadgeTone returns the badge CSS modifier for a given event kind.
+func eventBadgeTone(kind string) string {
+	if kind == "prompt" {
+		return "accent"
+	}
+	return "neutral"
+}

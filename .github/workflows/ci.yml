@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feature/**", "chore/**", "fix/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Frontend typecheck
+        run: pnpm typecheck
+
+      - name: Frontend tests
+        run: pnpm test
+
+      - name: Build frontend
+        run: RELEASE=1 pnpm -F @engram-explorer/frontend build
+
+      - name: Copy frontend into embed directory
+        run: |
+          rm -rf internal/web/dist
+          mkdir -p internal/web/dist
+          cp -r apps/frontend/dist/. internal/web/dist/
+
+      - name: Assert embed placeholder / real build present
+        run: test -f internal/web/dist/index.html
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not gofmt-formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test ./...

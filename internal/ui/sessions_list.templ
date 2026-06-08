@@ -1,0 +1,266 @@
+package ui
+
+import (
+	"fmt"
+	"net/url"
+	"strings"
+
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+)
+
+// SessionsListPage renders the full page shell for the sessions list view.
+templ SessionsListPage(result services.SessionListResult, params services.SessionListParams, lang, theme string) {
+	@Layout(T(lang, "sessions.title"), "sessions", lang, theme, sessionsListContent(result, params, lang))
+}
+
+// SessionsListPartial renders only the sessions list content (no HTML shell).
+// Used when HTMX requests a partial update.
+templ SessionsListPartial(result services.SessionListResult, params services.SessionListParams, lang string) {
+	@sessionsListContent(result, params, lang)
+}
+
+// sessionsListContent is the shared sessions body used by both full-page and partial renders.
+templ sessionsListContent(result services.SessionListResult, params services.SessionListParams, lang string) {
+	<div>
+		<div class="page-header">
+			<h1>{ T(lang, "sessions.title") }</h1>
+			<p>{ T(lang, "sessions.description") }</p>
+		</div>
+		<div class="card filter-bar">
+			<div class="card-body">
+				<form
+					method="get"
+					action="/sessions/list"
+					hx-get="/sessions/list"
+					hx-target="#sessions-table-container"
+					hx-trigger="change"
+					hx-push-url="false"
+					class="filter-row"
+				>
+					<div class="filter-group">
+						<label class="filter-label">{ T(lang, "sessions.filterSummary") }</label>
+						<select name="has_summary" class="input input-sm">
+							<option value="" selected?={ hasSummaryValue(params) == "" }>{ T(lang, "sessions.summaryAll") }</option>
+							<option value="true" selected?={ hasSummaryValue(params) == "true" }>{ T(lang, "sessions.summaryWith") }</option>
+							<option value="false" selected?={ hasSummaryValue(params) == "false" }>{ T(lang, "sessions.summaryWithout") }</option>
+						</select>
+					</div>
+				</form>
+			</div>
+		</div>
+		<div class="card">
+			<div class="card-header">
+				<h2>{ T(lang, "sessions.listTitle") }</h2>
+				<p>{ T(lang, "sessions.listLoaded", "count", fmt.Sprintf("%d", len(result.Items))) }</p>
+			</div>
+			<div class="card-body p-0" id="sessions-table-container">
+				@SessionsListBodyPartial(result, params, lang)
+			</div>
+		</div>
+	</div>
+}
+
+// SessionsListBodyPartial renders the full table + load-more button.
+// This is the HTMX swap target for filter changes.
+templ SessionsListBodyPartial(result services.SessionListResult, params services.SessionListParams, lang string) {
+	if len(result.Items) == 0 {
+		@EmptyState(T(lang, "sessions.noMatch"))
+	} else {
+		<div class="overflow-x-auto">
+			<table class="w-full text-sm">
+				<thead class="table-head">
+					<tr>
+						<th class="px-4 py-2 text-left">{ T(lang, "sessions.col.id") }</th>
+						<th class="px-4 py-2 text-left">{ T(lang, "sessions.col.project") }</th>
+						<th class="px-4 py-2 text-left">{ T(lang, "sessions.col.started") }</th>
+						<th class="px-4 py-2 text-left">{ T(lang, "sessions.col.observations") }</th>
+						<th class="px-4 py-2 text-left">{ T(lang, "sessions.col.prompts") }</th>
+					</tr>
+				</thead>
+				<tbody id="sessions-tbody" class="divide-y">
+					@SessionsRowsPartial(result, params, lang)
+				</tbody>
+			</table>
+		</div>
+	}
+}
+
+// SessionsRowsPartial renders only the <tr> rows, used by load-more (hx-swap="beforeend").
+templ SessionsRowsPartial(result services.SessionListResult, params services.SessionListParams, lang string) {
+	for _, s := range result.Items {
+		@sessionRow(s, lang)
+	}
+	if result.NextCursor != nil {
+		@sessionsLoadMoreRow(*result.NextCursor, params, lang)
+	}
+}
+
+// sessionRow renders a single session table row.
+templ sessionRow(s services.SessionListItem, lang string) {
+	<tr class="hover:bg-surface-2">
+		<td class="px-4 py-2">
+			<a href={ templ.SafeURL("/sessions/" + s.ID) } class="mono text-xs text-fg hover:text-accent">{ truncateID(s.ID) }</a>
+		</td>
+		<td class="px-4 py-2 text-fg-muted text-xs">
+			if s.Project != nil && *s.Project != "" {
+				<span class="badge badge-accent">{ *s.Project }</span>
+			} else {
+				<span class="muted">—</span>
+			}
+		</td>
+		<td class="px-4 py-2 mono text-xs text-fg-muted">{ nilStr(s.StartedAt) }</td>
+		<td class="px-4 py-2 text-fg-muted">
+			<span class="badge badge-neutral">{ fmt.Sprintf("%d", s.ObsCount) }</span>
+		</td>
+		<td class="px-4 py-2 text-fg-muted">
+			<span class={ sessionPromptBadge(s.PromptsCount) }>{ fmt.Sprintf("%d", s.PromptsCount) }</span>
+		</td>
+	</tr>
+	if s.Summary != nil && *s.Summary != "" {
+		<tr class="hover:bg-surface-2">
+			<td colspan="5" class="px-4 pb-2 text-xs text-fg-muted italic">{ summarySummary(*s.Summary) }</td>
+		</tr>
+	}
+}
+
+// sessionsLoadMoreRow renders the "Load more" button as a full-width table row.
+// On click it fetches the next page and appends rows to #sessions-tbody.
+templ sessionsLoadMoreRow(cursor string, params services.SessionListParams, lang string) {
+	<tr id="sessions-load-more-row">
+		<td colspan="5" class="px-4 py-3">
+			<button
+				class="btn btn-secondary btn-sm"
+				hx-get={ sessionsNextURL(cursor, params) }
+				hx-target="#sessions-tbody"
+				hx-swap="beforeend"
+				hx-on::after-request="document.getElementById('sessions-load-more-row')?.remove()"
+			>
+				{ T(lang, "common.loadMore") }
+			</button>
+		</td>
+	</tr>
+}
+
+// ---------------------------------------------------------------------------
+// Template helper functions
+// ---------------------------------------------------------------------------
+
+// hasSummaryValue returns the query string value for the has_summary filter.
+func hasSummaryValue(params services.SessionListParams) string {
+	if params.HasSummary == nil {
+		return ""
+	}
+	if *params.HasSummary {
+		return "true"
+	}
+	return "false"
+}
+
+// sessionsNextURL builds the load-more URL preserving current filters + new cursor.
+func sessionsNextURL(cursor string, params services.SessionListParams) string {
+	v := url.Values{}
+	v.Set("cursor", cursor)
+	v.Set("append", "true")
+	if params.HasSummary != nil {
+		if *params.HasSummary {
+			v.Set("has_summary", "true")
+		} else {
+			v.Set("has_summary", "false")
+		}
+	}
+	for _, p := range params.Projects {
+		v.Add("project", p)
+	}
+	return "/sessions/list?" + v.Encode()
+}
+
+// truncateID shortens a UUID-style session ID for display.
+func truncateID(id string) string {
+	if len(id) <= 12 {
+		return id
+	}
+	return id[:8] + "…" + id[len(id)-4:]
+}
+
+// sessionPromptBadge returns the badge class for the prompts count column.
+func sessionPromptBadge(count int64) string {
+	if count > 0 {
+		return "badge badge-accent"
+	}
+	return "badge badge-neutral"
+}
+
+// summarySummary truncates a summary string for the inline preview row.
+func summarySummary(s string) string {
+	runes := []rune(s)
+	max := 160
+	if len(runes) <= max {
+		return s
+	}
+	return string(runes[:max]) + "…"
+}
+
+// sessionsFilterURL builds the URL for the sessions list with current filters applied.
+// Used by the filter form action attribute.
+func sessionsFilterURL(params services.SessionListParams) string {
+	v := url.Values{}
+	if params.HasSummary != nil {
+		if *params.HasSummary {
+			v.Set("has_summary", "true")
+		} else {
+			v.Set("has_summary", "false")
+		}
+	}
+	for _, p := range params.Projects {
+		v.Add("project", p)
+	}
+	q := v.Encode()
+	if q == "" {
+		return "/sessions"
+	}
+	return "/sessions?" + q
+}
+
+// projectCheckboxURL builds the URL toggling a project filter on/off.
+func projectCheckboxURL(params services.SessionListParams, project string) string {
+	v := url.Values{}
+	if params.HasSummary != nil {
+		if *params.HasSummary {
+			v.Set("has_summary", "true")
+		} else {
+			v.Set("has_summary", "false")
+		}
+	}
+	added := false
+	for _, p := range params.Projects {
+		if p != project {
+			v.Add("project", p)
+		} else {
+			added = true
+		}
+	}
+	// If project was not present, add it (toggle on).
+	if !added {
+		v.Add("project", project)
+	}
+	q := v.Encode()
+	if q == "" {
+		return "/sessions/list"
+	}
+	return "/sessions/list?" + q
+}
+
+// projectInParams reports whether a project is currently in the filter list.
+func projectInParams(params services.SessionListParams, project string) bool {
+	for _, p := range params.Projects {
+		if p == project {
+			return true
+		}
+	}
+	return false
+}
+
+// joinProjects formats the projects filter for display.
+func joinProjects(projects []string) string {
+	return strings.Join(projects, ", ")
+}

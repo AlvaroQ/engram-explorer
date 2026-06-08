@@ -1,0 +1,428 @@
+package doctor
+
+import (
+	"fmt"
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+)
+
+// SyncPage renders the full sync health page wrapped in the Layout shell.
+// The actual content is deferred to HTMX via hx-trigger="load, every 15s".
+templ SyncPage(lang, theme string) {
+	@Layout("Sync Health", "syncHealth", lang, theme, syncShellContent())
+}
+
+// SyncShell renders only the sync shell content fragment — no Layout.
+// Used when HX-Request: true on GET /doctor/sync.
+templ SyncShell() {
+	@syncShellContent()
+}
+
+// syncShellContent is the shared inner content for the sync page shell.
+// It contains two deferred-load regions: projects table and issues banner.
+// Polling pauses while the tab is hidden to avoid pointless background traffic.
+templ syncShellContent() {
+	<div id="sync-shell">
+		<!--
+			Sync issues are collapsed by default — the user opens the panel only
+			if they want to inspect them. The <details> wrapper lives here (not in
+			the polled partial) so its open/closed state survives the 15s refresh;
+			the poll swaps only #sync-issues, and the count badge in the summary is
+			refreshed out-of-band (hx-swap-oob) by SyncIssuesPartial.
+		-->
+		<details class="issues-details">
+			<summary class="issues-summary">
+				<span class="issues-summary-title">Sync Issues</span>
+				<span id="sync-issues-count" class="badge">…</span>
+			</summary>
+			<div
+				id="sync-issues"
+				class="issues-body"
+				hx-get="/doctor/sync/issues"
+				hx-trigger="load, every 15s [document.visibilityState=='visible']"
+				hx-target="#sync-issues"
+				hx-swap="innerHTML"
+			>
+				<p class="loading">Loading sync issues...</p>
+			</div>
+		</details>
+		<div
+			id="sync-projects"
+			hx-get="/doctor/sync/projects"
+			hx-trigger="load, every 15s [document.visibilityState=='visible']"
+			hx-target="#sync-projects"
+			hx-swap="innerHTML"
+		>
+			<p class="loading">Loading sync projects...</p>
+		</div>
+	</div>
+}
+
+// SyncProjectsPartial renders the sync projects table fragment.
+// caps gates the Enroll/Unenroll buttons (parity with the React capabilities
+// check): when a capability is unavailable the button is shown disabled.
+templ SyncProjectsPartial(resp services.SyncProjectsResponse, caps services.CloudCapabilities) {
+	<div id="sync-projects-content">
+		if resp.GlobalTarget != nil {
+			<div class="global-target-card">
+				<h3>Global Target</h3>
+				<dl>
+					<dt>Target Key</dt><dd>{ resp.GlobalTarget.TargetKey }</dd>
+					if resp.GlobalTarget.Lifecycle != nil {
+						<dt>Lifecycle</dt><dd>{ *resp.GlobalTarget.Lifecycle }</dd>
+					}
+					if resp.GlobalTarget.LastEnqueuedSeq != nil {
+						<dt>Last Enqueued Seq</dt><dd>{ fmt.Sprintf("%d", *resp.GlobalTarget.LastEnqueuedSeq) }</dd>
+					}
+					if resp.GlobalTarget.LastAckedSeq != nil {
+						<dt>Last Acked Seq</dt><dd>{ fmt.Sprintf("%d", *resp.GlobalTarget.LastAckedSeq) }</dd>
+					}
+					<dt>Pending Mutations</dt><dd>{ fmt.Sprintf("%d", resp.GlobalTarget.PendingMutations) }</dd>
+				</dl>
+			</div>
+		}
+		if len(resp.Projects) == 0 {
+			@EmptyState("No sync projects found.")
+		} else {
+			<table class="sync-projects-table">
+				<thead>
+					<tr>
+						<th>Project</th>
+						<th>Observations</th>
+						<th>Last Activity</th>
+						<th>Enrolled</th>
+						<th>Status</th>
+						<th>Pending</th>
+						<th>Last Acked</th>
+						<th>Last Enqueued</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, p := range resp.Projects {
+						<tr>
+							<td>
+								<a href={ templ.URL(syncProjectURL(p.Project, "")) }>{ p.Project }</a>
+							</td>
+							<td>{ fmt.Sprintf("%d", p.ObsCount) }</td>
+							<td>
+								if p.LastActivity != nil {
+									{ *p.LastActivity }
+								}
+							</td>
+							<td>
+								if p.Enrolled {
+									<span class="badge badge-enrolled">enrolled</span>
+								} else {
+									<span class="badge badge-not-enrolled">not enrolled</span>
+								}
+							</td>
+							<td>
+								@syncStatusBadge(p.Status)
+							</td>
+							<td>{ fmt.Sprintf("%d", p.PendingMutations) }</td>
+							<td>
+								if p.LastAckedSeq != nil {
+									{ fmt.Sprintf("%d", *p.LastAckedSeq) }
+								}
+							</td>
+							<td>
+								if p.LastEnqueuedSeq != nil {
+									{ fmt.Sprintf("%d", *p.LastEnqueuedSeq) }
+								}
+							</td>
+							<td class="actions">
+								@syncProjectActions(p, caps)
+								<a href={ templ.URL(syncProjectURL(p.Project, "")) } class="btn-link">Detail</a>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	</div>
+}
+
+// syncProjectActions renders the Enroll / Unenroll buttons for one project row,
+// gated by capabilities. The manual "Sync Now" action lives on the project
+// detail page (where its #sync-detail target exists), not in this table.
+templ syncProjectActions(p services.SyncProjectRow, caps services.CloudCapabilities) {
+	if !p.Enrolled {
+		if caps.Enroll {
+			<button
+				hx-post={ syncProjectURL(p.Project, "enroll") }
+				hx-target="#sync-projects"
+				hx-swap="innerHTML"
+				hx-confirm={ "Enroll project " + p.Project + " in cloud sync?" }
+				class="btn-action"
+			>Enroll</button>
+		} else {
+			<button class="btn-action" disabled title="Enroll is not supported by the installed engram CLI">Enroll</button>
+		}
+	}
+	if p.Enrolled {
+		if caps.Unenroll {
+			<button
+				hx-post={ syncProjectURL(p.Project, "unenroll") }
+				hx-target="#sync-projects"
+				hx-swap="innerHTML"
+				hx-confirm={ "Unenroll project " + p.Project + "? This will stop cloud sync." }
+				class="btn-danger"
+			>Unenroll</button>
+		} else {
+			<button class="btn-danger" disabled title="Unenroll is not supported by the installed engram CLI">Unenroll</button>
+		}
+	}
+	// Delete is offered only for unenrolled, observation-free projects (e.g. a
+	// stray "repo" with sessions/prompts but no captured knowledge). Enrolled or
+	// non-empty projects never show the button — the server enforces the same
+	// guard in services.DeleteProject.
+	if !p.Enrolled && p.ObsCount == 0 {
+		<button
+			hx-post={ syncProjectURL(p.Project, "delete") }
+			hx-target="#sync-projects"
+			hx-swap="innerHTML"
+			hx-confirm={ syncDeleteConfirm(p) }
+			class="btn-danger"
+		>Delete</button>
+	}
+}
+
+// SyncIssuesPartial renders the body of the (collapsible) sync issues panel.
+// The <details>/<summary> wrapper is owned by syncShellContent so its open
+// state survives the 15s poll; here we (a) refresh the count badge in the
+// summary out-of-band and (b) swap the issue list into #sync-issues.
+templ SyncIssuesPartial(resp services.SyncIssuesResponse) {
+	<span id="sync-issues-count" hx-swap-oob="true" class={ syncIssuesCountClass(resp.Issues) }>
+		{ fmt.Sprintf("%d", len(resp.Issues)) }
+	</span>
+	if len(resp.Issues) == 0 {
+		<p class="no-issues">No sync issues detected.</p>
+	} else {
+		<ul class="issues-list">
+			for _, issue := range resp.Issues {
+				<li class={ "issue-item issue-" + string(issue.Severity) }>
+					<span class={ "severity-badge severity-" + string(issue.Severity) }>{ string(issue.Severity) }</span>
+					<strong class="issue-code">{ issue.Code }</strong>
+					<span class="issue-message">{ issue.Message }</span>
+					if issue.Hint != nil {
+						<span class="issue-hint">Hint: { *issue.Hint }</span>
+					}
+					if issue.Project != nil && *issue.Project != "" {
+						<span class="issue-project">Project: { *issue.Project }</span>
+					}
+				</li>
+			}
+		</ul>
+		<p class="generated-at">Generated at: { resp.GeneratedAt }</p>
+	}
+}
+
+// SyncProjectDetailPartial renders the project detail fragment.
+// Includes status/sequence/counts cards, the manual "Sync Now" action, optional
+// error card, pending mutations table, and optional upgrade-state card.
+templ SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) {
+	{{ slug := projectSlug(detail.Summary.Project) }}
+	<div class={ "sync-detail-" + slug } id={ "sync-detail-" + slug }>
+		<div class="detail-header">
+			<h2>Project: { detail.Summary.Project }</h2>
+			<button
+				hx-post={ syncProjectURL(detail.Summary.Project, "sync") }
+				hx-target={ "#sync-detail-" + slug }
+				hx-swap="outerHTML"
+				class="btn-action"
+			>Sync Now</button>
+		</div>
+		<div class="detail-cards">
+			<div class="detail-card">
+				<h4>Status</h4>
+				@syncStatusBadge(detail.Summary.Status)
+				if detail.Summary.Lifecycle != nil {
+					<p>Lifecycle: { *detail.Summary.Lifecycle }</p>
+				}
+				<p>
+					Enrolled:
+					if detail.Summary.Enrolled {
+						<span class="badge badge-enrolled">yes</span>
+					} else {
+						<span class="badge badge-not-enrolled">no</span>
+					}
+				</p>
+				if detail.Summary.EnrolledAt != nil {
+					<p>Enrolled at: { *detail.Summary.EnrolledAt }</p>
+				}
+			</div>
+			<div class="detail-card">
+				<h4>Sequence</h4>
+				<dl>
+					<dt>Last Enqueued</dt>
+					<dd>
+						if detail.Summary.LastEnqueuedSeq != nil {
+							{ fmt.Sprintf("%d", *detail.Summary.LastEnqueuedSeq) }
+						} else {
+							—
+						}
+					</dd>
+					<dt>Last Acked</dt>
+					<dd>
+						if detail.Summary.LastAckedSeq != nil {
+							{ fmt.Sprintf("%d", *detail.Summary.LastAckedSeq) }
+						} else {
+							—
+						}
+					</dd>
+					<dt>Last Pulled</dt>
+					<dd>
+						if detail.Summary.LastPulledSeq != nil {
+							{ fmt.Sprintf("%d", *detail.Summary.LastPulledSeq) }
+						} else {
+							—
+						}
+					</dd>
+				</dl>
+			</div>
+			<div class="detail-card">
+				<h4>Counts</h4>
+				<dl>
+					<dt>Observations</dt><dd>{ fmt.Sprintf("%d", detail.Summary.ObsCount) }</dd>
+					<dt>Sessions</dt><dd>{ fmt.Sprintf("%d", detail.Summary.SessionsCount) }</dd>
+					<dt>Prompts</dt><dd>{ fmt.Sprintf("%d", detail.Summary.PromptsCount) }</dd>
+					<dt>Pending Mutations</dt><dd>{ fmt.Sprintf("%d", detail.Summary.PendingMutations) }</dd>
+				</dl>
+			</div>
+		</div>
+		if detail.Summary.LastError != nil || detail.Summary.ReasonCode != nil {
+			<div class="error-card">
+				<h4>Last Error</h4>
+				if detail.Summary.LastError != nil {
+					<p>{ *detail.Summary.LastError }</p>
+				}
+				if detail.Summary.ReasonCode != nil {
+					<p>Reason code: { *detail.Summary.ReasonCode }</p>
+				}
+				if detail.Summary.ReasonMessage != nil {
+					<p>Reason: { *detail.Summary.ReasonMessage }</p>
+				}
+				if detail.Summary.ConsecutiveFailures != nil {
+					<p>Consecutive failures: { fmt.Sprintf("%d", *detail.Summary.ConsecutiveFailures) }</p>
+				}
+			</div>
+		}
+		<div class="pending-mutations">
+			<h3>Pending Mutations <span class="badge">{ fmt.Sprintf("%d", len(detail.Pending)) }</span></h3>
+			if len(detail.Pending) == 0 {
+				@EmptyState("No pending mutations.")
+			} else {
+				<table class="mutations-table">
+					<thead>
+						<tr>
+							<th>Seq</th>
+							<th>Entity</th>
+							<th>Op</th>
+							<th>Entity Key</th>
+							<th>Occurred At</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, m := range detail.Pending {
+							<tr>
+								<td>{ fmt.Sprintf("%d", m.Seq) }</td>
+								<td>{ m.Entity }</td>
+								<td>{ m.Op }</td>
+								<td>
+									if m.EntityKey != nil {
+										{ *m.EntityKey }
+									}
+								</td>
+								<td>
+									if m.OccurredAt != nil {
+										{ *m.OccurredAt }
+									}
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			}
+		</div>
+		if detail.UpgradeState != nil {
+			<div class="upgrade-state-card">
+				<h4>Upgrade State</h4>
+				<dl>
+					if detail.UpgradeState.Stage != nil {
+						<dt>Stage</dt><dd>{ *detail.UpgradeState.Stage }</dd>
+					}
+					if detail.UpgradeState.RepairClass != nil {
+						<dt>Repair Class</dt><dd>{ *detail.UpgradeState.RepairClass }</dd>
+					}
+					if detail.UpgradeState.UpdatedAt != nil {
+						<dt>Updated At</dt><dd>{ *detail.UpgradeState.UpdatedAt }</dd>
+					}
+				</dl>
+				if detail.UpgradeState.Findings != nil {
+					<details>
+						<summary>Findings</summary>
+						<pre>{ prettyJSON(detail.UpgradeState.Findings) }</pre>
+					</details>
+				}
+			</div>
+		}
+		<p><a href="/doctor/sync">&larr; Back to Sync Health</a></p>
+	</div>
+}
+
+// ---------------------------------------------------------------------------
+// Badge helpers
+// ---------------------------------------------------------------------------
+
+// syncStatusBadge renders a status badge with appropriate CSS class.
+templ syncStatusBadge(status services.SyncStatus) {
+	switch status {
+		case services.SyncStatusHealthy:
+			<span class="badge badge-healthy">healthy</span>
+		case services.SyncStatusDegraded:
+			<span class="badge badge-degraded">degraded</span>
+		case services.SyncStatusBroken:
+			<span class="badge badge-broken">broken</span>
+		case services.SyncStatusNotEnrolled:
+			<span class="badge badge-not-enrolled">not_enrolled</span>
+		case services.SyncStatusIdle:
+			<span class="badge badge-idle">idle</span>
+		default:
+			<span class="badge">{ string(status) }</span>
+	}
+}
+
+// syncHasHighIssues returns true if any issue has HIGH severity.
+func syncHasHighIssues(issues []services.SyncIssue) bool {
+	for _, i := range issues {
+		if i.Severity == services.SyncIssueSeverityHigh {
+			return true
+		}
+	}
+	return false
+}
+
+// syncIssuesCountClass picks the summary count-badge tone so a collapsed panel
+// still signals severity: red when any HIGH issue exists, amber when there are
+// lower-severity issues, neutral when there are none.
+func syncIssuesCountClass(issues []services.SyncIssue) string {
+	switch {
+	case syncHasHighIssues(issues):
+		return "badge badge-broken"
+	case len(issues) > 0:
+		return "badge badge-degraded"
+	default:
+		return "badge"
+	}
+}
+
+// syncDeleteConfirm builds the irreversible-delete confirmation prompt. It is
+// lossless: the project's own prompts and now-empty sessions are removed, but
+// sessions still holding observations that were reassigned to other projects
+// are moved to follow that content, not deleted.
+func syncDeleteConfirm(p services.SyncProjectRow) string {
+	return fmt.Sprintf(
+		"Delete project %q? Its prompts and empty sessions are removed; any session still holding observations moved to other projects is reassigned (not deleted), so nothing is lost. This cannot be undone.",
+		p.Project,
+	)
+}

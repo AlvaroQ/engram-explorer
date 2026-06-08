@@ -1,0 +1,17 @@
+package doctor
+
+// ErrorPartial renders an inline error message suitable for HTMX swap targets.
+// It returns status 200 so HTMX performs the swap; the visual styling signals
+// failure to the user.
+templ ErrorPartial(msg string) {
+	<div class="inline-error" role="alert">
+		<strong>Error:</strong> { msg }
+	</div>
+}
+
+// EmptyState renders a centred empty-state placeholder message.
+templ EmptyState(msg string) {
+	<div class="empty-state">
+		<p>{ msg }</p>
+	</div>
+}

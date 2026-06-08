@@ -1,0 +1,474 @@
+/* engram-explorer ui shell — HSL design tokens + minimal layout */
+
+/* ---------- Design tokens (dark default, mirrored from apps/frontend/src/styles.css) ---------- */
+/* Tokens are stored as bare HSL triplets (H S% L%) — NOT wrapped in hsl() —
+   so they match apps/frontend/src/styles.css and the compiled app.css.
+   Consumers below (and Tailwind utilities / React islands) wrap them with
+   hsl(var(--token)). Wrapping the token value itself would produce the
+   invalid hsl(hsl(...)) and silently fall back to currentColor / black. */
+:root {
+  --bg: 222 47% 7%;
+  --surface: 223 40% 11%;
+  --surface-2: 222 35% 14%;
+  --border: 222 28% 22%;
+  --fg: 220 25% 92%;
+  --fg-muted: 220 15% 65%;
+  --accent: 224 90% 70%;
+  --ok: 142 76% 60%;
+  --warn: 38 92% 60%;
+  --fail: 0 84% 67%;
+  color-scheme: dark;
+}
+
+:root.light {
+  --bg: 220 25% 98%;
+  --surface: 0 0% 100%;
+  --surface-2: 220 20% 96%;
+  --border: 220 14% 88%;
+  --fg: 222 47% 11%;
+  --fg-muted: 222 15% 45%;
+  --accent: 224 80% 50%;
+  --ok: 142 70% 38%;
+  --warn: 30 90% 50%;
+  --fail: 0 70% 48%;
+  color-scheme: light;
+}
+
+/* ---------- Reset & base ---------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: hsl(var(--bg));
+  color: hsl(var(--fg));
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: hsl(var(--accent));
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- App shell layout ---------- */
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  width: 224px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: hsl(var(--surface));
+  border-right: 1px solid hsl(var(--border));
+  padding: 20px 12px;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  padding: 0 8px 20px;
+}
+
+.sidebar-brand-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: hsl(var(--fg-muted));
+}
+
+.sidebar-brand-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: hsl(var(--fg));
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: hsl(var(--fg-muted));
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+}
+
+.sidebar-nav a:hover {
+  background: hsl(var(--surface-2));
+  color: hsl(var(--fg));
+  text-decoration: none;
+}
+
+.sidebar-nav a.active {
+  background: hsl(var(--surface-2));
+  color: hsl(var(--fg));
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: hsl(var(--border));
+  margin: 8px 0;
+}
+
+/* ---------- Main content area ---------- */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px;
+  background: hsl(var(--bg));
+}
+
+/* Full-bleed variant — no padding, used by brain/canvas pages */
+.main-content-full {
+  flex: 1;
+  overflow: hidden;
+  padding: 0;
+  background: hsl(var(--bg));
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Page header ---------- */
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  color: hsl(var(--fg));
+  margin-bottom: 4px;
+}
+
+.page-header p {
+  font-size: 13px;
+  color: hsl(var(--fg-muted));
+}
+
+/* ---------- Card ---------- */
+.card {
+  background: hsl(var(--surface));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.card-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.card-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--fg));
+  margin-bottom: 2px;
+}
+
+.card-header p {
+  font-size: 12px;
+  color: hsl(var(--fg-muted));
+}
+
+.card-body {
+  padding: 14px 18px;
+}
+
+.card-body.p-0 {
+  padding: 0;
+}
+
+/* ---------- Input ---------- */
+.input {
+  width: 100%;
+  background: hsl(var(--surface-2));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  color: hsl(var(--fg));
+  font-size: 13px;
+  padding: 7px 11px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input:focus {
+  border-color: hsl(var(--accent));
+}
+
+.input::placeholder {
+  color: hsl(var(--fg-muted));
+}
+
+/* ---------- Table ---------- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table thead th {
+  padding: 9px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(var(--fg-muted));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.data-table tbody tr {
+  border-bottom: 1px solid hsl(var(--border));
+  transition: background 0.1s;
+}
+
+.data-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+  background: hsl(var(--surface-2));
+}
+
+.data-table td {
+  padding: 9px 14px;
+  color: hsl(var(--fg));
+  vertical-align: middle;
+}
+
+.data-table td.muted {
+  color: hsl(var(--fg-muted));
+  font-size: 12px;
+}
+
+.data-table td.mono {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+
+/* ---------- Badge ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.badge-accent {
+  background: hsl(224, 90%, 20%);
+  color: hsl(var(--accent));
+}
+
+.badge-neutral {
+  background: hsl(var(--surface-2));
+  color: hsl(var(--fg-muted));
+  border: 1px solid hsl(var(--border));
+}
+
+/* ---------- Empty state ---------- */
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: hsl(var(--fg-muted));
+  font-size: 13px;
+}
+
+/* ---------- Inline error ---------- */
+.inline-error {
+  padding: 10px 14px;
+  background: hsl(0, 70%, 10%);
+  border: 1px solid hsl(var(--fail));
+  border-radius: 6px;
+  color: hsl(var(--fail));
+  font-size: 13px;
+}
+
+/* ---------- Filter bar ---------- */
+.filter-bar {
+  margin-bottom: 16px;
+}
+
+/* ---------- Topics specific ---------- */
+code {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  background: hsl(var(--surface-2));
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* ---------- Badge tones ---------- */
+.badge-ok {
+  background: hsl(142, 76%, 12%);
+  color: hsl(var(--ok));
+  border: 1px solid hsl(142, 76%, 25%);
+}
+
+.badge-fail {
+  background: hsl(0, 70%, 10%);
+  color: hsl(var(--fail));
+  border: 1px solid hsl(0, 70%, 25%);
+}
+
+/* ---------- Button ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--surface-2));
+  color: hsl(var(--fg));
+  transition: background 0.15s;
+}
+
+.btn:hover {
+  background: hsl(var(--surface));
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.btn-primary {
+  background: hsl(var(--accent));
+  color: hsl(220, 25%, 98%);
+  border-color: hsl(var(--accent));
+}
+
+.btn-primary:hover {
+  opacity: 0.85;
+}
+
+.btn-secondary {
+  background: hsl(var(--surface-2));
+  color: hsl(var(--fg-muted));
+}
+
+/* ---------- Settings page ---------- */
+.settings-section {
+  margin-bottom: 28px;
+}
+
+.settings-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(var(--fg-muted));
+  margin-bottom: 12px;
+}
+
+.preference-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.preference-row:last-child {
+  border-bottom: none;
+}
+
+.preference-label {
+  min-width: 0;
+}
+
+.preference-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: hsl(var(--fg));
+}
+
+.preference-desc {
+  font-size: 12px;
+  color: hsl(var(--fg-muted));
+  margin-top: 2px;
+}
+
+.preference-controls {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Info rows (settings system section) */
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid hsl(var(--border));
+  font-size: 13px;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  flex-shrink: 0;
+}
+
+.info-value {
+  text-align: right;
+  word-break: break-all;
+}
+
+.info-value.mono {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.db-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.error-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: hsl(var(--fail));
+}

@@ -1,0 +1,32 @@
+package ui
+
+// Island renders a React island mount point.
+//
+// The emitted div is picked up by /islands/loader.js at page load:
+//   - data-island: the island name, must match a bundle in /islands/<name>.js
+//   - data-props:  JSON-encoded props passed to the island's mount() function
+//
+// Usage in a templ page:
+//
+//	@Island("type-breakdown", map[string]any{"by_type": data.ByType})
+//
+// The container fills its parent's height (height:100%) so recharts'
+// ResponsiveContainer — which sizes to its parent — can measure a real height;
+// it falls back to min-height:240px when the parent has no defined height (e.g.
+// a plain grid cell). Callers that host a chart should give the wrapper a fixed
+// height (e.g. style="height:300px") so the 100% chain resolves.
+templ Island(name string, props any) {
+	<div
+		data-island={ name }
+		data-props={ islandPropsJSON(props) }
+		style="height:100%;min-height:240px"
+	></div>
+}
+
+// IslandScript emits the <script> tag that loads the island loader.
+// Include this once per page that uses islands, typically in the <head> or at
+// the end of <body>. The Layout component accepts an optional slot; callers
+// can include this via the content component or inline in the page template.
+templ IslandScript() {
+	<script type="module" src="/islands/loader.js"></script>
+}

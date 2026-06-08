@@ -1,0 +1,228 @@
+package ui
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+)
+
+// CCSDetailPage renders the full page for a single Claude Code session.
+templ CCSDetailPage(detail *services.CCSessionDetail, lang, theme string) {
+	@Layout(T(lang, "ccSessions.session")+" — "+detail.ID, "cc-sessions", lang, theme, ccsDetailContent(detail, lang))
+}
+
+// CCSDetailPartial renders only the content for HTMX partial swaps.
+templ CCSDetailPartial(detail *services.CCSessionDetail, lang string) {
+	@ccsDetailContent(detail, lang)
+}
+
+// ccsDetailContent is the shared body for detail (full-page + partial).
+templ ccsDetailContent(detail *services.CCSessionDetail, lang string) {
+	<div>
+		<div class="page-header">
+			<div class="page-header-back">
+				<a href="/cc-sessions">← { T(lang, "common.back") }</a>
+			</div>
+			<h1 class="mono">{ detail.ID }</h1>
+		</div>
+		<div class="detail-grid">
+			<!-- Metadata card -->
+			<div class="card">
+				<div class="card-header">
+					<h2>{ T(lang, "ccSessions.session") }</h2>
+				</div>
+				<div class="card-body">
+					@detailRow(T(lang, "ccSessions.fields.project"), detail.ProjectDisplay)
+					@detailRow(T(lang, "ccSessions.fields.cwd"), detail.CWD)
+					@detailRow(T(lang, "ccSessions.fields.branch"), detail.GitBranch)
+					@detailRow(T(lang, "ccSessions.fields.version"), detail.CCVersion)
+					@detailRow(T(lang, "ccSessions.fields.started"), ccsFormatTime(detail.StartedAt))
+					@detailRow(T(lang, "ccSessions.fields.ended"), ccsFormatTime(detail.EndedAt))
+					@detailRow(T(lang, "ccSessions.fields.size"), ccsFormatSize(detail.FileSizeBytes))
+				</div>
+			</div>
+			<!-- Stats card -->
+			<div class="card">
+				<div class="card-header">
+					<h2>{ T(lang, "ccSessions.counts") }</h2>
+				</div>
+				<div class="card-body">
+					@detailRow(T(lang, "ccSessions.fields.turns"), fmt.Sprintf("%d", len(detail.Turns)))
+					@detailRow(T(lang, "ccSessions.fields.userTurns"),
+						fmt.Sprintf("%d", countTurnsByRole(detail.Turns, "user")))
+					@detailRow(T(lang, "ccSessions.fields.assistantTurns"),
+						fmt.Sprintf("%d", countTurnsByRole(detail.Turns, "assistant")))
+					@detailRow(T(lang, "ccSessions.fields.tokens"), ccsFormatTokens(detail.Usage.TotalTokens))
+					@detailRow(T(lang, "ccSessions.fields.cost"), ccsFormatCost(detail.Usage))
+				</div>
+			</div>
+		</div>
+		<!-- Conversation timeline -->
+		<div class="card" style="margin-top: 1rem;">
+			<div class="card-header">
+				<h2>{ T(lang, "ccSessions.conversation") }</h2>
+				<p>{ T(lang, "ccSessions.conversationDesc", "count", fmt.Sprintf("%d", len(detail.Turns))) }</p>
+			</div>
+			<div class="card-body">
+				@ccsTurns(detail.Turns, lang)
+			</div>
+		</div>
+	</div>
+}
+
+// ccsTurns renders the conversation turns.
+templ ccsTurns(turns []services.CCTurn, lang string) {
+	if len(turns) == 0 {
+		<p class="muted">{ T(lang, "ccSessions.noTurns") }</p>
+	} else {
+		<div class="timeline">
+			for i, turn := range turns {
+				<details class={ "timeline-event", "timeline-event--" + turn.Role }>
+					<summary class="timeline-event-summary">
+						<span class={ "badge", ccsTurnBadgeClass(turn.Role) }>{ turn.Role }</span>
+						<span class="timeline-event-at muted mono">{ ccsShortTimestamp(turn.Timestamp) }</span>
+						<span class="timeline-event-title">{ ccsTurnPreview(turn) }</span>
+						<span class="timeline-event-index muted">{ fmt.Sprintf("#%d", i+1) }</span>
+					</summary>
+					<div class="timeline-event-body">
+						if turn.Text != "" {
+							<pre class="event-content">{ turn.Text }</pre>
+						} else {
+							@ccsTurnBlocks(turn.Blocks)
+						}
+					</div>
+				</details>
+			}
+		</div>
+	}
+}
+
+// ccsTurnBlocks renders the structured blocks of a turn.
+templ ccsTurnBlocks(blocks []services.CCMessageBlock) {
+	<div class="cc-blocks">
+		for _, b := range blocks {
+			switch b.Type {
+				case "text":
+					<pre class="event-content">{ b.Text }</pre>
+				case "tool_use":
+					<details class="cc-tool-block">
+						<summary class="cc-tool-summary">
+							<span class="badge badge-neutral">tool_use</span>
+							<span class="mono text-xs">{ b.Name }</span>
+							if b.ID != "" {
+								<span class="muted mono text-xs">{ b.ID }</span>
+							}
+						</summary>
+						<pre class="event-content cc-tool-input">{ ccsTruncateRaw(b.RawInput, 500) }</pre>
+					</details>
+				case "tool_result":
+					<details class="cc-tool-block">
+						<summary class="cc-tool-summary">
+							<span class="badge badge-neutral">tool_result</span>
+							if b.ToolUseID != "" {
+								<span class="muted mono text-xs">{ b.ToolUseID }</span>
+							}
+						</summary>
+						<pre class="event-content cc-tool-input">{ ccsTruncateRaw(b.Content, 500) }</pre>
+					</details>
+				case "thinking":
+					<details class="cc-tool-block">
+						<summary class="cc-tool-summary">
+							<span class="badge badge-neutral">thinking</span>
+						</summary>
+						<pre class="event-content cc-tool-input">{ b.Text }</pre>
+					</details>
+				default:
+					<div class="muted mono text-xs">{ b.Type }</div>
+			}
+		}
+	</div>
+}
+
+// ---------------------------------------------------------------------------
+// Helper functions for detail
+// ---------------------------------------------------------------------------
+
+// ccsTurnBadgeClass returns the badge class based on role.
+func ccsTurnBadgeClass(role string) string {
+	if role == "user" {
+		return "badge badge-accent"
+	}
+	return "badge badge-neutral"
+}
+
+// ccsTurnPreview returns a short preview of a turn for the summary line.
+func ccsTurnPreview(turn services.CCTurn) string {
+	if turn.Text != "" {
+		return ccsPromptPreview(turn.Text)
+	}
+	// Summarise blocks.
+	var parts []string
+	for _, b := range turn.Blocks {
+		switch b.Type {
+		case "text":
+			if b.Text != "" {
+				parts = append(parts, ccsPromptPreview(b.Text))
+			}
+		case "tool_use":
+			parts = append(parts, "⚙ "+b.Name)
+		case "tool_result":
+			parts = append(parts, "→ result")
+		case "thinking":
+			parts = append(parts, "💭 thinking")
+		}
+	}
+	if len(parts) == 0 {
+		return "(empty)"
+	}
+	s := strings.Join(parts, " · ")
+	runes := []rune(s)
+	if len(runes) > 100 {
+		return string(runes[:100]) + "…"
+	}
+	return s
+}
+
+// ccsShortTimestamp returns just the time portion of an ISO 8601 timestamp.
+func ccsShortTimestamp(ts string) string {
+	if ts == "" {
+		return "—"
+	}
+	// "2026-06-08T18:33:44.910Z" → "18:33:44"
+	t := ts
+	if idx := strings.Index(t, "T"); idx >= 0 {
+		t = t[idx+1:]
+	}
+	if idx := strings.Index(t, "."); idx >= 0 {
+		t = t[:idx]
+	}
+	if idx := strings.Index(t, "Z"); idx >= 0 {
+		t = t[:idx]
+	}
+	return t
+}
+
+// ccsTruncateRaw returns a truncated JSON string for large raw JSON inputs.
+func ccsTruncateRaw(raw json.RawMessage, maxRunes int) string {
+	if len(raw) == 0 || string(raw) == "null" {
+		return "—"
+	}
+	runes := []rune(string(raw))
+	if len(runes) <= maxRunes {
+		return string(runes)
+	}
+	return string(runes[:maxRunes]) + "… [truncated]"
+}
+
+// countTurnsByRole counts turns with a specific role.
+func countTurnsByRole(turns []services.CCTurn, role string) int {
+	n := 0
+	for _, t := range turns {
+		if t.Role == role {
+			n++
+		}
+	}
+	return n
+}

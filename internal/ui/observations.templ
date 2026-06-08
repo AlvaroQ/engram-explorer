@@ -1,0 +1,451 @@
+package ui
+
+import (
+	"fmt"
+	"net/url"
+
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+)
+
+// ObservationsPage renders the full page shell for the observations view.
+templ ObservationsPage(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang, theme string) {
+	@Layout(T(lang, "observations.title"), "observations", lang, theme, observationsContent(items, nextCursor, params, projects, lang))
+}
+
+// ObservationsPartial renders only the observations content (no HTML shell).
+// Used when HTMX requests a partial update.
+templ ObservationsPartial(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang string) {
+	@observationsContent(items, nextCursor, params, projects, lang)
+}
+
+// observationsContent is the shared observations body.
+templ observationsContent(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang string) {
+	<div class="flex flex-col gap-4">
+		<div class="page-header">
+			<h1>{ T(lang, "observations.title") }</h1>
+			<p>{ T(lang, "observations.description") }</p>
+		</div>
+		<!-- Filter bar -->
+		<div class="card filter-bar" id="obs-filter-bar">
+			<div class="card-body">
+				<!-- Text search -->
+				<div class="filter-row">
+					<input
+						id="obs-q"
+						class="input flex-1"
+						type="search"
+						name="q"
+						value={ params.Q }
+						placeholder={ T(lang, "observations.searchPlaceholder") }
+						hx-get="/observations/list"
+						hx-trigger="keyup changed delay:300ms, search"
+						hx-target="#obs-table-container"
+						hx-include="#obs-filters"
+						hx-push-url="true"
+					/>
+				</div>
+				<!-- Additional filters (always shown) -->
+				<form
+					id="obs-filters"
+					hx-get="/observations/list"
+					hx-trigger="change"
+					hx-target="#obs-table-container"
+					hx-include="#obs-q"
+					hx-push-url="true"
+					class="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2 lg:grid-cols-3"
+				>
+					<!-- Project multi-select (checkboxes in a scrollable box) -->
+					<div class="flex flex-col gap-1">
+						<label class="filter-label">{ T(lang, "observations.labels.project") }</label>
+						<div class="input overflow-y-auto" style="max-height:120px">
+							for _, p := range projects {
+								<label class="flex items-center gap-2 py-0.5 text-xs">
+									<input
+										type="checkbox"
+										name="project"
+										value={ p }
+										checked?={ obsContains(params.Projects, p) }
+									/>
+									{ p }
+								</label>
+							}
+						</div>
+					</div>
+					<!-- Type multi-select -->
+					<div class="flex flex-col gap-1">
+						<label class="filter-label">{ T(lang, "observations.labels.type") }</label>
+						<div class="input overflow-y-auto" style="max-height:120px">
+							for _, typ := range obsTypeOptions() {
+								<label class="flex items-center gap-2 py-0.5 text-xs">
+									<input
+										type="checkbox"
+										name="type"
+										value={ typ }
+										checked?={ obsContains(params.Types, typ) }
+									/>
+									{ typ }
+								</label>
+							}
+						</div>
+					</div>
+					<!-- Scope select -->
+					<div class="flex flex-col gap-1">
+						<label class="filter-label" for="obs-scope">{ T(lang, "observations.labels.scope") }</label>
+						<select id="obs-scope" name="scope" class="input input-sm">
+							<option value="" selected?={ params.Scope == "" || params.Scope == "all" }>{ T(lang, "observations.scope.all") }</option>
+							<option value="project" selected?={ params.Scope == "project" }>{ T(lang, "observations.scope.project") }</option>
+							<option value="personal" selected?={ params.Scope == "personal" }>{ T(lang, "observations.scope.personal") }</option>
+						</select>
+					</div>
+					<!-- Topic key input -->
+					<div class="flex flex-col gap-1">
+						<label class="filter-label" for="obs-topic">{ T(lang, "observations.labels.topicKey") }</label>
+						<input
+							id="obs-topic"
+							class="input input-sm"
+							type="text"
+							name="topic_key"
+							value={ params.TopicKey }
+							placeholder={ T(lang, "observations.placeholders.topicKey") }
+						/>
+					</div>
+					<!-- Deleted rows select -->
+					<div class="flex flex-col gap-1">
+						<label class="filter-label" for="obs-deleted">{ T(lang, "observations.labels.deletedRows") }</label>
+						<select id="obs-deleted" name="deleted" class="input input-sm">
+							<option value="active" selected?={ !params.IncludeDeleted && !params.OnlyDeleted }>{ T(lang, "observations.deleted.active") }</option>
+							<option value="all" selected?={ params.IncludeDeleted }>{ T(lang, "observations.deleted.all") }</option>
+							<option value="only" selected?={ params.OnlyDeleted }>{ T(lang, "observations.deleted.only") }</option>
+						</select>
+					</div>
+				</form>
+			</div>
+		</div>
+		<!-- Table + detail layout -->
+		<div class="flex gap-4" style="min-height:0; flex:1">
+			<!-- Table card -->
+			<div class="card flex-1 overflow-hidden">
+				<div class="card-header">
+					<h2>{ T(lang, "observations.title") }</h2>
+					<p>{ T(lang, "observations.loaded", "count", fmt.Sprintf("%d", len(items))) }</p>
+				</div>
+				<div class="card-body p-0 overflow-auto" id="obs-table-container">
+					@ObservationsTablePartial(items, nextCursor, params, lang)
+				</div>
+			</div>
+			<!-- Detail aside (empty until a row is clicked) -->
+			<aside id="obs-detail" class="card" style="width:380px;min-width:280px;overflow-y:auto;display:none">
+				<!-- Populated by hx-get /observations/{id} on row click -->
+			</aside>
+		</div>
+	</div>
+	<!-- Close detail when clicking outside of it -->
+	<script>
+	(function() {
+		document.addEventListener('click', function(e) {
+			var detail = document.getElementById('obs-detail');
+			if (!detail) return;
+			// Show if HTMX just swapped content into it; otherwise close on outside click.
+			if (!detail.contains(e.target) && !e.target.closest('tr[data-obs-id]')) {
+				// Do not auto-close — user must click the close button or another row.
+			}
+		});
+	})();
+	</script>
+}
+
+// ObservationsTablePartial renders the full table with load-more.
+// This is the HTMX swap target for filter changes (replaces whole table content).
+templ ObservationsTablePartial(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, lang string) {
+	if len(items) == 0 {
+		@EmptyState(T(lang, "observations.table.noMatch"))
+	} else {
+		<table class="data-table" id="obs-table">
+			<thead>
+				<tr>
+					<th>{ T(lang, "observations.table.created") }</th>
+					<th>{ T(lang, "observations.table.project") }</th>
+					<th>{ T(lang, "observations.table.type") }</th>
+					<th>{ T(lang, "observations.table.title") }</th>
+					<th>{ T(lang, "observations.table.tool") }</th>
+					<th>{ T(lang, "observations.table.topic") }</th>
+					<th>{ T(lang, "observations.table.rev") }</th>
+					<th>{ T(lang, "observations.table.dup") }</th>
+				</tr>
+			</thead>
+			<tbody id="obs-tbody">
+				@ObservationsRowsPartial(items, nextCursor, params, lang)
+			</tbody>
+		</table>
+	}
+}
+
+// ObservationsRowsPartial renders only <tr> rows + optional load-more sentinel.
+// Used by hx-swap="beforeend" on load-more.
+templ ObservationsRowsPartial(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, lang string) {
+	for _, obs := range items {
+		@obsRow(obs, lang)
+	}
+	if nextCursor != nil {
+		@obsLoadMoreRow(*nextCursor, params, lang)
+	}
+}
+
+// obsRow renders a single observation table row.
+templ obsRow(obs services.ObservationRow, lang string) {
+	<tr
+		data-obs-id={ fmt.Sprintf("%d", obs.ID) }
+		class="hover:bg-surface-2 cursor-pointer"
+		hx-get={ fmt.Sprintf("/observations/%d", obs.ID) }
+		hx-target="#obs-detail"
+		hx-swap="innerHTML"
+		hx-on::after-request="document.getElementById('obs-detail').style.display=''"
+	>
+		<td class="mono text-xs text-fg-muted">{ obsDateStr(obs) }</td>
+		<td>
+			if obs.Project != nil && *obs.Project != "" {
+				<span class="badge badge-accent">{ *obs.Project }</span>
+			} else {
+				<span class="badge badge-fail">{ T(lang, "observations.table.empty") }</span>
+			}
+		</td>
+		<td><span class="badge badge-accent">{ obs.Type }</span></td>
+		<td class="text-sm text-fg truncate" style="max-width:320px">
+			if obs.Title != nil && *obs.Title != "" {
+				{ *obs.Title }
+			} else {
+				<span class="muted">{ T(lang, "common.untitled") }</span>
+			}
+		</td>
+		<td class="text-xs text-fg-muted">
+			if obs.ToolName != nil && *obs.ToolName != "" {
+				{ *obs.ToolName }
+			} else {
+				{ "—" }
+			}
+		</td>
+		<td class="mono text-xs text-fg-muted truncate" style="max-width:160px">
+			if obs.TopicKey != nil && *obs.TopicKey != "" {
+				{ *obs.TopicKey }
+			} else {
+				{ "—" }
+			}
+		</td>
+		<td class="text-xs text-fg-muted">{ fmt.Sprintf("%d", obsRevCount(obs)) }</td>
+		<td class="text-xs text-fg-muted">{ fmt.Sprintf("%d", obsDupCount(obs)) }</td>
+	</tr>
+}
+
+// obsLoadMoreRow renders the load-more sentinel row for cursor pagination.
+templ obsLoadMoreRow(cursor string, params services.ObservationListParams, lang string) {
+	<tr id="obs-load-more-row">
+		<td colspan="8" class="px-4 py-3">
+			<button
+				class="btn btn-secondary btn-sm"
+				hx-get={ obsNextURL(cursor, params) }
+				hx-target="#obs-tbody"
+				hx-swap="beforeend"
+				hx-on::after-request="document.getElementById('obs-load-more-row')?.remove()"
+			>
+				{ T(lang, "common.loadMore") }
+			</button>
+		</td>
+	</tr>
+}
+
+// ObservationDetailPartial renders the observation detail for the aside drawer.
+templ ObservationDetailPartial(obs *services.ObservationRow, revisions []services.ObservationRow, heading, lang string) {
+	<div class="space-y-4 text-sm p-3">
+		<div class="flex items-center justify-between gap-2">
+			<h2 class="text-base font-semibold text-fg">{ heading }</h2>
+			<button
+				type="button"
+				class="btn btn-ghost btn-sm"
+				onclick="document.getElementById('obs-detail').style.display='none'"
+				aria-label={ T(lang, "common.close") }
+			>×</button>
+		</div>
+		<!-- Badges row -->
+		<div class="flex flex-wrap gap-2">
+			<span class="badge badge-accent">{ obs.Type }</span>
+			if obs.Scope != nil && *obs.Scope != "" {
+				<span class="badge badge-neutral">{ T(lang, "observations.detail.scope", "scope", *obs.Scope) }</span>
+			}
+			if obs.ToolName != nil && *obs.ToolName != "" {
+				<span class="badge badge-neutral">{ *obs.ToolName }</span>
+			}
+			if obs.DeletedAt != nil {
+				<span class="badge badge-fail">{ T(lang, "observations.detail.deleted") }</span>
+			}
+		</div>
+		<!-- Title -->
+		<h3 class="text-base font-semibold text-fg">
+			if obs.Title != nil && *obs.Title != "" {
+				{ *obs.Title }
+			} else {
+				{ T(lang, "common.untitled") }
+			}
+		</h3>
+		<!-- Field grid -->
+		<dl class="grid grid-cols-1 gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
+			@obsDetailField(T(lang, "observations.detail.fields.project"), nilStr(obs.Project), false)
+			@obsDetailField(T(lang, "observations.detail.fields.topicKey"), nilStr(obs.TopicKey), true)
+			@obsDetailField(T(lang, "observations.detail.fields.created"), nilStr(obs.CreatedAt), false)
+			@obsDetailField(T(lang, "observations.detail.fields.updated"), nilStr(obs.UpdatedAt), false)
+			@obsDetailField(T(lang, "observations.detail.fields.revisions"), fmt.Sprintf("%d", obsRevCount(*obs)), false)
+			@obsDetailField(T(lang, "observations.detail.fields.duplicates"), fmt.Sprintf("%d", obsDupCount(*obs)), false)
+			@obsDetailField(T(lang, "observations.detail.fields.session"), nilStr(obs.SessionID), true)
+			@obsDetailField(T(lang, "observations.detail.fields.syncId"), nilStr(obs.SyncID), true)
+			if obs.DeletedAt != nil {
+				@obsDetailField(T(lang, "observations.detail.fields.deletedAt"), nilStr(obs.DeletedAt), false)
+			}
+		</dl>
+		<!-- Content -->
+		<div>
+			<h4 class="mb-2 text-xs uppercase tracking-wide text-fg-muted">{ T(lang, "observations.detail.content") }</h4>
+			<pre class="max-h-96 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-surface-2 p-3 text-xs text-fg">
+				if obs.Content != nil && *obs.Content != "" {
+					{ *obs.Content }
+				} else {
+					{ T(lang, "common.empty") }
+				}
+			</pre>
+		</div>
+		<!-- Revisions -->
+		if len(revisions) > 0 {
+			<div>
+				<h4 class="mb-2 text-xs uppercase tracking-wide text-fg-muted">
+					{ T(lang, "observations.detail.revisions", "count", fmt.Sprintf("%d", len(revisions))) }
+				</h4>
+				<ul class="divide-y divide-border rounded-md border border-border bg-surface-2">
+					for _, rev := range revisions {
+						<li class="flex items-center justify-between gap-3 p-2 text-xs">
+							<div class="min-w-0">
+								<p class="truncate text-fg">
+									if rev.Title != nil && *rev.Title != "" {
+										{ *rev.Title }
+									} else {
+										{ T(lang, "common.untitled") }
+									}
+								</p>
+								<p class="text-fg-muted">
+									if rev.UpdatedAt != nil {
+										{ *rev.UpdatedAt }
+									} else if rev.CreatedAt != nil {
+										{ *rev.CreatedAt }
+									} else {
+										{ "—" }
+									}
+								</p>
+							</div>
+							<span class="badge badge-neutral">{ rev.Type }</span>
+						</li>
+					}
+				</ul>
+			</div>
+		}
+		<!-- Go to session link -->
+		if obs.SessionID != nil && *obs.SessionID != "" {
+			<a
+				href={ templ.SafeURL("/sessions/" + *obs.SessionID) }
+				class="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-1 text-xs text-fg-muted hover:text-fg"
+			>
+				{ T(lang, "observations.detail.goToSession") }
+			</a>
+		}
+	</div>
+}
+
+// obsDetailField renders a single label+value pair in the field grid.
+templ obsDetailField(label, value string, mono bool) {
+	<div class="flex min-w-0 flex-col gap-0.5">
+		<dt class="text-fg-muted">{ label }</dt>
+		if mono {
+			<dd class="truncate font-mono text-fg">{ value }</dd>
+		} else {
+			<dd class="truncate text-fg">{ value }</dd>
+		}
+	</div>
+}
+
+// ---------------------------------------------------------------------------
+// Helper functions
+// ---------------------------------------------------------------------------
+
+// obsTypeOptions returns the static list of known observation types.
+func obsTypeOptions() []string {
+	return []string{
+		"architecture", "bugfix", "decision", "discovery", "session_summary",
+		"config", "ui-fix", "pattern", "preference", "insight", "project",
+		"learning", "manual", "feature", "command",
+	}
+}
+
+// obsContains reports whether slice contains target.
+func obsContains(slice []string, target string) bool {
+	for _, s := range slice {
+		if s == target {
+			return true
+		}
+	}
+	return false
+}
+
+// obsDateStr returns the display date for an observation row (updated_at preferred).
+func obsDateStr(obs services.ObservationRow) string {
+	if obs.UpdatedAt != nil && *obs.UpdatedAt != "" {
+		return *obs.UpdatedAt
+	}
+	if obs.CreatedAt != nil {
+		return *obs.CreatedAt
+	}
+	return "—"
+}
+
+// obsRevCount returns the revision count (0 when nil).
+func obsRevCount(obs services.ObservationRow) int64 {
+	if obs.RevisionCount != nil {
+		return *obs.RevisionCount
+	}
+	return 0
+}
+
+// obsDupCount returns the duplicate count (0 when nil).
+func obsDupCount(obs services.ObservationRow) int64 {
+	if obs.DuplicateCount != nil {
+		return *obs.DuplicateCount
+	}
+	return 0
+}
+
+// obsNextURL builds the load-more URL preserving all active filters + new cursor.
+func obsNextURL(cursor string, params services.ObservationListParams) string {
+	v := url.Values{}
+	v.Set("cursor", cursor)
+	v.Set("append", "true")
+	if params.Q != "" {
+		v.Set("q", params.Q)
+	}
+	for _, p := range params.Projects {
+		v.Add("project", p)
+	}
+	for _, t := range params.Types {
+		v.Add("type", t)
+	}
+	for _, tn := range params.ToolNames {
+		v.Add("tool_name", tn)
+	}
+	if params.Scope != "" && params.Scope != "all" {
+		v.Set("scope", params.Scope)
+	}
+	if params.TopicKey != "" {
+		v.Set("topic_key", params.TopicKey)
+	}
+	if params.IncludeDeleted {
+		v.Set("deleted", "all")
+	} else if params.OnlyDeleted {
+		v.Set("deleted", "only")
+	}
+	return "/observations/list?" + v.Encode()
+}
+

@@ -1,0 +1,25 @@
+# Normalize line endings: LF in the repo, auto on checkout.
+* text=auto eol=lf
+
+# Source and scripts must stay LF even on Windows checkouts.
+*.go    text eol=lf
+*.sh    text eol=lf
+*.mjs   text eol=lf
+*.ts    text eol=lf
+*.tsx   text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+
+# Windows batch files need CRLF.
+*.bat   text eol=crlf
+
+# Binary assets — never normalize.
+*.png   binary
+*.jpg   binary
+*.ico   binary
+*.icns  binary
+*.db    binary
+*.woff  binary
+*.woff2 binary

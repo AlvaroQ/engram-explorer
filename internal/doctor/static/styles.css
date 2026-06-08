@@ -1,0 +1,327 @@
+/* styles.css — engram-explorer doctor module
+ * Original minimal stylesheet, dark theme. Aligned 1:1 with the classes the
+ * templ templates actually emit (orphans.templ, sync.templ, components.templ,
+ * layout.templ). NOT copied from upstream engram.
+ *
+ * Color system: a single set of semantic tokens drives every badge / banner /
+ * card so status colors stay consistent across the module.
+ */
+
+:root {
+  --doc-green:  #16a34a;
+  --doc-amber:  #d97706;
+  --doc-red:    #dc2626;
+  --doc-blue:   #2563eb;
+  --doc-gray:   #525252;
+  --doc-radius: 6px;
+
+  /* Pico is no longer loaded — alias the --pico-* names this stylesheet still
+     references to the shared app design tokens (defined in /static/styles.css
+     as bare HSL triplets) so the doctor module matches the rest of the UI. */
+  --pico-color: hsl(var(--fg));
+  --pico-muted-color: hsl(var(--fg-muted));
+  --pico-muted-border-color: hsl(var(--border));
+  --pico-primary: hsl(var(--accent));
+  --pico-primary-background: hsl(var(--accent) / 0.15);
+  --pico-border-radius: 6px;
+  --pico-font-family-monospace: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ── Base elements (Pico removed; styled with app tokens) ─────────────
+   Scoped to .main-content so they only affect doctor page content, never
+   the shared sidebar. */
+.main-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+.main-content thead th {
+  text-align: left;
+  padding: 9px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(var(--fg-muted));
+  border-bottom: 1px solid hsl(var(--border));
+  white-space: nowrap;
+}
+.main-content tbody td {
+  padding: 9px 12px;
+  border-bottom: 1px solid hsl(var(--border));
+  vertical-align: middle;
+}
+.main-content tbody tr:hover { background: hsl(var(--surface-2)); }
+.main-content tbody tr:last-child td { border-bottom: none; }
+
+.main-content select {
+  background: hsl(var(--surface-2));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--doc-radius);
+  color: hsl(var(--fg));
+  font-size: 0.8rem;
+  padding: 0.3rem 0.5rem;
+}
+
+/* Unclassed buttons (e.g. the orphans "Assign" submit) get the app's neutral
+   button look; the explicit .btn-action / .btn-danger classes win their own. */
+.main-content button:not([class]) {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  border-radius: var(--doc-radius);
+  cursor: pointer;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--surface-2));
+  color: hsl(var(--fg));
+}
+.main-content button:not([class]):hover { background: hsl(var(--surface)); }
+
+/* ── Nav ──────────────────────────────────────────────────────────── */
+.doctor-nav {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--pico-muted-border-color, #333);
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.doctor-nav a {
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--doc-radius);
+  text-decoration: none;
+  font-size: 0.875rem;
+  color: var(--pico-color, #eee);
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.doctor-nav a:hover,
+.doctor-nav a.active {
+  background: var(--pico-primary-background, #1d3a5f);
+  border-color: var(--pico-primary, #3b82f6);
+  color: var(--pico-primary, #3b82f6);
+}
+
+/* ── Badges ───────────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 0.2em 0.6em;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.4;
+  background: color-mix(in srgb, var(--doc-gray) 18%, transparent);
+  color: #a1a1aa;
+  border: 1px solid color-mix(in srgb, var(--doc-gray) 60%, transparent);
+}
+
+/* Status badges (syncStatusBadge) + enrollment badges share the palette. */
+.badge-healthy,
+.badge-enrolled {
+  background: color-mix(in srgb, var(--doc-green) 18%, transparent);
+  color: #4ade80;
+  border-color: var(--doc-green);
+}
+.badge-degraded {
+  background: color-mix(in srgb, var(--doc-amber) 18%, transparent);
+  color: #fbbf24;
+  border-color: var(--doc-amber);
+}
+.badge-broken {
+  background: color-mix(in srgb, var(--doc-red) 18%, transparent);
+  color: #f87171;
+  border-color: var(--doc-red);
+}
+.badge-idle,
+.badge-not-enrolled {
+  background: color-mix(in srgb, var(--doc-gray) 18%, transparent);
+  color: #a1a1aa;
+  border-color: color-mix(in srgb, var(--doc-gray) 60%, transparent);
+}
+
+/* ── Empty state ──────────────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--pico-muted-color, #888);
+}
+.empty-state p { margin: 0; font-size: 0.95rem; }
+
+/* ── Loading placeholder ──────────────────────────────────────────── */
+.loading {
+  color: var(--pico-muted-color, #888);
+  font-style: italic;
+  padding: 1rem 0;
+}
+
+/* ── Inline error ─────────────────────────────────────────────────── */
+.inline-error {
+  padding: 0.75rem 1rem;
+  border-radius: var(--doc-radius);
+  background: color-mix(in srgb, var(--doc-red) 14%, transparent);
+  border: 1px solid var(--doc-red);
+  color: #f87171;
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+/* ── Action cells / buttons ───────────────────────────────────────── */
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.actions form { display: inline-flex; gap: 0.35rem; margin: 0; }
+
+.btn-action,
+.btn-danger,
+.btn-link {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  border-radius: var(--doc-radius);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.btn-action {
+  background: var(--pico-primary-background, #1d3a5f);
+  color: var(--pico-primary, #60a5fa);
+  border-color: var(--doc-blue);
+}
+.btn-danger {
+  background: color-mix(in srgb, var(--doc-red) 14%, transparent);
+  color: #f87171;
+  border-color: var(--doc-red);
+}
+.btn-link {
+  background: transparent;
+  color: var(--pico-primary, #60a5fa);
+  text-decoration: none;
+}
+.btn-action:hover  { filter: brightness(1.2); }
+.btn-danger:hover  { filter: brightness(1.2); }
+.btn-link:hover    { text-decoration: underline; }
+
+/* ── Orphans sections ─────────────────────────────────────────────── */
+.orphans-section { margin-bottom: 2rem; }
+.orphans-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+}
+
+/* ── Sync: global target + project table ──────────────────────────── */
+.global-target-card,
+.detail-card,
+.error-card,
+.upgrade-state-card {
+  border: 1px solid var(--pico-muted-border-color, #333);
+  border-radius: var(--doc-radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: color-mix(in srgb, var(--doc-gray) 8%, transparent);
+}
+.error-card {
+  border-color: var(--doc-red);
+  background: color-mix(in srgb, var(--doc-red) 10%, transparent);
+}
+
+.detail-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.detail-card h4,
+.global-target-card h3 { margin-top: 0; }
+
+.detail-card dl,
+.global-target-card dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
+.detail-card dt,
+.global-target-card dt { color: var(--pico-muted-color, #888); font-size: 0.8rem; }
+.detail-card dd,
+.global-target-card dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+.sync-projects-table,
+.mutations-table { width: 100%; font-size: 0.85rem; }
+.sync-projects-table td { font-variant-numeric: tabular-nums; }
+
+/* ── Sync: issues banner ──────────────────────────────────────────── */
+/* Collapsible sync-issues panel (collapsed by default). */
+.issues-details {
+  border: 1px solid var(--pico-muted-border-color, #333);
+  border-radius: var(--doc-radius);
+  margin-bottom: 1rem;
+  background: hsl(var(--surface));
+}
+.issues-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  user-select: none;
+}
+.issues-summary::-webkit-details-marker { display: none; }
+.issues-summary::before {
+  content: "\25B6"; /* ▶ */
+  font-size: 0.7rem;
+  color: hsl(var(--fg-muted));
+  transition: transform 0.15s ease;
+}
+.issues-details[open] .issues-summary::before { transform: rotate(90deg); }
+.issues-summary-title { flex: 1; }
+.issues-body { padding: 0 1rem 1rem; }
+.issues-body .loading { padding: 0 0 0.5rem; }
+.no-issues { margin: 0; color: #4ade80; }
+.issues-list { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+.issue-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--pico-muted-border-color, #2a2a2a);
+}
+.issue-code { font-family: var(--pico-font-family-monospace, monospace); }
+.issue-message { flex: 1; }
+.issue-hint,
+.issue-project { font-size: 0.78rem; color: var(--pico-muted-color, #888); }
+.generated-at { margin: 0.75rem 0 0; font-size: 0.75rem; color: var(--pico-muted-color, #888); }
+
+/* Severity badges (issue list) reuse the status palette. */
+.severity-badge {
+  padding: 0.15em 0.5em;
+  border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.severity-high   { background: color-mix(in srgb, var(--doc-red) 18%, transparent);   color: #f87171; border: 1px solid var(--doc-red); }
+.severity-medium { background: color-mix(in srgb, var(--doc-amber) 18%, transparent); color: #fbbf24; border: 1px solid var(--doc-amber); }
+.severity-low    { background: color-mix(in srgb, var(--doc-blue) 18%, transparent);  color: #60a5fa; border: 1px solid var(--doc-blue); }
+
+/* ── Sync: pending mutations + upgrade ────────────────────────────── */
+.pending-mutations { margin-top: 1.5rem; }
+.pending-mutations h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+}
+
+/* ── HTMX loading indicator ───────────────────────────────────────── */
+.htmx-indicator { opacity: 0; transition: opacity 0.2s ease; }
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator { opacity: 1; }

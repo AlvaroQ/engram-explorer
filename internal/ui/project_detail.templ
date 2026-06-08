@@ -1,0 +1,307 @@
+package ui
+
+import (
+	"fmt"
+	"net/url"
+
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+)
+
+// ProjectDetailPage renders the full project-detail page shell.
+templ ProjectDetailPage(data services.ProjectOverview, sync *services.SyncProjectRow, lang, theme string) {
+	@Layout(data.Project, "projects", lang, theme, projectDetailContent(data, sync, lang))
+}
+
+// ProjectDetailPartial renders only the project-detail content (no HTML shell).
+// Used when HTMX requests a partial update.
+templ ProjectDetailPartial(data services.ProjectOverview, sync *services.SyncProjectRow, lang string) {
+	@projectDetailContent(data, sync, lang)
+}
+
+// projectDetailContent is the shared project-detail body.
+templ projectDetailContent(data services.ProjectOverview, sync *services.SyncProjectRow, lang string) {
+	<div class="flex flex-col gap-5">
+		<!-- Page header -->
+		<div class="page-header">
+			<div>
+				<a href="/projects" class="mb-1 inline-flex items-center gap-1 text-xs text-fg-muted hover:text-accent">
+					← { T(lang, "projectDetail.allProjects") }
+				</a>
+				<h1>{ data.Project }</h1>
+				<p>{ T(lang, "projectDetail.description") }</p>
+			</div>
+			<div class="flex items-center gap-2">
+				<a
+					href={ templ.SafeURL("/observations?project=" + url.QueryEscape(data.Project)) }
+					class="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-xs text-fg-muted hover:text-fg"
+				>
+					{ T(lang, "projectDetail.allObservations") }
+				</a>
+				<a
+					href="/sessions"
+					class="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-xs text-fg-muted hover:text-fg"
+				>
+					{ T(lang, "projectDetail.allSessions") }
+				</a>
+				if sync != nil && sync.Enrolled {
+					<a
+						href={ templ.SafeURL("/doctor/sync/" + url.PathEscape(data.Project)) }
+						class="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-xs text-fg-muted hover:text-fg"
+					>
+						{ T(lang, "projectDetail.syncDetail") }
+					</a>
+				}
+			</div>
+		</div>
+		<!-- KPI grid -->
+		@projectDetailKPIs(data, sync, lang)
+		<!-- Charts row: activity (2/3) + type breakdown (1/3) -->
+		<div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+			<div class="card flex flex-col lg:col-span-2">
+				<div class="card-header">
+					<div>
+						<h2>{ T(lang, "projectDetail.activity.title") }</h2>
+						<p>{ T(lang, "projectDetail.activity.description") }</p>
+					</div>
+				</div>
+				<div class="card-body" style="height:300px">
+					@Island("project-activity-chart", toProjectActivityChartProps(data.Activity30d))
+				</div>
+			</div>
+			<div class="card flex flex-col">
+				<div class="card-header">
+					<div>
+						<h2>{ T(lang, "projectDetail.byType.title") }</h2>
+						<p>{ T(lang, "projectDetail.byType.description") }</p>
+					</div>
+				</div>
+				<div class="card-body" style="height:280px">
+					@Island("type-breakdown", TypeBreakdownIslandProps{ByType: toTypeBreakdownEntries(data.ByType)})
+				</div>
+			</div>
+		</div>
+		<!-- Tools + Topics row -->
+		<div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+			<div class="card">
+				<div class="card-header">
+					<div>
+						<h2>{ T(lang, "projectDetail.tools.title") }</h2>
+						<p>{ T(lang, "projectDetail.tools.description") }</p>
+					</div>
+				</div>
+				<div class="card-body">
+					@projectDetailToolList(data.ByTool, lang)
+				</div>
+			</div>
+			<div class="card">
+				<div class="card-header">
+					<div>
+						<h2>{ T(lang, "projectDetail.topics.title") }</h2>
+						<p>{ T(lang, "projectDetail.topics.description") }</p>
+					</div>
+				</div>
+				<div class="card-body">
+					@projectDetailTopicList(data.TopTopics, data.Project, lang)
+				</div>
+			</div>
+		</div>
+		<!-- Recent sessions + Recent observations row -->
+		<div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+			<div class="card">
+				<div class="card-header">
+					<div>
+						<h2>{ T(lang, "projectDetail.recentSessions.title") }</h2>
+						<p>{ T(lang, "projectDetail.recentSessions.description", "shown", fmt.Sprintf("%d", len(data.RecentSessions)), "total", fmt.Sprintf("%d", data.KPIs.Sessions)) }</p>
+					</div>
+				</div>
+				<div class="card-body p-0">
+					@projectDetailRecentSessions(data.RecentSessions, lang)
+				</div>
+			</div>
+			<div class="card">
+				<div class="card-header">
+					<div>
+						<h2>{ T(lang, "projectDetail.recentObservations.title") }</h2>
+						<p>{ T(lang, "projectDetail.recentObservations.description", "count", fmt.Sprintf("%d", len(data.RecentObservations))) }</p>
+					</div>
+				</div>
+				<div class="card-body p-0">
+					@projectDetailRecentObservations(data.RecentObservations, data.Project, lang)
+				</div>
+			</div>
+		</div>
+		<!-- Recent prompts (shown only when non-empty) -->
+		if len(data.RecentPrompts) > 0 {
+			<div class="card">
+				<div class="card-header">
+					<div>
+						<h2>{ T(lang, "projectDetail.recentPrompts.title") }</h2>
+					</div>
+				</div>
+				<div class="card-body space-y-2">
+					for _, p := range data.RecentPrompts {
+						<article class="rounded-md border border-border bg-surface-2 p-3">
+							<p class="font-mono text-xs text-fg-muted">{ derefStr(p.CreatedAt, "—") }</p>
+							<p class="mt-1 line-clamp-3 whitespace-pre-wrap text-sm text-fg">{ derefStr(p.Content, T(lang, "common.empty")) }</p>
+						</article>
+					}
+				</div>
+			</div>
+		}
+	</div>
+}
+
+// projectDetailKPIs renders the 5-card KPI grid (obs, sessions, topics, prompts, sync).
+templ projectDetailKPIs(data services.ProjectOverview, sync *services.SyncProjectRow, lang string) {
+	<div class="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-5">
+		@projectDetailKPICard(T(lang, "projectDetail.kpi.observations"), fmt.Sprintf("%d", data.KPIs.Observations))
+		@projectDetailKPICard(T(lang, "projectDetail.kpi.sessions"), fmt.Sprintf("%d", data.KPIs.Sessions))
+		@projectDetailKPICard(T(lang, "projectDetail.kpi.topics"), fmt.Sprintf("%d", data.KPIs.Topics))
+		@projectDetailKPICard(T(lang, "projectDetail.kpi.prompts"), fmt.Sprintf("%d", data.KPIs.Prompts))
+		<!-- Sync KPI card -->
+		<div class="card">
+			<div class="card-body">
+				<p class="text-xs uppercase tracking-wide text-fg-muted">{ T(lang, "projectDetail.kpi.sync") }</p>
+				<div class="mt-1">
+					if sync == nil {
+						<span class="badge badge-neutral">{ T(lang, "projectDetail.kpi.unknown") }</span>
+					} else if !sync.Enrolled {
+						<span class="badge badge-neutral">{ T(lang, "projectDetail.kpi.notEnrolled") }</span>
+					} else if sync.Status == services.SyncStatusBroken {
+						<span class="badge badge-fail">{ T(lang, "projectDetail.kpi.brokenPending", "count", fmt.Sprintf("%d", sync.PendingMutations)) }</span>
+					} else if sync.Status == services.SyncStatusHealthy {
+						<span class="badge badge-ok">{ T(lang, "projectDetail.kpi.healthy") }</span>
+					} else {
+						<span class="badge badge-warn">{ string(sync.Status) }</span>
+					}
+				</div>
+				if sync != nil {
+					<p class="mt-2 font-mono text-xs text-fg-muted">
+						{ T(lang, "projectDetail.kpi.ackedEnq",
+							"acked", fmt.Sprintf("%d", derefInt64(sync.LastAckedSeq)),
+							"enq", fmt.Sprintf("%d", derefInt64(sync.LastEnqueuedSeq))) }
+					</p>
+				}
+			</div>
+		</div>
+	</div>
+}
+
+// projectDetailKPICard renders a single numeric KPI tile.
+templ projectDetailKPICard(label, value string) {
+	<div class="card">
+		<div class="card-body flex items-center justify-between gap-3">
+			<div>
+				<p class="text-xs uppercase tracking-wide text-fg-muted">{ label }</p>
+				<p class="mt-1 text-2xl font-semibold text-fg">{ value }</p>
+			</div>
+		</div>
+	</div>
+}
+
+// projectDetailToolList renders the by-tool list.
+templ projectDetailToolList(tools []services.ToolCount, lang string) {
+	if len(tools) == 0 {
+		<p class="text-sm text-fg-muted">{ T(lang, "projectDetail.tools.empty") }</p>
+	} else {
+		<ul class="space-y-1.5">
+			for _, t := range tools {
+				<li class="flex items-center justify-between gap-2">
+					<span class="truncate font-mono text-xs text-fg">{ t.ToolName }</span>
+					<span class="badge badge-neutral">{ fmt.Sprintf("%d", t.Count) }</span>
+				</li>
+			}
+		</ul>
+	}
+}
+
+// projectDetailTopicList renders the top-topics list.
+// Topics link to the observations page (still React) via external href.
+templ projectDetailTopicList(topics []services.TopicSummary, project string, lang string) {
+	if len(topics) == 0 {
+		<p class="text-sm text-fg-muted">{ T(lang, "projectDetail.topics.empty") }</p>
+	} else {
+		<ul class="space-y-1.5">
+			for _, tt := range topics {
+				<li class="flex items-center justify-between gap-2">
+					<a
+						href={ templ.SafeURL("/observations?project=" + url.QueryEscape(project) + "&topic_key=" + url.QueryEscape(tt.TopicKey)) }
+						class="truncate font-mono text-xs text-accent hover:underline"
+					>
+						{ tt.TopicKey }
+					</a>
+					<span class="badge badge-neutral">{ fmt.Sprintf("%d", tt.ObsCount) }</span>
+				</li>
+			}
+		</ul>
+	}
+}
+
+// projectDetailRecentSessions renders the recent-sessions list.
+templ projectDetailRecentSessions(sessions []services.RecentSession, lang string) {
+	if len(sessions) == 0 {
+		<p class="p-4 text-sm text-fg-muted">{ T(lang, "projectDetail.recentSessions.empty") }</p>
+	} else {
+		<ul class="divide-y divide-border">
+			for _, s := range sessions {
+				<li>
+					<a href={ templ.SafeURL("/sessions/" + url.PathEscape(s.ID)) } class="block px-4 py-2.5 hover:bg-surface-2">
+						<p class="truncate font-mono text-xs text-fg">{ s.ID }</p>
+						<p class="text-xs text-fg-muted">
+							{ derefStr(s.StartedAt, "—") }
+							· { T(lang, "projectDetail.recentSessions.obsCount", "count", fmt.Sprintf("%d", s.ObsCount)) }
+						</p>
+						if s.Summary != nil && *s.Summary != "" {
+							<p class="mt-1 line-clamp-2 text-xs text-fg-muted">{ *s.Summary }</p>
+						}
+					</a>
+				</li>
+			}
+		</ul>
+	}
+}
+
+// projectDetailRecentObservations renders the recent-observations list.
+// "Open in Observations" links to the React SPA observations page (external href).
+templ projectDetailRecentObservations(obs []services.RecentObs, project string, lang string) {
+	if len(obs) == 0 {
+		<p class="p-4 text-sm text-fg-muted">{ T(lang, "projectDetail.recentObservations.empty") }</p>
+	} else {
+		<ul class="divide-y divide-border">
+			for _, o := range obs {
+				<li class="flex items-center justify-between gap-2 px-4 py-2">
+					<div class="min-w-0">
+						<p class="truncate text-sm text-fg">{ derefStr(o.Title, T(lang, "common.untitled")) }</p>
+						<p class="font-mono text-xs text-fg-muted">
+							{ derefStr(o.CreatedAt, "—") }
+							if o.ToolName != nil && *o.ToolName != "" {
+								· { *o.ToolName }
+							}
+						</p>
+					</div>
+					<span class="badge badge-accent">{ o.Type }</span>
+				</li>
+			}
+		</ul>
+		<div class="border-t border-border p-3">
+			<a
+				href={ templ.SafeURL("/observations?project=" + url.QueryEscape(project)) }
+				class="inline-flex items-center rounded-md border border-border bg-surface-2 px-3 py-1.5 text-xs text-fg-muted hover:text-fg"
+			>
+				{ T(lang, "projectDetail.recentObservations.openInObservations") }
+			</a>
+		</div>
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Helper functions
+// ---------------------------------------------------------------------------
+
+// derefInt64 dereferences a *int64; returns 0 if nil.
+func derefInt64(n *int64) int64 {
+	if n == nil {
+		return 0
+	}
+	return *n
+}

@@ -1,0 +1,156 @@
+// Package doctor provides the templ+HTMX diagnostics module for engram-explorer.
+// It mounts at /doctor/* on the shared API ServeMux, completely independent of
+// the React SPA.  Deps uses only concrete types to avoid import cycles with
+// internal/httpapi.
+package doctor
+
+import (
+	"database/sql"
+	"io/fs"
+	"net/http"
+
+	"github.com/AlvaroQ/engram-explorer/internal/config"
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+	"github.com/a-h/templ"
+)
+
+// Deps carries the concrete dependencies required by the doctor module.
+// It intentionally uses *sql.DB and config.Config directly — never the httpapi
+// Container — so that internal/doctor can be imported by internal/httpapi
+// without creating an import cycle.
+type Deps struct {
+	RoDB   *sql.DB       // read-only pool; may be nil in tests
+	RWDB   *sql.DB       // read-write pool; nil when read-only mode is active
+	Config config.Config // full runtime configuration
+
+	// Cloud is an optional CloudController override.  When non-nil it is used
+	// by the sync write handlers instead of constructing a concrete
+	// *services.CloudControlService inside Mount.  Production callers leave this
+	// nil (Mount builds the concrete service); tests inject a fake to exercise
+	// success paths without spawning a real CLI subprocess.
+	Cloud CloudController
+
+	// DaemonPing is an optional override for the daemon availability check used
+	// by handleSyncIssues.  When non-nil it is called instead of making a real
+	// HTTP round-trip to the daemon.  Production callers leave this nil; tests
+	// inject func() bool { return true } to simulate an available daemon.
+	DaemonPing func() bool
+}
+
+// IsHTMX reports whether the request was issued by HTMX (i.e. the HX-Request
+// header is present and set to "true").
+func IsHTMX(r *http.Request) bool {
+	return r.Header.Get("HX-Request") == "true"
+}
+
+// render writes a templ component to the response.  It always sets the
+// Content-Type header to text/html; charset=utf-8.
+func render(w http.ResponseWriter, r *http.Request, c templ.Component) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = c.Render(r.Context(), w)
+}
+
+// requireRW wraps a write handler with a read-only guard. When RWDB is nil
+// (read-only mode) it renders an inline error instead of invoking h, so every
+// write route shares a single source of truth for the read-only check.
+func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if d.RWDB == nil {
+			render(w, r, ErrorPartial("Write operations are not available in read-only mode."))
+			return
+		}
+		h(w, r)
+	}
+}
+
+// Mount registers all /doctor/* routes on mux.
+// Call this inside httpapi.NewServeMux after the cloud routes.
+func Mount(mux *http.ServeMux, d Deps) {
+	// Static assets (/doctor/static/*).
+	staticSub, err := fs.Sub(StaticFS, "static")
+	if err != nil {
+		// embed.FS always has the "static" directory at compile time.
+		panic("doctor: could not sub static FS: " + err.Error())
+	}
+	fileServer := http.FileServerFS(staticSub)
+	mux.Handle("GET /doctor/static/",
+		http.StripPrefix("/doctor/static/", fileServer),
+	)
+
+	// Root: redirect to orphans page.
+	mux.HandleFunc("GET /doctor/", func(w http.ResponseWriter, r *http.Request) {
+		// Only match the exact root; sub-paths are handled by their own entries.
+		if r.URL.Path != "/doctor/" {
+			http.NotFound(w, r)
+			return
+		}
+		http.Redirect(w, r, "/doctor/orphans", http.StatusFound)
+	})
+
+	// -----------------------------------------------------------------------
+	// Orphans routes (Slice 1)
+	// -----------------------------------------------------------------------
+
+	// GET /doctor/orphans — full page or HTMX partial based on HX-Request header.
+	mux.HandleFunc("GET /doctor/orphans", handleOrphansPage(d))
+
+	// GET /doctor/orphans/list — bare list partial; hx-get deferred load target.
+	mux.HandleFunc("GET /doctor/orphans/list", handleOrphansListPartial(d))
+
+	// POST /doctor/orphans/{entity}/{id}/project — assign entity to a project.
+	mux.HandleFunc("POST /doctor/orphans/{entity}/{id}/project", requireRW(d, handleOrphansAssign(d)))
+
+	// DELETE /doctor/orphans/{entity}/{id} — delete orphaned entity.
+	mux.HandleFunc("DELETE /doctor/orphans/{entity}/{id}", requireRW(d, handleOrphansDelete(d)))
+
+	// -----------------------------------------------------------------------
+	// Sync routes (Slice 2)
+	// -----------------------------------------------------------------------
+
+	// Resolve the CloudController: use the injected fake when available
+	// (test path), otherwise construct the real *services.CloudControlService
+	// (production path).  This keeps the production call site in
+	// internal/httpapi/server.go unchanged — it never sets Deps.Cloud.
+	var cloud CloudController
+	if d.Cloud != nil {
+		cloud = d.Cloud
+	} else {
+		cloud = services.NewCloudControlService(services.CloudControlOptions{
+			AuditLogPath:  d.Config.AuditLogPath,
+			EngramDataDir: d.Config.EngramDataDir,
+			RWDB:          d.RWDB,
+		})
+	}
+
+	// GET /doctor/sync — full sync shell page (deferred-load regions).
+	mux.HandleFunc("GET /doctor/sync", handleSyncPage(d))
+
+	// GET /doctor/sync/projects — projects table partial (polled every 15s).
+	// Must be registered before /doctor/sync/{project} so the literal path wins.
+	// Takes cloud so it can probe capabilities and gate the action buttons.
+	mux.HandleFunc("GET /doctor/sync/projects", handleSyncProjectsList(d, cloud))
+
+	// GET /doctor/sync/issues — issues banner partial (polled every 15s).
+	// Must be registered before /doctor/sync/{project} (same reason).
+	mux.HandleFunc("GET /doctor/sync/issues", handleSyncIssues(d))
+
+	// GET /doctor/sync/{project} — project detail partial.
+	// Go 1.22+ ServeMux: literal paths above win over wildcards automatically,
+	// but we register them first for clarity.
+	mux.HandleFunc("GET /doctor/sync/{project}", handleSyncProjectDetail(d))
+
+	// POST /doctor/sync/{project}/enroll — enroll project in cloud sync.
+	mux.HandleFunc("POST /doctor/sync/{project}/enroll",
+		requireRW(d, handleSyncCloudAction(d, cloud, "Enroll", cloud.Enroll)))
+
+	// POST /doctor/sync/{project}/unenroll — unenroll project from cloud sync.
+	mux.HandleFunc("POST /doctor/sync/{project}/unenroll",
+		requireRW(d, handleSyncCloudAction(d, cloud, "Unenroll", cloud.Unenroll)))
+
+	// POST /doctor/sync/{project}/sync — trigger manual sync for a project.
+	mux.HandleFunc("POST /doctor/sync/{project}/sync", requireRW(d, handleSyncTrigger(d, cloud)))
+
+	// POST /doctor/sync/{project}/delete — permanently delete an unenrolled,
+	// observation-free project (removes its sessions and prompts).
+	mux.HandleFunc("POST /doctor/sync/{project}/delete", requireRW(d, handleSyncDeleteProject(d, cloud)))
+}

@@ -1,0 +1,131 @@
+package ui
+
+import (
+	"fmt"
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+)
+
+// PromptsPage renders the full page shell for the prompts list/search view.
+templ PromptsPage(items []services.PromptRow, searchItems []services.PromptWithSnippet, query, lang, theme string) {
+	@Layout(T(lang, "prompts.title"), "prompts", lang, theme, promptsContent(items, searchItems, query, lang))
+}
+
+// PromptsPartial renders only the prompts content (no HTML shell).
+// Used when HTMX requests a partial update.
+templ PromptsPartial(items []services.PromptRow, searchItems []services.PromptWithSnippet, query, lang string) {
+	@promptsContent(items, searchItems, query, lang)
+}
+
+// promptsContent is the shared prompts body used by both full-page and partial renders.
+templ promptsContent(items []services.PromptRow, searchItems []services.PromptWithSnippet, query, lang string) {
+	<div>
+		<div class="page-header">
+			<h1>{ T(lang, "prompts.title") }</h1>
+			<p>{ T(lang, "prompts.description") }</p>
+		</div>
+		<div class="card filter-bar">
+			<div class="card-body">
+				<div class="search-input-wrap">
+					<input
+						class="input"
+						type="search"
+						name="q"
+						value={ query }
+						placeholder={ T(lang, "prompts.searchPlaceholder") }
+						hx-get="/prompts/list"
+						hx-trigger="keyup changed delay:300ms"
+						hx-target="#prompts-list-container"
+						hx-include="[name='q']"
+					/>
+				</div>
+			</div>
+		</div>
+		<div class="card">
+			<div class="card-header">
+				if query != "" {
+					<h2>{ T(lang, "prompts.resultsFor", "q", query) }</h2>
+				} else {
+					<h2>{ T(lang, "prompts.recent") }</h2>
+				}
+				<p>{ T(lang, "prompts.matches", "count", fmt.Sprintf("%d", promptsCount(items, searchItems, query))) }</p>
+			</div>
+			<div class="card-body" id="prompts-list-container">
+				@PromptsListPartialContent(items, searchItems, query, lang)
+			</div>
+		</div>
+	</div>
+}
+
+// PromptsListPartialContent renders only the list items (HTMX swap target).
+templ PromptsListPartialContent(items []services.PromptRow, searchItems []services.PromptWithSnippet, query, lang string) {
+	if query != "" {
+		if len(searchItems) == 0 {
+			@EmptyState(T(lang, "prompts.empty"))
+		} else {
+			<div class="prompts-list">
+				for _, p := range searchItems {
+					@promptSearchCard(p, lang)
+				}
+			</div>
+		}
+	} else {
+		if len(items) == 0 {
+			@EmptyState(T(lang, "prompts.empty"))
+		} else {
+			<div class="prompts-list">
+				for _, p := range items {
+					@promptCard(p, lang)
+				}
+			</div>
+		}
+	}
+}
+
+// promptCard renders a single prompt row (list mode, no snippet).
+templ promptCard(p services.PromptRow, lang string) {
+	<article class="prompt-card">
+		<header class="prompt-card-header">
+			<span class="mono muted">{ nilStr(p.CreatedAt) }</span>
+			if p.Project != nil && *p.Project != "" {
+				<span class="badge badge-accent">{ *p.Project }</span>
+			}
+		</header>
+		<p class="prompt-card-content">
+			if p.Content != nil && *p.Content != "" {
+				{ *p.Content }
+			} else {
+				{ T(lang, "common.empty") }
+			}
+		</p>
+	</article>
+}
+
+// promptSearchCard renders a single prompt search result with an HTML snippet.
+// The snippet is pre-generated safe HTML from the FTS engine — use templ.Raw.
+templ promptSearchCard(p services.PromptWithSnippet, lang string) {
+	<article class="prompt-card">
+		<header class="prompt-card-header">
+			<span class="mono muted">{ nilStr(p.CreatedAt) }</span>
+			if p.Project != nil && *p.Project != "" {
+				<span class="badge badge-accent">{ *p.Project }</span>
+			}
+		</header>
+		if p.Snippet != "" {
+			<p class="prompt-card-content prompt-card-snippet">
+				@templ.Raw(p.Snippet)
+			</p>
+		} else if p.Content != nil && *p.Content != "" {
+			<p class="prompt-card-content">{ *p.Content }</p>
+		} else {
+			<p class="prompt-card-content muted">{ T(lang, "common.empty") }</p>
+		}
+	</article>
+}
+
+// promptsCount returns the count depending on whether a query is active.
+func promptsCount(items []services.PromptRow, searchItems []services.PromptWithSnippet, query string) int {
+	if query != "" {
+		return len(searchItems)
+	}
+	return len(items)
+}

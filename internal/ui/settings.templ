@@ -1,0 +1,183 @@
+package ui
+
+// settingsData carries all data needed to render the settings page.
+type settingsData struct {
+	DBPath      string
+	DBOk        bool
+	DaemonURL   string
+	DaemonOk    bool
+	DaemonError string
+	UptimeS     int
+	Lang        string
+	Theme       string
+}
+
+// SettingsPage renders the full settings page shell.
+templ SettingsPage(d settingsData) {
+	@Layout(T(d.Lang, "settings.title"), "settings", d.Lang, d.Theme, settingsContent(d))
+}
+
+// SettingsPartial renders only the settings content (no HTML shell).
+// Used when HTMX requests a partial update.
+templ SettingsPartial(d settingsData) {
+	@settingsContent(d)
+}
+
+// settingsContent is the shared settings body used by both full-page and partial renders.
+templ settingsContent(d settingsData) {
+	<div>
+		<div class="page-header">
+			<h1>{ T(d.Lang, "settings.title") }</h1>
+		</div>
+
+		<!-- Appearance section -->
+		<section class="settings-section">
+			<h2 class="settings-section-title">{ T(d.Lang, "settings.section.appearance") }</h2>
+
+			<div class="card">
+				<div class="card-body">
+					<!-- Language preference -->
+					<div class="preference-row">
+						<div class="preference-label">
+							<p class="preference-name">{ T(d.Lang, "settings.language") }</p>
+							<p class="preference-desc">{ T(d.Lang, "settings.languageDescription") }</p>
+						</div>
+						<div class="preference-controls">
+							<form method="post" action="/lang">
+								<button
+									type="submit"
+									name="value"
+									value="en"
+									class={ "btn btn-sm", templ.KV("btn-primary", d.Lang == "en"), templ.KV("btn-secondary", d.Lang != "en") }
+								>
+									{ T(d.Lang, "lang.en") }
+								</button>
+							</form>
+							<form method="post" action="/lang">
+								<button
+									type="submit"
+									name="value"
+									value="es"
+									class={ "btn btn-sm", templ.KV("btn-primary", d.Lang == "es"), templ.KV("btn-secondary", d.Lang != "es") }
+								>
+									{ T(d.Lang, "lang.es") }
+								</button>
+							</form>
+						</div>
+					</div>
+
+					<!-- Theme preference -->
+					<div class="preference-row">
+						<div class="preference-label">
+							<p class="preference-name">{ T(d.Lang, "settings.theme") }</p>
+						</div>
+						<div class="preference-controls">
+							<form method="post" action="/theme">
+								<button
+									type="submit"
+									name="value"
+									value="dark"
+									class={ "btn btn-sm", templ.KV("btn-primary", d.Theme == "dark"), templ.KV("btn-secondary", d.Theme != "dark") }
+								>
+									{ T(d.Lang, "settings.themeDark") }
+								</button>
+							</form>
+							<form method="post" action="/theme">
+								<button
+									type="submit"
+									name="value"
+									value="light"
+									class={ "btn btn-sm", templ.KV("btn-primary", d.Theme == "light"), templ.KV("btn-secondary", d.Theme != "light") }
+								>
+									{ T(d.Lang, "settings.themeLight") }
+								</button>
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- System section -->
+		<section class="settings-section">
+			<h2 class="settings-section-title">{ T(d.Lang, "settings.section.system") }</h2>
+
+			<!-- Database card -->
+			<div class="card">
+				<div class="card-header">
+					<h3>{ T(d.Lang, "settings.database") }</h3>
+					<p>{ T(d.Lang, "settings.db.description") }</p>
+				</div>
+				<div class="card-body">
+					<div class="info-row">
+						<span class="info-label muted">{ T(d.Lang, "settings.row.path") }</span>
+						<span class="info-value mono">
+							if d.DBPath != "" {
+								{ d.DBPath }
+							} else {
+								{ "—" }
+							}
+						</span>
+					</div>
+					<div class="info-row">
+						<span class="info-label muted">{ T(d.Lang, "settings.row.status") }</span>
+						<span>
+							if d.DBOk {
+								<span class="badge badge-ok">{ T(d.Lang, "settings.badge.connected") }</span>
+							} else {
+								<span class="badge badge-fail">{ T(d.Lang, "settings.badge.unavailable") }</span>
+							}
+						</span>
+					</div>
+					<!-- Export / Import actions -->
+					<div class="db-actions">
+						<a href="/api/db/export" class="btn btn-sm" download>{ T(d.Lang, "settings.db.export") }</a>
+						<form
+							method="post"
+							action="/api/db/import"
+							enctype="multipart/form-data"
+							onsubmit="return confirm('Import database? Only new memories are added — nothing is overwritten. A backup is taken first.')"
+						>
+							<label class="btn btn-sm" style="cursor:pointer;">
+								{ T(d.Lang, "settings.db.import") }
+								<input type="file" name="file" accept=".db,.sqlite,.sqlite3,application/octet-stream" style="display:none;" onchange="this.form.submit()"/>
+							</label>
+						</form>
+					</div>
+				</div>
+			</div>
+
+			<!-- Daemon card -->
+			<div class="card">
+				<div class="card-header">
+					<h3>{ T(d.Lang, "settings.daemon") }</h3>
+				</div>
+				<div class="card-body">
+					<div class="info-row">
+						<span class="info-label muted">{ T(d.Lang, "settings.row.url") }</span>
+						<span class="info-value mono">
+							if d.DaemonURL != "" {
+								{ d.DaemonURL }
+							} else {
+								{ "—" }
+							}
+						</span>
+					</div>
+					<div class="info-row">
+						<span class="info-label muted">{ T(d.Lang, "settings.row.status") }</span>
+						<span>
+							if d.DaemonOk {
+								<span class="badge badge-ok">{ T(d.Lang, "settings.badge.reachable") }</span>
+							} else {
+								<span class="badge badge-fail">{ T(d.Lang, "settings.badge.unreachable") }</span>
+							}
+						</span>
+					</div>
+					if !d.DaemonOk && d.DaemonError != "" {
+						<p class="error-hint">{ d.DaemonError }</p>
+					}
+				</div>
+			</div>
+		</section>
+	</div>
+}

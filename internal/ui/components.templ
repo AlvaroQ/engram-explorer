@@ -1,0 +1,16 @@
+package ui
+
+// ErrorPartial renders an inline error suitable for HTMX swap targets.
+// Returns status 200 so HTMX still performs the swap.
+templ ErrorPartial(msg string) {
+	<div class="inline-error" role="alert">
+		<strong>Error:</strong> { msg }
+	</div>
+}
+
+// EmptyState renders a centred empty-state placeholder.
+templ EmptyState(msg string) {
+	<div class="empty-state">
+		<p>{ msg }</p>
+	</div>
+}

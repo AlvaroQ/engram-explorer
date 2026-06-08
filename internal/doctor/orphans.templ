@@ -1,0 +1,201 @@
+package doctor
+
+import (
+	"fmt"
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+)
+
+// OrphansPage renders the full orphans page wrapped in the Layout shell.
+// It delegates content to OrphansList.
+templ OrphansPage(data *services.OrphansResponse, projects []services.ProjectStats, lang, theme string) {
+	@Layout("Orphans", "orphans", lang, theme, orphansContent(data, projects))
+}
+
+// OrphansList renders only the orphans content fragment — no Layout shell.
+// Used by HTMX for initial deferred load and post-action refresh.
+templ OrphansList(data *services.OrphansResponse, projects []services.ProjectStats) {
+	@orphansContent(data, projects)
+}
+
+// orphansContent is the shared inner content for both full-page and partial renders.
+templ orphansContent(data *services.OrphansResponse, projects []services.ProjectStats) {
+	<div id="orphans-list">
+		if data.Totals.Observations == 0 && data.Totals.Sessions == 0 && data.Totals.Prompts == 0 {
+			@EmptyState("No orphaned entities found. All observations, sessions, and prompts are assigned to a project.")
+		} else {
+			if data.Totals.Observations > 0 {
+				<section class="orphans-section">
+					<h2>Observations <span class="badge">{ fmt.Sprintf("%d", data.Totals.Observations) }</span></h2>
+					<table>
+						<thead>
+							<tr>
+								<th>ID</th>
+								<th>Type</th>
+								<th>Title</th>
+								<th>Topic Key</th>
+								<th>Session</th>
+								<th>Updated At</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, obs := range data.Observations {
+								<tr>
+									<td>{ fmt.Sprintf("%d", obs.ID) }</td>
+									<td>{ obs.Type }</td>
+									<td>
+										if obs.Title != nil {
+											{ *obs.Title }
+										}
+									</td>
+									<td>
+										if obs.TopicKey != nil {
+											{ *obs.TopicKey }
+										}
+									</td>
+									<td>
+										if obs.SessionID != nil {
+											{ *obs.SessionID }
+										}
+									</td>
+									<td>
+										if obs.UpdatedAt != nil {
+											{ *obs.UpdatedAt }
+										} else if obs.CreatedAt != nil {
+											{ *obs.CreatedAt }
+										}
+									</td>
+									@orphanRowActions("observations", fmt.Sprintf("%d", obs.ID), "observation", projects)
+								</tr>
+							}
+						</tbody>
+					</table>
+				</section>
+			}
+			if data.Totals.Sessions > 0 {
+				<section class="orphans-section">
+					<h2>Sessions <span class="badge">{ fmt.Sprintf("%d", data.Totals.Sessions) }</span></h2>
+					<table>
+						<thead>
+							<tr>
+								<th>ID</th>
+								<th>Directory</th>
+								<th>Summary</th>
+								<th>Started At</th>
+								<th>Ended At</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, sess := range data.Sessions {
+								<tr>
+									<td>{ sess.ID }</td>
+									<td>
+										if sess.Directory != nil {
+											{ *sess.Directory }
+										}
+									</td>
+									<td>
+										if sess.Summary != nil {
+											{ truncate(*sess.Summary, 80) }
+										}
+									</td>
+									<td>
+										if sess.StartedAt != nil {
+											{ *sess.StartedAt }
+										}
+									</td>
+									<td>
+										if sess.EndedAt != nil {
+											{ *sess.EndedAt }
+										}
+									</td>
+									@orphanRowActions("sessions", sess.ID, "session", projects)
+								</tr>
+							}
+						</tbody>
+					</table>
+				</section>
+			}
+			if data.Totals.Prompts > 0 {
+				<section class="orphans-section">
+					<h2>Prompts <span class="badge">{ fmt.Sprintf("%d", data.Totals.Prompts) }</span></h2>
+					<table>
+						<thead>
+							<tr>
+								<th>ID</th>
+								<th>Content (preview)</th>
+								<th>Session ID</th>
+								<th>Created At</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, p := range data.Prompts {
+								<tr>
+									<td>{ fmt.Sprintf("%d", p.ID) }</td>
+									<td>
+										if p.Content != nil {
+											{ truncate(*p.Content, 80) }
+										}
+									</td>
+									<td>
+										if p.SessionID != nil {
+											{ *p.SessionID }
+										}
+									</td>
+									<td>
+										if p.CreatedAt != nil {
+											{ *p.CreatedAt }
+										}
+									</td>
+									@orphanRowActions("prompts", fmt.Sprintf("%d", p.ID), "prompt", projects)
+								</tr>
+							}
+						</tbody>
+					</table>
+				</section>
+			}
+		}
+	</div>
+}
+
+// orphanRowActions renders the assign-form + delete-button cell shared by all
+// three orphan tables. entity is the URL segment ("observations"|"sessions"|
+// "prompts"); id is the stringified entity id; label is the singular noun used
+// in the delete confirmation prompt.
+templ orphanRowActions(entity, id, label string, projects []services.ProjectStats) {
+	<td class="actions">
+		<form hx-post={ orphanActionURL(entity, id, "project") } hx-target="#orphans-list" hx-swap="outerHTML">
+			@projectSelect(projects)
+			<button type="submit">Assign</button>
+		</form>
+		<button
+			hx-delete={ orphanActionURL(entity, id, "") }
+			hx-target="#orphans-list"
+			hx-swap="outerHTML"
+			hx-confirm={ "Delete this orphaned " + label + "? This action cannot be undone." }
+			class="btn-danger"
+		>Delete</button>
+	</td>
+}
+
+// projectSelect renders the shared "assign project" dropdown used by every
+// orphan row. Empty project keys are skipped.
+templ projectSelect(projects []services.ProjectStats) {
+	<select name="project" required>
+		<option value="">— assign project —</option>
+		for _, p := range projects {
+			if p.Project != "" {
+				<option value={ p.Project }>{ p.Project }</option>
+			}
+		}
+	</select>
+}
+
+// OrphansListWithError renders the orphans list preceded by an inline error
+// message. Used when a write action fails but we still want to refresh the list.
+templ OrphansListWithError(data *services.OrphansResponse, projects []services.ProjectStats, errMsg string) {
+	@ErrorPartial(errMsg)
+	@orphansContent(data, projects)
+}

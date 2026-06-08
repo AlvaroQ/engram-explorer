@@ -1,0 +1,808 @@
+{
+  "common": {
+    "loading": "Loading…",
+    "loadMore": "Load more",
+    "loadingMore": "Loading more…",
+    "back": "Back",
+    "cancel": "Cancel",
+    "close": "Close",
+    "clear": "Clear",
+    "filters": "Filters",
+    "noProject": "(no project)",
+    "untitled": "(untitled)",
+    "empty": "(empty)",
+    "emptyName": "(empty)",
+    "emptyNameBug": "(empty name — capture bug)",
+    "checking": "checking…",
+    "yes": "yes",
+    "no": "no",
+    "all": "all",
+    "none": "—",
+    "language": "Language"
+  },
+  "sidebar": {
+    "brand": "Engram",
+    "subtitle": "Local Dashboard",
+    "overview": "Overview",
+    "knowledge": "Knowledge",
+    "projects": "Projects",
+    "observations": "Observations",
+    "sessions": "Sessions",
+    "ccSessions": "Claude Code",
+    "syncHealth": "Sync Health",
+    "prompts": "Prompts",
+    "topics": "Topics",
+    "settings": "Settings",
+    "primaryNav": "Primary",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "sync": {
+      "cloud": "Sync cloud",
+      "syncing": "Syncing…",
+      "tooltip": "Sync all enrolled projects to engram cloud",
+      "ariaLabel": "Sync all enrolled projects to engram cloud",
+      "noEnrolled": "No enrolled projects to sync.",
+      "ok": "Synced {{ok}}/{{total}} projects.",
+      "partial": "Synced {{ok}}/{{total}} — {{failed}} failed.",
+      "failed": "Sync failed: {{message}}"
+    },
+    "status": {
+      "checking": "checking…",
+      "backendUnreachable": "backend unreachable",
+      "dbError": "DB error",
+      "daemonOffline": "daemon offline",
+      "allOk": "Status ok"
+    }
+  },
+  "overview": {
+    "kpi": {
+      "observations": "Observations",
+      "browseAll": "Browse all",
+      "sessions": "Sessions",
+      "seeTimeline": "See timeline",
+      "projects": "Projects",
+      "drillProject": "Drill into a project",
+      "prompts": "Prompts",
+      "searchPrompts": "Search prompts"
+    },
+    "activity": {
+      "title": "Activity by project",
+      "description": "Observations per day and project",
+      "loadError": "Could not load activity data.",
+      "empty": "No activity in the selected range.",
+      "range": {
+        "7d": "7d",
+        "30d": "30d",
+        "90d": "90d",
+        "ariaLabel": "Activity range"
+      },
+      "orphans": "(orphans)",
+      "others": "others"
+    },
+    "byType": {
+      "title": "By type",
+      "description": "Distribution of observations",
+      "empty": "No types captured.",
+      "total": "Total",
+      "others": "others"
+    },
+    "activityDetail": {
+      "byProject": {
+        "title": "Detail by project"
+      },
+      "byType": {
+        "title": "Detail by type"
+      }
+    },
+    "issues": {
+      "title": "Issues detected",
+      "description": "Cross-cutting checks against your local DB",
+      "none": "No issues detected. 🎉",
+      "global": "Global",
+      "generatedAt": "Last update: {{time}}",
+      "col": {
+        "severity": "Severity",
+        "code": "Code",
+        "project": "Project",
+        "message": "Message",
+        "lastUpdate": "Update",
+        "count": "Issues"
+      },
+      "group": {
+        "expandAria": "Expand group {{project}}",
+        "collapseAria": "Collapse group {{project}}",
+        "count": "{{count}} issues",
+        "countOne": "{{count}} issue",
+        "severityBreakdown": "H:{{high}} · M:{{medium}} · L:{{low}}"
+      }
+    },
+    "recent": {
+      "title": "Recent observations",
+      "description": "Newest 10 across all projects",
+      "empty": "No observations yet.",
+      "col": {
+        "type": "Type",
+        "title": "Title",
+        "project": "Project",
+        "created": "Created"
+      }
+    }
+  },
+  "brain": {
+    "title": "Brain",
+    "subtitle": "3D graph of your memories",
+    "showingTop": "showing top {{limit}} of {{total}} nodes",
+    "allNodes": "{{count}} nodes",
+    "nodesLabel": "nodes",
+    "edgesLabel": "edges",
+    "emptyGraph": "No graph data",
+    "graphError": "Graph unavailable — try reloading",
+    "openHint": "Open in Observations",
+    "expandHint": "Show full content",
+    "collapseHint": "Hide content",
+    "detailError": "Couldn't load the content.",
+    "contentNotAvailable": "Content not available for this node.",
+    "fields": {
+      "type": "Type",
+      "title": "Title",
+      "project": "Project",
+      "scope": "Scope",
+      "weight": "Reinforced",
+      "topicKey": "Topic",
+      "duplicates": "Duplicates",
+      "content": "Content",
+      "directory": "Directory",
+      "started": "Started",
+      "ended": "Ended",
+      "observations": "Observations",
+      "prompts": "Prompts",
+      "summary": "Summary"
+    },
+    "colorBy": {
+      "label": "Color by",
+      "project": "Project",
+      "type": "Type"
+    },
+    "summary": {
+      "title": "Graph summary",
+      "description": "Counts from the memory graph",
+      "observations": "Observations",
+      "shownNodes": "Shown nodes",
+      "duplicateGroups": "Duplicate groups",
+      "projects": "Projects",
+      "edges": "Edges",
+      "truncated": "Truncated"
+    },
+    "edgeBreakdown": {
+      "title": "Edges by relation",
+      "description": "Semantic relationship breakdown",
+      "empty": "No edges."
+    },
+    "conversationMode": {
+      "title": "Conversation mode",
+      "description": "Experimental — session and prompt nodes",
+      "toggleLabel": "Enable conversation mode",
+      "notice": "Only the hermes adapter populates session and prompt data today. This mode is disabled until broader support ships."
+    },
+    "search": {
+      "placeholder": "Search nodes…"
+    },
+    "spotlight": {
+      "open": "Search knowledge",
+      "placeholder": "Search observations, sessions, tags…",
+      "close": "Close search",
+      "sections": {
+        "recentSessions": "Recent sessions",
+        "inGraph": "In the graph",
+        "inContent": "In content"
+      },
+      "notInView": "Not in current view",
+      "noMatches": "No matches",
+      "searching": "Searching…",
+      "hint": "Press Cmd/Ctrl+K to search",
+      "resultCount": "{{count}} results"
+    },
+    "segments": {
+      "title": "Segments",
+      "searchPlaceholder": "Search nodes…",
+      "clearFilters": "Clear filters",
+      "zeroMatches": "0 matches",
+      "noFacets": "No facets available for this level.",
+      "expandPanel": "Expand segmentation panel",
+      "collapsePanel": "Collapse segmentation panel"
+    },
+    "levelStats": {
+      "lobes": "lobes",
+      "neurons": "neurons",
+      "clusters": "clusters",
+      "obs": "obs",
+      "nodes": "nodes",
+      "root": "Root",
+      "crossSynapses": "cross-synapses"
+    },
+    "facetLabels": {
+      "project": "Project",
+      "type": "Type",
+      "scope": "Scope",
+      "tool": "Tool",
+      "date": "Date"
+    },
+    "legend": {
+      "colorByLabel": "Color by {{grouping}}",
+      "colorByCluster": "Color by cluster",
+      "clusterN": "Cluster {{n}}",
+      "more": "+{{count}} more",
+      "galaxyHint": "Nodes cluster by project (galaxy). Topic sub-clusters appear within each galaxy.",
+      "edgesLabel": "Semantic edges",
+      "relation": {
+        "related": "related",
+        "scoped": "scoped",
+        "compatible": "compatible"
+      }
+    },
+    "neighbors": "Neighbors",
+    "retry": "Retry",
+    "exitFocus": "Restore view",
+    "closeDetail": "Close detail",
+    "emptyBrain": "Brain is empty",
+    "emptyBrainHint": "Create some memories to see your brain come alive.",
+    "truncatedNotice": "Graph truncated — showing a subset of observations",
+    "loading": {
+      "label": "Loading knowledge graph..."
+    },
+    "breadcrumb": {
+      "root": "Brain",
+      "navAriaLabel": "Brain navigation",
+      "navigateBackTo": "Navigate back to {{label}}"
+    },
+    "a11y": {
+      "canvasLabel": "3D graph with {{nodes}} nodes and {{edges}} edges. Tab to open the keyboard-navigable node list.",
+      "listLabel": "Graph node list",
+      "listHint": "{{count}} nodes. Press Enter to view details.",
+      "listMore": "+{{count}} more — refine with search"
+    },
+    "tooltip": {
+      "kind": "Kind",
+      "project": "Project",
+      "type": "Type",
+      "weight": "Weight",
+      "children": "Children",
+      "topic": "Topic"
+    },
+    "projectRail": {
+      "isolate": "Isolate {{project}} nodes"
+    },
+    "hover": {
+      "noDate": "no date"
+    },
+    "editType": {
+      "label": "Type",
+      "placeholder": "Type or select a type…",
+      "createOption": "New type: {{name}}",
+      "error": {
+        "generic": "Could not change type: {{message}}"
+      }
+    },
+    "editField": {
+      "edit": "Edit {{label}}",
+      "save": "Save",
+      "cancel": "Cancel",
+      "empty": "Value cannot be empty",
+      "error": {
+        "generic": "Could not save {{label}}: {{message}}"
+      }
+    },
+    "editProject": {
+      "label": "Project",
+      "placeholder": "Type or select a project…",
+      "createOption": "New project: {{name}}",
+      "move": "Move",
+      "renameMerge": "Rename",
+      "newName": "Target project",
+      "confirmTitle": "Rename / merge \"{{source}}\"?",
+      "confirmBodyRename": "All observations, sessions, and prompts in \"{{source}}\" will be moved to \"{{target}}\". This cannot be undone.",
+      "confirmBodyMerge": "All content in \"{{source}}\" will be merged into the existing project \"{{target}}\". This cannot be undone.",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "success": "Done.",
+      "error": {
+        "enrolled": "Cloud-enrolled projects cannot be renamed yet (Phase 2).",
+        "targetExists": "A project named \"{{target}}\" already exists. Use merge mode instead.",
+        "generic": "Operation failed: {{message}}"
+      }
+    }
+  },
+  "syncSummary": {
+    "title": "Sync health",
+    "description": "Cloud sync state",
+    "open": "Open",
+    "openSyncHealth": "Open Sync Health",
+    "enrolled": "Enrolled",
+    "healthy": "Healthy",
+    "broken": "Broken",
+    "pendingMutations": "Pending mutations"
+  },
+  "sessions": {
+    "title": "Sessions",
+    "description": "One row per session. Click to inspect the timeline and stats.",
+    "filters": "Filters",
+    "filterProject": "Project",
+    "filterSummary": "Summary",
+    "summaryAll": "all",
+    "summaryWith": "with summary",
+    "summaryWithout": "without summary",
+    "listTitle": "Sessions",
+    "listLoaded": "{{count}} loaded",
+    "noMatch": "No sessions match.",
+    "obsCount": "{{count}} obs",
+    "promptsCount": "{{count}} prompts",
+    "notFound": "Session not found.",
+    "session": "Session",
+    "counts": "Counts",
+    "summaryCard": "Summary",
+    "summaryEmpty": "No summary saved for this session.",
+    "timeline": "Timeline",
+    "timelineDesc": "{{count}} events ordered chronologically",
+    "noEvents": "No events captured.",
+    "noTimestamps": "Events have no timestamps; nothing to plot. See the list below.",
+    "fields": {
+      "project": "Project",
+      "directory": "Directory",
+      "started": "Started",
+      "ended": "Ended",
+      "observations": "Observations",
+      "prompts": "Prompts"
+    },
+    "openInObservations": "Open in Observations →"
+  },
+  "prompts": {
+    "title": "User prompts",
+    "description": "User prompts captured by Engram. Use the search box for FTS5 with snippet highlighting.",
+    "searchPlaceholder": "Search prompts (FTS5)…",
+    "resultsFor": "Results for \"{{q}}\"",
+    "recent": "Recent prompts",
+    "matches": "{{count}} matches",
+    "empty": "No prompts match."
+  },
+  "topics": {
+    "title": "Topics",
+    "descriptionPart1": "Observations grouped by their",
+    "descriptionPart2": ". Click a row to inspect the observations on that topic.",
+    "filterPlaceholder": "Filter by topic key or project…",
+    "listTitle": "Topics",
+    "entries": "{{count}} entries",
+    "empty": "No topics match.",
+    "lastUpdated": "last updated",
+    "obsCount": "{{count}} obs",
+    "revisions": "{{count}} rev"
+  },
+  "observations": {
+    "title": "Observations",
+    "description": "Filter, search and inspect every observation in the local database.",
+    "loaded": "{{count}} loaded",
+    "loadError": "Failed to load observations: {{message}}",
+    "searchPlaceholder": "Full-text search title + content (FTS5)…",
+    "filters": "Filters",
+    "clear": "Clear",
+    "labels": {
+      "project": "Project",
+      "type": "Type",
+      "toolName": "Tool name",
+      "scope": "Scope",
+      "topicKey": "Topic key",
+      "deletedRows": "Deleted rows"
+    },
+    "placeholders": {
+      "toolName": "e.g. Edit, Bash",
+      "topicKey": "e.g. architecture/portfolio"
+    },
+    "scope": {
+      "all": "all",
+      "project": "project",
+      "personal": "personal"
+    },
+    "deleted": {
+      "active": "hide deleted",
+      "all": "include deleted",
+      "only": "only deleted"
+    },
+    "table": {
+      "created": "Created",
+      "project": "Project",
+      "type": "Type",
+      "title": "Title",
+      "tool": "Tool",
+      "topic": "Topic",
+      "rev": "Rev",
+      "dup": "Dup",
+      "empty": "empty",
+      "noMatch": "No observations match this filter.",
+      "loadingMore": "Loading more…"
+    },
+    "drawerTitle": "Observation #{{id}}",
+    "detail": {
+      "loadError": "Failed to load observation.",
+      "scope": "scope: {{scope}}",
+      "deleted": "deleted",
+      "fields": {
+        "project": "Project",
+        "topicKey": "Topic key",
+        "created": "Created",
+        "updated": "Updated",
+        "revisions": "Revisions",
+        "duplicates": "Duplicates seen",
+        "session": "Session",
+        "syncId": "Sync id",
+        "deletedAt": "Deleted at"
+      },
+      "content": "Content",
+      "revisions": "Revisions on the same topic ({{count}})",
+      "copyJson": "Copy JSON",
+      "copySql": "Copy SQL",
+      "goToSession": "Go to session",
+      "copied": "{{label}} copied",
+      "clipboardError": "clipboard error"
+    }
+  },
+  "syncHealth": {
+    "title": "Sync Health",
+    "description": "Per-project state of the cloud sync target. Refreshes every 15 seconds.",
+    "issues": {
+      "none": "No issues detected.",
+      "title": "{{count}} issues detected",
+      "highSeverity": "{{count}} of HIGH severity — review immediately.",
+      "nothingCritical": "Nothing critical, but worth a glance."
+    },
+    "globalTarget": {
+      "title": "Global cloud target",
+      "description": "Aggregated state of the `cloud` target",
+      "lifecycle": "Lifecycle",
+      "lastEnqueued": "Last enqueued",
+      "lastAcked": "Last acked",
+      "pending": "Pending"
+    },
+    "projects": {
+      "title": "Projects",
+      "description": "Sorted by observation count",
+      "loadError": "Failed to load sync projects.",
+      "table": {
+        "project": "Project",
+        "obs": "Obs",
+        "lastActivity": "Last activity",
+        "enrolled": "Enrolled",
+        "status": "Status",
+        "pending": "Pending",
+        "cloudSeq": "Cloud seq",
+        "actions": "Actions",
+        "enrolledBadge": "enrolled",
+        "notEnrolled": "not enrolled",
+        "detail": "Detail"
+      },
+      "actions": {
+        "enroll": "Enroll",
+        "unenroll": "Unenroll",
+        "unenrollUnsupported": "Unenroll unavailable (no writable database adapter configured).",
+        "enrollUnsupported": "engram cloud enroll is not supported by the installed CLI"
+      },
+      "confirmEnroll": "Enroll {{project}}?",
+      "confirmUnenroll": "Unenroll {{project}}?",
+      "confirmEnrollDesc": "This will run `engram cloud enroll {{project}}` as a subprocess. Future observations will sync to the cloud.",
+      "confirmUnenrollDesc": "This removes {{project}} from `sync_enrolled_projects` and clears the orphan `sync_state` row and any unacked pending mutations for the project. Observations already uploaded to the cloud are NOT deleted, and acked mutation history is preserved. To resume syncing, enroll it again."
+    },
+    "syncProject": {
+      "notFound": "Project not found.",
+      "syncOk": "Cloud sync ok.",
+      "syncFailed": "Sync failed: {{message}}",
+      "syncCloud": "Sync cloud",
+      "syncing": "Syncing…",
+      "tooltipEnabled": "Run engram sync --cloud for this project",
+      "tooltipDisabled": "Project must be enrolled before it can be synced",
+      "ariaLabel": "Sync {{project}} to engram cloud",
+      "status": "Status",
+      "lifecycle": "Lifecycle",
+      "enrolled": "Enrolled",
+      "enrolledAt": "Enrolled at",
+      "sequence": "Sequence numbers",
+      "lastEnqueued": "Last enqueued",
+      "lastAcked": "Last acked",
+      "lastPulled": "Last pulled",
+      "consecutiveFailures": "Failures (consec.)",
+      "counts": "Counts",
+      "observations": "Observations",
+      "sessions": "Sessions",
+      "prompts": "Prompts",
+      "pendingMutations": "Pending mutations",
+      "lastError": "Last error",
+      "errorCode": "code: {{code}}",
+      "pendingTitle": "Pending mutations",
+      "pendingDesc": "{{count}} unacked (latest 200)",
+      "noPending": "No pending mutations. 🎉",
+      "cloudUpgrade": "Cloud upgrade state",
+      "stage": "Stage",
+      "repairClass": "Repair class",
+      "updated": "Updated",
+      "table": {
+        "seq": "seq",
+        "entity": "entity",
+        "op": "op",
+        "key": "key",
+        "occurredAt": "occurred_at"
+      }
+    }
+  },
+  "projects": {
+    "title": "Projects",
+    "description": "Every project that has ever produced an observation, session, or prompt. Click a row to see what was done in that project (activity, types, sessions).",
+    "filterPlaceholder": "Filter by project name…",
+    "all": "All projects",
+    "count": "{{count}} projects",
+    "noMatch": "No projects match.",
+    "table": {
+      "project": "Project",
+      "observations": "Observations",
+      "sessions": "Sessions",
+      "prompts": "Prompts",
+      "lastActivity": "Last activity",
+      "syncLag": "Sync lag",
+      "sync": "Sync"
+    },
+    "syncLag": {
+      "fresh": "up to date",
+      "noSync": "—",
+      "pendingShort": "{{count}} pend.",
+      "pendingTitle": "{{count}} unacked mutations",
+      "agoSeconds": "{{value}}s ago",
+      "agoMinutes": "{{value}}m ago",
+      "agoHours": "{{value}}h ago",
+      "agoDays": "{{value}}d ago",
+      "lastSyncTitle": "Last sync_state change: {{time}}"
+    },
+    "syncBadge": {
+      "notEnrolled": "not enrolled",
+      "broken": "broken",
+      "healthy": "healthy",
+      "syncing": "syncing…",
+      "syncingTitle": "Just enrolled — waiting for first ack from the daemon ({{enq}} mutations queued)",
+      "degraded": "degraded",
+      "degradedTitle": "Daemon reported an error: {{error}}",
+      "progressTitle": "{{acked}} of {{enq}} acked ({{percent}}%)"
+    },
+    "toast": {
+      "enrollSuccess": "{{project}} enrolled in cloud. The daemon will start syncing within minutes.",
+      "enrollError": "Could not enroll {{project}}: {{error}}",
+      "unenrollSuccess": "{{project}} unenrolled from cloud.",
+      "unenrollError": "Could not unenroll {{project}}: {{error}}",
+      "syncStarted": "Syncing {{project}}…",
+      "syncSuccess": "{{project}} synced.",
+      "syncError": "Sync failed for {{project}}: {{error}}"
+    }
+  },
+  "projectDetail": {
+    "allProjects": "All projects",
+    "description": "Everything captured for this project — activity, types, recent work.",
+    "allObservations": "All observations →",
+    "allSessions": "All sessions →",
+    "syncDetail": "Sync detail →",
+    "notFound": "Project not found.",
+    "kpi": {
+      "observations": "Observations",
+      "sessions": "Sessions",
+      "topics": "Topics",
+      "prompts": "Prompts",
+      "sync": "Sync",
+      "unknown": "unknown",
+      "notEnrolled": "not enrolled",
+      "brokenPending": "broken · {{count}} pending",
+      "healthy": "healthy",
+      "ackedEnq": "acked {{acked}} / enq {{enq}}"
+    },
+    "activity": {
+      "title": "Activity (last 30 days)",
+      "description": "Observations created per day",
+      "empty": "No activity in the last 30 days."
+    },
+    "byType": {
+      "title": "By type",
+      "description": "Distribution within this project",
+      "empty": "No types captured."
+    },
+    "tools": {
+      "title": "Tools used",
+      "description": "Top 10 tools by observation count",
+      "empty": "No tool metadata captured."
+    },
+    "topics": {
+      "title": "Top topics",
+      "description": "Most active topic_keys",
+      "empty": "No topic_keys for this project."
+    },
+    "recentSessions": {
+      "title": "Recent sessions",
+      "description": "{{shown}} of {{total}}",
+      "empty": "No sessions for this project.",
+      "obsCount": "{{count}} obs"
+    },
+    "recentObservations": {
+      "title": "Recent observations",
+      "description": "Latest {{count}}",
+      "empty": "No observations.",
+      "openInObservations": "Open in Observations →"
+    },
+    "recentPrompts": {
+      "title": "Recent prompts"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "section": {
+      "appearance": "Appearance",
+      "system": "System",
+      "cloud": "Cloud"
+    },
+    "theme": "Theme",
+    "themeDark": "dark",
+    "themeLight": "light",
+    "language": "Language",
+    "languageDescription": "Choose the interface language",
+    "database": "Database",
+    "daemon": "Engram daemon",
+    "cloudCli": "Cloud CLI capabilities",
+    "cloudCliDesc": "Detected from `engram cloud --help`",
+    "cloudCliError": "Could not detect CLI capabilities.",
+    "cloudCliTip": "Note: the CLI does not expose `cloud unenroll` (verified up to v1.15.1). The dashboard handles it by writing directly to `sync_enrolled_projects`.",
+    "runtime": "Runtime",
+    "db": {
+      "description": "Export a backup or import (merge) another database.",
+      "export": "Export",
+      "exporting": "Exporting…",
+      "import": "Import",
+      "importing": "Importing…",
+      "exported": "Database exported.",
+      "exportError": "Export failed: {{message}}",
+      "importError": "Import failed: {{message}}",
+      "confirmTitle": "Import database?",
+      "confirmBody": "The file's content will be merged into your current database: only new memories are added, nothing is overwritten. An automatic backup of your current database is taken first.",
+      "imported": "Imported: {{observations}} observations, {{sessions}} sessions, {{prompts}} prompts, {{relations}} relations.",
+      "backupSaved": "Backup saved to {{path}}"
+    },
+    "row": {
+      "path": "Path",
+      "status": "Status",
+      "url": "URL",
+      "cloudEnroll": "cloud enroll",
+      "cloudUnenroll": "cloud unenroll",
+      "dashboard": "Dashboard",
+      "node": "Node",
+      "uptime": "Uptime"
+    },
+    "badge": {
+      "connected": "connected",
+      "unavailable": "unavailable",
+      "reachable": "reachable",
+      "unreachable": "unreachable",
+      "available": "available",
+      "missing": "missing",
+      "notInCli": "not in this CLI"
+    }
+  },
+  "ccSessions": {
+    "title": "Claude Code",
+    "description": "Live transcripts from ~/.claude/projects — one row per session.",
+    "filterProject": "Project",
+    "listTitle": "Sessions",
+    "listLoaded": "{{count}} loaded",
+    "noMatch": "No Claude Code sessions found.",
+    "notFound": "Session not found.",
+    "session": "Session",
+    "counts": "Counts",
+    "conversation": "Conversation",
+    "conversationDesc": "{{count}} turns",
+    "noTurns": "No conversation turns found.",
+    "col": {
+      "prompt": "First prompt",
+      "project": "Project",
+      "started": "Started",
+      "ended": "Last modified",
+      "branch": "Branch",
+      "version": "CC version",
+      "size": "Size",
+      "tokens": "Tokens",
+      "cost": "Cost"
+    },
+    "fields": {
+      "project": "Project",
+      "cwd": "Directory",
+      "branch": "Branch",
+      "version": "CC version",
+      "started": "Started",
+      "ended": "Last modified",
+      "size": "File size",
+      "turns": "Turns",
+      "userTurns": "User turns",
+      "assistantTurns": "Assistant turns",
+      "tokens": "Total tokens",
+      "cost": "Estimated cost"
+    },
+    "usage": {
+      "input": "Input",
+      "output": "Output",
+      "cacheWrite": "Cache write",
+      "cacheRead": "Cache read"
+    }
+  },
+  "placeholder": {
+    "comingSoon": "Coming soon.",
+    "notImplemented": "Not implemented yet",
+    "scheduledFor": "Scheduled for {{phase}}.",
+    "shipsInPart1": "The backend already exposes the data for this view. The UI ships in {{phase}} per",
+    "shipsInPart2": "."
+  },
+  "multiSelect": {
+    "removeAria": "Remove {{value}}",
+    "addPlaceholder": "Add {{label}}"
+  },
+  "drawer": {
+    "closeAria": "Close"
+  },
+  "modal": {
+    "cancel": "Cancel"
+  },
+  "lang": {
+    "es": "Español",
+    "en": "English",
+    "switchAria": "Switch language"
+  },
+  "orphans": {
+    "title": "Orphan rows without project",
+    "description": "Observations, sessions and prompts whose project field is empty. Edit them to reassign to an existing project.",
+    "empty": "No orphan rows. 🎉",
+    "section": {
+      "observations": "Orphan observations",
+      "sessions": "Orphan sessions",
+      "prompts": "Orphan prompts",
+      "count": "{{count}} unassigned"
+    },
+    "table": {
+      "id": "ID",
+      "type": "Type",
+      "title": "Title",
+      "tool": "Tool",
+      "topic": "Topic",
+      "created": "Created",
+      "session": "Session",
+      "directory": "Directory",
+      "started": "Started",
+      "ended": "Ended",
+      "summary": "Summary",
+      "content": "Content",
+      "actions": "Actions",
+      "assign": "Assign",
+      "delete": "Delete"
+    },
+    "deleteConfirm": {
+      "title": "Delete this row?",
+      "descObservation": "The observation will be marked as deleted (soft delete). If the project is enrolled in cloud sync, a delete mutation will be enqueued.",
+      "descSession": "The session will be permanently removed from the DB. This cannot be undone.",
+      "descPrompt": "The prompt will be permanently removed from the DB. This cannot be undone.",
+      "confirm": "Delete"
+    }
+  },
+  "assign": {
+    "modalTitle": "Assign project",
+    "selectLabel": "Target project",
+    "selectPlaceholder": "Type to search…",
+    "noMatch": "No matching projects",
+    "submit": "Assign",
+    "submitting": "Assigning…",
+    "success": "Assigned to {{project}}",
+    "successWithSync": "Assigned to {{project}}. Mutation #{{seq}} enqueued for cloud sync.",
+    "error": "Error: {{message}}",
+    "noteEnrolled": "The target project is enrolled in cloud sync. A mutation will be generated and propagated next time you sync.",
+    "noteNotEnrolled": "The target project is NOT enrolled in cloud sync. The change will be local only.",
+    "preview": {
+      "current": "Current",
+      "next": "New",
+      "empty": "(empty)"
+    }
+  }
+}

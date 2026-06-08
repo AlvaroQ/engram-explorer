@@ -1,0 +1,233 @@
+package ui
+
+import (
+	"fmt"
+
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+)
+
+// OverviewPage renders the full overview page shell.
+templ OverviewPage(data services.OverviewResponse, issues services.SyncIssuesResponse, lang, theme string) {
+	@Layout(T(lang, "sidebar.overview"), "overview", lang, theme, overviewContent(data, issues, lang))
+}
+
+// OverviewPartial renders only the overview content (no HTML shell).
+// Used when HTMX requests a partial update.
+templ OverviewPartial(data services.OverviewResponse, issues services.SyncIssuesResponse, lang string) {
+	@overviewContent(data, issues, lang)
+}
+
+// overviewContent is the shared overview body.
+templ overviewContent(data services.OverviewResponse, issues services.SyncIssuesResponse, lang string) {
+	<div class="flex flex-col gap-6">
+		<!-- KPI row -->
+		<div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+			@overviewKPICard("/projects", T(lang, "overview.kpi.projects"), T(lang, "overview.kpi.drillProject"), fmt.Sprintf("%d", data.KPIs.Projects))
+			@overviewKPICard("/sessions", T(lang, "overview.kpi.sessions"), T(lang, "overview.kpi.seeTimeline"), fmt.Sprintf("%d", data.KPIs.Sessions))
+			@overviewKPICard("/observations", T(lang, "overview.kpi.observations"), T(lang, "overview.kpi.browseAll"), fmt.Sprintf("%d", data.KPIs.Observations))
+			@overviewKPICard("/prompts", T(lang, "overview.kpi.prompts"), T(lang, "overview.kpi.searchPrompts"), fmt.Sprintf("%d", data.KPIs.Prompts))
+		</div>
+		<!-- Charts row: activity (span-2) + type breakdown + sync summary -->
+		<div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
+			<!-- Activity by project — React island (fetches /api/activity on its own) -->
+			<div class="card flex flex-col lg:col-span-2">
+				<div class="card-header">
+					<div>
+						<h2>{ T(lang, "overview.activity.title") }</h2>
+						<p>{ T(lang, "overview.activity.description") }</p>
+					</div>
+				</div>
+				<div class="card-body" style="height:300px">
+					@Island("activity-by-project-chart", struct{}{})
+				</div>
+			</div>
+			<!-- Type breakdown — React island (data passed via props) -->
+			<div class="card flex flex-col">
+				<div class="card-header">
+					<div>
+						<h2>{ T(lang, "overview.byType.title") }</h2>
+						<p>{ T(lang, "overview.byType.description") }</p>
+					</div>
+				</div>
+				<div class="card-body" style="height:280px">
+					@Island("type-breakdown", TypeBreakdownIslandProps{ByType: toTypeBreakdownEntries(data.ByType)})
+				</div>
+			</div>
+			<!-- Sync summary — server-rendered -->
+			@overviewSyncSummaryCard(data.SyncSummary, lang)
+		</div>
+		<!-- Brain preview cards row — React islands (Three.js, fetch /api/graph on their own) -->
+		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+			@Island("brain-preview-card", BrainPreviewCardIslandProps{
+				Title:   T(lang, "overview.activityDetail.byProject.title"),
+				ColorBy: "project",
+			})
+			@Island("brain-preview-card", BrainPreviewCardIslandProps{
+				Title:   T(lang, "overview.activityDetail.byType.title"),
+				ColorBy: "type",
+			})
+		</div>
+		<!-- Recent observations table — server-rendered -->
+		<div class="card">
+			<div class="card-header">
+				<div>
+					<h2>{ T(lang, "overview.recent.title") }</h2>
+					<p>{ T(lang, "overview.recent.description") }</p>
+				</div>
+			</div>
+			<div class="card-body p-0">
+				@overviewRecentTable(data.RecentObservations, lang)
+			</div>
+		</div>
+		<!-- Sync issues — server-rendered with <details> expand/collapse -->
+		<div class="card" id="overview-issues">
+			<div class="card-header">
+				<div>
+					<h2>{ T(lang, "overview.issues.title") }</h2>
+					<p>{ T(lang, "overview.issues.description") }</p>
+				</div>
+				if issues.GeneratedAt != "" {
+					<span class="text-xs text-fg-muted">{ T(lang, "overview.issues.generatedAt", "time", issues.GeneratedAt) }</span>
+				}
+			</div>
+			<div class="card-body p-0">
+				@overviewIssuesTable(issues, lang)
+			</div>
+		</div>
+	</div>
+}
+
+// overviewKPICard renders one KPI tile linking to a drill-down page.
+templ overviewKPICard(href, label, sublabel, value string) {
+	<a
+		href={ templ.SafeURL(href) }
+		class="group block rounded-lg border border-border bg-surface transition-colors hover:border-accent/40 hover:bg-surface-2"
+	>
+		<div class="flex items-start justify-between gap-3 px-5 py-4">
+			<div>
+				<p class="text-xs uppercase tracking-wide text-fg-muted">{ label }</p>
+				<p class="mt-1 text-2xl font-semibold text-fg">{ value }</p>
+				<p class="mt-1 inline-flex items-center gap-1 text-xs text-fg-muted group-hover:text-accent">
+					{ sublabel }
+				</p>
+			</div>
+		</div>
+	</a>
+}
+
+// overviewSyncSummaryCard renders the sync health summary card (server-rendered).
+templ overviewSyncSummaryCard(s services.SyncSummary, lang string) {
+	<div class="card flex flex-col">
+		<div class="card-header">
+			<div>
+				<h2>{ T(lang, "syncSummary.title") }</h2>
+				<p>{ T(lang, "syncSummary.description") }</p>
+			</div>
+			<a href="/doctor/sync" class="text-xs text-fg-muted transition-colors hover:text-accent">
+				{ T(lang, "syncSummary.open") }
+			</a>
+		</div>
+		<ul class="divide-y divide-border/50 px-5 pt-2">
+			@overviewSyncRow(T(lang, "syncSummary.enrolled"), fmt.Sprintf("%d", s.EnrolledCount), "")
+			@overviewSyncRow(T(lang, "syncSummary.healthy"), fmt.Sprintf("%d", s.HealthyCount), "text-ok")
+			@overviewSyncRow(T(lang, "syncSummary.broken"), fmt.Sprintf("%d", s.BrokenCount), overviewBrokenTone(s.BrokenCount))
+			@overviewSyncRow(T(lang, "syncSummary.pendingMutations"), fmt.Sprintf("%d", s.PendingMutationsTotal), overviewPendingTone(s.PendingMutationsTotal))
+		</ul>
+	</div>
+}
+
+// overviewSyncRow renders a single row in the sync summary card.
+templ overviewSyncRow(label, value, toneClass string) {
+	<li class="flex h-10 items-center justify-between">
+		<span class="text-sm text-fg-muted">{ label }</span>
+		<span class={ "font-mono text-sm font-semibold tabular-nums", toneClass }>{ value }</span>
+	</li>
+}
+
+// overviewRecentTable renders the "recent observations" table (server-side).
+templ overviewRecentTable(items []services.OverviewRecentObs, lang string) {
+	if len(items) == 0 {
+		<p class="px-5 py-4 text-sm text-fg-muted">{ T(lang, "overview.recent.empty") }</p>
+	} else {
+		<div class="overflow-x-auto">
+			<table class="w-full border-collapse text-sm">
+				<thead class="bg-surface-2 text-xs uppercase tracking-wide text-fg-muted">
+					<tr>
+						<th class="px-5 py-3 text-left font-medium">{ T(lang, "overview.recent.col.created") }</th>
+						<th class="px-3 py-3 text-left font-medium">{ T(lang, "overview.recent.col.type") }</th>
+						<th class="px-3 py-3 text-left font-medium">{ T(lang, "overview.recent.col.title") }</th>
+						<th class="px-5 py-3 text-left font-medium">{ T(lang, "overview.recent.col.project") }</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-border">
+					for _, o := range items {
+						<tr class="align-top hover:bg-surface-2/50">
+							<td class="whitespace-nowrap px-5 py-3 text-xs text-fg-muted">{ derefStr(o.CreatedAt, "—") }</td>
+							<td class="px-3 py-3">
+								<span class="badge badge-neutral">{ o.Type }</span>
+							</td>
+							<td class="px-3 py-3 text-fg">
+								<p class="truncate leading-snug">{ derefStr(o.Title, T(lang, "common.untitled")) }</p>
+							</td>
+							<td class="px-5 py-3 text-fg">
+								if o.Project != nil && *o.Project != "" {
+									<span class="font-medium">{ *o.Project }</span>
+								} else {
+									<span class="italic text-fg-muted">—</span>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+}
+
+// overviewIssuesTable renders the sync issues grouped by project.
+// Groups are collapsible via HTML <details>/<summary> — zero JavaScript needed.
+templ overviewIssuesTable(resp services.SyncIssuesResponse, lang string) {
+	if len(resp.Issues) == 0 {
+		<p class="px-5 py-4 text-sm text-ok">{ T(lang, "overview.issues.none") }</p>
+	} else {
+		<div class="divide-y divide-border">
+			for _, group := range groupSyncIssues(resp.Issues) {
+				<details class="group">
+					<summary class="flex cursor-pointer list-none items-center gap-3 px-5 py-3 hover:bg-surface-2/50">
+						<span class="text-fg-muted" aria-hidden="true">▶</span>
+						<span class="whitespace-nowrap text-xs text-fg-muted">{ resp.GeneratedAt }</span>
+						if group.IsGlobal {
+							<span class="italic text-fg-muted">{ T(lang, "overview.issues.global") }</span>
+						} else {
+							<span class="font-medium text-fg">{ group.Key }</span>
+						}
+						<span class={ "ml-auto", overviewSeverityBadgeClass(string(group.MaxSeverity)) }>
+							{ string(group.MaxSeverity) }
+						</span>
+						<span class="font-mono text-xs text-fg-muted">
+							{ overviewIssueCountLabel(len(group.Issues), lang) }
+						</span>
+					</summary>
+					<div class="bg-surface-2/30 px-5 py-3">
+						<ul class="flex flex-col divide-y divide-border/60">
+							for _, issue := range group.Issues {
+								<li class="flex flex-col gap-1 py-2 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:gap-3">
+									<div class="flex shrink-0 items-center gap-2">
+										<span class={ overviewSeverityBadgeClass(string(issue.Severity)) }>{ string(issue.Severity) }</span>
+										<code class="rounded bg-surface px-1.5 py-0.5 font-mono text-xs text-fg">{ issue.Code }</code>
+									</div>
+									<div class="min-w-0 flex-1 text-fg">
+										<p class="leading-snug">{ issue.Message }</p>
+										if issue.Hint != nil && *issue.Hint != "" {
+											<p class="mt-1 text-xs text-fg-muted leading-snug">{ *issue.Hint }</p>
+										}
+									</div>
+								</li>
+							}
+						</ul>
+					</div>
+				</details>
+			}
+		</div>
+	}
+}
