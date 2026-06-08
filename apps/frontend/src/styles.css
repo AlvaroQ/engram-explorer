@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: 222 47% 7%;
+    --surface: 223 40% 11%;
+    --surface-2: 222 35% 14%;
+    --border: 222 28% 22%;
+    --fg: 220 25% 92%;
+    --fg-muted: 220 15% 65%;
+    --accent: 224 90% 70%;
+    --ok: 142 76% 60%;
+    --warn: 38 92% 60%;
+    --fail: 0 84% 67%;
+    color-scheme: dark;
+  }
+
+  :root.light {
+    --bg: 220 25% 98%;
+    --surface: 0 0% 100%;
+    --surface-2: 220 20% 96%;
+    --border: 220 14% 88%;
+    --fg: 222 47% 11%;
+    --fg-muted: 222 15% 45%;
+    --accent: 224 80% 50%;
+    --ok: 142 70% 38%;
+    --warn: 30 90% 50%;
+    --fail: 0 70% 48%;
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-bg text-fg font-sans antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-border bg-surface p-5;
+  }
+}
+
+/* Brain project-title overlay (drei <Html>) — entrance reveal + idle float.
+   Kept as plain keyframes (no tailwindcss-animate plugin in this project). */
+@keyframes brain-title-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes brain-title-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* easeOutExpo curve — matches the camera/tween feel used across the brain scene. */
+.animate-brain-title-in {
+  animation: brain-title-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-brain-title-float {
+  animation: brain-title-float 5s ease-in-out infinite;
+}

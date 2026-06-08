@@ -1,0 +1,73 @@
+version: 2
+
+project_name: engram-explorer
+
+before:
+  hooks:
+    # Install pnpm dependencies (CI uses --frozen-lockfile for reproducibility).
+    - pnpm install --frozen-lockfile
+    # Build the React frontend with source maps disabled.
+    - sh -c "RELEASE=1 pnpm -F @engram-explorer/frontend build"
+    # Copy the compiled frontend into the Go embed directory.
+    - sh -c "rm -rf internal/web/dist && mkdir -p internal/web/dist && cp -r apps/frontend/dist/. internal/web/dist/"
+
+builds:
+  - id: engram-explorer
+    main: ./cmd/engram-explorer
+    binary: engram-explorer
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+    # Exclude windows/arm64 — no mainstream demand yet.
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: engram-explorer
+    builds:
+      - engram-explorer
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "Merge pull request"
+      - "Merge branch"
+
+brews:
+  - name: engram-explorer
+    repository:
+      owner: AlvaroQ
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: "https://github.com/AlvaroQ/engram-explorer"
+    description: "Local web dashboard for exploring Engram memory database"
+    license: "MIT"
+    install: |
+      bin.install "engram-explorer"
+    test: |
+      assert_match version.to_s, shell_output("#{bin}/engram-explorer --version 2>&1", 1)
