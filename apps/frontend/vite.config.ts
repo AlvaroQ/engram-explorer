@@ -23,6 +23,7 @@ const isRelease = process.env['RELEASE'] === '1';
 const islandEntries: Record<string, string> = {
   'islands/type-breakdown': resolve(__dirname, 'src/islands/type-breakdown.tsx'),
   'islands/activity-by-project-chart': resolve(__dirname, 'src/islands/activity-by-project-chart.tsx'),
+  'islands/cc-usage-charts': resolve(__dirname, 'src/islands/cc-usage-charts.tsx'),
   'islands/project-activity-chart': resolve(__dirname, 'src/islands/project-activity-chart.tsx'),
   'islands/brain-preview-card': resolve(__dirname, 'src/islands/brain-preview-card.tsx'),
   'islands/brain': resolve(__dirname, 'src/islands/brain.tsx'),

@@ -702,7 +702,7 @@
       "prompt": "First prompt",
       "project": "Project",
       "started": "Started",
-      "ended": "Last modified",
+      "ended": "Modified",
       "branch": "Branch",
       "version": "CC version",
       "size": "Size",
@@ -728,6 +728,23 @@
       "output": "Output",
       "cacheWrite": "Cache write",
       "cacheRead": "Cache read"
+    },
+    "charts": {
+      "title": "Usage summary",
+      "description": "Tokens and cost across all Claude Code sessions.",
+      "costByProject": "Cost by project",
+      "tokensByModel": "Tokens by model",
+      "overTime": "Usage over time",
+      "topSessions": "Most expensive sessions",
+      "sessions": "Sessions",
+      "tokens": "Total tokens",
+      "cost": "Estimated cost",
+      "loading": "Loading…",
+      "empty": "No Claude Code sessions found.",
+      "error": "Failed to load usage stats.",
+      "others": "Others",
+      "untitled": "(untitled)",
+      "costEstimateNote": "Cost excludes turns on unpriced models — actual spend may be higher."
     }
   },
   "placeholder": {

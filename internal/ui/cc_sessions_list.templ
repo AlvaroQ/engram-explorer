@@ -25,6 +25,15 @@ templ ccsListContent(result services.CCSessionListResult, params services.CCSess
 			<h1>{ T(lang, "ccSessions.title") }</h1>
 			<p>{ T(lang, "ccSessions.description") }</p>
 		</div>
+		<div class="card">
+			<div class="card-header">
+				<h2>{ T(lang, "ccSessions.charts.title") }</h2>
+				<p>{ T(lang, "ccSessions.charts.description") }</p>
+			</div>
+			<div class="card-body">
+				@Island("cc-usage-charts", ccUsageChartsProps(lang))
+			</div>
+		</div>
 		<div class="card filter-bar">
 			<div class="card-body">
 				<form

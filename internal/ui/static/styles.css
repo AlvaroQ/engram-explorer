@@ -472,3 +472,159 @@ code {
   font-size: 12px;
   color: hsl(var(--fail));
 }
+
+/* ---------- Claude Code session detail ---------- */
+/* Goal 2: Session + Counts cards side by side on the same row. */
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.detail-grid > .card {
+  margin-bottom: 0;
+}
+@media (max-width: 640px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Key/value rows inside the detail cards (detailRow helper). */
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 0;
+  font-size: 13px;
+  border-bottom: 1px solid hsl(var(--border) / 0.5);
+}
+.detail-row:last-child {
+  border-bottom: none;
+}
+.detail-row .muted {
+  color: hsl(var(--fg-muted));
+}
+.detail-value {
+  color: hsl(var(--fg));
+  text-align: right;
+  word-break: break-word;
+}
+
+/* Conversation timeline. */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.timeline-event {
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  background: hsl(var(--surface-2));
+  overflow: hidden;
+}
+.timeline-event-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+.timeline-event-summary::-webkit-details-marker {
+  display: none;
+}
+.timeline-event-at {
+  font-size: 11px;
+}
+.timeline-event-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: hsl(var(--fg-muted));
+  font-size: 12px;
+}
+.timeline-event-index {
+  font-size: 11px;
+}
+.timeline-event--user {
+  border-left: 3px solid hsl(var(--accent));
+}
+.timeline-event--assistant {
+  border-left: 3px solid hsl(var(--border));
+}
+.timeline-event-body {
+  padding: 4px 12px 12px;
+}
+
+/* Message bodies wrap instead of overflowing. */
+.event-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: hsl(var(--fg));
+}
+
+/* Tool / thinking sub-blocks. */
+.cc-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cc-tool-block {
+  border: 1px solid hsl(var(--border) / 0.7);
+  border-radius: 6px;
+  background: hsl(var(--surface));
+}
+.cc-tool-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  list-style: none;
+}
+.cc-tool-summary::-webkit-details-marker {
+  display: none;
+}
+.cc-tool-input {
+  padding: 6px 10px 10px;
+}
+
+/* Goal 3: agent "thinking" is de-emphasized (lighter gray, italic);
+   user prompts and the agent's final text keep the normal tone. */
+.cc-thinking .event-content,
+.cc-thinking .cc-tool-summary {
+  color: hsl(var(--fg-muted) / 0.7);
+  font-style: italic;
+}
+
+/* Goal 1: attachment / system-marker chip (replaces a raw marker block).
+   The full marker text is shown via the native title tooltip on hover. */
+.cc-attach {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 2px 9px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  background: hsl(var(--surface));
+  color: hsl(var(--fg-muted));
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  cursor: help;
+}
+.cc-attach svg {
+  flex: none;
+  opacity: 0.8;
+}
+.cc-attach-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

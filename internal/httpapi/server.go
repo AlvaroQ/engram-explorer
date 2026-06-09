@@ -32,6 +32,7 @@ func NewServeMux(c *Container) http.Handler {
 	promptsRoutes(mux, c)
 	projectsRoutes(mux, c)
 	overviewRoutes(mux, c)
+	ccSessionsRoutes(mux, c)
 	orphansRoutes(mux, c)
 	daemonRoutes(mux, c)
 

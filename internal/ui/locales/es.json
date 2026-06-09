@@ -702,7 +702,7 @@
       "prompt": "Primer prompt",
       "project": "Proyecto",
       "started": "Inicio",
-      "ended": "Última modificación",
+      "ended": "Modificación",
       "branch": "Rama",
       "version": "Versión CC",
       "size": "Tamaño",
@@ -728,6 +728,23 @@
       "output": "Salida",
       "cacheWrite": "Escritura de caché",
       "cacheRead": "Lectura de caché"
+    },
+    "charts": {
+      "title": "Resumen de uso",
+      "description": "Tokens y coste de todas las sesiones de Claude Code.",
+      "costByProject": "Coste por proyecto",
+      "tokensByModel": "Tokens por modelo",
+      "overTime": "Uso en el tiempo",
+      "topSessions": "Sesiones más caras",
+      "sessions": "Sesiones",
+      "tokens": "Tokens totales",
+      "cost": "Coste estimado",
+      "loading": "Cargando…",
+      "empty": "No se encontraron sesiones de Claude Code.",
+      "error": "No se pudieron cargar las estadísticas de uso.",
+      "others": "Otros",
+      "untitled": "(sin título)",
+      "costEstimateNote": "El coste excluye turnos con modelos sin precio — el gasto real puede ser mayor."
     }
   },
   "placeholder": {

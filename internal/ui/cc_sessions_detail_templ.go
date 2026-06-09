@@ -393,22 +393,29 @@ func ccsTurns(turns []services.CCTurn, lang string) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				if turn.Text != "" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<pre class=\"event-content\">")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var20 string
-					templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(turn.Text)
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 91, Col: 45}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</pre>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
+					if tag, ok := ccsAttachment(turn.Text); ok {
+						templ_7745c5c3_Err = ccsAttachChip(tag, turn.Text).Render(ctx, templ_7745c5c3_Buffer)
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+					} else {
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<pre class=\"event-content\">")
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						var templ_7745c5c3_Var20 string
+						templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(turn.Text)
+						if templ_7745c5c3_Err != nil {
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 94, Col: 46}
+						}
+						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</pre>")
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
 					}
 				} else {
 					templ_7745c5c3_Err = ccsTurnBlocks(turn.Blocks).Render(ctx, templ_7745c5c3_Buffer)
@@ -459,22 +466,29 @@ func ccsTurnBlocks(blocks []services.CCMessageBlock) templ.Component {
 		for _, b := range blocks {
 			switch b.Type {
 			case "text":
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<pre class=\"event-content\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var22 string
-				templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(b.Text)
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 108, Col: 40}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</pre>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
+				if tag, ok := ccsAttachment(b.Text); ok {
+					templ_7745c5c3_Err = ccsAttachChip(tag, b.Text).Render(ctx, templ_7745c5c3_Buffer)
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				} else {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<pre class=\"event-content\">")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var22 string
+					templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(b.Text)
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 115, Col: 41}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</pre>")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
 				}
 			case "tool_use":
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<details class=\"cc-tool-block\"><summary class=\"cc-tool-summary\"><span class=\"badge badge-neutral\">tool_use</span> <span class=\"mono text-xs\">")
@@ -484,7 +498,7 @@ func ccsTurnBlocks(blocks []services.CCMessageBlock) templ.Component {
 				var templ_7745c5c3_Var23 string
 				templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(b.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 113, Col: 42}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 121, Col: 42}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 				if templ_7745c5c3_Err != nil {
@@ -502,7 +516,7 @@ func ccsTurnBlocks(blocks []services.CCMessageBlock) templ.Component {
 					var templ_7745c5c3_Var24 string
 					templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(b.ID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 115, Col: 47}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 123, Col: 47}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 					if templ_7745c5c3_Err != nil {
@@ -520,7 +534,7 @@ func ccsTurnBlocks(blocks []services.CCMessageBlock) templ.Component {
 				var templ_7745c5c3_Var25 string
 				templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(ccsTruncateRaw(b.RawInput, 500))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 118, Col: 80}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 126, Col: 80}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 				if templ_7745c5c3_Err != nil {
@@ -543,7 +557,7 @@ func ccsTurnBlocks(blocks []services.CCMessageBlock) templ.Component {
 					var templ_7745c5c3_Var26 string
 					templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(b.ToolUseID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 125, Col: 54}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 133, Col: 54}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 					if templ_7745c5c3_Err != nil {
@@ -561,7 +575,7 @@ func ccsTurnBlocks(blocks []services.CCMessageBlock) templ.Component {
 				var templ_7745c5c3_Var27 string
 				templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(ccsTruncateRaw(b.Content, 500))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 128, Col: 79}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 136, Col: 79}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 				if templ_7745c5c3_Err != nil {
@@ -572,14 +586,14 @@ func ccsTurnBlocks(blocks []services.CCMessageBlock) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			case "thinking":
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<details class=\"cc-tool-block\"><summary class=\"cc-tool-summary\"><span class=\"badge badge-neutral\">thinking</span></summary><pre class=\"event-content cc-tool-input\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<details class=\"cc-tool-block cc-thinking\"><summary class=\"cc-tool-summary\"><span class=\"badge badge-neutral\">thinking</span></summary><pre class=\"event-content cc-tool-input\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var28 string
 				templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(b.Text)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 135, Col: 55}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 143, Col: 55}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 				if templ_7745c5c3_Err != nil {
@@ -597,7 +611,7 @@ func ccsTurnBlocks(blocks []services.CCMessageBlock) templ.Component {
 				var templ_7745c5c3_Var29 string
 				templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(b.Type)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 138, Col: 45}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 146, Col: 45}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 				if templ_7745c5c3_Err != nil {
@@ -617,9 +631,131 @@ func ccsTurnBlocks(blocks []services.CCMessageBlock) templ.Component {
 	})
 }
 
+// ccsAttachChip renders a marker/attachment block (e.g. <ide_opened_file>) as a
+// compact paperclip chip. The full marker text is exposed via the title tooltip.
+func ccsAttachChip(tag, full string) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var30 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var30 == nil {
+			templ_7745c5c3_Var30 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<span class=\"cc-attach\" title=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var31 string
+		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(full)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 155, Col: 37}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = ccsPaperclip().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "<span class=\"cc-attach-label\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var32 string
+		templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(tag)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 157, Col: 37}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "</span></span>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+// ccsPaperclip is the inline clip icon used by ccsAttachChip.
+func ccsPaperclip() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var33 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var33 == nil {
+			templ_7745c5c3_Var33 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "<svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48\"></path></svg>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
 // ---------------------------------------------------------------------------
 // Helper functions for detail
 // ---------------------------------------------------------------------------
+
+// ccsMarkerTags are wrapper tags injected by the harness/IDE that arrive as
+// their own text block in the transcript and are better shown as a compact
+// attachment chip than as a raw block.
+var ccsMarkerTags = []string{
+	"ide_opened_file",
+	"ide_selection",
+	"ide_diagnostics",
+	"system-reminder",
+	"command-name",
+	"command-message",
+	"command-args",
+	"local-command-stdout",
+}
+
+// ccsAttachment reports whether text is a single wrapped marker block and, if so,
+// returns the tag name for the chip label. Detection = the trimmed text opens
+// with "<tag>" or "<tag ..." (markers wrap their whole content from the start).
+func ccsAttachment(text string) (string, bool) {
+	t := strings.TrimSpace(text)
+	for _, tag := range ccsMarkerTags {
+		if strings.HasPrefix(t, "<"+tag+">") || strings.HasPrefix(t, "<"+tag+" ") {
+			return tag, true
+		}
+	}
+	return "", false
+}
 
 // ccsTurnBadgeClass returns the badge class based on role.
 func ccsTurnBadgeClass(role string) string {
@@ -632,6 +768,9 @@ func ccsTurnBadgeClass(role string) string {
 // ccsTurnPreview returns a short preview of a turn for the summary line.
 func ccsTurnPreview(turn services.CCTurn) string {
 	if turn.Text != "" {
+		if tag, ok := ccsAttachment(turn.Text); ok {
+			return "📎 " + tag
+		}
 		return ccsPromptPreview(turn.Text)
 	}
 	// Summarise blocks.
@@ -639,7 +778,9 @@ func ccsTurnPreview(turn services.CCTurn) string {
 	for _, b := range turn.Blocks {
 		switch b.Type {
 		case "text":
-			if b.Text != "" {
+			if tag, ok := ccsAttachment(b.Text); ok {
+				parts = append(parts, "📎 "+tag)
+			} else if b.Text != "" {
 				parts = append(parts, ccsPromptPreview(b.Text))
 			}
 		case "tool_use":
