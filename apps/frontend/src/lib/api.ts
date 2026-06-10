@@ -196,6 +196,51 @@ export interface ActivityResponse {
   rows: Array<{ day: string; project: string; count: number }>;
 }
 
+// --- Claude Code session analytics (/api/cc-sessions/stats) ---
+export interface CCUsageDTO {
+  input_tokens: number;
+  output_tokens: number;
+  cache_write_5m_tokens: number;
+  cache_write_1h_tokens: number;
+  cache_read_tokens: number;
+  total_tokens: number;
+  cost_usd: number;
+  unknown_model: boolean;
+}
+export interface CCProjectStat {
+  project: string;
+  sessions: number;
+  usage: CCUsageDTO;
+}
+export interface CCModelStat {
+  model: string;
+  sessions: number;
+  usage: CCUsageDTO;
+}
+export interface CCDayStat {
+  day: string;
+  sessions: number;
+  usage: CCUsageDTO;
+}
+export interface CCTopSessionStat {
+  id: string;
+  project_folder: string;
+  project: string;
+  first_prompt: string;
+  started_at: string;
+  usage: CCUsageDTO;
+}
+export interface CCStatsResponse {
+  generated_at: string;
+  sessions: number;
+  has_unknown_model: boolean;
+  totals: CCUsageDTO;
+  by_project: CCProjectStat[];
+  by_model: CCModelStat[];
+  over_time: CCDayStat[];
+  top_sessions: CCTopSessionStat[];
+}
+
 export interface ObservationListParams {
   project?: string[];
   type?: string[];
@@ -437,6 +482,7 @@ export const api = {
   listProjects: () => request<{ items: ProjectStats[] }>('/api/projects'),
   activityByProject: (range: ActivityRange) =>
     request<ActivityResponse>(`/api/activity?range=${range}`),
+  ccSessionsStats: () => request<CCStatsResponse>('/api/cc-sessions/stats'),
   listObservations: (params: ObservationListParams) =>
     request<ObservationListResponse>(`/api/observations?${buildSearch(params)}`),
   getObservation: (id: number) => request<ObservationDetailResponse>(`/api/observations/${String(id)}`),

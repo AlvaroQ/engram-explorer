@@ -114,19 +114,6 @@ func seedOrphanSession(t *testing.T, db *sql.DB) string {
 	return sid
 }
 
-// seedNonOrphanObservation inserts an observation with a project (not orphaned).
-func seedNonOrphanObservation(t *testing.T, db *sql.DB) int64 {
-	t.Helper()
-	res, err := db.Exec(
-		`INSERT INTO observations (type, title, project, created_at) VALUES ('manual','assigned obs','myproject','2025-01-01 00:00:00')`,
-	)
-	if err != nil {
-		t.Fatalf("seed non-orphan obs: %v", err)
-	}
-	id, _ := res.LastInsertId()
-	return id
-}
-
 // ---------------------------------------------------------------------------
 // Phase 1.1: Template render tests (RED until handlers exist)
 // ---------------------------------------------------------------------------

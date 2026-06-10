@@ -1,10 +1,11 @@
 package services
 
 import (
-	"database/sql"
 	"fmt"
 
 	"golang.org/x/sync/errgroup"
+
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // OverviewKPIs holds global aggregate counts.
@@ -45,7 +46,7 @@ type OverviewResponse struct {
 // queries run concurrently via errgroup; the read pool (4 conns) bounds actual
 // parallelism, and Wait() provides the happens-before barrier before the
 // results are assembled, so the per-section variables are race-free.
-func OverviewBuild(db *sql.DB) (*OverviewResponse, error) {
+func OverviewBuild(db sqlite.Querier) (*OverviewResponse, error) {
 	var (
 		kpis        OverviewKPIs
 		activity30d = []ActivityDay{}
@@ -97,7 +98,7 @@ func OverviewBuild(db *sql.DB) (*OverviewResponse, error) {
 	}, nil
 }
 
-func overviewKPIs(db *sql.DB) (OverviewKPIs, error) {
+func overviewKPIs(db sqlite.Querier) (OverviewKPIs, error) {
 	var kpis OverviewKPIs
 	if err := db.QueryRow(`
 		SELECT
@@ -111,7 +112,7 @@ func overviewKPIs(db *sql.DB) (OverviewKPIs, error) {
 	return kpis, nil
 }
 
-func overviewActivity30d(db *sql.DB) ([]ActivityDay, error) {
+func overviewActivity30d(db sqlite.Querier) ([]ActivityDay, error) {
 	cutoff := cutoffDays(30)
 	activity30d, err := queryRows(db, `
 		SELECT date(created_at) AS day, COUNT(*) AS count
@@ -124,7 +125,7 @@ func overviewActivity30d(db *sql.DB) ([]ActivityDay, error) {
 	return activity30d, nil
 }
 
-func overviewByType(db *sql.DB) ([]TypeCount, error) {
+func overviewByType(db sqlite.Querier) ([]TypeCount, error) {
 	byType, err := queryRows(db, `
 		SELECT type, COUNT(*) AS count
 		  FROM observations
@@ -136,7 +137,7 @@ func overviewByType(db *sql.DB) ([]TypeCount, error) {
 	return byType, nil
 }
 
-func overviewRecent(db *sql.DB) ([]OverviewRecentObs, error) {
+func overviewRecent(db sqlite.Querier) ([]OverviewRecentObs, error) {
 	recentObs, err := queryRows(db, `
 		SELECT id, type, title, project, created_at
 		  FROM observations
@@ -156,7 +157,7 @@ func overviewRecent(db *sql.DB) ([]OverviewRecentObs, error) {
 // computeSyncSummary replicates the sync_summary block from the Node overview service.
 // Node's overview service calls sync.listProjects() and derives the summary from the
 // resulting project rows — so we do the same by calling SyncListProjects and summing.
-func computeSyncSummary(db *sql.DB) (SyncSummary, error) {
+func computeSyncSummary(db sqlite.Querier) (SyncSummary, error) {
 	syncData, err := SyncListProjects(db)
 	if err != nil {
 		// sync tables may not exist on old schemas — return zeros.

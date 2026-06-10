@@ -304,7 +304,12 @@ func TestSyncProjectsNotEnrolledShowsEnroll(t *testing.T) {
 	// Do NOT seed into sync_enrolled_projects.
 
 	mux := http.NewServeMux()
-	doctor.Mount(mux, doctor.Deps{RoDB: db, RWDB: db})
+	// Inject a fake cloud so the enroll capability does not depend on whether the
+	// real `engram` CLI is installed — it is absent in CI, where Capabilities()
+	// reports Enroll:false (ENOENT) and the button would be hidden. Mirrors the
+	// other sync tests in this file.
+	fake := &fakeCloudController{}
+	doctor.Mount(mux, doctor.Deps{RoDB: db, RWDB: db, Cloud: fake})
 
 	req := httptest.NewRequest(http.MethodGet, "/doctor/sync/projects", nil)
 	w := httptest.NewRecorder()

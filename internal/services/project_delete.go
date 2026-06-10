@@ -2,8 +2,9 @@ package services
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
+
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // DeleteProjectResult holds the per-table affected-row counts.
@@ -14,10 +15,10 @@ type DeleteProjectResult struct {
 
 // DeleteAffectedCounts holds what happened per entity table.
 type DeleteAffectedCounts struct {
-	Observations       int64 `json:"observations"`        // rows deleted
-	UserPrompts        int64 `json:"userPrompts"`         // rows deleted
-	Sessions           int64 `json:"sessions"`            // rows deleted (empty sessions)
-	SessionsReassigned int64 `json:"sessionsReassigned"`  // moved to another project, not deleted
+	Observations       int64 `json:"observations"`       // rows deleted
+	UserPrompts        int64 `json:"userPrompts"`        // rows deleted
+	Sessions           int64 `json:"sessions"`           // rows deleted (empty sessions)
+	SessionsReassigned int64 `json:"sessionsReassigned"` // moved to another project, not deleted
 }
 
 // DeleteProject removes a project. It is conservative and lossless:
@@ -37,7 +38,7 @@ type DeleteAffectedCounts struct {
 //  2. reassign any of this project's sessions that still hold another project's
 //     content to that project — the session follows its content,
 //  3. delete the sessions that are left empty.
-func DeleteProject(ctx context.Context, db *sql.DB, project string) (DeleteProjectResult, error) {
+func DeleteProject(ctx context.Context, db sqlite.Querier, project string) (DeleteProjectResult, error) {
 	if project == "" {
 		return DeleteProjectResult{}, NewWriteError("INVALID_PROJECT", "project name is empty")
 	}

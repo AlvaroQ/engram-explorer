@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // ---------------------------------------------------------------------------
@@ -76,7 +78,7 @@ type assignPromptRow struct {
 // AssignProject assigns a single entity (observation, session, or prompt) to a
 // project. All mutations run inside a single sql.Tx. Returns WriteError with
 // codes NOT_FOUND or BAD_INPUT on expected failures.
-func AssignProject(ctx context.Context, db *sql.DB, entity EntityKind, id any, project string) (AssignmentResult, error) {
+func AssignProject(ctx context.Context, db sqlite.Querier, entity EntityKind, id any, project string) (AssignmentResult, error) {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return AssignmentResult{}, fmt.Errorf("begin tx: %w", err)

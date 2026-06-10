@@ -2,8 +2,9 @@ package services
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
+
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // ---------------------------------------------------------------------------
@@ -40,7 +41,7 @@ type RenameAffectedCounts struct {
 // transaction. Validation order follows the spec exactly:
 // SAME_NAME → SOURCE_NOT_FOUND → ENROLLED_SOURCE_UNSUPPORTED →
 // TARGET_EXISTS/NOT_FOUND → ENROLLED_TARGET_UNSUPPORTED.
-func RenameProject(ctx context.Context, db *sql.DB, params RenameProjectParams) (RenameProjectResult, error) {
+func RenameProject(ctx context.Context, db sqlite.Querier, params RenameProjectParams) (RenameProjectResult, error) {
 	// Pre-tx validations that only read.
 	if params.Source == params.Target {
 		return RenameProjectResult{}, NewWriteError("SAME_NAME", "source and target project names are the same")

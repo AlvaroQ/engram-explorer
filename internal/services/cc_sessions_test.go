@@ -683,3 +683,108 @@ func TestDetail_UsageAccounting(t *testing.T) {
 		t.Errorf("expected CostUSD 0.007, got %.5f", detail.Usage.CostUSD)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Tests: CCSessionsStats (analytics aggregation)
+// ---------------------------------------------------------------------------
+
+func TestCCSessionsStats_Aggregation(t *testing.T) {
+	reader := newFakeReader()
+	mtime := time.Now()
+
+	// Project alpha: two sessions, opus + sonnet usage.
+	reader.addSession("alpha-folder", "s1.jsonl",
+		buildSimpleSession("e:/x/alpha", "main", "2.1", "hi alpha 1")+
+			assistantUsageLine("m1", "claude-opus-4-8", 1_000_000, 1_000_000, 0, 0, 0)+"\n", mtime)
+	reader.addSession("alpha-folder", "s2.jsonl",
+		buildSimpleSession("e:/x/alpha", "main", "2.1", "hi alpha 2")+
+			assistantUsageLine("m2", "claude-sonnet-4-6", 2000, 1000, 0, 0, 0)+"\n", mtime)
+	// Project beta: one session, haiku.
+	reader.addSession("beta-folder", "s3.jsonl",
+		buildSimpleSession("e:/x/beta", "main", "2.1", "hi beta")+
+			assistantUsageLine("m3", "claude-haiku-4-5", 5000, 5000, 0, 0, 0)+"\n", mtime)
+
+	res, err := services.CCSessionsStats(reader)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Sessions != 3 {
+		t.Errorf("expected 3 sessions, got %d", res.Sessions)
+	}
+	if res.HasUnknownModel {
+		t.Error("all models are priced; HasUnknownModel should be false")
+	}
+	// alpha tokens = (1M+1M) + (2000+1000) = 2,003,000 ; beta = 10,000 ; total = 2,013,000
+	if res.Totals.TotalTokens != 2_013_000 {
+		t.Errorf("expected total tokens 2,013,000, got %d", res.Totals.TotalTokens)
+	}
+
+	// By project: alpha first (highest cost/tokens), 2 sessions.
+	if len(res.ByProject) != 2 {
+		t.Fatalf("expected 2 projects, got %d", len(res.ByProject))
+	}
+	if res.ByProject[0].Project != "alpha" || res.ByProject[0].Sessions != 2 {
+		t.Errorf("expected alpha with 2 sessions first, got %q (%d)", res.ByProject[0].Project, res.ByProject[0].Sessions)
+	}
+
+	// By model: opus, sonnet, haiku all present.
+	models := map[string]bool{}
+	for _, m := range res.ByModel {
+		models[m.Model] = true
+	}
+	for _, want := range []string{"opus", "sonnet", "haiku"} {
+		if !models[want] {
+			t.Errorf("expected model %q in ByModel", want)
+		}
+	}
+
+	// Top sessions: the opus 2M-token session is #1.
+	if len(res.TopSessions) == 0 || res.TopSessions[0].ID != "s1" {
+		t.Errorf("expected s1 as top session by cost, got %+v", res.TopSessions)
+	}
+}
+
+func TestCCSessionsStats_UnknownModelFlag(t *testing.T) {
+	reader := newFakeReader()
+	mtime := time.Now()
+	reader.addSession("p", "s.jsonl",
+		buildSimpleSession("e:/p", "", "", "hi")+
+			assistantUsageLine("m", "future-model-x", 1000, 500, 0, 0, 0)+"\n", mtime)
+
+	res, err := services.CCSessionsStats(reader)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !res.HasUnknownModel {
+		t.Error("expected HasUnknownModel true for an unpriced model")
+	}
+	if res.Totals.TotalTokens != 1500 {
+		t.Errorf("expected 1500 tokens counted, got %d", res.Totals.TotalTokens)
+	}
+}
+
+func TestCCSessionsFingerprint_ChangesWithContent(t *testing.T) {
+	mtime := time.Unix(1_700_000_000, 0)
+
+	r1 := newFakeReader()
+	r1.addSession("p", "s.jsonl", buildSimpleSession("e:/p", "", "", "a"), mtime)
+	fp1 := services.CCSessionsFingerprint(r1)
+
+	// Same set, same mtime/size -> same fingerprint.
+	r2 := newFakeReader()
+	r2.addSession("p", "s.jsonl", buildSimpleSession("e:/p", "", "", "a"), mtime)
+	if services.CCSessionsFingerprint(r2) != fp1 {
+		t.Error("identical content+mtime should yield identical fingerprint")
+	}
+
+	// Different size (longer content) -> different fingerprint.
+	r3 := newFakeReader()
+	r3.addSession("p", "s.jsonl", buildSimpleSession("e:/p", "", "", "a longer prompt body"), mtime)
+	if services.CCSessionsFingerprint(r3) == fp1 {
+		t.Error("changed content size should change the fingerprint")
+	}
+
+	if fp1 == "" {
+		t.Error("fingerprint should be non-empty")
+	}
+}

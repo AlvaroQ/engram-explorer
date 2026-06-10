@@ -606,11 +606,8 @@ func TestDBExport_NoRWDB_Returns503(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewContainer: %v", err)
 	}
-	// Force RWDB to nil (simulates read-only startup).
-	if c.RWDB != nil {
-		c.RWDB.Close()
-		c.RWDB = nil
-	}
+	// Force RWDB to nil (simulates read-only startup); pool closed by c.Close.
+	c.RWDB = nil
 	t.Cleanup(c.Close)
 	handler := httpapi.NewServeMux(c)
 

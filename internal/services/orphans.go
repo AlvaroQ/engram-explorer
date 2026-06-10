@@ -1,6 +1,8 @@
 package services
 
-import "database/sql"
+import (
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
+)
 
 // OrphanObservation is an observation with no project.
 type OrphanObservation struct {
@@ -49,7 +51,7 @@ type OrphanTotals struct {
 }
 
 // OrphansList returns all orphaned entities (no project).
-func OrphansList(db *sql.DB) (*OrphansResponse, error) {
+func OrphansList(db sqlite.Querier) (*OrphansResponse, error) {
 	observations, err := queryRows(db, `
 		SELECT id, type, title, tool_name, topic_key, created_at, updated_at, session_id, sync_id
 		  FROM observations

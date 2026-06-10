@@ -1,11 +1,12 @@
 package services
 
 import (
-	"database/sql"
 	"encoding/json"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // enrollGraceMs is the window in which a freshly-enrolled project is allowed
@@ -151,7 +152,7 @@ type mutationCountRow struct {
 
 // readProjectAggregates fetches the per-project aggregates. The entity UNION is
 // shared with ProjectsList via projectEntitiesUnionSQL (defined in projects.go).
-func readProjectAggregates(db *sql.DB) ([]projectAggregate, error) {
+func readProjectAggregates(db sqlite.Querier) ([]projectAggregate, error) {
 	query := `
 		SELECT COALESCE(o.project, '') AS project,
 		       SUM(o.obs_count) AS obs_count,
@@ -169,7 +170,7 @@ func readProjectAggregates(db *sql.DB) ([]projectAggregate, error) {
 }
 
 // readEnrolledProjects returns a map of project → enrolled_at.
-func readEnrolledProjects(db *sql.DB) (map[string]*string, error) {
+func readEnrolledProjects(db sqlite.Querier) (map[string]*string, error) {
 	rows, err := db.Query(`SELECT project, enrolled_at FROM sync_enrolled_projects`)
 	if err != nil {
 		return nil, err
@@ -188,7 +189,7 @@ func readEnrolledProjects(db *sql.DB) (map[string]*string, error) {
 }
 
 // readSyncStates returns all sync_state rows keyed by target_key.
-func readSyncStates(db *sql.DB) (map[string]syncStateRow, error) {
+func readSyncStates(db sqlite.Querier) (map[string]syncStateRow, error) {
 	rows, err := db.Query(`
 		SELECT target_key, lifecycle, last_enqueued_seq, last_acked_seq, last_pulled_seq,
 		       consecutive_failures, backoff_until, lease_owner, lease_until,
@@ -214,7 +215,7 @@ func readSyncStates(db *sql.DB) (map[string]syncStateRow, error) {
 }
 
 // readPendingCounts returns two maps: byTargetKey and byProject.
-func readPendingCounts(db *sql.DB) (byTargetKey map[string]mutationCountRow, byProject map[string]mutationCountRow, err error) {
+func readPendingCounts(db sqlite.Querier) (byTargetKey map[string]mutationCountRow, byProject map[string]mutationCountRow, err error) {
 	byTargetKey = make(map[string]mutationCountRow)
 	byProject = make(map[string]mutationCountRow)
 
@@ -388,7 +389,7 @@ func buildProjectRow(
 }
 
 // SyncListProjects returns the aggregated sync state for all projects.
-func SyncListProjects(db *sql.DB) (SyncProjectsResponse, error) {
+func SyncListProjects(db sqlite.Querier) (SyncProjectsResponse, error) {
 	aggregates, err := readProjectAggregates(db)
 	if err != nil {
 		return SyncProjectsResponse{}, err
@@ -459,7 +460,7 @@ func SyncListProjects(db *sql.DB) (SyncProjectsResponse, error) {
 
 // SyncGetProjectDetail returns the full sync detail for a single project.
 // Returns nil, nil if the project is not found.
-func SyncGetProjectDetail(db *sql.DB, project string) (*SyncProjectDetailResponse, error) {
+func SyncGetProjectDetail(db sqlite.Querier, project string) (*SyncProjectDetailResponse, error) {
 	all, err := SyncListProjects(db)
 	if err != nil {
 		return nil, err
@@ -532,7 +533,7 @@ func SyncGetProjectDetail(db *sql.DB, project string) (*SyncProjectDetailRespons
 }
 
 // SyncComputeIssues computes the diagnostic issues for all projects.
-func SyncComputeIssues(db *sql.DB, daemonAvailable bool) (SyncIssuesResponse, error) {
+func SyncComputeIssues(db sqlite.Querier, daemonAvailable bool) (SyncIssuesResponse, error) {
 	data, err := SyncListProjects(db)
 	if err != nil {
 		return SyncIssuesResponse{}, err

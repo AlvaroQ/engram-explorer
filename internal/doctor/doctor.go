@@ -5,23 +5,25 @@
 package doctor
 
 import (
-	"database/sql"
 	"io/fs"
 	"net/http"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/services"
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
+	"github.com/AlvaroQ/engram-explorer/internal/ui"
 	"github.com/a-h/templ"
 )
 
 // Deps carries the concrete dependencies required by the doctor module.
-// It intentionally uses *sql.DB and config.Config directly — never the httpapi
-// Container — so that internal/doctor can be imported by internal/httpapi
+// It intentionally uses sqlite.Querier and config.Config directly — never the
+// httpapi Container — so that internal/doctor can be imported by internal/httpapi
 // without creating an import cycle.
 type Deps struct {
-	RoDB   *sql.DB       // read-only pool; may be nil in tests
-	RWDB   *sql.DB       // read-write pool; nil when read-only mode is active
-	Config config.Config // full runtime configuration
+	RoDB   sqlite.Querier       // read-only pool; may be nil in tests
+	RWDB   sqlite.Querier       // read-write pool; nil when read-only mode is active
+	Config config.Config        // full runtime configuration (immutable snapshot)
+	Paths  *config.RuntimePaths // live mutable paths; defaulted from Config in Mount
 
 	// Cloud is an optional CloudController override.  When non-nil it is used
 	// by the sync write handlers instead of constructing a concrete
@@ -47,7 +49,8 @@ func IsHTMX(r *http.Request) bool {
 // Content-Type header to text/html; charset=utf-8.
 func render(w http.ResponseWriter, r *http.Request, c templ.Component) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = c.Render(r.Context(), w)
+	// Carry the sidebar section-visibility prefs (shared ui.Sidebar reads them).
+	_ = c.Render(ui.NavContext(r), w)
 }
 
 // requireRW wraps a write handler with a read-only guard. When RWDB is nil
@@ -66,6 +69,12 @@ func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
 // Mount registers all /doctor/* routes on mux.
 // Call this inside httpapi.NewServeMux after the cloud routes.
 func Mount(mux *http.ServeMux, d Deps) {
+	// Default the live path holder from the immutable Config so tests that build
+	// Deps without Paths keep working.
+	if d.Paths == nil {
+		d.Paths = config.NewRuntimePaths(d.Config.EngramDbPath, d.Config.ClaudeProjectsDir)
+	}
+
 	// Static assets (/doctor/static/*).
 	staticSub, err := fs.Sub(StaticFS, "static")
 	if err != nil {
@@ -117,7 +126,7 @@ func Mount(mux *http.ServeMux, d Deps) {
 	} else {
 		cloud = services.NewCloudControlService(services.CloudControlOptions{
 			AuditLogPath:  d.Config.AuditLogPath,
-			EngramDataDir: d.Config.EngramDataDir,
+			EngramDataDir: d.Paths.DataDir(),
 			RWDB:          d.RWDB,
 		})
 	}

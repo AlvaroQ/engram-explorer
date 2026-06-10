@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/AlvaroQ/engram-explorer/internal/cursor"
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // SessionRow mirrors the sessions table columns used by the API.
@@ -89,7 +90,7 @@ const (
 )
 
 // SessionsList returns a paginated list of sessions.
-func SessionsList(db *sql.DB, p SessionListParams) (SessionListResult, error) {
+func SessionsList(db sqlite.Querier, p SessionListParams) (SessionListResult, error) {
 	limit := p.Limit
 	if limit <= 0 {
 		limit = 50
@@ -244,7 +245,7 @@ func SessionsList(db *sql.DB, p SessionListParams) (SessionListResult, error) {
 }
 
 // enrichSessions adds Tags and RecentTitle to each item.
-func enrichSessions(db *sql.DB, items []SessionListItem) ([]SessionListItem, error) {
+func enrichSessions(db sqlite.Querier, items []SessionListItem) ([]SessionListItem, error) {
 	if len(items) == 0 {
 		return items, nil
 	}
@@ -333,7 +334,7 @@ func enrichSessions(db *sql.DB, items []SessionListItem) ([]SessionListItem, err
 
 // SessionsGetDetail returns the full session detail including events and stats.
 // Returns nil, nil if the session does not exist.
-func SessionsGetDetail(db *sql.DB, id string) (*SessionDetailResponse, error) {
+func SessionsGetDetail(db sqlite.Querier, id string) (*SessionDetailResponse, error) {
 	var sess SessionRow
 	err := db.QueryRow(
 		`SELECT id, project, directory, started_at, ended_at, summary FROM sessions WHERE id = ?`,

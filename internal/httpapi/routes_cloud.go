@@ -22,7 +22,7 @@ func cloudRoutes(mux *http.ServeMux, c *Container) {
 
 	cloud := services.NewCloudControlService(services.CloudControlOptions{
 		AuditLogPath:  c.Config.AuditLogPath,
-		EngramDataDir: c.Config.EngramDataDir,
+		EngramDataDir: c.Paths.DataDir(),
 		RWDB:          c.RWDB,
 	})
 

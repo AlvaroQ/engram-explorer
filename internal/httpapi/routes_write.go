@@ -435,7 +435,7 @@ func handleDBImport(c *Container) http.HandlerFunc {
 		defer os.Remove(tmpPath)
 
 		// Determine data dir for safety backup (same dir as the DB file).
-		dataDir := c.Config.EngramDataDir
+		dataDir := c.Paths.DataDir()
 		if dataDir == "" {
 			writeError(w, http.StatusInternalServerError, "INTERNAL",
 				"data directory not configured", nil, c.Config.ExposeDetails)

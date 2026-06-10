@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // ---------------------------------------------------------------------------
@@ -26,7 +28,7 @@ type DeletionResult struct {
 // DeleteEntity soft-deletes observations and hard-deletes sessions/prompts.
 // Returns WriteError with codes: NOT_FOUND, ALREADY_DELETED, HAS_PROMPTS,
 // HAS_OBSERVATIONS.
-func DeleteEntity(ctx context.Context, db *sql.DB, entity EntityKind, id any) (DeletionResult, error) {
+func DeleteEntity(ctx context.Context, db sqlite.Querier, entity EntityKind, id any) (DeletionResult, error) {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return DeletionResult{}, fmt.Errorf("begin tx: %w", err)

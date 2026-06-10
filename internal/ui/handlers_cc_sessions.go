@@ -8,6 +8,21 @@ import (
 )
 
 // ---------------------------------------------------------------------------
+// Overview handler
+// ---------------------------------------------------------------------------
+
+// handleCCOverviewPage serves GET /cc-overview — the usage charts only (no
+// project filter, no sessions list). The cc-usage-charts island fetches its own
+// data from /api/cc-sessions/stats, so this handler needs no service call.
+func handleCCOverviewPage(d Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		lang := langForRequest(r)
+		theme := themeForRequest(r)
+		render(w, r, CCOverviewPage(lang, theme))
+	}
+}
+
+// ---------------------------------------------------------------------------
 // List handlers
 // ---------------------------------------------------------------------------
 
@@ -19,7 +34,7 @@ func handleCCSessionsListPage(d Deps) http.HandlerFunc {
 		theme := themeForRequest(r)
 		params := ccsListParamsFromQuery(r)
 
-		reader := services.DiskProjectsReader{BaseDir: d.Config.ClaudeProjectsDir}
+		reader := services.DiskProjectsReader{BaseDir: d.Paths.ClaudeDir()}
 		result, err := services.CCSessionsList(reader, params)
 		if err != nil {
 			render(w, r, ErrorPartial("Failed to load Claude Code sessions: "+err.Error()))
@@ -41,7 +56,7 @@ func handleCCSessionsListPartial(d Deps) http.HandlerFunc {
 		lang := langForRequest(r)
 		params := ccsListParamsFromQuery(r)
 
-		reader := services.DiskProjectsReader{BaseDir: d.Config.ClaudeProjectsDir}
+		reader := services.DiskProjectsReader{BaseDir: d.Paths.ClaudeDir()}
 		result, err := services.CCSessionsList(reader, params)
 		if err != nil {
 			render(w, r, ErrorPartial("Failed to load Claude Code sessions: "+err.Error()))
@@ -92,7 +107,7 @@ func handleCCSessionDetailPage(d Deps) http.HandlerFunc {
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
 
-		reader := services.DiskProjectsReader{BaseDir: d.Config.ClaudeProjectsDir}
+		reader := services.DiskProjectsReader{BaseDir: d.Paths.ClaudeDir()}
 		detail, err := services.CCSessionGetDetail(reader, projectFolder, id)
 		if err != nil {
 			render(w, r, ErrorPartial("Failed to load session: "+err.Error()))

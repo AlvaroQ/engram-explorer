@@ -75,9 +75,9 @@ func TestDoctorRootExists(t *testing.T) {
 // This is a table-driven test for the isHTMX detection logic.
 func TestIsHTMXHeader(t *testing.T) {
 	cases := []struct {
-		name        string
-		header      string
-		wantIsHTMX  bool
+		name       string
+		header     string
+		wantIsHTMX bool
 	}{
 		{"no header", "", false},
 		{"header true", "true", true},

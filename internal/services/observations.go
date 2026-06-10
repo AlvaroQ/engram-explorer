@@ -7,6 +7,7 @@ import (
 
 	"github.com/AlvaroQ/engram-explorer/internal/cursor"
 	"github.com/AlvaroQ/engram-explorer/internal/fts"
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // ObservationRow mirrors the DB row exactly (snake_case, pointer fields for
@@ -102,7 +103,7 @@ func scanObservationWithSnippet(s scanner) (ObservationWithSnippet, error) {
 }
 
 // ObservationsList executes the keyset-paginated list query.
-func ObservationsList(db *sql.DB, p ObservationListParams) (items []ObservationRow, nextCursor *string, err error) {
+func ObservationsList(db sqlite.Querier, p ObservationListParams) (items []ObservationRow, nextCursor *string, err error) {
 	conditions := []string{}
 	params := []any{}
 
@@ -209,7 +210,7 @@ func ObservationsList(db *sql.DB, p ObservationListParams) (items []ObservationR
 }
 
 // ObservationsGetByID returns the observation and its topic revisions, or nil if not found.
-func ObservationsGetByID(db *sql.DB, id int64) (obs *ObservationRow, revisions []ObservationRow, err error) {
+func ObservationsGetByID(db sqlite.Querier, id int64) (obs *ObservationRow, revisions []ObservationRow, err error) {
 	query := `SELECT ` + obsCols + ` FROM observations o WHERE o.id = ?`
 	r, err := scanObservation(db.QueryRow(query, id))
 	if err == sql.ErrNoRows {
@@ -236,7 +237,7 @@ func ObservationsGetByID(db *sql.DB, id int64) (obs *ObservationRow, revisions [
 }
 
 // ObservationsSearch runs an FTS5 snippet search.
-func ObservationsSearch(db *sql.DB, rawQ string, limit int) ([]ObservationWithSnippet, error) {
+func ObservationsSearch(db sqlite.Querier, rawQ string, limit int) ([]ObservationWithSnippet, error) {
 	sanitized := fts.SanitizeQuery(rawQ)
 	if sanitized == "" {
 		return []ObservationWithSnippet{}, nil
@@ -254,7 +255,7 @@ func ObservationsSearch(db *sql.DB, rawQ string, limit int) ([]ObservationWithSn
 // ObservationsListTypes returns all distinct, non-empty observation types ordered
 // alphabetically case-insensitively (matching the Node listTypes implementation
 // which uses ORDER BY type COLLATE NOCASE).
-func ObservationsListTypes(db *sql.DB) ([]string, error) {
+func ObservationsListTypes(db sqlite.Querier) ([]string, error) {
 	return queryRows(db, `
 		SELECT DISTINCT type FROM observations
 		WHERE deleted_at IS NULL AND type IS NOT NULL AND type <> ''

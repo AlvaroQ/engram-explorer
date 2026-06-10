@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // projectNameRE mirrors the Node PROJECT_NAME_RE whitelist.
@@ -68,7 +69,7 @@ type CloudControlOptions struct {
 
 	// RWDB is the read-write SQLite pool. Required for unenroll (which is
 	// handled locally via SQL — the engram CLI has no `cloud unenroll`).
-	RWDB *sql.DB
+	RWDB sqlite.Querier
 }
 
 // CloudControlService exposes the four cloud operations.
