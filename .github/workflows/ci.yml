@@ -41,8 +41,8 @@ jobs:
           mkdir -p internal/web/dist
           cp -r apps/frontend/dist/. internal/web/dist/
 
-      - name: Assert embed placeholder / real build present
-        run: test -f internal/web/dist/index.html
+      - name: Assert embed real build present
+        run: test -f internal/web/dist/islands/loader.js
 
       - name: Setup Go
         uses: actions/setup-go@v5
