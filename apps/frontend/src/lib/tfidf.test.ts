@@ -14,10 +14,7 @@ import type { GraphNode } from './api.ts';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeNode(
-  id: number,
-  opts: Partial<GraphNode> = {},
-): GraphNode {
+function makeNode(id: number, opts: Partial<GraphNode> = {}): GraphNode {
   return {
     id,
     project: 'test-project',
@@ -146,7 +143,10 @@ describe('topKeywords', () => {
   });
 
   it('returns empty array for k=0', () => {
-    const vec = new Map([['alpha', 3], ['beta', 2]]);
+    const vec = new Map([
+      ['alpha', 3],
+      ['beta', 2],
+    ]);
     expect(topKeywords(vec, 0)).toEqual([]);
   });
 
@@ -186,7 +186,7 @@ describe('topKeywords', () => {
   it('respects minRatio floor — excludes tokens below the threshold', () => {
     const vec = new Map([
       ['dominant', 100],
-      ['minor', 5],  // 5/100 = 0.05 < minRatio 0.15
+      ['minor', 5], // 5/100 = 0.05 < minRatio 0.15
       ['medium', 20], // 20/100 = 0.20 >= minRatio 0.15
     ]);
     const result = topKeywords(vec, 10, 0.15);
@@ -196,7 +196,10 @@ describe('topKeywords', () => {
   });
 
   it('excludes tokens below minRatio floor relative to max weight', () => {
-    const vec = new Map([['only', 10], ['tiny', 1]]);
+    const vec = new Map([
+      ['only', 10],
+      ['tiny', 1],
+    ]);
     const result = topKeywords(vec, 5, 0.5);
     expect(result).toContain('only');
     expect(result).not.toContain('tiny'); // 1/10 = 0.1 < minRatio 0.5

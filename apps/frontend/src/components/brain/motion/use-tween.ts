@@ -14,8 +14,8 @@
  * not matter — it registers a useFrame and returns null.
  */
 
-import { useFrame, invalidate } from '@react-three/fiber'
-import { motionStore } from './motion-store'
+import { useFrame, invalidate } from '@react-three/fiber';
+import { motionStore } from './motion-store';
 
 /**
  * R3F component that provides the single master animation driver.
@@ -26,17 +26,17 @@ import { motionStore } from './motion-store'
 export function TweenDriver(): null {
   useFrame((_state, delta) => {
     // Skip advancing or invalidating when the tab is hidden (CB3 guard).
-    if (typeof document !== 'undefined' && document.hidden) return
+    if (typeof document !== 'undefined' && document.hidden) return;
 
     // delta is in seconds; motion-store.tick() expects milliseconds.
-    motionStore.tick(delta * 1000)
+    motionStore.tick(delta * 1000);
 
     if (motionStore.hasActive()) {
       // Keep the demand frameloop running while tweens are active.
-      invalidate()
+      invalidate();
     }
     // When hasActive() returns false we do nothing — frameloop goes idle.
-  })
+  });
 
-  return null
+  return null;
 }

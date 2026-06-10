@@ -7,6 +7,7 @@
 ## Related issue
 
 <!-- Link the issue this resolves. For non-trivial changes, please open an issue first. -->
+
 Closes #
 
 ## Type of change

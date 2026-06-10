@@ -1,6 +1,6 @@
 name: Bug report
 description: Report a problem with engram-explorer
-labels: ["bug"]
+labels: ['bug']
 body:
   - type: markdown
     attributes:

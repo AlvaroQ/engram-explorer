@@ -4,3 +4,9 @@ build
 coverage
 pnpm-lock.yaml
 *.tsbuildinfo
+
+# Vendored minified libraries — never reformat
+*.min.js
+
+# Generated Tailwind bundle
+internal/ui/static/app.css

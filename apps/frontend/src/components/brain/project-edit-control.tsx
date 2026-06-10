@@ -84,7 +84,8 @@ export function ProjectEditControl({ node, currentProject }: ProjectEditControlP
   // filter once they type a partial query that isn't itself an exact project name.
   const filteredOptions = useMemo((): string[] => {
     const needle = draft.trim().toLowerCase();
-    const isExactExisting = needle.length > 0 && projectNames.some((p) => p.toLowerCase() === needle);
+    const isExactExisting =
+      needle.length > 0 && projectNames.some((p) => p.toLowerCase() === needle);
     if (needle.length === 0 || isExactExisting) return projectNames;
     return projectNames.filter((p) => p.toLowerCase().includes(needle));
   }, [projectNames, draft]);

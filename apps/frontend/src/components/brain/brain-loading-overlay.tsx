@@ -54,7 +54,9 @@ export function BrainLoadingOverlay(): JSX.Element {
             <span
               key={`dot-${deg}`}
               className="absolute left-1/2 top-1/2 h-2.5 w-2.5 rounded-full bg-accent/80 shadow-sm shadow-accent/60"
-              style={{ transform: `translate(-50%, -50%) rotate(${deg}deg) translateY(-${ORBIT_RADIUS_PX}px)` }}
+              style={{
+                transform: `translate(-50%, -50%) rotate(${deg}deg) translateY(-${ORBIT_RADIUS_PX}px)`,
+              }}
             />
           ))}
         </div>

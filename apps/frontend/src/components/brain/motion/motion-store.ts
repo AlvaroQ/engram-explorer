@@ -12,23 +12,23 @@
  * this store from a single useFrame callback (C5 contract).
  */
 
-import type { TweenHandle } from './interpolator'
+import type { TweenHandle } from './interpolator';
 
 interface MotionStore {
-  register(handle: TweenHandle): void
-  tick(deltaMs: number): void
-  hasActive(): boolean
-  cancelAll(): void
+  register(handle: TweenHandle): void;
+  tick(deltaMs: number): void;
+  hasActive(): boolean;
+  cancelAll(): void;
 }
 
 function createMotionStore(): MotionStore {
   // Plain mutable set — never a React state setter target.
-  const handles = new Set<TweenHandle>()
+  const handles = new Set<TweenHandle>();
 
   return {
     register(handle: TweenHandle): void {
       if (!handle.done) {
-        handles.add(handle)
+        handles.add(handle);
       }
     },
 
@@ -36,13 +36,13 @@ function createMotionStore(): MotionStore {
       // Step all active handles first, then sweep any that are now done.
       for (const handle of handles) {
         if (!handle.done) {
-          handle.step(deltaMs)
+          handle.step(deltaMs);
         }
       }
       // Sweep completed handles after stepping (including those that just finished).
       for (const handle of handles) {
         if (handle.done) {
-          handles.delete(handle)
+          handles.delete(handle);
         }
       }
     },
@@ -51,20 +51,20 @@ function createMotionStore(): MotionStore {
       // Sweep any handles that finished between ticks, then report.
       for (const handle of handles) {
         if (handle.done) {
-          handles.delete(handle)
+          handles.delete(handle);
         }
       }
-      return handles.size > 0
+      return handles.size > 0;
     },
 
     cancelAll(): void {
       for (const handle of handles) {
-        handle.cancel()
+        handle.cancel();
       }
-      handles.clear()
+      handles.clear();
     },
-  }
+  };
 }
 
 /** Module-level singleton — the ONE motion manager for the entire brain scene. */
-export const motionStore: MotionStore = createMotionStore()
+export const motionStore: MotionStore = createMotionStore();

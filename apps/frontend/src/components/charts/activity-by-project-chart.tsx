@@ -31,10 +31,20 @@ type WidePoint = { day: string } & Record<string, number>;
 
 interface PivotResult {
   data: WidePoint[];
-  series: Array<{ key: string; label: string; color: string; isOthers: boolean; isOrphans: boolean }>;
+  series: Array<{
+    key: string;
+    label: string;
+    color: string;
+    isOthers: boolean;
+    isOrphans: boolean;
+  }>;
 }
 
-function pivot(rows: ActivityResponse['rows'], orphansLabel: string, othersLabel: string): PivotResult {
+function pivot(
+  rows: ActivityResponse['rows'],
+  orphansLabel: string,
+  othersLabel: string,
+): PivotResult {
   if (rows.length === 0) return { data: [], series: [] };
 
   const totals = new Map<string, number>();
@@ -107,11 +117,7 @@ export function ActivityByProjectChart(): JSX.Element {
 
   const pivoted = useMemo(
     () =>
-      pivot(
-        query.data?.rows ?? [],
-        t('overview.activity.orphans'),
-        t('overview.activity.others'),
-      ),
+      pivot(query.data?.rows ?? [], t('overview.activity.orphans'), t('overview.activity.others')),
     [query.data, t],
   );
 
@@ -162,7 +168,12 @@ export function ActivityByProjectChart(): JSX.Element {
                 formatter={(value) => {
                   const s = pivoted.series.find((x) => x.label === value);
                   return (
-                    <span className={cn('text-fg', s?.isOrphans || s?.isOthers ? 'italic text-fg-muted' : null)}>
+                    <span
+                      className={cn(
+                        'text-fg',
+                        s?.isOrphans || s?.isOthers ? 'italic text-fg-muted' : null,
+                      )}
+                    >
                       {value}
                     </span>
                   );
@@ -211,9 +222,7 @@ function RangeToggle({
             aria-pressed={active}
             className={cn(
               'rounded px-2.5 py-1 text-xs font-medium tabular-nums transition-colors',
-              active
-                ? 'bg-accent text-white'
-                : 'text-fg-muted hover:text-fg',
+              active ? 'bg-accent text-white' : 'text-fg-muted hover:text-fg',
             )}
           >
             {t(`overview.activity.range.${opt}` as const)}

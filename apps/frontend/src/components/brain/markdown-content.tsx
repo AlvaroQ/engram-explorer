@@ -25,7 +25,10 @@ const WIKILINK_RE = /\[\[([A-Za-z0-9][\w/-]*)\]\]/g;
 const WIKILINK_SCHEME = 'engram:';
 
 function encodeWikilinks(markdown: string): string {
-  return markdown.replace(WIKILINK_RE, (_full, target: string) => `[${target}](${WIKILINK_SCHEME}${target})`);
+  return markdown.replace(
+    WIKILINK_RE,
+    (_full, target: string) => `[${target}](${WIKILINK_SCHEME}${target})`,
+  );
 }
 
 // Preserve our private scheme; defer everything else to react-markdown's default
@@ -48,14 +51,18 @@ const COMPONENTS: Components = {
       {children}
     </h2>
   ),
-  h3: ({ children }) => (
-    <h3 className="mt-2 mb-1 font-semibold text-fg first:mt-0">{children}</h3>
+  h3: ({ children }) => <h3 className="mt-2 mb-1 font-semibold text-fg first:mt-0">{children}</h3>,
+  p: ({ children }) => (
+    <p className="my-2 leading-relaxed text-fg first:mt-0 last:mb-0">{children}</p>
   ),
-  p: ({ children }) => <p className="my-2 leading-relaxed text-fg first:mt-0 last:mb-0">{children}</p>,
   strong: ({ children }) => <strong className="font-semibold text-fg">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
-  ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-5 marker:text-fg-muted">{children}</ul>,
-  ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5 marker:text-fg-muted">{children}</ol>,
+  ul: ({ children }) => (
+    <ul className="my-2 list-disc space-y-1 pl-5 marker:text-fg-muted">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="my-2 list-decimal space-y-1 pl-5 marker:text-fg-muted">{children}</ol>
+  ),
   li: ({ children }) => <li className="leading-relaxed text-fg">{children}</li>,
   code: ({ children }) => (
     <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[11px] text-fg">
@@ -171,7 +178,11 @@ function buildComponents(onWikilink?: ((target: string) => void) | undefined): C
     a: ({ href, children }) => {
       if (href !== undefined && href.startsWith(WIKILINK_SCHEME)) {
         return (
-          <WikiChip target={href.slice(WIKILINK_SCHEME.length)} label={children} onWikilink={onWikilink} />
+          <WikiChip
+            target={href.slice(WIKILINK_SCHEME.length)}
+            label={children}
+            onWikilink={onWikilink}
+          />
         );
       }
       return (
@@ -240,7 +251,10 @@ export interface MarkdownContentProps {
 // the engram `**Label**:` convention. react-markdown builds a React tree from
 // the AST (no dangerouslySetInnerHTML), so untrusted DB content is XSS-safe by
 // construction.
-export default function MarkdownContent({ content, onWikilink }: MarkdownContentProps): JSX.Element {
+export default function MarkdownContent({
+  content,
+  onWikilink,
+}: MarkdownContentProps): JSX.Element {
   const sections = parseSections(content);
   return (
     <div className="space-y-3 break-words text-[13px] text-fg">

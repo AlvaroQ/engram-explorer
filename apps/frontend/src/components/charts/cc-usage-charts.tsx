@@ -104,7 +104,10 @@ export function CCUsageCharts({ labels }: { labels: CCUsageLabels }): JSX.Elemen
     const tail = sorted.slice(TOP_N);
     if (tail.length > 0) {
       const cost = tail.reduce((s, p) => s + p.usage.cost_usd, 0);
-      top.push({ name: `${labels.others} (${String(tail.length)})`, cost: Number(cost.toFixed(4)) });
+      top.push({
+        name: `${labels.others} (${String(tail.length)})`,
+        cost: Number(cost.toFixed(4)),
+      });
     }
     return top;
   }, [data, labels.others]);
@@ -149,7 +152,11 @@ export function CCUsageCharts({ labels }: { labels: CCUsageLabels }): JSX.Elemen
                 layout="vertical"
                 margin={{ top: 4, right: 16, left: 8, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="hsl(var(--border))"
+                  horizontal={false}
+                />
                 <XAxis
                   type="number"
                   stroke="hsl(var(--fg-muted))"
@@ -250,7 +257,11 @@ export function CCUsageCharts({ labels }: { labels: CCUsageLabels }): JSX.Elemen
                     name === labels.cost ? fmtCost(Number(value)) : String(value)
                   }
                 />
-                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} iconType="square" iconSize={8} />
+                <Legend
+                  wrapperStyle={{ fontSize: 11, paddingTop: 4 }}
+                  iconType="square"
+                  iconSize={8}
+                />
                 <Bar
                   yAxisId="left"
                   dataKey="sessions"

@@ -10,17 +10,17 @@
 // ALL animation is GPU-driven: positions are interpolated in the vertex shader by a
 // uTime uniform. JS never moves a vertex per frame. Two draw calls total for particles
 // (one per layer), two for base lines = four draw calls total regardless of edge count.
-import { useFrame } from '@react-three/fiber'
-import { useMemo, useEffect, useRef } from 'react'
-import * as THREE from 'three'
-import type { GraphEdge, GraphEdgeRelation, GraphNode } from '../../lib/api.ts'
+import { useFrame } from '@react-three/fiber';
+import { useMemo, useEffect, useRef } from 'react';
+import * as THREE from 'three';
+import type { GraphEdge, GraphEdgeRelation, GraphNode } from '../../lib/api.ts';
 import {
   tokenize,
   TOPIC_TOKEN_WEIGHT,
   TITLE_TOKEN_WEIGHT,
   NON_TOPICAL_TYPES,
-} from '../../lib/tfidf.ts'
-import { hash01 } from '../../lib/math-utils.ts'
+} from '../../lib/tfidf.ts';
+import { hash01 } from '../../lib/math-utils.ts';
 
 // ---------------------------------------------------------------------------
 // Colors
@@ -28,26 +28,26 @@ import { hash01 } from '../../lib/math-utils.ts'
 
 // Bright per-relation colors for explicit semantic edges.
 const EDGE_COLORS: Record<GraphEdgeRelation, string> = {
-  related: '#60a5fa',    // blue-400
-  scoped: '#fbbf24',     // amber-400
+  related: '#60a5fa', // blue-400
+  scoped: '#fbbf24', // amber-400
   compatible: '#34d399', // emerald-400
-}
+};
 
 // Dim neutral color for implicit shared-topic proximity roads.
-const TOPIC_ROAD_COLOR = '#6b80a0' // desaturated slate-blue
+const TOPIC_ROAD_COLOR = '#6b80a0'; // desaturated slate-blue
 
 // ---------------------------------------------------------------------------
 // Particle budget
 // ---------------------------------------------------------------------------
 
 // Semantic edges: particle count per road scales with endpoint weight.
-const SEMANTIC_MIN_PARTICLES = 1
-const SEMANTIC_MAX_PARTICLES = 6
+const SEMANTIC_MIN_PARTICLES = 1;
+const SEMANTIC_MAX_PARTICLES = 6;
 // Topic roads: always dim and sparse — weight influence is softer.
-const TOPIC_MIN_PARTICLES = 1
-const TOPIC_MAX_PARTICLES = 3
+const TOPIC_MIN_PARTICLES = 1;
+const TOPIC_MAX_PARTICLES = 3;
 // Hard cap on total particles across all roads (performance ceiling at 800 nodes).
-const TOTAL_PARTICLE_CAP = 4000
+const TOTAL_PARTICLE_CAP = 4000;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -56,21 +56,27 @@ const TOTAL_PARTICLE_CAP = 4000
 // Weight → particle count for semantic edges.
 // Uses log2(1 + avgWeight) so heavy nodes get more light but the growth tapers off.
 function semanticParticleCount(weightA: number, weightB: number): number {
-  const avg = (weightA + weightB) / 2
-  return Math.max(SEMANTIC_MIN_PARTICLES, Math.min(SEMANTIC_MAX_PARTICLES, Math.round(1 + Math.log2(1 + avg))))
+  const avg = (weightA + weightB) / 2;
+  return Math.max(
+    SEMANTIC_MIN_PARTICLES,
+    Math.min(SEMANTIC_MAX_PARTICLES, Math.round(1 + Math.log2(1 + avg))),
+  );
 }
 
 // Weight → particle count for topic roads (softer scaling, lower ceiling).
 function topicParticleCount(weightA: number, weightB: number): number {
-  const avg = (weightA + weightB) / 2
-  return Math.max(TOPIC_MIN_PARTICLES, Math.min(TOPIC_MAX_PARTICLES, Math.round(1 + Math.log2(1 + avg * 0.5))))
+  const avg = (weightA + weightB) / 2;
+  return Math.max(
+    TOPIC_MIN_PARTICLES,
+    Math.min(TOPIC_MAX_PARTICLES, Math.round(1 + Math.log2(1 + avg * 0.5))),
+  );
 }
 
 interface DerivedEdge {
-  source: number // node id
-  target: number
-  weightSource: number
-  weightTarget: number
+  source: number; // node id
+  target: number;
+  weightSource: number;
+  weightTarget: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,8 +104,8 @@ interface DerivedEdge {
 // SIM_NEIGHBOURS / SIM_THRESHOLD are local to the edge-derivation algorithm;
 // they are NOT part of the shared tfidf.ts surface because they control the
 // graph structure rather than the lexical representation.
-const SIM_NEIGHBOURS = 3 // top-K most-similar neighbours kept per node (bounds degree)
-const SIM_THRESHOLD = 0.18 // min cosine to draw a road (drops weak, coincidental links)
+const SIM_NEIGHBOURS = 3; // top-K most-similar neighbours kept per node (bounds degree)
+const SIM_THRESHOLD = 0.18; // min cosine to draw a road (drops weak, coincidental links)
 
 // Build synthetic roads by TF-IDF cosine similarity within each project.
 // Each node links to its SIM_NEIGHBOURS strongest matches above SIM_THRESHOLD; the
@@ -107,93 +113,93 @@ const SIM_THRESHOLD = 0.18 // min cosine to draw a road (drops weak, coincidenta
 function deriveSimilarityEdges(nodes: GraphNode[]): DerivedEdge[] {
   // Similarity is computed WITHIN a project only, so synthetic roads never bridge
   // galaxies — matching the intra-project intent.
-  const byProject = new Map<string, GraphNode[]>()
+  const byProject = new Map<string, GraphNode[]>();
   for (const n of nodes) {
-    if (n.type != null && NON_TOPICAL_TYPES.has(n.type)) continue
-    const p = n.project ?? '∅'
-    const bucket = byProject.get(p)
-    if (bucket) bucket.push(n)
-    else byProject.set(p, [n])
+    if (n.type != null && NON_TOPICAL_TYPES.has(n.type)) continue;
+    const p = n.project ?? '∅';
+    const bucket = byProject.get(p);
+    if (bucket) bucket.push(n);
+    else byProject.set(p, [n]);
   }
 
-  const edges: DerivedEdge[] = []
+  const edges: DerivedEdge[] = [];
 
   for (const [, members] of byProject) {
-    const N = members.length
-    if (N < 2) continue
+    const N = members.length;
+    if (N < 2) continue;
 
     // 1. Weighted term frequency per node + document frequency per token.
-    const tfMaps: Map<string, number>[] = []
-    const df = new Map<string, number>()
+    const tfMaps: Map<string, number>[] = [];
+    const df = new Map<string, number>();
     for (const m of members) {
-      const tf = new Map<string, number>()
-      for (const tok of tokenize(m.topicKey)) tf.set(tok, (tf.get(tok) ?? 0) + TOPIC_TOKEN_WEIGHT)
-      for (const tok of tokenize(m.label)) tf.set(tok, (tf.get(tok) ?? 0) + TITLE_TOKEN_WEIGHT)
-      tfMaps.push(tf)
-      for (const tok of tf.keys()) df.set(tok, (df.get(tok) ?? 0) + 1)
+      const tf = new Map<string, number>();
+      for (const tok of tokenize(m.topicKey)) tf.set(tok, (tf.get(tok) ?? 0) + TOPIC_TOKEN_WEIGHT);
+      for (const tok of tokenize(m.label)) tf.set(tok, (tf.get(tok) ?? 0) + TITLE_TOKEN_WEIGHT);
+      tfMaps.push(tf);
+      for (const tok of tf.keys()) df.set(tok, (df.get(tok) ?? 0) + 1);
     }
 
     // 2. L2-normalized TF-IDF vectors + an inverted index token→node indices so we
     //    only score pairs that actually share a token (sparse, not full O(n²) dot).
-    const vecs: Map<string, number>[] = []
-    const norms: number[] = []
-    const inverted = new Map<string, number[]>()
+    const vecs: Map<string, number>[] = [];
+    const norms: number[] = [];
+    const inverted = new Map<string, number[]>();
     for (let i = 0; i < N; i++) {
-      const v = new Map<string, number>()
-      let sumSq = 0
+      const v = new Map<string, number>();
+      let sumSq = 0;
       for (const [tok, freq] of tfMaps[i]!) {
-        const idf = Math.log(N / (df.get(tok) ?? 1))
-        if (idf <= 0) continue // token in every node → zero discriminative value
-        const w = freq * idf
-        v.set(tok, w)
-        sumSq += w * w
-        const inv = inverted.get(tok)
-        if (inv) inv.push(i)
-        else inverted.set(tok, [i])
+        const idf = Math.log(N / (df.get(tok) ?? 1));
+        if (idf <= 0) continue; // token in every node → zero discriminative value
+        const w = freq * idf;
+        v.set(tok, w);
+        sumSq += w * w;
+        const inv = inverted.get(tok);
+        if (inv) inv.push(i);
+        else inverted.set(tok, [i]);
       }
-      vecs.push(v)
-      norms.push(Math.sqrt(sumSq) || 1)
+      vecs.push(v);
+      norms.push(Math.sqrt(sumSq) || 1);
     }
 
     // 3. For each node, accumulate dot products against every token-sharing peer,
     //    keep its top-K above threshold, and add the (deduped, undirected) road.
-    const seen = new Set<string>()
+    const seen = new Set<string>();
     for (let i = 0; i < N; i++) {
-      const dots = new Map<number, number>()
+      const dots = new Map<number, number>();
       for (const [tok, wi] of vecs[i]!) {
-        const inv = inverted.get(tok)
-        if (!inv) continue
+        const inv = inverted.get(tok);
+        if (!inv) continue;
         for (const j of inv) {
-          if (j === i) continue
-          dots.set(j, (dots.get(j) ?? 0) + wi * (vecs[j]!.get(tok) ?? 0))
+          if (j === i) continue;
+          dots.set(j, (dots.get(j) ?? 0) + wi * (vecs[j]!.get(tok) ?? 0));
         }
       }
 
-      const scored: { j: number; cos: number }[] = []
+      const scored: { j: number; cos: number }[] = [];
       for (const [j, dot] of dots) {
-        const cos = dot / (norms[i]! * norms[j]!)
-        if (cos >= SIM_THRESHOLD) scored.push({ j, cos })
+        const cos = dot / (norms[i]! * norms[j]!);
+        if (cos >= SIM_THRESHOLD) scored.push({ j, cos });
       }
-      scored.sort((a, b) => b.cos - a.cos)
+      scored.sort((a, b) => b.cos - a.cos);
 
       for (let k = 0; k < Math.min(SIM_NEIGHBOURS, scored.length); k++) {
-        const j = scored[k]!.j
-        const a = i < j ? i : j
-        const b = i < j ? j : i
-        const key = `${a}:${b}`
-        if (seen.has(key)) continue
-        seen.add(key)
+        const j = scored[k]!.j;
+        const a = i < j ? i : j;
+        const b = i < j ? j : i;
+        const key = `${a}:${b}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
         edges.push({
           source: members[a]!.id,
           target: members[b]!.id,
           weightSource: members[a]!.weight,
           weightTarget: members[b]!.weight,
-        })
+        });
       }
     }
   }
 
-  return edges
+  return edges;
 }
 
 // ---------------------------------------------------------------------------
@@ -201,9 +207,9 @@ function deriveSimilarityEdges(nodes: GraphNode[]): DerivedEdge[] {
 // ---------------------------------------------------------------------------
 
 interface Props {
-  nodes: GraphNode[]
-  edges: GraphEdge[]
-  positions: Float32Array | null
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  positions: Float32Array | null;
   /**
    * Ids of the isolated project's nodes. When set, the base edge layers fade and
    * a brighter "focused" layer — edges with BOTH endpoints inside the isolated
@@ -212,7 +218,7 @@ interface Props {
    * short + faint and vanish in the global view; isolating one and zooming in must
    * resurface them rather than dim them. null = global view (base opacities).
    */
-  matchedIds?: Set<number> | null | undefined
+  matchedIds?: Set<number> | null | undefined;
 }
 
 // Faint always-on segments for explicit semantic edges — one draw call.
@@ -221,31 +227,35 @@ function buildBaseLineGeometry(
   idToIndex: Map<number, number>,
   positions: Float32Array,
 ): THREE.BufferGeometry | null {
-  const pts: number[] = []
-  const cols: number[] = []
-  const scratch = new THREE.Color()
+  const pts: number[] = [];
+  const cols: number[] = [];
+  const scratch = new THREE.Color();
 
   for (const edge of edges) {
-    const ai = idToIndex.get(edge.source)
-    const bi = idToIndex.get(edge.target)
-    if (ai === undefined || bi === undefined || ai === bi) continue
+    const ai = idToIndex.get(edge.source);
+    const bi = idToIndex.get(edge.target);
+    if (ai === undefined || bi === undefined || ai === bi) continue;
 
     pts.push(
-      positions[ai * 3] ?? 0, positions[ai * 3 + 1] ?? 0, positions[ai * 3 + 2] ?? 0,
-      positions[bi * 3] ?? 0, positions[bi * 3 + 1] ?? 0, positions[bi * 3 + 2] ?? 0,
-    )
+      positions[ai * 3] ?? 0,
+      positions[ai * 3 + 1] ?? 0,
+      positions[ai * 3 + 2] ?? 0,
+      positions[bi * 3] ?? 0,
+      positions[bi * 3 + 1] ?? 0,
+      positions[bi * 3 + 2] ?? 0,
+    );
     // Per-vertex color (both endpoints share the relation color). This is the
     // legitimate use of vertexColors: the geometry actually has a `color`
     // attribute — unlike the node spheres, which use instanceColor instead.
-    scratch.set(EDGE_COLORS[edge.relation])
-    cols.push(scratch.r, scratch.g, scratch.b, scratch.r, scratch.g, scratch.b)
+    scratch.set(EDGE_COLORS[edge.relation]);
+    cols.push(scratch.r, scratch.g, scratch.b, scratch.r, scratch.g, scratch.b);
   }
 
-  if (pts.length === 0) return null
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
-  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3))
-  return geo
+  if (pts.length === 0) return null;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  return geo;
 }
 
 // Even fainter always-on segments for derived shared-topicKey roads — one draw call.
@@ -254,27 +264,31 @@ function buildTopicLineGeometry(
   idToIndex: Map<number, number>,
   positions: Float32Array,
 ): THREE.BufferGeometry | null {
-  const pts: number[] = []
-  const cols: number[] = []
-  const scratch = new THREE.Color(TOPIC_ROAD_COLOR)
+  const pts: number[] = [];
+  const cols: number[] = [];
+  const scratch = new THREE.Color(TOPIC_ROAD_COLOR);
 
   for (const edge of topicEdges) {
-    const ai = idToIndex.get(edge.source)
-    const bi = idToIndex.get(edge.target)
-    if (ai === undefined || bi === undefined || ai === bi) continue
+    const ai = idToIndex.get(edge.source);
+    const bi = idToIndex.get(edge.target);
+    if (ai === undefined || bi === undefined || ai === bi) continue;
 
     pts.push(
-      positions[ai * 3] ?? 0, positions[ai * 3 + 1] ?? 0, positions[ai * 3 + 2] ?? 0,
-      positions[bi * 3] ?? 0, positions[bi * 3 + 1] ?? 0, positions[bi * 3 + 2] ?? 0,
-    )
-    cols.push(scratch.r, scratch.g, scratch.b, scratch.r, scratch.g, scratch.b)
+      positions[ai * 3] ?? 0,
+      positions[ai * 3 + 1] ?? 0,
+      positions[ai * 3 + 2] ?? 0,
+      positions[bi * 3] ?? 0,
+      positions[bi * 3 + 1] ?? 0,
+      positions[bi * 3 + 2] ?? 0,
+    );
+    cols.push(scratch.r, scratch.g, scratch.b, scratch.r, scratch.g, scratch.b);
   }
 
-  if (pts.length === 0) return null
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
-  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3))
-  return geo
+  if (pts.length === 0) return null;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  return geo;
 }
 
 // Build the travelling-particle cloud for ONE layer of edges.
@@ -290,7 +304,13 @@ function buildTopicLineGeometry(
 //
 // Returns null when there are no valid edges (so the caller can skip rendering).
 function buildParticleGeometry(
-  edgeList: { source: number; target: number; weightSource: number; weightTarget: number; colorHex: string }[],
+  edgeList: {
+    source: number;
+    target: number;
+    weightSource: number;
+    weightTarget: number;
+    colorHex: string;
+  }[],
   idToIndex: Map<number, number>,
   positions: Float32Array,
   countFn: (wa: number, wb: number) => number,
@@ -298,11 +318,11 @@ function buildParticleGeometry(
   speedVariance: number,
   totalCap: number,
 ): THREE.BufferGeometry | null {
-  const from: number[] = []
-  const to: number[] = []
-  const offset: number[] = []
-  const speed: number[] = []
-  const color: number[] = []
+  const from: number[] = [];
+  const to: number[] = [];
+  const offset: number[] = [];
+  const speed: number[] = [];
+  const color: number[] = [];
   // aDir: 0 = forward (position→aTo), 1 = reverse (position→aTo with start at far end).
   // The shader handles both cases identically — swapping from/to at build time means
   // the attribute is purely a build-time concern, not a runtime shader branch.
@@ -314,66 +334,72 @@ function buildParticleGeometry(
   // shader's `mix(position, aTo, t)` then runs the sprite from the "target" side
   // back to the "source" side. Zero shader changes required.
 
-  const scratch = new THREE.Color()
-  let totalEmitted = 0
-  let edgeIndex = 0
+  const scratch = new THREE.Color();
+  let totalEmitted = 0;
+  let edgeIndex = 0;
 
   for (const edge of edgeList) {
-    if (totalEmitted >= totalCap) break
+    if (totalEmitted >= totalCap) break;
 
-    const ai = idToIndex.get(edge.source)
-    const bi = idToIndex.get(edge.target)
-    if (ai === undefined || bi === undefined || ai === bi) continue
+    const ai = idToIndex.get(edge.source);
+    const bi = idToIndex.get(edge.target);
+    if (ai === undefined || bi === undefined || ai === bi) continue;
 
-    const ax = positions[ai * 3] ?? 0, ay = positions[ai * 3 + 1] ?? 0, az = positions[ai * 3 + 2] ?? 0
-    const bx = positions[bi * 3] ?? 0, by = positions[bi * 3 + 1] ?? 0, bz = positions[bi * 3 + 2] ?? 0
-    const dx = bx - ax, dy = by - ay, dz = bz - az
-    if (dx * dx + dy * dy + dz * dz < 1e-6) continue
+    const ax = positions[ai * 3] ?? 0,
+      ay = positions[ai * 3 + 1] ?? 0,
+      az = positions[ai * 3 + 2] ?? 0;
+    const bx = positions[bi * 3] ?? 0,
+      by = positions[bi * 3 + 1] ?? 0,
+      bz = positions[bi * 3 + 2] ?? 0;
+    const dx = bx - ax,
+      dy = by - ay,
+      dz = bz - az;
+    if (dx * dx + dy * dy + dz * dz < 1e-6) continue;
 
-    scratch.set(edge.colorHex)
-    const n = Math.min(countFn(edge.weightSource, edge.weightTarget), totalCap - totalEmitted)
+    scratch.set(edge.colorHex);
+    const n = Math.min(countFn(edge.weightSource, edge.weightTarget), totalCap - totalEmitted);
     // Forward count = half (rounded up), reverse = remainder.
-    const fwdCount = Math.ceil(n / 2)
-    const revCount = n - fwdCount
-    const phaseBase = hash01(edgeIndex * 2.17)
-    const edgeSpeed = baseSpeed + hash01(edgeIndex * 3.71) * speedVariance
+    const fwdCount = Math.ceil(n / 2);
+    const revCount = n - fwdCount;
+    const phaseBase = hash01(edgeIndex * 2.17);
+    const edgeSpeed = baseSpeed + hash01(edgeIndex * 3.71) * speedVariance;
     // Scale speed slightly with weight: heavier nodes → slightly faster light.
-    const avgWeight = (edge.weightSource + edge.weightTarget) / 2
-    const weightSpeedBoost = Math.min(0.04, avgWeight * 0.002) // max +0.04 boost
-    const finalSpeed = edgeSpeed + weightSpeedBoost
+    const avgWeight = (edge.weightSource + edge.weightTarget) / 2;
+    const weightSpeedBoost = Math.min(0.04, avgWeight * 0.002); // max +0.04 boost
+    const finalSpeed = edgeSpeed + weightSpeedBoost;
 
     // Emit forward sprites (source → target).
     for (let k = 0; k < fwdCount; k++) {
-      from.push(ax, ay, az)
-      to.push(bx, by, bz)
+      from.push(ax, ay, az);
+      to.push(bx, by, bz);
       // Evenly spaced along edge + per-edge phase so the graph isn't synchronized.
-      offset.push((k / n + phaseBase) % 1)
-      speed.push(finalSpeed)
-      color.push(scratch.r, scratch.g, scratch.b)
+      offset.push((k / n + phaseBase) % 1);
+      speed.push(finalSpeed);
+      color.push(scratch.r, scratch.g, scratch.b);
     }
 
     // Emit reverse sprites (target → source): swap position and aTo.
     for (let k = 0; k < revCount; k++) {
-      from.push(bx, by, bz)  // sprite starts at target
-      to.push(ax, ay, az)     // and travels to source
+      from.push(bx, by, bz); // sprite starts at target
+      to.push(ax, ay, az); // and travels to source
       // Offset reverse sprites by 0.5 so they're staggered against the forward ones.
-      offset.push(((k + fwdCount) / n + phaseBase + 0.5) % 1)
-      speed.push(finalSpeed)
-      color.push(scratch.r, scratch.g, scratch.b)
+      offset.push(((k + fwdCount) / n + phaseBase + 0.5) % 1);
+      speed.push(finalSpeed);
+      color.push(scratch.r, scratch.g, scratch.b);
     }
 
-    totalEmitted += n
-    edgeIndex += 1
+    totalEmitted += n;
+    edgeIndex += 1;
   }
 
-  if (from.length === 0) return null
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(from, 3))
-  geo.setAttribute('aTo', new THREE.Float32BufferAttribute(to, 3))
-  geo.setAttribute('aOffset', new THREE.Float32BufferAttribute(offset, 1))
-  geo.setAttribute('aSpeed', new THREE.Float32BufferAttribute(speed, 1))
-  geo.setAttribute('aColor', new THREE.Float32BufferAttribute(color, 3))
-  return geo
+  if (from.length === 0) return null;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(from, 3));
+  geo.setAttribute('aTo', new THREE.Float32BufferAttribute(to, 3));
+  geo.setAttribute('aOffset', new THREE.Float32BufferAttribute(offset, 1));
+  geo.setAttribute('aSpeed', new THREE.Float32BufferAttribute(speed, 1));
+  geo.setAttribute('aColor', new THREE.Float32BufferAttribute(color, 3));
+  return geo;
 }
 
 // ---------------------------------------------------------------------------
@@ -402,7 +428,7 @@ const particleVertexShader = /* glsl */ `
     // giant blobs and far ones never vanish — keeps them reading as small "cars".
     gl_PointSize = clamp(uSize * (300.0 / max(1.0, -mvPosition.z)), 1.5, 6.0);
   }
-`
+`;
 
 const particleFragmentShader = /* glsl */ `
   uniform float uOpacity;
@@ -415,7 +441,7 @@ const particleFragmentShader = /* glsl */ `
     float a = smoothstep(0.5, 0.25, d) * uOpacity;
     gl_FragColor = vec4(vColor, a);
   }
-`
+`;
 
 // ---------------------------------------------------------------------------
 // React components
@@ -429,16 +455,16 @@ function EdgeParticles({
   pointSize,
   renderOrder = 0,
 }: {
-  geometry: THREE.BufferGeometry
-  dimmed: boolean
+  geometry: THREE.BufferGeometry;
+  dimmed: boolean;
   /** Full opacity when not dimmed. Topic roads pass a lower value (0.5) to stay dim. */
-  baseOpacity: number
+  baseOpacity: number;
   /** Base point size. Topic roads use a smaller value (1.5) to read as secondary. */
-  pointSize: number
+  pointSize: number;
   /** Draw order — focused overlay layers use a higher value to sit above the base. */
-  renderOrder?: number
+  renderOrder?: number;
 }) {
-  const matRef = useRef<THREE.ShaderMaterial>(null!)
+  const matRef = useRef<THREE.ShaderMaterial>(null!);
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
@@ -448,25 +474,30 @@ function EdgeParticles({
     // pointSize and baseOpacity are static per layer — safe to capture once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
-  )
+  );
 
   // Advance time on the actual material's uniforms — mutating a ref, no re-render.
   useFrame((_, delta) => {
-    if (typeof document !== 'undefined' && document.hidden) return
-    const uTime = matRef.current?.uniforms.uTime
-    if (uTime) uTime.value += delta
-  })
+    if (typeof document !== 'undefined' && document.hidden) return;
+    const uTime = matRef.current?.uniforms.uTime;
+    if (uTime) uTime.value += delta;
+  });
 
   // Fade the sprites along with the base lines when filtering.
   useEffect(() => {
-    const uOpacity = matRef.current?.uniforms.uOpacity
-    if (uOpacity) uOpacity.value = dimmed ? 0.2 : baseOpacity
-  }, [dimmed, baseOpacity])
+    const uOpacity = matRef.current?.uniforms.uOpacity;
+    if (uOpacity) uOpacity.value = dimmed ? 0.2 : baseOpacity;
+  }, [dimmed, baseOpacity]);
 
-  useEffect(() => () => geometry.dispose(), [geometry])
+  useEffect(() => () => geometry.dispose(), [geometry]);
 
   return (
-    <points geometry={geometry} renderOrder={renderOrder} frustumCulled={false} raycast={() => null}>
+    <points
+      geometry={geometry}
+      renderOrder={renderOrder}
+      frustumCulled={false}
+      raycast={() => null}
+    >
       <shaderMaterial
         ref={matRef}
         uniforms={uniforms}
@@ -477,7 +508,7 @@ function EdgeParticles({
         blending={THREE.AdditiveBlending}
       />
     </points>
-  )
+  );
 }
 
 // Renders static base lines and disposes geometry on unmount/change.
@@ -486,17 +517,22 @@ function BaseLines({
   opacity,
   renderOrder = 0,
 }: {
-  geometry: THREE.BufferGeometry
-  opacity: number
+  geometry: THREE.BufferGeometry;
+  opacity: number;
   /** Draw order — focused overlay layers use a higher value to sit above the base. */
-  renderOrder?: number
+  renderOrder?: number;
 }) {
-  useEffect(() => () => geometry.dispose(), [geometry])
+  useEffect(() => () => geometry.dispose(), [geometry]);
   return (
-    <lineSegments geometry={geometry} renderOrder={renderOrder} frustumCulled={false} raycast={() => null}>
+    <lineSegments
+      geometry={geometry}
+      renderOrder={renderOrder}
+      frustumCulled={false}
+      raycast={() => null}
+    >
       <lineBasicMaterial vertexColors transparent opacity={opacity} depthWrite={false} />
     </lineSegments>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -506,34 +542,34 @@ function BaseLines({
 export function TunnelFlow({ nodes, edges, positions, matchedIds = null }: Props) {
   // A project is isolated when matchedIds is a non-null set. In that mode the base
   // layers fade (dimmed) and a brighter "focused" overlay is drawn on top.
-  const dimmed = matchedIds != null
+  const dimmed = matchedIds != null;
 
   // Predicate: an edge is "focused" when BOTH endpoints belong to the isolated
   // project. null when nothing is isolated (global view) — no overlay is built.
   const isFocused = useMemo(
     () => (matchedIds ? (s: number, t: number) => matchedIds.has(s) && matchedIds.has(t) : null),
     [matchedIds],
-  )
+  );
 
   // Build id→index map once per node list (ids are now numbers).
   const idToIndex = useMemo(() => {
-    const m = new Map<number, number>()
-    nodes.forEach((n, i) => m.set(n.id, i))
-    return m
-  }, [nodes])
+    const m = new Map<number, number>();
+    nodes.forEach((n, i) => m.set(n.id, i));
+    return m;
+  }, [nodes]);
 
   // Derive synthetic similarity roads from node content (topicKey + title).
   // Render-only layer — no backend contract change. See deriveSimilarityEdges for
   // the TF-IDF / k-NN rationale. Recomputed only when the node set changes.
-  const topicEdges = useMemo(() => deriveSimilarityEdges(nodes), [nodes])
+  const topicEdges = useMemo(() => deriveSimilarityEdges(nodes), [nodes]);
 
   // Build a weight-map for nodes so the particle builder can look up weights for
   // derived topic edges (semantic edges already carry their node data via idToIndex).
   const weightById = useMemo(() => {
-    const m = new Map<number, number>()
-    for (const n of nodes) m.set(n.id, n.weight)
-    return m
-  }, [nodes])
+    const m = new Map<number, number>();
+    for (const n of nodes) m.set(n.id, n.weight);
+    return m;
+  }, [nodes]);
 
   // ---------------------------------------------------------------------------
   // Semantic layer geometries
@@ -543,7 +579,7 @@ export function TunnelFlow({ nodes, edges, positions, matchedIds = null }: Props
   const semanticLineGeo = useMemo(
     () => (positions ? buildBaseLineGeometry(edges, idToIndex, positions) : null),
     [edges, idToIndex, positions],
-  )
+  );
 
   // Bright bidirectional particles for semantic edges (weight-driven count + speed).
   // Annotate each edge with source/target weights and relation color for the builder.
@@ -557,7 +593,7 @@ export function TunnelFlow({ nodes, edges, positions, matchedIds = null }: Props
         colorHex: EDGE_COLORS[e.relation],
       })),
     [edges, weightById],
-  )
+  );
 
   // Perf: while a project is isolated the base particle layers are NOT rendered —
   // they would draw thousands of near-invisible additive sprites on top of the
@@ -573,13 +609,13 @@ export function TunnelFlow({ nodes, edges, positions, matchedIds = null }: Props
             idToIndex,
             positions,
             semanticParticleCount,
-            /* baseSpeed */ 0.10,
+            /* baseSpeed */ 0.1,
             /* speedVariance */ 0.06,
             /* totalCap */ TOTAL_PARTICLE_CAP,
           )
         : null,
     [semanticEdgesAnnotated, idToIndex, positions, dimmed],
-  )
+  );
 
   // ---------------------------------------------------------------------------
   // Topic layer geometries
@@ -589,7 +625,7 @@ export function TunnelFlow({ nodes, edges, positions, matchedIds = null }: Props
   const topicLineGeo = useMemo(
     () => (positions ? buildTopicLineGeometry(topicEdges, idToIndex, positions) : null),
     [topicEdges, idToIndex, positions],
-  )
+  );
 
   // Annotate topic edges with their color for the shared builder.
   const topicEdgesAnnotated = useMemo(
@@ -599,7 +635,7 @@ export function TunnelFlow({ nodes, edges, positions, matchedIds = null }: Props
         colorHex: TOPIC_ROAD_COLOR,
       })),
     [topicEdges],
-  )
+  );
 
   // Dim, sparse particles for topic proximity roads (weight-driven but lower ceiling).
   // Same isolation gate as the semantic particles: skip the base topic-road
@@ -618,7 +654,7 @@ export function TunnelFlow({ nodes, edges, positions, matchedIds = null }: Props
           )
         : null,
     [topicEdgesAnnotated, idToIndex, positions, dimmed],
-  )
+  );
 
   // ---------------------------------------------------------------------------
   // Focused overlay geometries (only when a project is isolated)
@@ -633,10 +669,14 @@ export function TunnelFlow({ nodes, edges, positions, matchedIds = null }: Props
   const focusedSemanticLineGeo = useMemo(
     () =>
       positions && isFocused
-        ? buildBaseLineGeometry(edges.filter((e) => isFocused(e.source, e.target)), idToIndex, positions)
+        ? buildBaseLineGeometry(
+            edges.filter((e) => isFocused(e.source, e.target)),
+            idToIndex,
+            positions,
+          )
         : null,
     [edges, idToIndex, positions, isFocused],
-  )
+  );
 
   const focusedSemanticParticleGeo = useMemo(
     () =>
@@ -646,21 +686,25 @@ export function TunnelFlow({ nodes, edges, positions, matchedIds = null }: Props
             idToIndex,
             positions,
             semanticParticleCount,
-            0.10,
+            0.1,
             0.06,
             TOTAL_PARTICLE_CAP,
           )
         : null,
     [semanticEdgesAnnotated, idToIndex, positions, isFocused],
-  )
+  );
 
   const focusedTopicLineGeo = useMemo(
     () =>
       positions && isFocused
-        ? buildTopicLineGeometry(topicEdges.filter((e) => isFocused(e.source, e.target)), idToIndex, positions)
+        ? buildTopicLineGeometry(
+            topicEdges.filter((e) => isFocused(e.source, e.target)),
+            idToIndex,
+            positions,
+          )
         : null,
     [topicEdges, idToIndex, positions, isFocused],
-  )
+  );
 
   const focusedTopicParticleGeo = useMemo(
     () =>
@@ -676,9 +720,9 @@ export function TunnelFlow({ nodes, edges, positions, matchedIds = null }: Props
           )
         : null,
     [topicEdgesAnnotated, idToIndex, positions, isFocused],
-  )
+  );
 
-  if (!positions) return null
+  if (!positions) return null;
 
   return (
     <>
@@ -698,9 +742,7 @@ export function TunnelFlow({ nodes, edges, positions, matchedIds = null }: Props
       {/* Topic proximity layer: dim roads + dim sparse particles.
           Base floor raised (0.07→0.10 lines, 0.45→0.50 particles) so shared-topic
           roads read a little better in the global view without flooding it. */}
-      {topicLineGeo ? (
-        <BaseLines geometry={topicLineGeo} opacity={dimmed ? 0.02 : 0.10} />
-      ) : null}
+      {topicLineGeo ? <BaseLines geometry={topicLineGeo} opacity={dimmed ? 0.02 : 0.1} /> : null}
       {topicParticleGeo ? (
         <EdgeParticles
           geometry={topicParticleGeo}
@@ -738,5 +780,5 @@ export function TunnelFlow({ nodes, edges, positions, matchedIds = null }: Props
         />
       ) : null}
     </>
-  )
+  );
 }

@@ -29,7 +29,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     } catch {
       // ignore
     }
-    throw new ApiRequestError(res.status, payload.error ?? { code: 'UNKNOWN', message: res.statusText });
+    throw new ApiRequestError(
+      res.status,
+      payload.error ?? { code: 'UNKNOWN', message: res.statusText },
+    );
   }
   return (await res.json()) as T;
 }
@@ -485,7 +488,8 @@ export const api = {
   ccSessionsStats: () => request<CCStatsResponse>('/api/cc-sessions/stats'),
   listObservations: (params: ObservationListParams) =>
     request<ObservationListResponse>(`/api/observations?${buildSearch(params)}`),
-  getObservation: (id: number) => request<ObservationDetailResponse>(`/api/observations/${String(id)}`),
+  getObservation: (id: number) =>
+    request<ObservationDetailResponse>(`/api/observations/${String(id)}`),
   listSessions: (params: SessionListParams) =>
     request<SessionListResponse>(`/api/sessions?${buildSessionSearch(params)}`),
   getSession: (id: string) =>
@@ -517,7 +521,11 @@ export const api = {
   // Backend write routes are plural: /api/{observations,sessions,prompts}/...
   // The entity arg is singular, so pluralize with `+s` to hit the real route
   // (a singular path falls through to the catch-all and returns 405).
-  assignProject: (entity: 'observation' | 'session' | 'prompt', id: string | number, project: string) =>
+  assignProject: (
+    entity: 'observation' | 'session' | 'prompt',
+    id: string | number,
+    project: string,
+  ) =>
     request<AssignProjectResponse>(`/api/${entity}s/${encodeURIComponent(String(id))}/project`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -528,15 +536,23 @@ export const api = {
       method: 'DELETE',
     }),
   graph: (project?: string) =>
-    request<GraphResponse>(project ? `/api/graph?project=${encodeURIComponent(project)}` : '/api/graph'),
-  renameProject: (project: string, body: { target: string; mode: 'rename' | 'merge' }) =>
-    request<RenameProjectResponse>(
-      `/api/projects/${encodeURIComponent(project)}/rename`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+    request<GraphResponse>(
+      project ? `/api/graph?project=${encodeURIComponent(project)}` : '/api/graph',
     ),
+  renameProject: (project: string, body: { target: string; mode: 'rename' | 'merge' }) =>
+    request<RenameProjectResponse>(`/api/projects/${encodeURIComponent(project)}/rename`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
   updateObservation: (
     id: number,
-    patch: { type?: string; title?: string | null; topic_key?: string | null; content?: string | null },
+    patch: {
+      type?: string;
+      title?: string | null;
+      topic_key?: string | null;
+      content?: string | null;
+    },
   ) =>
     request<ObservationUpdateResponse>(`/api/observations/${String(id)}`, {
       method: 'PATCH',
@@ -553,7 +569,10 @@ export const api = {
       } catch {
         // ignore
       }
-      throw new ApiRequestError(res.status, payload.error ?? { code: 'UNKNOWN', message: res.statusText });
+      throw new ApiRequestError(
+        res.status,
+        payload.error ?? { code: 'UNKNOWN', message: res.statusText },
+      );
     }
     return res.blob();
   },

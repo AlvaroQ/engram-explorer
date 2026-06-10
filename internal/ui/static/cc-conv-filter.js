@@ -6,43 +6,43 @@
 // plus a per-turn "empty" class so turns left with no visible block disappear.
 
 (function () {
-  "use strict";
+  'use strict';
 
   // Recompute visibility for one .cc-conv wrapper from its toggle states.
   function apply(conv) {
     if (!conv) return;
-    var toggles = conv.querySelectorAll("[data-cc-toggle]");
+    var toggles = conv.querySelectorAll('[data-cc-toggle]');
     var hidden = {};
     toggles.forEach(function (t) {
-      var type = t.getAttribute("data-cc-toggle");
+      var type = t.getAttribute('data-cc-toggle');
       hidden[type] = !t.checked;
-      conv.classList.toggle("cc-hide-" + type, !t.checked);
+      conv.classList.toggle('cc-hide-' + type, !t.checked);
     });
 
     // Hide any turn whose every block is currently hidden. Blocks of a type with
     // no toggle (text, other) keep the turn visible.
-    conv.querySelectorAll(".timeline-event").forEach(function (ev) {
-      var blocks = ev.querySelectorAll("[data-cc-block]");
+    conv.querySelectorAll('.timeline-event').forEach(function (ev) {
+      var blocks = ev.querySelectorAll('[data-cc-block]');
       if (blocks.length === 0) {
-        ev.classList.remove("cc-turn-empty");
+        ev.classList.remove('cc-turn-empty');
         return;
       }
       var anyVisible = false;
       blocks.forEach(function (b) {
-        if (!hidden[b.getAttribute("data-cc-block")]) anyVisible = true;
+        if (!hidden[b.getAttribute('data-cc-block')]) anyVisible = true;
       });
-      ev.classList.toggle("cc-turn-empty", !anyVisible);
+      ev.classList.toggle('cc-turn-empty', !anyVisible);
     });
 
     // Reflect compact state: the button is "active" when all groups are hidden.
-    var btn = conv.querySelector("[data-cc-compact]");
+    var btn = conv.querySelector('[data-cc-compact]');
     if (btn) {
       var allHidden = true;
       toggles.forEach(function (t) {
         if (t.checked) allHidden = false;
       });
-      btn.classList.toggle("is-active", allHidden);
-      btn.setAttribute("aria-pressed", String(allHidden));
+      btn.classList.toggle('is-active', allHidden);
+      btn.setAttribute('aria-pressed', String(allHidden));
     }
   }
 
@@ -50,7 +50,7 @@
   // restore everything. Then re-apply.
   function compact(conv) {
     if (!conv) return;
-    var toggles = conv.querySelectorAll("[data-cc-toggle]");
+    var toggles = conv.querySelectorAll('[data-cc-toggle]');
     var anyChecked = false;
     toggles.forEach(function (t) {
       if (t.checked) anyChecked = true;
@@ -69,16 +69,16 @@
   if (!window.__ccConvFilterBound) {
     window.__ccConvFilterBound = true;
 
-    document.addEventListener("change", function (e) {
+    document.addEventListener('change', function (e) {
       var t = e.target;
-      if (t && t.matches && t.matches("[data-cc-toggle]")) {
-        apply(t.closest(".cc-conv"));
+      if (t && t.matches && t.matches('[data-cc-toggle]')) {
+        apply(t.closest('.cc-conv'));
       }
     });
 
-    document.addEventListener("click", function (e) {
-      var b = e.target.closest && e.target.closest("[data-cc-compact]");
-      if (b) compact(b.closest(".cc-conv"));
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-cc-compact]');
+      if (b) compact(b.closest('.cc-conv'));
     });
   }
 })();

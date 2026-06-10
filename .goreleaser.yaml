@@ -35,7 +35,7 @@ archives:
   - id: engram-explorer
     builds:
       - engram-explorer
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
     format_overrides:
       - goos: windows
         formats:
@@ -45,18 +45,18 @@ archives:
       - LICENSE*
 
 checksum:
-  name_template: "checksums.txt"
+  name_template: 'checksums.txt'
   algorithm: sha256
 
 changelog:
   sort: asc
   filters:
     exclude:
-      - "^docs:"
-      - "^test:"
-      - "^chore:"
-      - "Merge pull request"
-      - "Merge branch"
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - 'Merge pull request'
+      - 'Merge branch'
 
 brews:
   - name: engram-explorer
@@ -64,10 +64,10 @@ brews:
     repository:
       owner: AlvaroQ
       name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    homepage: "https://github.com/AlvaroQ/engram-explorer"
-    description: "Local web dashboard for exploring Engram memory database"
-    license: "MIT"
+      token: '{{ .Env.HOMEBREW_TAP_TOKEN }}'
+    homepage: 'https://github.com/AlvaroQ/engram-explorer'
+    description: 'Local web dashboard for exploring Engram memory database'
+    license: 'MIT'
     install: |
       bin.install "engram-explorer"
     test: |

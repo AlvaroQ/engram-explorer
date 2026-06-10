@@ -9,15 +9,7 @@
  *   data-props='{"activity_30d":[{"day":"2024-01-01","count":3},...]}'
  */
 import { createRoot } from 'react-dom/client';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 export interface ActivityDay {
   day: string;

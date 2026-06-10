@@ -31,7 +31,6 @@
     "dev:frontend": "pnpm -F @engram-explorer/frontend dev",
     "build": "pnpm -F @engram-explorer/frontend build",
     "test": "pnpm -r test",
-    "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\""

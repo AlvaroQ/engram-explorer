@@ -11,7 +11,7 @@
  *   No setInterval is used in production; the R3F useFrame is the sole clock.
  */
 
-import * as THREE from 'three'
+import * as THREE from 'three';
 
 // ---------------------------------------------------------------------------
 // Easing functions
@@ -19,24 +19,24 @@ import * as THREE from 'three'
 
 /** Decelerate exponentially: fast start, slow finish. Use for camera fly-to. */
 export function easeOutExpo(t: number): number {
-  if (t === 0) return 0
-  if (t === 1) return 1
-  return 1 - Math.pow(2, -10 * t)
+  if (t === 0) return 0;
+  if (t === 1) return 1;
+  return 1 - Math.pow(2, -10 * t);
 }
 
 /** Symmetric cubic ease in-out: slow start, fast middle, slow finish. */
 export function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 /** Decelerate cubically: fast start, slow finish. Use for node entrance. */
 export function easeOutCubic(t: number): number {
-  return 1 - Math.pow(1 - t, 3)
+  return 1 - Math.pow(1 - t, 3);
 }
 
 /** No easing: constant speed. */
 export function linear(t: number): number {
-  return t
+  return t;
 }
 
 // ---------------------------------------------------------------------------
@@ -49,7 +49,7 @@ export const DURATIONS = {
   dimBrighten: 300,
   /** Drill-in "node opens" burst: children expand from the parent's position. */
   nodeBurst: 600,
-} as const
+} as const;
 
 // ---------------------------------------------------------------------------
 // useReducedMotion — single source of prefers-reduced-motion
@@ -65,34 +65,34 @@ export const DURATIONS = {
  * Components MUST NOT query prefers-reduced-motion directly — use this instead.
  */
 export function useReducedMotion(): boolean {
-  if (typeof globalThis.window === 'undefined') return false
-  return globalThis.window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (typeof globalThis.window === 'undefined') return false;
+  return globalThis.window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 // ---------------------------------------------------------------------------
 // TweenSpec and TweenHandle
 // ---------------------------------------------------------------------------
 
-export type Easing = (t: number) => number
+export type Easing = (t: number) => number;
 
 export interface TweenSpec<T> {
-  from: T
-  to: T
-  durationMs: number
-  easing?: Easing
+  from: T;
+  to: T;
+  durationMs: number;
+  easing?: Easing;
 }
 
 export interface TweenHandle {
   /** Cancel the tween without calling onComplete. */
-  cancel(): void
+  cancel(): void;
   /**
    * Advance the tween by deltaMs milliseconds.
    * Called by motionStore.tick() on every R3F frame.
    * No-op if already done or cancelled.
    */
-  step(deltaMs: number): void
+  step(deltaMs: number): void;
   /** True once the tween has completed or been cancelled. */
-  readonly done: boolean
+  readonly done: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -100,7 +100,7 @@ export interface TweenHandle {
 // ---------------------------------------------------------------------------
 
 function interpolateNumber(from: number, to: number, t: number): number {
-  return from + (to - from) * t
+  return from + (to - from) * t;
 }
 
 function interpolateVector3(from: THREE.Vector3, to: THREE.Vector3, t: number): THREE.Vector3 {
@@ -108,7 +108,7 @@ function interpolateVector3(from: THREE.Vector3, to: THREE.Vector3, t: number): 
     interpolateNumber(from.x, to.x, t),
     interpolateNumber(from.y, to.y, t),
     interpolateNumber(from.z, to.z, t),
-  )
+  );
 }
 
 function interpolateColor(from: THREE.Color, to: THREE.Color, t: number): THREE.Color {
@@ -116,21 +116,21 @@ function interpolateColor(from: THREE.Color, to: THREE.Color, t: number): THREE.
     interpolateNumber(from.r, to.r, t),
     interpolateNumber(from.g, to.g, t),
     interpolateNumber(from.b, to.b, t),
-  )
+  );
 }
 
 function interpolate<T>(from: T, to: T, t: number): T {
   if (typeof from === 'number' && typeof to === 'number') {
-    return interpolateNumber(from, to, t) as T
+    return interpolateNumber(from, to, t) as T;
   }
   if (from instanceof THREE.Vector3 && to instanceof THREE.Vector3) {
-    return interpolateVector3(from, to, t) as T
+    return interpolateVector3(from, to, t) as T;
   }
   if (from instanceof THREE.Color && to instanceof THREE.Color) {
-    return interpolateColor(from, to, t) as T
+    return interpolateColor(from, to, t) as T;
   }
   // Fallback: snap to target
-  return t >= 1 ? to : from
+  return t >= 1 ? to : from;
 }
 
 // ---------------------------------------------------------------------------
@@ -156,35 +156,35 @@ export function tween<T>(
   onComplete?: () => void,
   reducedMotion = false,
 ): TweenHandle {
-  const effectiveDuration = reducedMotion ? Math.min(spec.durationMs, 50) : spec.durationMs
-  const easingFn = spec.easing ?? linear
+  const effectiveDuration = reducedMotion ? Math.min(spec.durationMs, 50) : spec.durationMs;
+  const easingFn = spec.easing ?? linear;
 
-  let elapsed = 0
-  let isDone = false
+  let elapsed = 0;
+  let isDone = false;
 
   const handle: TweenHandle = {
     step(deltaMs: number): void {
-      if (isDone) return
-      elapsed += deltaMs
-      const rawT = Math.min(elapsed / effectiveDuration, 1)
-      const easedT = easingFn(rawT)
-      const value = interpolate(spec.from, spec.to, easedT)
-      onUpdate(value)
+      if (isDone) return;
+      elapsed += deltaMs;
+      const rawT = Math.min(elapsed / effectiveDuration, 1);
+      const easedT = easingFn(rawT);
+      const value = interpolate(spec.from, spec.to, easedT);
+      onUpdate(value);
       if (rawT >= 1) {
-        isDone = true
-        onComplete?.()
+        isDone = true;
+        onComplete?.();
       }
     },
 
     cancel() {
-      if (isDone) return
-      isDone = true
+      if (isDone) return;
+      isDone = true;
     },
 
     get done() {
-      return isDone
+      return isDone;
     },
-  }
+  };
 
-  return handle
+  return handle;
 }

@@ -4,7 +4,7 @@
 
 ![Engram Explorer Dashboard overview](docs/engram-explorer.png)
 
-Engram stores your agents' long-term memory in a local SQLite database (`~/.engram/engram.db`). The official TUI/CLI is great for capture and recall — but it can't *show* you the shape of that memory, nor the operational problems hiding inside it: orphan projects, broken cloud sync, thousands of pending mutations, observations captured without a project. This dashboard reads that database **directly** — read-only by default, so it never blocks the daemon's writes — and surfaces all of it across 13 views — projects, sessions, observations, prompts, topics, sync health, and diagnostics — in both **Spanish and English**, light or dark. It can also apply targeted, **user-confirmed** fixes (reassign a stray observation, rename a project, prune junk) through a guarded write path you can switch off entirely with `ENGRAM_DASH_READONLY=true` — see [Editing your memory](#editing-your-memory).
+Engram stores your agents' long-term memory in a local SQLite database (`~/.engram/engram.db`). The official TUI/CLI is great for capture and recall — but it can't _show_ you the shape of that memory, nor the operational problems hiding inside it: orphan projects, broken cloud sync, thousands of pending mutations, observations captured without a project. This dashboard reads that database **directly** — read-only by default, so it never blocks the daemon's writes — and surfaces all of it across 13 views — projects, sessions, observations, prompts, topics, sync health, and diagnostics — in both **Spanish and English**, light or dark. It can also apply targeted, **user-confirmed** fixes (reassign a stray observation, rename a project, prune junk) through a guarded write path you can switch off entirely with `ENGRAM_DASH_READONLY=true` — see [Editing your memory](#editing-your-memory).
 
 The distribution philosophy matches Engram itself: **one binary, one SQLite file.** No Node.js runtime, no WebView2, no sidecar. Download the binary for your platform, point it at your database, and open your browser.
 
@@ -18,7 +18,7 @@ The official Engram plugin ecosystem (MCP plugins and integrations) communicates
 
 The "one binary, one SQLite file" distribution philosophy is deliberate: it mirrors the simplicity Engram itself ships with.
 
-Think of it this way — the CLI captures and recalls; this shows you the *shape* of what your agent has remembered. It complements the official tooling, it doesn't replace it.
+Think of it this way — the CLI captures and recalls; this shows you the _shape_ of what your agent has remembered. It complements the official tooling, it doesn't replace it.
 
 ---
 
@@ -40,21 +40,21 @@ This is the centerpiece. **The Brain renders every observation in your database 
 
 ## What it surfaces
 
-| View | What you get |
-| --- | --- |
-| **Overview** | At-a-glance counts (projects, sessions, observations, prompts), activity-by-project chart, type distribution, and sync health |
-| **Brain** | The 3D neural map above |
-| **Projects** | Per-project memory, activity, and sync state |
-| **Project detail** | Full memory and session timeline for a single project |
-| **Observations** | Every memory, filterable, with full markdown + wikilinks |
-| **Sessions** | Session timeline and per-session detail |
-| **Prompts** | Captured user prompts, searchable |
-| **Topics** | Memory grouped by stable `topic_key` |
-| **Sync Health** | Cloud enrollment status: enrolled / healthy / broken / pending mutations |
-| **Sync project** | Per-project cloud sync detail and mutation queue |
-| **Orphans** | Observations captured without a project — the capture bugs the CLI can't show |
-| **Diagnostics** | Orphan projects, broken sync — a diagnostic engine across all 13 views |
-| **Settings** | UI preferences, language, theme |
+| View               | What you get                                                                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Overview**       | At-a-glance counts (projects, sessions, observations, prompts), activity-by-project chart, type distribution, and sync health |
+| **Brain**          | The 3D neural map above                                                                                                       |
+| **Projects**       | Per-project memory, activity, and sync state                                                                                  |
+| **Project detail** | Full memory and session timeline for a single project                                                                         |
+| **Observations**   | Every memory, filterable, with full markdown + wikilinks                                                                      |
+| **Sessions**       | Session timeline and per-session detail                                                                                       |
+| **Prompts**        | Captured user prompts, searchable                                                                                             |
+| **Topics**         | Memory grouped by stable `topic_key`                                                                                          |
+| **Sync Health**    | Cloud enrollment status: enrolled / healthy / broken / pending mutations                                                      |
+| **Sync project**   | Per-project cloud sync detail and mutation queue                                                                              |
+| **Orphans**        | Observations captured without a project — the capture bugs the CLI can't show                                                 |
+| **Diagnostics**    | Orphan projects, broken sync — a diagnostic engine across all 13 views                                                        |
+| **Settings**       | UI preferences, language, theme                                                                                               |
 
 ---
 
@@ -62,7 +62,7 @@ This is the centerpiece. **The Brain renders every observation in your database 
 
 ### To run a pre-built binary
 
-- The `engram-explorer` binary for your platform (macOS, Linux, Windows)
+- The `engram-explorer` binary for your platform (macOS, Linux, Windows) — download from [GitHub Releases](https://github.com/AlvaroQ/engram-explorer/releases)
 - An existing Engram install: `~/.engram/engram.db` — **or** use the demo seeder (see Quick Start)
 - No Node.js, no runtime dependencies
 
@@ -170,14 +170,14 @@ If you'd rather run a strict viewer with **no** write capability at all, start t
 
 ## Tech stack
 
-| Layer | Stack |
-| --- | --- |
-| **Backend** | Go · `net/http` · `modernc.org/sqlite` (read-only, pure-Go, no CGo) · `log/slog` |
-| **UI (primary)** | templ + HTMX · server-rendered · cursor-based server-side pagination · i18n server-side (en/es) · Tailwind v3 (HSL tokens) |
-| **React islands** | React 19 · Vite multi-entry · each island exports `mount(el,props)` · loaded by `loader.ts` |
-| **Brain island** | React Three Fiber · Three.js · drei · Web Worker force layout · GPU particle synapses |
-| **Charts island** | Recharts · activity-by-project, project-activity, type-breakdown |
-| **Distribution** | Single binary · `go:embed` · GoReleaser · Homebrew tap |
+| Layer             | Stack                                                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Backend**       | Go · `net/http` · `modernc.org/sqlite` (read-only, pure-Go, no CGo) · `log/slog`                                           |
+| **UI (primary)**  | templ + HTMX · server-rendered · cursor-based server-side pagination · i18n server-side (en/es) · Tailwind v3 (HSL tokens) |
+| **React islands** | React 19 · Vite multi-entry · each island exports `mount(el,props)` · loaded by `loader.ts`                                |
+| **Brain island**  | React Three Fiber · Three.js · drei · Web Worker force layout · GPU particle synapses                                      |
+| **Charts island** | Recharts · activity-by-project, project-activity, type-breakdown                                                           |
+| **Distribution**  | Single binary · `go:embed` · GoReleaser · Homebrew tap                                                                     |
 
 ---
 
@@ -221,29 +221,29 @@ engram-explorer/
 
 All configuration is via environment variables. Defaults work out of the box for a standard Engram install.
 
-| Env var | Default | Purpose |
-| --- | --- | --- |
-| `ENGRAM_DATA_DIR` | `~/.engram` | Directory where `engram.db` lives |
-| `DASHBOARD_PORT` | `8787` | HTTP listen port |
-| `DASHBOARD_HOST` | `127.0.0.1` | HTTP bind address (LAN exposure not recommended) |
-| `ENGRAM_PORT` | `7437` | Port of the local `engram serve` daemon |
-| `ENGRAM_DAEMON_URL` | `http://127.0.0.1:7437` | Full base URL of the daemon (overrides `ENGRAM_PORT`) |
-| `LOG_LEVEL` | `info` (prod) / `debug` (dev) | Logging verbosity: `debug`, `info`, `warn`, `error` |
-| `ENGRAM_DASH_ENV` | `production` | Set to `development` to expose internal error details in API responses |
-| `ENGRAM_DASH_READONLY` | `false` | Set to `true` to run as a pure read-only viewer — the read-write pool is never opened and every mutating route returns `503` |
+| Env var                | Default                       | Purpose                                                                                                                      |
+| ---------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `ENGRAM_DATA_DIR`      | `~/.engram`                   | Directory where `engram.db` lives                                                                                            |
+| `DASHBOARD_PORT`       | `8787`                        | HTTP listen port                                                                                                             |
+| `DASHBOARD_HOST`       | `127.0.0.1`                   | HTTP bind address (LAN exposure not recommended)                                                                             |
+| `ENGRAM_PORT`          | `7437`                        | Port of the local `engram serve` daemon                                                                                      |
+| `ENGRAM_DAEMON_URL`    | `http://127.0.0.1:7437`       | Full base URL of the daemon (overrides `ENGRAM_PORT`)                                                                        |
+| `LOG_LEVEL`            | `info` (prod) / `debug` (dev) | Logging verbosity: `debug`, `info`, `warn`, `error`                                                                          |
+| `ENGRAM_DASH_ENV`      | `production`                  | Set to `development` to expose internal error details in API responses                                                       |
+| `ENGRAM_DASH_READONLY` | `false`                       | Set to `true` to run as a pure read-only viewer — the read-write pool is never opened and every mutating route returns `503` |
 
 ---
 
 ## Build targets
 
-| Target | What it does |
-| --- | --- |
-| `make build` | Full build: `templ generate` → `vite build` (islands) → `build:ui-css` (Tailwind) → embed → `go build` |
-| `make frontend` | Build React island bundles only (`pnpm -F @engram-explorer/frontend build`) |
-| `make embed` | Copy `apps/frontend/dist/` into `internal/web/dist/` for `go:embed` |
-| `make dev` | Run the Go binary in dev mode (`go run ./cmd/engram-explorer`) |
-| `make test` | Run all Go tests (`go test ./...`) |
-| `make clean` | Remove the binary and the embedded dist copy |
+| Target          | What it does                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------ |
+| `make build`    | Full build: `templ generate` → `vite build` (islands) → `build:ui-css` (Tailwind) → embed → `go build` |
+| `make frontend` | Build React island bundles only (`pnpm -F @engram-explorer/frontend build`)                            |
+| `make embed`    | Copy `apps/frontend/dist/` into `internal/web/dist/` for `go:embed`                                    |
+| `make dev`      | Run the Go binary in dev mode (`go run ./cmd/engram-explorer`)                                         |
+| `make test`     | Run all Go tests (`go test ./...`)                                                                     |
+| `make clean`    | Remove the binary and the embedded dist copy                                                           |
 
 Development workflow:
 
@@ -299,6 +299,12 @@ To use a different port: `DASHBOARD_PORT=9090 ./engram-explorer`.
 **`POST /api/cloud/enroll` returns `CLI_NOT_FOUND`** — `engram` is not on `$PATH` for the user running the dashboard. Install the binary system-wide or run the dashboard from a shell where `engram --version` resolves.
 
 **`429 Rate limit exceeded`** — cloud mutation endpoints are rate-limited. The `Retry-After` header indicates how long to wait.
+
+---
+
+## Releases & changelog
+
+Versioned binaries and per-release changelogs are published on [GitHub Releases](https://github.com/AlvaroQ/engram-explorer/releases). Releases are built with GoReleaser from `v*` tags and include macOS, Linux, and Windows artifacts plus a Homebrew tap.
 
 ---
 

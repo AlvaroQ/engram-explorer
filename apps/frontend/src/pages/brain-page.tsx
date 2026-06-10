@@ -35,7 +35,12 @@ import { AccessibleNodeList } from '../components/brain/accessible-node-list.tsx
 import { NodeDetailPanel } from '../components/brain/node-detail-panel.tsx';
 import { ProjectRail, type ProjectRailItem } from '../components/brain/project-rail.tsx';
 import { KnowledgeSpotlight } from '../components/brain/knowledge-spotlight.tsx';
-import { buildHexPalette, nodeColor, NULL_HEX, type ColorBy } from '../components/brain/node-colors.ts';
+import {
+  buildHexPalette,
+  nodeColor,
+  NULL_HEX,
+  type ColorBy,
+} from '../components/brain/node-colors.ts';
 
 // Lazy-load the 3D canvas so three.js does NOT enter the initial chunk.
 const GraphScene = lazy(() =>
@@ -78,7 +83,9 @@ function NodeHoverTooltip({
   // Format createdAt as a relative/short date.
   let dateLabel: string = t('brain.hover.noDate');
   if (node.createdAt != null) {
-    const parsed = new Date(node.createdAt.includes('T') ? node.createdAt : node.createdAt.replace(' ', 'T'));
+    const parsed = new Date(
+      node.createdAt.includes('T') ? node.createdAt : node.createdAt.replace(' ', 'T'),
+    );
     if (!Number.isNaN(parsed.getTime())) {
       dateLabel = parsed.toLocaleDateString(undefined, {
         year: 'numeric',
@@ -109,7 +116,10 @@ function NodeHoverTooltip({
       {/* Label — drawn in the node color so the card's primary text matches its
           border + tint. Wraps to two lines before ellipsizing (line-clamp-2).
           Inline color overrides text-fg only when a color is set. */}
-      <p className="font-semibold text-fg leading-snug line-clamp-2" style={{ color: color || undefined }}>
+      <p
+        className="font-semibold text-fg leading-snug line-clamp-2"
+        style={{ color: color || undefined }}
+      >
         {label}
       </p>
 
@@ -118,9 +128,7 @@ function NodeHoverTooltip({
       {(node.project != null || node.type != null) && (
         <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-normal text-fg-muted">
           {node.project != null && <span>{node.project}</span>}
-          {node.project != null && node.type != null && (
-            <span className="text-fg-muted/50">›</span>
-          )}
+          {node.project != null && node.type != null && <span className="text-fg-muted/50">›</span>}
           {node.type != null && <span>{node.type}</span>}
         </div>
       )}
@@ -144,7 +152,9 @@ function NodeHoverTooltip({
       {/* Date + weight row */}
       <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-fg-muted">
         <span>{dateLabel}</span>
-        <span>{t('brain.fields.weight')}: {node.weight}</span>
+        <span>
+          {t('brain.fields.weight')}: {node.weight}
+        </span>
       </div>
     </div>
   );
@@ -417,15 +427,18 @@ export function BrainPage(): JSX.Element {
 
   // Hover tooltip: called by GraphScene when the hovered node identity changes.
   // clientX/clientY are DOM coordinates from the ThreeEvent nativeEvent.
-  const handleNodeHover = useCallback((node: GraphNode | null, clientX: number, clientY: number) => {
-    setHoverNode(node);
-    if (node !== null) {
-      setHoverPos({ x: clientX, y: clientY });
-    }
-    // hoverPos is intentionally not reset on pointer-out (node === null).
-    // The tooltip is hidden by the `hoverNode !== null` guard, so stale
-    // coordinates are never rendered.
-  }, []);
+  const handleNodeHover = useCallback(
+    (node: GraphNode | null, clientX: number, clientY: number) => {
+      setHoverNode(node);
+      if (node !== null) {
+        setHoverPos({ x: clientX, y: clientY });
+      }
+      // hoverPos is intentionally not reset on pointer-out (node === null).
+      // The tooltip is hidden by the `hoverNode !== null` guard, so stale
+      // coordinates are never rendered.
+    },
+    [],
+  );
 
   return (
     <div className="flex h-full min-h-[500px] flex-col bg-black">
@@ -472,7 +485,9 @@ export function BrainPage(): JSX.Element {
               </p>
               <button
                 type="button"
-                onClick={() => { void refetch(); }}
+                onClick={() => {
+                  void refetch();
+                }}
                 className="mt-2 rounded bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 {t('brain.retry')}
@@ -579,7 +594,6 @@ export function BrainPage(): JSX.Element {
                     color={hoverNodeColor}
                   />
                 )}
-
               </>
             )}
 

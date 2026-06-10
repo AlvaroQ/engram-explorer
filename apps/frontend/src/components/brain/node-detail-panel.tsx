@@ -2,11 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, type JSX } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import {
-  api,
-  type GraphNode,
-  type ObservationDetailResponse,
-} from '../../lib/api.ts';
+import { api, type GraphNode, type ObservationDetailResponse } from '../../lib/api.ts';
 import { ProjectEditControl } from './project-edit-control.tsx';
 import { TypeEditControl } from './type-edit-control.tsx';
 import { InlineEditField } from './inline-edit-field.tsx';
@@ -216,7 +212,9 @@ export function NodeDetailPanel({
       aria-label={title}
       className={`${containerPositionClass} ${widthClass}`}
     >
-      <div className={variant === 'panel' ? bodyPaddingClass : `overflow-y-auto ${bodyPaddingClass}`}>
+      <div
+        className={variant === 'panel' ? bodyPaddingClass : `overflow-y-auto ${bodyPaddingClass}`}
+      >
         {/* Type badge on the left (now an editable combobox), creation date on the right. */}
         <div className="flex items-center justify-between gap-2">
           {node.id > 0 ? (
@@ -284,7 +282,10 @@ export function NodeDetailPanel({
             f.key === 'project' ? (
               <ProjectEditControl key="project" node={node} currentProject={node.project} />
             ) : f.key === 'topicKey' && node.id > 0 ? (
-              <div key="topicKey" className={`flex min-w-0 flex-col gap-0.5 ${FIELD_SPAN['topicKey']}`}>
+              <div
+                key="topicKey"
+                className={`flex min-w-0 flex-col gap-0.5 ${FIELD_SPAN['topicKey']}`}
+              >
                 <dt className="text-[10px] uppercase tracking-wide text-fg-muted">{f.label}</dt>
                 <dd>
                   <TopicKeyEditField node={node} value={node.topicKey} />
@@ -347,10 +348,10 @@ function RelationBadge({ relation }: { relation?: string | undefined }): JSX.Ele
     relation === 'related'
       ? SYNAPSE_COLORS.related
       : relation === 'compatible'
-      ? SYNAPSE_COLORS.compatible
-      : relation === 'scoped'
-      ? SYNAPSE_COLORS.scoped
-      : SYNAPSE_COLORS.neutral;
+        ? SYNAPSE_COLORS.compatible
+        : relation === 'scoped'
+          ? SYNAPSE_COLORS.scoped
+          : SYNAPSE_COLORS.neutral;
 
   return (
     <span
@@ -387,11 +388,7 @@ function NeighborsSection({
   onNeighborSelect?: ((nodeId: string) => void) | undefined;
 }): JSX.Element | null {
   const { t } = useTranslation();
-  const neighbors: NeighborEntry[] = resolveNeighbors(
-    brainNode.id,
-    currentLevel,
-    parentLevel,
-  );
+  const neighbors: NeighborEntry[] = resolveNeighbors(brainNode.id, currentLevel, parentLevel);
 
   // Build a map of id → label from both levels for display
   const idToLabel = new Map<string, string>();
@@ -550,7 +547,13 @@ function TitleEditField({ node }: { node: GraphNode }): JSX.Element {
 // TopicKeyEditField — wraps InlineEditField for the topic_key field.
 // ---------------------------------------------------------------------------
 
-function TopicKeyEditField({ node, value }: { node: GraphNode; value: string | null }): JSX.Element {
+function TopicKeyEditField({
+  node,
+  value,
+}: {
+  node: GraphNode;
+  value: string | null;
+}): JSX.Element {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 

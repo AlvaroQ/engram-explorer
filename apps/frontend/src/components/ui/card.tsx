@@ -30,7 +30,10 @@ export function CardHeader({
 }: CardHeaderProps): JSX.Element {
   return (
     <div
-      className={cn('flex items-start justify-between gap-3 border-b border-border px-5 py-4', className)}
+      className={cn(
+        'flex items-start justify-between gap-3 border-b border-border px-5 py-4',
+        className,
+      )}
       {...props}
     >
       <div className="min-w-0 shrink-0">
