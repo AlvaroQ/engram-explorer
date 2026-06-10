@@ -42,8 +42,7 @@ export function resolveNeighbors(
   let incidentEdges = findIncidentEdges(nodeId, currentLevel.edges);
 
   // M9: fall back to parent level when current level has no incident edges
-  const resolveLevel =
-    incidentEdges.length > 0 || !parentLevel ? currentLevel : parentLevel;
+  const resolveLevel = incidentEdges.length > 0 || !parentLevel ? currentLevel : parentLevel;
 
   if (incidentEdges.length === 0 && parentLevel) {
     incidentEdges = findIncidentEdges(nodeId, parentLevel.edges);

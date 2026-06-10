@@ -89,13 +89,13 @@ When you run `engram tui` you see something like this:
 
 ### Footer keybindings
 
-| Key | Action |
-|-----|--------|
+| Key       | Action                                    |
+| --------- | ----------------------------------------- |
 | `j` / `k` | Move cursor up / down in the Actions list |
-| `↑` / `↓` | Same as `j` / `k` |
-| `Enter` | Activate highlighted action |
-| `s` | Shortcut directly to "Search memories" |
-| `q` | Exit the TUI |
+| `↑` / `↓` | Same as `j` / `k`                         |
+| `Enter`   | Activate highlighted action               |
+| `s`       | Shortcut directly to "Search memories"    |
+| `q`       | Exit the TUI                              |
 
 ### The 5 main menu actions
 
@@ -127,19 +127,19 @@ When you open `http://localhost:8787/` you see:
 
 ### Routes and what they show
 
-| Route | Content |
-|-------|---------|
-| `/` (Overview) | Clickable KPIs (Observations / Sessions / Projects / Prompts), "Activity (last 30 days)" chart, "By type" pie, Sync Health summary, "Issues detected" banner, "Recent observations" |
-| `/projects` | Full project list with counts and sync badge. Filter by name. Click for drill-down |
-| `/projects/:project` | Per-project KPIs + 30-day activity + type breakdown + tools used + top topics + recent sessions, observations, and prompts |
-| `/observations` | Server-side paginated list (HTMX infinite scroll, 10 000+ rows without lag). URL-state multi-select filters: project, type, tool_name, scope, topic_key, deleted. FTS5 search with debounce. Detail drawer with topic revisions and JSON / SQL export |
-| `/sessions` | Paginated list with filters |
-| `/sessions/:id` | Horizontal visual timeline: prompts (blue) + observations colored by type. Click a marker for details |
-| `/sync` | Auto-refreshing table (every 15 s) with computed status, "Issues detected" banner, Enroll / Unenroll buttons per project |
-| `/sync/:project` | Operational drill-down: lifecycle, sequence numbers, last error, pending mutations, `cloud_upgrade_state` |
-| `/prompts` | Table + FTS5 search with `<mark>` highlight |
-| `/topics` | Topic key list with revision count. Click → observations filtered by that topic |
-| `/settings` | DB path, daemon URL, CLI capabilities, runtime info, theme toggle |
+| Route                | Content                                                                                                                                                                                                                                               |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/` (Overview)       | Clickable KPIs (Observations / Sessions / Projects / Prompts), "Activity (last 30 days)" chart, "By type" pie, Sync Health summary, "Issues detected" banner, "Recent observations"                                                                   |
+| `/projects`          | Full project list with counts and sync badge. Filter by name. Click for drill-down                                                                                                                                                                    |
+| `/projects/:project` | Per-project KPIs + 30-day activity + type breakdown + tools used + top topics + recent sessions, observations, and prompts                                                                                                                            |
+| `/observations`      | Server-side paginated list (HTMX infinite scroll, 10 000+ rows without lag). URL-state multi-select filters: project, type, tool_name, scope, topic_key, deleted. FTS5 search with debounce. Detail drawer with topic revisions and JSON / SQL export |
+| `/sessions`          | Paginated list with filters                                                                                                                                                                                                                           |
+| `/sessions/:id`      | Horizontal visual timeline: prompts (blue) + observations colored by type. Click a marker for details                                                                                                                                                 |
+| `/sync`              | Auto-refreshing table (every 15 s) with computed status, "Issues detected" banner, Enroll / Unenroll buttons per project                                                                                                                              |
+| `/sync/:project`     | Operational drill-down: lifecycle, sequence numbers, last error, pending mutations, `cloud_upgrade_state`                                                                                                                                             |
+| `/prompts`           | Table + FTS5 search with `<mark>` highlight                                                                                                                                                                                                           |
+| `/topics`            | Topic key list with revision count. Click → observations filtered by that topic                                                                                                                                                                       |
+| `/settings`          | DB path, daemon URL, CLI capabilities, runtime info, theme toggle                                                                                                                                                                                     |
 
 ---
 
@@ -147,15 +147,15 @@ When you open `http://localhost:8787/` you see:
 
 ### Common ground
 
-| Task | TUI | Dashboard |
-|------|-----|-----------|
-| View global KPIs | Home screen (counts box) | `/` Overview KPIs |
-| View project list | Home screen → "Projects" (top 5 + "and N more") | `/projects` (complete list with drill-down) |
-| Search observations by keyword | Action **Search memories** (`s` or select + `Enter`) | `/observations` → "Full-text search…" box |
-| View recent observations | Action **Recent observations** | `/` Overview → "Recent observations", or `/observations` sorted by `updated_at DESC` |
-| Browse sessions | Action **Browse sessions** | `/sessions` |
-| View session detail | Browse sessions → select | `/sessions/<id>` (with visual timeline, not just a list) |
-| Exit | `q` | Close the browser tab |
+| Task                           | TUI                                                  | Dashboard                                                                            |
+| ------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| View global KPIs               | Home screen (counts box)                             | `/` Overview KPIs                                                                    |
+| View project list              | Home screen → "Projects" (top 5 + "and N more")      | `/projects` (complete list with drill-down)                                          |
+| Search observations by keyword | Action **Search memories** (`s` or select + `Enter`) | `/observations` → "Full-text search…" box                                            |
+| View recent observations       | Action **Recent observations**                       | `/` Overview → "Recent observations", or `/observations` sorted by `updated_at DESC` |
+| Browse sessions                | Action **Browse sessions**                           | `/sessions`                                                                          |
+| View session detail            | Browse sessions → select                             | `/sessions/<id>` (with visual timeline, not just a list)                             |
+| Exit                           | `q`                                                  | Close the browser tab                                                                |
 
 ### TUI only (see §6)
 
@@ -180,12 +180,15 @@ These exercises produce **comparable** results between the TUI and the dashboard
 ### Exercise A — Global counts
 
 **TUI:**
+
 ```bash
 engram tui
 ```
+
 Note the counts in the top box (sessions, observations, prompts, projects).
 
 **Dashboard:**
+
 1. Open `http://localhost:8787/`
 2. Check the 4 large KPIs at the top.
 
@@ -194,11 +197,13 @@ Note the counts in the top box (sessions, observations, prompts, projects).
 ### Exercise B — Inspect a specific project
 
 **TUI:**
+
 1. `engram tui`
 2. Navigate to "Browse sessions" or "Recent observations"
 3. Filter by project if the view allows it
 
 **Dashboard:**
+
 1. `http://localhost:8787/projects` → click on the project name
 2. You see: observation count, session count, topic count, prompt count, last activity, 30-day activity chart, type distribution, tools used, top topics
 
@@ -213,11 +218,13 @@ engram projects list | grep <project-name>
 This is the primary use case the dashboard was built for.
 
 **TUI:** the TUI does **not** show cloud sync state per project. From the CLI:
+
 ```bash
 engram cloud status
 ```
 
 **Dashboard:**
+
 1. `http://localhost:8787/sync`
 2. Projects with `lifecycle = pending`, many mutations enqueued, and zero acknowledgements appear with status `broken`
 3. The "Issues detected" banner at the top lists exactly those cases as `SYNC_BROKEN HIGH`
@@ -228,26 +235,26 @@ engram cloud status
 
 ## 6. What only the TUI does
 
-| Capability | Why TUI yes, dashboard no |
-|------------|--------------------------|
-| **Setup agent plugin** | A wizard that writes config files for AI agents (e.g. `.claude/settings.json`, `.opencode/`). This is a filesystem operation outside the scope of an inspection dashboard |
-| **Works without a browser** | Single Go binary; run it on a headless VPS with nothing else installed |
-| **No dependency on the dashboard backend** | Reads the DB directly as a native Go program. The dashboard requires the Go binary to be running as an HTTP server |
+| Capability                                 | Why TUI yes, dashboard no                                                                                                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Setup agent plugin**                     | A wizard that writes config files for AI agents (e.g. `.claude/settings.json`, `.opencode/`). This is a filesystem operation outside the scope of an inspection dashboard |
+| **Works without a browser**                | Single Go binary; run it on a headless VPS with nothing else installed                                                                                                    |
+| **No dependency on the dashboard backend** | Reads the DB directly as a native Go program. The dashboard requires the Go binary to be running as an HTTP server                                                        |
 
 ---
 
 ## 7. What only the dashboard does
 
-| Capability | Why |
-|------------|-----|
-| **Automatic sync problem detection** | The diagnostics engine in `internal/services` applies rules over `sync_state` + `sync_mutations` and emits typed issues with severity. The TUI does not touch those tables |
-| **Per-project drill-down with 30-day activity and type breakdown** | New view (`/projects/:project`) — does not exist in TUI |
-| **Server-side paginated list with URL-combinable filters** | `/observations` with HTMX infinite scroll + cursor pagination and multi-select. State lives in the URL; views are bookmarkable |
-| **Visual session timeline** | Horizontal SVG with markers colored by type. The TUI lists events one by one |
-| **Enroll / Unenroll from the UI** | Backend executes `engram cloud enroll <project>` as a subprocess with a whitelist regex and audit log. Button shows confirmation dialog with the exact command |
-| **JSON / CSV export of filtered view** | Useful for external analysis |
-| **FTS5 with `<mark>` highlight** | Backend uses SQLite `snippet()` and the UI renders highlighted matches |
-| **Automatic sync state refresh** | 15-second polling on `/sync`. The TUI shows a point-in-time snapshot |
+| Capability                                                         | Why                                                                                                                                                                        |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Automatic sync problem detection**                               | The diagnostics engine in `internal/services` applies rules over `sync_state` + `sync_mutations` and emits typed issues with severity. The TUI does not touch those tables |
+| **Per-project drill-down with 30-day activity and type breakdown** | New view (`/projects/:project`) — does not exist in TUI                                                                                                                    |
+| **Server-side paginated list with URL-combinable filters**         | `/observations` with HTMX infinite scroll + cursor pagination and multi-select. State lives in the URL; views are bookmarkable                                             |
+| **Visual session timeline**                                        | Horizontal SVG with markers colored by type. The TUI lists events one by one                                                                                               |
+| **Enroll / Unenroll from the UI**                                  | Backend executes `engram cloud enroll <project>` as a subprocess with a whitelist regex and audit log. Button shows confirmation dialog with the exact command             |
+| **JSON / CSV export of filtered view**                             | Useful for external analysis                                                                                                                                               |
+| **FTS5 with `<mark>` highlight**                                   | Backend uses SQLite `snippet()` and the UI renders highlighted matches                                                                                                     |
+| **Automatic sync state refresh**                                   | 15-second polling on `/sync`. The TUI shows a point-in-time snapshot                                                                                                       |
 
 ---
 
@@ -255,28 +262,28 @@ engram cloud status
 
 ### What to use for what
 
-| Situation | Best tool |
-|-----------|-----------|
-| "How much is there in total?" | `engram stats` (CLI) or Overview in dashboard |
-| "Find a memory by keyword" | TUI (`s`) or `/observations` with FTS5 |
-| "See full content of an observation and its revisions" | Dashboard `/observations` → click → drawer |
-| "What happened in project X?" | Dashboard `/projects/X` (charts, types, sessions, topics) |
-| "Is any project's sync broken?" | Dashboard `/sync` (Issues banner + status badges) |
-| "Enroll project Y in cloud sync" | CLI: `engram cloud enroll Y`. Dashboard: "Enroll" button in the project row. TUI: no such action |
-| "I'm on a headless server with no browser" | TUI |
-| "I'm on my workstation with a browser" | Dashboard |
+| Situation                                              | Best tool                                                                                        |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| "How much is there in total?"                          | `engram stats` (CLI) or Overview in dashboard                                                    |
+| "Find a memory by keyword"                             | TUI (`s`) or `/observations` with FTS5                                                           |
+| "See full content of an observation and its revisions" | Dashboard `/observations` → click → drawer                                                       |
+| "What happened in project X?"                          | Dashboard `/projects/X` (charts, types, sessions, topics)                                        |
+| "Is any project's sync broken?"                        | Dashboard `/sync` (Issues banner + status badges)                                                |
+| "Enroll project Y in cloud sync"                       | CLI: `engram cloud enroll Y`. Dashboard: "Enroll" button in the project row. TUI: no such action |
+| "I'm on a headless server with no browser"             | TUI                                                                                              |
+| "I'm on my workstation with a browser"                 | Dashboard                                                                                        |
 
 ### Quick TUI → URL equivalents
 
-| TUI | Dashboard URL |
-|-----|--------------|
-| Home screen | `/` |
-| Action: Search memories | `/observations` (FTS5 in the toolbar) |
-| Action: Recent observations | `/` (section "Recent observations") or `/observations` sorted by `updated_at` |
-| Action: Browse sessions → select | `/sessions` → click → `/sessions/:id` |
-| (does not exist) | `/projects/:project` |
-| (does not exist) | `/sync` |
-| (does not exist) | `/topics` |
+| TUI                              | Dashboard URL                                                                 |
+| -------------------------------- | ----------------------------------------------------------------------------- |
+| Home screen                      | `/`                                                                           |
+| Action: Search memories          | `/observations` (FTS5 in the toolbar)                                         |
+| Action: Recent observations      | `/` (section "Recent observations") or `/observations` sorted by `updated_at` |
+| Action: Browse sessions → select | `/sessions` → click → `/sessions/:id`                                         |
+| (does not exist)                 | `/projects/:project`                                                          |
+| (does not exist)                 | `/sync`                                                                       |
+| (does not exist)                 | `/topics`                                                                     |
 
 ### CLI alternative (without TUI or dashboard)
 

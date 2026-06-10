@@ -25,13 +25,13 @@
  * This file contains only R3F/Three.js rendering code.
  */
 
-import { useFrame, useThree, invalidate } from '@react-three/fiber'
-import { useMemo, useEffect, useRef } from 'react'
-import * as THREE from 'three'
-import type { BrainEdge, BrainLevel, EdgeFamily } from './types.ts'
-import { hash01 } from '../../lib/math-utils.ts'
-import { tween, easeInOutCubic, DURATIONS, useReducedMotion } from './motion/interpolator.ts'
-import { motionStore } from './motion/motion-store.ts'
+import { useFrame, useThree, invalidate } from '@react-three/fiber';
+import { useMemo, useEffect, useRef } from 'react';
+import * as THREE from 'three';
+import type { BrainEdge, BrainLevel, EdgeFamily } from './types.ts';
+import { hash01 } from '../../lib/math-utils.ts';
+import { tween, easeInOutCubic, DURATIONS, useReducedMotion } from './motion/interpolator.ts';
+import { motionStore } from './motion/motion-store.ts';
 import {
   computeTubeRadius,
   computeEdgeOpacity,
@@ -41,17 +41,17 @@ import {
   SYNAPSE_AMBIENT_SEMANTIC_MAX,
   SYNAPSE_AMBIENT_TOPIC_ROAD_MIN,
   SYNAPSE_AMBIENT_TOPIC_ROAD_MAX,
-} from './brain-tunnel-flow.ts'
+} from './brain-tunnel-flow.ts';
 
 // ---------------------------------------------------------------------------
 // LOD constants
 // ---------------------------------------------------------------------------
 
 /** Distance beyond which particles are suppressed (LOD gate). */
-const PARTICLE_LOD_MAX_DIST = 200
+const PARTICLE_LOD_MAX_DIST = 200;
 
 /** Max particles across all edges per layer. */
-const BRAIN_PARTICLE_CAP = 1200
+const BRAIN_PARTICLE_CAP = 1200;
 
 // ---------------------------------------------------------------------------
 // Particle shaders (GPU-driven uTime, preserved from legacy TunnelFlow)
@@ -77,7 +77,7 @@ const particleVertexShader = /* glsl */ `
     gl_Position = projectionMatrix * mvPosition;
     gl_PointSize = clamp(uSize * (300.0 / max(1.0, -mvPosition.z)), 1.5, 5.0);
   }
-`
+`;
 
 const particleFragmentShader = /* glsl */ `
   varying float vOpacity;
@@ -89,7 +89,7 @@ const particleFragmentShader = /* glsl */ `
     float a = smoothstep(0.5, 0.25, d) * vOpacity;
     gl_FragColor = vec4(vColor, a);
   }
-`
+`;
 
 // Tube fragment shader with optional stipple (dashing) for topic-road edges.
 // uStipple = 0.0 → solid (semantic); uStipple = 1.0 → dashed (topic-road).
@@ -110,7 +110,7 @@ const tubeFragmentShader = /* glsl */ `
     }
     gl_FragColor = vec4(vColor * vFocusOpacity, uOpacity * vFocusOpacity);
   }
-`
+`;
 
 const tubeVertexShader = /* glsl */ `
   attribute vec3 aColor;
@@ -125,7 +125,7 @@ const tubeVertexShader = /* glsl */ `
     vFocusOpacity = aFocusOpacity;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
-`
+`;
 
 // ---------------------------------------------------------------------------
 // Geometry builders
@@ -133,17 +133,17 @@ const tubeVertexShader = /* glsl */ `
 
 /** Vertex range in the merged buffer for a single edge. */
 interface EdgeVertexRange {
-  edgeKey: string
-  family: EdgeFamily
-  startVertex: number
-  endVertex: number
+  edgeKey: string;
+  family: EdgeFamily;
+  startVertex: number;
+  endVertex: number;
 }
 
 /** Result of buildMergedTubeGeometry — geometry + per-edge vertex ranges. */
 interface MergedTubeResult {
-  geometry: THREE.BufferGeometry
-  focusOpacityAttr: THREE.Float32BufferAttribute
-  vertexRanges: EdgeVertexRange[]
+  geometry: THREE.BufferGeometry;
+  focusOpacityAttr: THREE.Float32BufferAttribute;
+  vertexRanges: EdgeVertexRange[];
 }
 
 /**
@@ -160,78 +160,78 @@ function buildMergedTubeGeometry(
   positions: Float32Array,
   family: EdgeFamily,
 ): MergedTubeResult | null {
-  const mergedPositions: number[] = []
-  const mergedUvs: number[] = []
-  const mergedNormals: number[] = []
-  const mergedColors: number[] = []
-  const mergedFocusOpacity: number[] = []
-  const mergedIndices: number[] = []
-  const vertexRanges: EdgeVertexRange[] = []
-  const scratch = new THREE.Color()
+  const mergedPositions: number[] = [];
+  const mergedUvs: number[] = [];
+  const mergedNormals: number[] = [];
+  const mergedColors: number[] = [];
+  const mergedFocusOpacity: number[] = [];
+  const mergedIndices: number[] = [];
+  const vertexRanges: EdgeVertexRange[] = [];
+  const scratch = new THREE.Color();
 
-  const RADIAL_SEGS = 4
-  let indexOffset = 0
+  const RADIAL_SEGS = 4;
+  let indexOffset = 0;
 
   for (const edge of edges) {
-    if (edge.family !== family) continue
+    if (edge.family !== family) continue;
 
-    const ai = idToIndex.get(edge.source)
-    const bi = idToIndex.get(edge.target)
-    if (ai === undefined || bi === undefined || ai === bi) continue
+    const ai = idToIndex.get(edge.source);
+    const bi = idToIndex.get(edge.target);
+    if (ai === undefined || bi === undefined || ai === bi) continue;
 
-    const ax = positions[ai * 3] ?? 0
-    const ay = positions[ai * 3 + 1] ?? 0
-    const az = positions[ai * 3 + 2] ?? 0
-    const bx = positions[bi * 3] ?? 0
-    const by = positions[bi * 3 + 1] ?? 0
-    const bz = positions[bi * 3 + 2] ?? 0
+    const ax = positions[ai * 3] ?? 0;
+    const ay = positions[ai * 3 + 1] ?? 0;
+    const az = positions[ai * 3 + 2] ?? 0;
+    const bx = positions[bi * 3] ?? 0;
+    const by = positions[bi * 3 + 1] ?? 0;
+    const bz = positions[bi * 3 + 2] ?? 0;
 
-    const dx = bx - ax
-    const dy = by - ay
-    const dz = bz - az
-    const lenSq = dx * dx + dy * dy + dz * dz
-    if (lenSq < 1e-6) continue
+    const dx = bx - ax;
+    const dy = by - ay;
+    const dz = bz - az;
+    const lenSq = dx * dx + dy * dy + dz * dz;
+    if (lenSq < 1e-6) continue;
 
-    const radius = computeTubeRadius(edge.weight)
+    const radius = computeTubeRadius(edge.weight);
     // brightness baked into color (static, confidence-derived)
-    const brightness = computeEdgeBrightness(edge.confidence)
+    const brightness = computeEdgeBrightness(edge.confidence);
     // ambient opacity goes into aFocusOpacity (mutable on focus change)
-    const ambientOpacity = computeEdgeOpacity(family, false, null)
+    const ambientOpacity = computeEdgeOpacity(family, false, null);
 
-    scratch.set(resolveEdgeColor(edge.relation))
+    scratch.set(resolveEdgeColor(edge.relation));
     // Color encodes only brightness, not opacity — opacity via aFocusOpacity
-    const r = scratch.r * brightness
-    const g = scratch.g * brightness
-    const b = scratch.b * brightness
+    const r = scratch.r * brightness;
+    const g = scratch.g * brightness;
+    const b = scratch.b * brightness;
 
     // Build a simple tube using a CatmullRomCurve3 with 2 points (straight tube)
     const curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(ax, ay, az),
       new THREE.Vector3(bx, by, bz),
-    ])
+    ]);
 
-    const tubeSeg = 1
-    const tubeGeo = new THREE.TubeGeometry(curve, tubeSeg, radius, RADIAL_SEGS, false)
+    const tubeSeg = 1;
+    const tubeGeo = new THREE.TubeGeometry(curve, tubeSeg, radius, RADIAL_SEGS, false);
 
-    const posAttr = tubeGeo.getAttribute('position') as THREE.BufferAttribute
-    const uvAttr = tubeGeo.getAttribute('uv') as THREE.BufferAttribute
-    const normAttr = tubeGeo.getAttribute('normal') as THREE.BufferAttribute
-    const idxAttr = tubeGeo.getIndex()
+    const posAttr = tubeGeo.getAttribute('position') as THREE.BufferAttribute;
+    const uvAttr = tubeGeo.getAttribute('uv') as THREE.BufferAttribute;
+    const normAttr = tubeGeo.getAttribute('normal') as THREE.BufferAttribute;
+    const idxAttr = tubeGeo.getIndex();
 
-    const vCount = posAttr.count
-    const startVertex = indexOffset
+    const vCount = posAttr.count;
+    const startVertex = indexOffset;
 
     for (let v = 0; v < vCount; v++) {
-      mergedPositions.push(posAttr.getX(v), posAttr.getY(v), posAttr.getZ(v))
-      mergedUvs.push(uvAttr.getX(v), uvAttr.getY(v))
-      mergedNormals.push(normAttr.getX(v), normAttr.getY(v), normAttr.getZ(v))
-      mergedColors.push(r, g, b)
-      mergedFocusOpacity.push(ambientOpacity)
+      mergedPositions.push(posAttr.getX(v), posAttr.getY(v), posAttr.getZ(v));
+      mergedUvs.push(uvAttr.getX(v), uvAttr.getY(v));
+      mergedNormals.push(normAttr.getX(v), normAttr.getY(v), normAttr.getZ(v));
+      mergedColors.push(r, g, b);
+      mergedFocusOpacity.push(ambientOpacity);
     }
 
     if (idxAttr) {
       for (let i = 0; i < idxAttr.count; i++) {
-        mergedIndices.push(idxAttr.getX(i) + indexOffset)
+        mergedIndices.push(idxAttr.getX(i) + indexOffset);
       }
     }
 
@@ -240,25 +240,25 @@ function buildMergedTubeGeometry(
       family,
       startVertex,
       endVertex: indexOffset + vCount,
-    })
+    });
 
-    indexOffset += vCount
-    tubeGeo.dispose()
+    indexOffset += vCount;
+    tubeGeo.dispose();
   }
 
-  if (mergedPositions.length === 0) return null
+  if (mergedPositions.length === 0) return null;
 
-  const focusOpacityAttr = new THREE.Float32BufferAttribute(mergedFocusOpacity, 1)
-  focusOpacityAttr.setUsage(THREE.DynamicDrawUsage)
+  const focusOpacityAttr = new THREE.Float32BufferAttribute(mergedFocusOpacity, 1);
+  focusOpacityAttr.setUsage(THREE.DynamicDrawUsage);
 
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(mergedPositions, 3))
-  geo.setAttribute('uv', new THREE.Float32BufferAttribute(mergedUvs, 2))
-  geo.setAttribute('normal', new THREE.Float32BufferAttribute(mergedNormals, 3))
-  geo.setAttribute('aColor', new THREE.Float32BufferAttribute(mergedColors, 3))
-  geo.setAttribute('aFocusOpacity', focusOpacityAttr)
-  geo.setIndex(mergedIndices)
-  return { geometry: geo, focusOpacityAttr, vertexRanges }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(mergedPositions, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(mergedUvs, 2));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(mergedNormals, 3));
+  geo.setAttribute('aColor', new THREE.Float32BufferAttribute(mergedColors, 3));
+  geo.setAttribute('aFocusOpacity', focusOpacityAttr);
+  geo.setIndex(mergedIndices);
+  return { geometry: geo, focusOpacityAttr, vertexRanges };
 }
 
 /** Build particle geometry for all edges of a given family. */
@@ -268,72 +268,74 @@ function buildParticleGeometry(
   positions: Float32Array,
   family: EdgeFamily,
 ): THREE.BufferGeometry | null {
-  const from: number[] = []
-  const to: number[] = []
-  const offset: number[] = []
-  const speed: number[] = []
-  const color: number[] = []
-  const scratch = new THREE.Color()
+  const from: number[] = [];
+  const to: number[] = [];
+  const offset: number[] = [];
+  const speed: number[] = [];
+  const color: number[] = [];
+  const scratch = new THREE.Color();
 
-  let totalEmitted = 0
-  let edgeIndex = 0
+  let totalEmitted = 0;
+  let edgeIndex = 0;
 
   for (const edge of edges) {
-    if (edge.family !== family) continue
-    if (totalEmitted >= BRAIN_PARTICLE_CAP) break
+    if (edge.family !== family) continue;
+    if (totalEmitted >= BRAIN_PARTICLE_CAP) break;
 
-    const ai = idToIndex.get(edge.source)
-    const bi = idToIndex.get(edge.target)
-    if (ai === undefined || bi === undefined || ai === bi) continue
+    const ai = idToIndex.get(edge.source);
+    const bi = idToIndex.get(edge.target);
+    if (ai === undefined || bi === undefined || ai === bi) continue;
 
-    const ax = positions[ai * 3] ?? 0
-    const ay = positions[ai * 3 + 1] ?? 0
-    const az = positions[ai * 3 + 2] ?? 0
-    const bx = positions[bi * 3] ?? 0
-    const by = positions[bi * 3 + 1] ?? 0
-    const bz = positions[bi * 3 + 2] ?? 0
-    const dx = bx - ax, dy = by - ay, dz = bz - az
-    if (dx * dx + dy * dy + dz * dz < 1e-6) continue
+    const ax = positions[ai * 3] ?? 0;
+    const ay = positions[ai * 3 + 1] ?? 0;
+    const az = positions[ai * 3 + 2] ?? 0;
+    const bx = positions[bi * 3] ?? 0;
+    const by = positions[bi * 3 + 1] ?? 0;
+    const bz = positions[bi * 3 + 2] ?? 0;
+    const dx = bx - ax,
+      dy = by - ay,
+      dz = bz - az;
+    if (dx * dx + dy * dy + dz * dz < 1e-6) continue;
 
     // Particle count scales with edge weight (capped per family)
-    const maxPerEdge = family === 'semantic' ? 4 : 2
-    const n = Math.min(maxPerEdge, Math.max(1, Math.round(edge.weight)))
-    const fwdCount = Math.ceil(n / 2)
-    const revCount = n - fwdCount
+    const maxPerEdge = family === 'semantic' ? 4 : 2;
+    const n = Math.min(maxPerEdge, Math.max(1, Math.round(edge.weight)));
+    const fwdCount = Math.ceil(n / 2);
+    const revCount = n - fwdCount;
 
-    scratch.set(resolveEdgeColor(edge.relation))
-    const phaseBase = hash01(edgeIndex * 2.17)
-    const baseSpeed = family === 'semantic' ? 0.10 : 0.06
-    const edgeSpeed = baseSpeed + hash01(edgeIndex * 3.71) * (family === 'semantic' ? 0.06 : 0.03)
+    scratch.set(resolveEdgeColor(edge.relation));
+    const phaseBase = hash01(edgeIndex * 2.17);
+    const baseSpeed = family === 'semantic' ? 0.1 : 0.06;
+    const edgeSpeed = baseSpeed + hash01(edgeIndex * 3.71) * (family === 'semantic' ? 0.06 : 0.03);
 
     for (let k = 0; k < fwdCount && totalEmitted < BRAIN_PARTICLE_CAP; k++) {
-      from.push(ax, ay, az)
-      to.push(bx, by, bz)
-      offset.push((k / n + phaseBase) % 1)
-      speed.push(edgeSpeed)
-      color.push(scratch.r, scratch.g, scratch.b)
-      totalEmitted++
+      from.push(ax, ay, az);
+      to.push(bx, by, bz);
+      offset.push((k / n + phaseBase) % 1);
+      speed.push(edgeSpeed);
+      color.push(scratch.r, scratch.g, scratch.b);
+      totalEmitted++;
     }
     for (let k = 0; k < revCount && totalEmitted < BRAIN_PARTICLE_CAP; k++) {
-      from.push(bx, by, bz)
-      to.push(ax, ay, az)
-      offset.push(((k + fwdCount) / n + phaseBase + 0.5) % 1)
-      speed.push(edgeSpeed)
-      color.push(scratch.r, scratch.g, scratch.b)
-      totalEmitted++
+      from.push(bx, by, bz);
+      to.push(ax, ay, az);
+      offset.push(((k + fwdCount) / n + phaseBase + 0.5) % 1);
+      speed.push(edgeSpeed);
+      color.push(scratch.r, scratch.g, scratch.b);
+      totalEmitted++;
     }
 
-    edgeIndex++
+    edgeIndex++;
   }
 
-  if (from.length === 0) return null
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(from, 3))
-  geo.setAttribute('aTo', new THREE.Float32BufferAttribute(to, 3))
-  geo.setAttribute('aOffset', new THREE.Float32BufferAttribute(offset, 1))
-  geo.setAttribute('aSpeed', new THREE.Float32BufferAttribute(speed, 1))
-  geo.setAttribute('aColor', new THREE.Float32BufferAttribute(color, 3))
-  return geo
+  if (from.length === 0) return null;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(from, 3));
+  geo.setAttribute('aTo', new THREE.Float32BufferAttribute(to, 3));
+  geo.setAttribute('aOffset', new THREE.Float32BufferAttribute(offset, 1));
+  geo.setAttribute('aSpeed', new THREE.Float32BufferAttribute(speed, 1));
+  geo.setAttribute('aColor', new THREE.Float32BufferAttribute(color, 3));
+  return geo;
 }
 
 // ---------------------------------------------------------------------------
@@ -347,20 +349,20 @@ function buildParticleGeometry(
 // ---------------------------------------------------------------------------
 
 interface EdgeOpacityState {
-  key: string
-  opacityRef: { current: number }
+  key: string;
+  opacityRef: { current: number };
 }
 
 function buildEdgeOpacityStates(edges: BrainEdge[]): Map<string, EdgeOpacityState> {
-  const map = new Map<string, EdgeOpacityState>()
+  const map = new Map<string, EdgeOpacityState>();
   for (const edge of edges) {
-    const key = `${edge.source}:${edge.target}`
+    const key = `${edge.source}:${edge.target}`;
     map.set(key, {
       key,
       opacityRef: { current: computeEdgeOpacity(edge.family, false, null) },
-    })
+    });
   }
-  return map
+  return map;
 }
 
 // ---------------------------------------------------------------------------
@@ -380,16 +382,16 @@ function TubeMesh({
   edgeOpacityStatesRef,
   reducedMotion,
 }: {
-  geometry: THREE.BufferGeometry
-  focusOpacityAttr: THREE.Float32BufferAttribute
-  vertexRanges: EdgeVertexRange[]
-  family: EdgeFamily
-  opacity: number
-  focusId: string | null
-  edgeOpacityStatesRef: React.MutableRefObject<Map<string, EdgeOpacityState>>
-  reducedMotion: boolean
+  geometry: THREE.BufferGeometry;
+  focusOpacityAttr: THREE.Float32BufferAttribute;
+  vertexRanges: EdgeVertexRange[];
+  family: EdgeFamily;
+  opacity: number;
+  focusId: string | null;
+  edgeOpacityStatesRef: React.MutableRefObject<Map<string, EdgeOpacityState>>;
+  reducedMotion: boolean;
 }) {
-  const matRef = useRef<THREE.ShaderMaterial>(null!)
+  const matRef = useRef<THREE.ShaderMaterial>(null!);
 
   const uniforms = useMemo(
     () => ({
@@ -398,64 +400,63 @@ function TubeMesh({
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [family],
-  )
+  );
 
   // Update uOpacity uniform when prop changes
   useEffect(() => {
-    const u = matRef.current?.uniforms.uOpacity
-    if (u) u.value = opacity
-  }, [opacity])
+    const u = matRef.current?.uniforms.uOpacity;
+    if (u) u.value = opacity;
+  }, [opacity]);
 
   // S9: Animate aFocusOpacity per-vertex when focusId changes.
   // This replaces opacityMap → geometry rebuild cycle.
   // Tweens route through motion-store (single invalidator, C5 contract).
-  const prevFocusIdRef = useRef<string | null | undefined>(undefined)
+  const prevFocusIdRef = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    if (prevFocusIdRef.current === focusId) return
-    prevFocusIdRef.current = focusId
+    if (prevFocusIdRef.current === focusId) return;
+    prevFocusIdRef.current = focusId;
 
-    const opacityStates = edgeOpacityStatesRef.current
+    const opacityStates = edgeOpacityStatesRef.current;
 
     // Build a lookup from edgeKey to the vertex range for this merged geometry
     // (O(N) on vertexRanges, not on all edges — fast)
     for (const range of vertexRanges) {
-      const state = opacityStates.get(range.edgeKey)
-      if (!state) continue
+      const state = opacityStates.get(range.edgeKey);
+      if (!state) continue;
 
-      const edgeParts = range.edgeKey.split(':')
-      const edgeSource = edgeParts[0] ?? ''
-      const edgeTarget = edgeParts[1] ?? ''
-      const isIncident =
-        focusId !== null && (edgeSource === focusId || edgeTarget === focusId)
-      const targetOpacity = computeEdgeOpacity(range.family, isIncident, focusId)
+      const edgeParts = range.edgeKey.split(':');
+      const edgeSource = edgeParts[0] ?? '';
+      const edgeTarget = edgeParts[1] ?? '';
+      const isIncident = focusId !== null && (edgeSource === focusId || edgeTarget === focusId);
+      const targetOpacity = computeEdgeOpacity(range.family, isIncident, focusId);
 
-      const from = state.opacityRef.current
-      const to = targetOpacity
+      const from = state.opacityRef.current;
+      const to = targetOpacity;
 
-      if (Math.abs(from - to) < 0.001) continue
+      if (Math.abs(from - to) < 0.001) continue;
 
-      const rangeRef = { ...range }
+      const rangeRef = { ...range };
       const handle = tween<number>(
         { from, to, durationMs: DURATIONS.dimBrighten, easing: easeInOutCubic },
         (v) => {
-          state.opacityRef.current = v
+          state.opacityRef.current = v;
           // Mutate the Float32Array in-place and mark dirty
-          const arr = focusOpacityAttr.array as Float32Array
+          const arr = focusOpacityAttr.array as Float32Array;
           for (let vi = rangeRef.startVertex; vi < rangeRef.endVertex; vi++) {
-            arr[vi] = v
+            arr[vi] = v;
           }
-          focusOpacityAttr.needsUpdate = true
-          invalidate()
+          focusOpacityAttr.needsUpdate = true;
+          invalidate();
         },
         undefined,
         reducedMotion,
-      )
-      motionStore.register(handle)
+      );
+      motionStore.register(handle);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusId, focusOpacityAttr, vertexRanges, reducedMotion])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId, focusOpacityAttr, vertexRanges, reducedMotion]);
 
-  useEffect(() => () => geometry.dispose(), [geometry])
+  useEffect(() => () => geometry.dispose(), [geometry]);
 
   return (
     <mesh geometry={geometry} frustumCulled={false} raycast={() => null}>
@@ -470,7 +471,7 @@ function TubeMesh({
         blending={THREE.AdditiveBlending}
       />
     </mesh>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -481,12 +482,12 @@ function BrainEdgeParticles({
   geometry,
   baseOpacity,
 }: {
-  geometry: THREE.BufferGeometry
-  baseOpacity: number
+  geometry: THREE.BufferGeometry;
+  baseOpacity: number;
 }) {
-  const matRef = useRef<THREE.ShaderMaterial>(null!)
-  const camera = useThree((s) => s.camera)
-  const controls = useThree((s) => s.controls) as { target: THREE.Vector3 } | null
+  const matRef = useRef<THREE.ShaderMaterial>(null!);
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls) as { target: THREE.Vector3 } | null;
 
   const uniforms = useMemo(
     () => ({
@@ -496,7 +497,7 @@ function BrainEdgeParticles({
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
-  )
+  );
 
   // Advance uTime on the GPU (no JS per-vertex work).
   // LOD gate: suppress animation when the content is far from the camera.
@@ -509,21 +510,23 @@ function BrainEdgeParticles({
   // The invalidate() makes this work under frameloop="demand" too; under
   // frameloop="always" it is a harmless no-op.
   useFrame((_, delta) => {
-    if (typeof document !== 'undefined' && document.hidden) return
-    const dist = controls?.target ? camera.position.distanceTo(controls.target) : camera.position.length()
-    if (dist > PARTICLE_LOD_MAX_DIST) return
-    const uTime = matRef.current?.uniforms.uTime
-    if (uTime) uTime.value += delta
+    if (typeof document !== 'undefined' && document.hidden) return;
+    const dist = controls?.target
+      ? camera.position.distanceTo(controls.target)
+      : camera.position.length();
+    if (dist > PARTICLE_LOD_MAX_DIST) return;
+    const uTime = matRef.current?.uniforms.uTime;
+    if (uTime) uTime.value += delta;
     // Wake the demand frameloop to keep particles flowing while LOD-gated (zoomed in).
-    invalidate()
-  })
+    invalidate();
+  });
 
   useEffect(() => {
-    const u = matRef.current?.uniforms.uOpacity
-    if (u) u.value = baseOpacity
-  }, [baseOpacity])
+    const u = matRef.current?.uniforms.uOpacity;
+    if (u) u.value = baseOpacity;
+  }, [baseOpacity]);
 
-  useEffect(() => () => geometry.dispose(), [geometry])
+  useEffect(() => () => geometry.dispose(), [geometry]);
 
   return (
     <points geometry={geometry} frustumCulled={false} raycast={() => null}>
@@ -537,7 +540,7 @@ function BrainEdgeParticles({
         blending={THREE.AdditiveBlending}
       />
     </points>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -554,12 +557,12 @@ function BrainEdgeParticles({
 // ---------------------------------------------------------------------------
 
 export interface BrainTunnelFlowProps {
-  level: BrainLevel
-  positions: Float32Array | null
+  level: BrainLevel;
+  positions: Float32Array | null;
   /** Id of the currently hovered BrainNode (string id, not numeric). */
-  hoveredId?: string | null | undefined
+  hoveredId?: string | null | undefined;
   /** Id of the currently selected BrainNode (string id, not numeric). */
-  selectedId?: string | null | undefined
+  selectedId?: string | null | undefined;
 }
 
 export function BrainTunnelFlow({
@@ -568,17 +571,17 @@ export function BrainTunnelFlow({
   hoveredId = null,
   selectedId = null,
 }: BrainTunnelFlowProps) {
-  const focusId = hoveredId ?? selectedId ?? null
+  const focusId = hoveredId ?? selectedId ?? null;
 
   // Hoist useReducedMotion to component top level (React hygiene: W4a)
-  const reducedMotion = useReducedMotion()
+  const reducedMotion = useReducedMotion();
 
   // Build id → position index map from level.nodes (indexed in same order as positions)
   const idToIndex = useMemo(() => {
-    const m = new Map<string, number>()
-    level.nodes.forEach((n, i) => m.set(n.id, i))
-    return m
-  }, [level.nodes])
+    const m = new Map<string, number>();
+    level.nodes.forEach((n, i) => m.set(n.id, i));
+    return m;
+  }, [level.nodes]);
 
   // ---------------------------------------------------------------------------
   // Sub-slice 5a: Focus-layer opacity state
@@ -586,14 +589,14 @@ export function BrainTunnelFlow({
   // ---------------------------------------------------------------------------
 
   // Per-edge opacity refs (mutable, mutated by tweens, read in render)
-  const edgeOpacityStatesRef = useRef<Map<string, EdgeOpacityState>>(new Map())
+  const edgeOpacityStatesRef = useRef<Map<string, EdgeOpacityState>>(new Map());
   // Track previous edges for rebuild detection
-  const prevEdgesRef = useRef<BrainEdge[]>([])
+  const prevEdgesRef = useRef<BrainEdge[]>([]);
 
   // Rebuild opacity states when edges change
   if (prevEdgesRef.current !== level.edges) {
-    prevEdgesRef.current = level.edges
-    edgeOpacityStatesRef.current = buildEdgeOpacityStates(level.edges)
+    prevEdgesRef.current = level.edges;
+    edgeOpacityStatesRef.current = buildEdgeOpacityStates(level.edges);
   }
 
   // ---------------------------------------------------------------------------
@@ -604,19 +607,15 @@ export function BrainTunnelFlow({
 
   const semanticResult = useMemo(
     () =>
-      positions
-        ? buildMergedTubeGeometry(level.edges, idToIndex, positions, 'semantic')
-        : null,
+      positions ? buildMergedTubeGeometry(level.edges, idToIndex, positions, 'semantic') : null,
     [level.edges, idToIndex, positions],
-  )
+  );
 
   const topicRoadResult = useMemo(
     () =>
-      positions
-        ? buildMergedTubeGeometry(level.edges, idToIndex, positions, 'topic-road')
-        : null,
+      positions ? buildMergedTubeGeometry(level.edges, idToIndex, positions, 'topic-road') : null,
     [level.edges, idToIndex, positions],
-  )
+  );
 
   // ---------------------------------------------------------------------------
   // Particle layer (GPU uTime, Sub-slice 5b / LOD gated)
@@ -634,7 +633,7 @@ export function BrainTunnelFlow({
           )
         : null,
     [level.edges, idToIndex, positions],
-  )
+  );
 
   const topicParticleGeo = useMemo(
     () =>
@@ -647,13 +646,14 @@ export function BrainTunnelFlow({
           )
         : null,
     [level.edges, idToIndex, positions],
-  )
+  );
 
-  if (!positions) return null
+  if (!positions) return null;
 
   // Ambient midpoints for particle base opacity
-  const semanticParticleOpacity = (SYNAPSE_AMBIENT_SEMANTIC_MIN + SYNAPSE_AMBIENT_SEMANTIC_MAX) / 2
-  const topicParticleOpacity = (SYNAPSE_AMBIENT_TOPIC_ROAD_MIN + SYNAPSE_AMBIENT_TOPIC_ROAD_MAX) / 2
+  const semanticParticleOpacity = (SYNAPSE_AMBIENT_SEMANTIC_MIN + SYNAPSE_AMBIENT_SEMANTIC_MAX) / 2;
+  const topicParticleOpacity =
+    (SYNAPSE_AMBIENT_TOPIC_ROAD_MIN + SYNAPSE_AMBIENT_TOPIC_ROAD_MAX) / 2;
 
   return (
     <>
@@ -695,17 +695,14 @@ export function BrainTunnelFlow({
 
       {/* Draw call 3b: Topic-road particles (dimmer) */}
       {topicParticleGeo ? (
-        <BrainEdgeParticles
-          geometry={topicParticleGeo}
-          baseOpacity={topicParticleOpacity}
-        />
+        <BrainEdgeParticles geometry={topicParticleGeo} baseOpacity={topicParticleOpacity} />
       ) : null}
     </>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Re-export constants for consumers (graph-scene, tests)
 // These re-exports allow importing from brain-tunnel-flow.tsx directly.
 // ---------------------------------------------------------------------------
-export type { EdgeFamily } from './types.ts'
+export type { EdgeFamily } from './types.ts';

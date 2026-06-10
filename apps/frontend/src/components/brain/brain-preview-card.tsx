@@ -8,9 +8,7 @@ import { Skeleton } from '../ui/skeleton.tsx';
 import { NodeDetailPanel } from './node-detail-panel.tsx';
 import { nodeColor } from './node-colors.ts';
 
-const GraphScene = lazy(() =>
-  import('./graph-scene.tsx').then((m) => ({ default: m.GraphScene })),
-);
+const GraphScene = lazy(() => import('./graph-scene.tsx').then((m) => ({ default: m.GraphScene })));
 
 // The preview cards run an O(n²) force layout in a Web Worker. Above ~200 nodes
 // it takes seconds to converge AND nodes cluster too tight for a fixed-camera
@@ -72,9 +70,7 @@ export function BrainPreviewCard({ title, description, colorBy }: Props): JSX.El
             /* pointer-events-auto ensures canvas clicks and the overlaid panel both work */
             <div className="absolute inset-x-1 inset-y-0 pb-1 pointer-events-auto">
               <ErrorBoundary
-                fallback={
-                  <p className="px-4 pt-4 text-sm text-fail">{t('brain.graphError')}</p>
-                }
+                fallback={<p className="px-4 pt-4 text-sm text-fail">{t('brain.graphError')}</p>}
               >
                 <Suspense fallback={<Skeleton className="h-full" />}>
                   <GraphScene
@@ -97,7 +93,9 @@ export function BrainPreviewCard({ title, description, colorBy }: Props): JSX.El
                   compact
                   color={nodeColor(selected, nodes, colorBy)}
                   onClose={() => setSelected(null)}
-                  onNavigate={(path) => { window.location.href = path; }}
+                  onNavigate={(path) => {
+                    window.location.href = path;
+                  }}
                 />
               ) : null}
             </div>

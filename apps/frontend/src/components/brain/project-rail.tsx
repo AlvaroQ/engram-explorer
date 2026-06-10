@@ -31,9 +31,7 @@ export function ProjectRail({ items, isolated, onToggle }: Props): JSX.Element |
   // imperceptible (you can hardly tell it exists); only the item cards carry a
   // faint tint to keep their text legible over the 3D scene.
   return (
-    <div
-      className="flex h-full w-44 flex-col gap-1.5 overflow-y-auto py-2 px-2 bg-surface/5 backdrop-blur-[2px]"
-    >
+    <div className="flex h-full w-44 flex-col gap-1.5 overflow-y-auto py-2 px-2 bg-surface/5 backdrop-blur-[2px]">
       {items.map((it) => {
         const active = isolated === it.project;
         const dimmed = isolated !== null && !active;

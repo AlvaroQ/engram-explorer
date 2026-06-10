@@ -1,7 +1,7 @@
 a# Brain — Deep Neural Architecture Redesign
 
 - **Date:** 2026-06-06
-- **Status:** Reviewed (adversarial spec review passed: *Approved with fixes* — fixes applied below; pending user approval)
+- **Status:** Reviewed (adversarial spec review passed: _Approved with fixes_ — fixes applied below; pending user approval)
 - **Topic:** `/brain` (TAB BRAIN) — categorized/segmented information as a navigable neural structure
 - **Branch:** `feature/brain`
 - **Next step after approval:** SDD (`/sdd-new`), not writing-plans
@@ -14,7 +14,7 @@ a# Brain — Deep Neural Architecture Redesign
 
 The `/brain` page renders all Engram observations as a single flat 3D force-directed knowledge graph (React Three Fiber + Three.js). It is visually rich but flat: ~490 observations (server-capped at 800), no hierarchical drill-down, and mostly instant (non-eased) transitions.
 
-**Goal:** turn `/brain` into a *deep brain architecture* where information is clearly **categorized and segmented**, animations are **fluid via a single interpolation layer**, and the user **drills progressively into "neurons" that store clusters of information** — a living neural-interconnection structure.
+**Goal:** turn `/brain` into a _deep brain architecture_ where information is clearly **categorized and segmented**, animations are **fluid via a single interpolation layer**, and the user **drills progressively into "neurons" that store clusters of information** — a living neural-interconnection structure.
 
 This is a frontend-centric redesign of an existing, working feature. It **reuses** the current R3F rendering stack and **adds** four new modules on top. No backend changes are required for v1.
 
@@ -22,21 +22,21 @@ This is a frontend-centric redesign of an existing, working feature. It **reuses
 
 ## 2. Current State (grounded)
 
-| Area | File | Today |
-|------|------|-------|
-| Page shell | `apps/frontend/src/pages/brain-page.tsx` | Summary cards + canvas + rails; disabled "conversation mode" |
-| Scene | `apps/frontend/src/components/brain/graph-scene.tsx` | `<Canvas frameloop="demand">`, OrbitControls, `CameraFocus` (direct linear `0.12` lerp inside `useFrame`, `graph-scene.tsx:94`, calls `invalidate()` each frame) |
-| Nodes | `apps/frontend/src/components/brain/graph-nodes.tsx` | One `InstancedMesh`, per-instance color, fresnel rim; static halos |
-| Edges | `apps/frontend/src/components/brain/tunnel-flow.tsx` | 4 layers (semantic + topic, base `lineSegments` + GPU particles), constant-speed flow; `deriveSimilarityEdges` (TF-IDF/k-NN, `tunnel-flow.tsx:131`) builds synthetic topic roads client-side via `useMemo` |
-| Layout | `apps/frontend/src/components/brain/force-layout.worker.ts` | Off-main-thread 3D force layout, ~200 iters, normalized ±30 |
-| Colors | `apps/frontend/src/components/brain/node-colors.ts` | HSL palette by project or type |
-| Color toggle | `apps/frontend/src/components/brain/color-by-toggle.tsx` | Either/or `project | type` (controls **color only**) |
-| Project rails | `apps/frontend/src/components/brain/project-rail.tsx` | 45+ projects split **L/R**, isolate-and-dim |
-| Detail | `apps/frontend/src/components/brain/node-detail-panel.tsx` | Metadata + lazy markdown + wikilinks; **no neighbors** |
-| Markdown | `apps/frontend/src/components/brain/markdown-content.tsx` | Sections + `[[wikilinks]]` |
-| A11y | `apps/frontend/src/components/brain/accessible-node-list.tsx` | sr-only list, capped at 150 |
-| API types | `apps/frontend/src/lib/api.ts` | `GraphNode`, `GraphEdge`, `GraphMeta` |
-| Backend | `internal/services/graph.go` + `internal/httpapi/routes_graph.go` | Flat graph, dedupe by `normalized_hash`, node cap (`internal/services/graph.go`) |
+| Area          | File                                                              | Today                                                                                                                                                                                                      |
+| ------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| Page shell    | `apps/frontend/src/pages/brain-page.tsx`                          | Summary cards + canvas + rails; disabled "conversation mode"                                                                                                                                               |
+| Scene         | `apps/frontend/src/components/brain/graph-scene.tsx`              | `<Canvas frameloop="demand">`, OrbitControls, `CameraFocus` (direct linear `0.12` lerp inside `useFrame`, `graph-scene.tsx:94`, calls `invalidate()` each frame)                                           |
+| Nodes         | `apps/frontend/src/components/brain/graph-nodes.tsx`              | One `InstancedMesh`, per-instance color, fresnel rim; static halos                                                                                                                                         |
+| Edges         | `apps/frontend/src/components/brain/tunnel-flow.tsx`              | 4 layers (semantic + topic, base `lineSegments` + GPU particles), constant-speed flow; `deriveSimilarityEdges` (TF-IDF/k-NN, `tunnel-flow.tsx:131`) builds synthetic topic roads client-side via `useMemo` |
+| Layout        | `apps/frontend/src/components/brain/force-layout.worker.ts`       | Off-main-thread 3D force layout, ~200 iters, normalized ±30                                                                                                                                                |
+| Colors        | `apps/frontend/src/components/brain/node-colors.ts`               | HSL palette by project or type                                                                                                                                                                             |
+| Color toggle  | `apps/frontend/src/components/brain/color-by-toggle.tsx`          | Either/or `project                                                                                                                                                                                         | type` (controls **color only**) |
+| Project rails | `apps/frontend/src/components/brain/project-rail.tsx`             | 45+ projects split **L/R**, isolate-and-dim                                                                                                                                                                |
+| Detail        | `apps/frontend/src/components/brain/node-detail-panel.tsx`        | Metadata + lazy markdown + wikilinks; **no neighbors**                                                                                                                                                     |
+| Markdown      | `apps/frontend/src/components/brain/markdown-content.tsx`         | Sections + `[[wikilinks]]`                                                                                                                                                                                 |
+| A11y          | `apps/frontend/src/components/brain/accessible-node-list.tsx`     | sr-only list, capped at 150                                                                                                                                                                                |
+| API types     | `apps/frontend/src/lib/api.ts`                                    | `GraphNode`, `GraphEdge`, `GraphMeta`                                                                                                                                                                      |
+| Backend       | `internal/services/graph.go` + `internal/httpapi/routes_graph.go` | Flat graph, dedupe by `normalized_hash`, node cap (`internal/services/graph.go`)                                                                                                                           |
 
 **Data available per node** (`GraphNode`): `id, project, type, scope, topicKey, label, weight, duplicateCount, createdAt`. **Per edge** (`GraphEdge`): `source, target, relation ('related'|'scoped'|'compatible'), confidence?, reason?`.
 
@@ -46,17 +46,17 @@ This is a frontend-centric redesign of an existing, working feature. It **reuses
 
 ## 3. Design Decisions (validated with the user)
 
-| # | Decision | Choice | Rationale |
-|---|----------|--------|-----------|
-| D1 | What is a "neuron" | **All three as switchable Views**: Lóbulos (neuron=project), Temas (neuron=`topic_key`), Orgánico (neuron=similarity cluster) | `topic_key` already organizes Engram memory; views cover simple→deep→organic |
-| D2 | View switcher placement | Horizontal tabs **right of the title**; **replaces** the old color toggle as the primary control | Clean, signals "configure the brain architecture" |
-| D3 | Color control | **Survives as a secondary, compact control**; per-view sensible default, still offers "by type" | View ≠ color; orthogonal axes — keep both lenses |
-| D4 | Drill-down mechanic | **Immersive zoom** — camera flies in, neuron explodes into members, rest recedes; breadcrumb to exit | Only model that delivers "deep architecture"; each level renders only its own nodes → dissolves the 800 cap |
-| D5 | Motion language | **Smooth / organic** (easeOutExpo), no spring; centralized | User picked "Suave" — fluid, no bounce |
-| D6 | Where hierarchy is computed | **Hybrid (C)** — client aggregation behind a `brain-model` interface, swappable to backend later | ~90% of work (UI) is identical either way; local-first app holds thousands of nodes fine; don't freeze a backend contract before validating UX |
-| D7 | Synapses | **Meaningful + focus (B)** — subtle ambient, light up on hover/select; color=relation, radius=count, brightness=confidence; semantic vs topic-road distinguished | "Alive but legible" |
-| D8 | Search/segmentation | **Segmentation panel (B)** — search + **stackable** facets (Project AND Type AND Scope AND Tool AND Date) + legend + per-level stats; `⌘K` quick-jump v2-deferred | Fulfills "categorized and segmented"; stackable beats either/or |
-| D9 | Layout | **Unified panel** — left = segmentation, center = brain + breadcrumb + stats, right = detail + neighbors; side rails removed | Stackable facets need their own panel; freeing the right side for detail beats a floating card |
+| #   | Decision                    | Choice                                                                                                                                                            | Rationale                                                                                                                                      |
+| --- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | What is a "neuron"          | **All three as switchable Views**: Lóbulos (neuron=project), Temas (neuron=`topic_key`), Orgánico (neuron=similarity cluster)                                     | `topic_key` already organizes Engram memory; views cover simple→deep→organic                                                                   |
+| D2  | View switcher placement     | Horizontal tabs **right of the title**; **replaces** the old color toggle as the primary control                                                                  | Clean, signals "configure the brain architecture"                                                                                              |
+| D3  | Color control               | **Survives as a secondary, compact control**; per-view sensible default, still offers "by type"                                                                   | View ≠ color; orthogonal axes — keep both lenses                                                                                               |
+| D4  | Drill-down mechanic         | **Immersive zoom** — camera flies in, neuron explodes into members, rest recedes; breadcrumb to exit                                                              | Only model that delivers "deep architecture"; each level renders only its own nodes → dissolves the 800 cap                                    |
+| D5  | Motion language             | **Smooth / organic** (easeOutExpo), no spring; centralized                                                                                                        | User picked "Suave" — fluid, no bounce                                                                                                         |
+| D6  | Where hierarchy is computed | **Hybrid (C)** — client aggregation behind a `brain-model` interface, swappable to backend later                                                                  | ~90% of work (UI) is identical either way; local-first app holds thousands of nodes fine; don't freeze a backend contract before validating UX |
+| D7  | Synapses                    | **Meaningful + focus (B)** — subtle ambient, light up on hover/select; color=relation, radius=count, brightness=confidence; semantic vs topic-road distinguished  | "Alive but legible"                                                                                                                            |
+| D8  | Search/segmentation         | **Segmentation panel (B)** — search + **stackable** facets (Project AND Type AND Scope AND Tool AND Date) + legend + per-level stats; `⌘K` quick-jump v2-deferred | Fulfills "categorized and segmented"; stackable beats either/or                                                                                |
+| D9  | Layout                      | **Unified panel** — left = segmentation, center = brain + breadcrumb + stats, right = detail + neighbors; side rails removed                                      | Stackable facets need their own panel; freeing the right side for detail beats a floating card                                                 |
 
 **Defaults assumed (user-confirmed):** node entrance smooth (no spring); 800 cap raised to ~5000 (config); sr-only a11y list preserved and extended to levels; `⌘K` is v2-deferred.
 
@@ -95,45 +95,60 @@ The UI never consumes the raw `/graph` response. It consumes an abstract, view-a
 type ViewMode = 'lobulos' | 'temas' | 'organico';
 type NodeKind = 'lobe' | 'neuron' | 'cluster' | 'observation';
 
-interface BrainNodeRef { id: string; kind: NodeKind; label: string }
-
-interface BrainNode {
-  id: string;                 // synthetic for aggregates: "lobe:engram", "neuron:engram/auth-model"; "obs:<numericId>" for leaves
+interface BrainNodeRef {
+  id: string;
   kind: NodeKind;
   label: string;
-  color: string;              // resolved per active color-by
-  weight: number;             // aggregate size (member count) or observation weight for leaves
-  childCount: number;         // 0 ⇒ leaf
+}
+
+interface BrainNode {
+  id: string; // synthetic for aggregates: "lobe:engram", "neuron:engram/auth-model"; "obs:<numericId>" for leaves
+  kind: NodeKind;
+  label: string;
+  color: string; // resolved per active color-by
+  weight: number; // aggregate size (member count) or observation weight for leaves
+  childCount: number; // 0 ⇒ leaf
   meta: Record<string, unknown>; // dominant type, scope mix, date range, sourceIds count…
-  sourceIds?: number[];       // underlying observation ids (stats/detail)
+  sourceIds?: number[]; // underlying observation ids (stats/detail)
 }
 
 type EdgeFamily = 'semantic' | 'topic-road';
 interface BrainEdge {
-  source: string; target: string;
+  source: string;
+  target: string;
   family: EdgeFamily;
-  relation?: GraphEdgeRelation;   // dominant relation for semantic bundles
-  weight: number;                 // count of underlying GraphEdge rows → tube RADIUS
-  confidence?: number;            // average → brightness
+  relation?: GraphEdgeRelation; // dominant relation for semantic bundles
+  weight: number; // count of underlying GraphEdge rows → tube RADIUS
+  confidence?: number; // average → brightness
 }
 
-interface LevelStats { nodeCount: number; observationCount: number; crossSynapses: number; dominantType?: string }
-interface BrainLevel { nodes: BrainNode[]; edges: BrainEdge[]; parentPath: BrainNodeRef[]; stats: LevelStats }
+interface LevelStats {
+  nodeCount: number;
+  observationCount: number;
+  crossSynapses: number;
+  dominantType?: string;
+}
+interface BrainLevel {
+  nodes: BrainNode[];
+  edges: BrainEdge[];
+  parentPath: BrainNodeRef[];
+  stats: LevelStats;
+}
 
 interface BrainModel {
   view: ViewMode;
   root(filters: ActiveFacets): BrainLevel;
   children(nodeId: string, filters: ActiveFacets): BrainLevel; // empty level for leaves
   search(query: string, filters: ActiveFacets): BrainNodeRef[];
-  availableFacets(): FacetGroupId[];   // which facet groups the loaded data supports
+  availableFacets(): FacetGroupId[]; // which facet groups the loaded data supports
 }
 ```
 
 **Leaf contract (C2):** a leaf has `childCount === 0` and `kind === 'observation'`. `children(leafId)` returns an **empty level** `{ nodes: [], edges: [], parentPath, stats }` — never `undefined`/throw. The renderer MUST treat `childCount === 0` as a leaf: selecting it opens the detail panel **without** pushing a level or flying the camera.
 
-**`relation` → `family` mapping (C4):** derived deterministically — `related` → `semantic`; `compatible` → `semantic`; `scoped` → `topic-road`. (Synthetic `deriveSimilarityEdges` roads are always `topic-road`.) *SDD must confirm this mapping against the backend schema before implementation.*
+**`relation` → `family` mapping (C4):** derived deterministically — `related` → `semantic`; `compatible` → `semantic`; `scoped` → `topic-road`. (Synthetic `deriveSimilarityEdges` roads are always `topic-road`.) _SDD must confirm this mapping against the backend schema before implementation._
 
-**Edge aggregation math (C3 / M4):** when building a non-leaf level, `client-brain-model.ts` merges all underlying edges sharing `(source-aggregate, target-aggregate, family)` into one `BrainEdge`: `weight` = count of distinct underlying `GraphEdge` rows; `confidence` = average of underlying confidences; `relation` = **dominant** (most frequent) relation in the bundle (drives color). *Worked example:* if observations A, B, C (same neuron) each have a `related` edge to observation D (other neuron), the aggregate edge `(neuron:ABC → neuron:D, family='semantic')` has `weight = 3`. **Edge budget:** if a level yields > 200 edges, cull weakest by `confidence × weight` (at brain level, render only bundles with `weight ≥ threshold`). `deriveSimilarityEdges` already sums weights and is the reference pattern.
+**Edge aggregation math (C3 / M4):** when building a non-leaf level, `client-brain-model.ts` merges all underlying edges sharing `(source-aggregate, target-aggregate, family)` into one `BrainEdge`: `weight` = count of distinct underlying `GraphEdge` rows; `confidence` = average of underlying confidences; `relation` = **dominant** (most frequent) relation in the bundle (drives color). _Worked example:_ if observations A, B, C (same neuron) each have a `related` edge to observation D (other neuron), the aggregate edge `(neuron:ABC → neuron:D, family='semantic')` has `weight = 3`. **Edge budget:** if a level yields > 200 edges, cull weakest by `confidence × weight` (at brain level, render only bundles with `weight ≥ threshold`). `deriveSimilarityEdges` already sums weights and is the reference pattern.
 
 - **Client impl** (`client-brain-model.ts`) groups the flat node list (`project`; then `topic_key` for Temas; reuse `deriveSimilarityEdges` clusters for Orgánico) and re-points/aggregates edges as above.
 - **Future backend impl** implements the same interface against `/graph/lobes`, `/graph/lobe/:p`, `/graph/neuron/:t` — **UI unchanged**.
@@ -142,11 +157,11 @@ interface BrainModel {
 
 Drill depth is **view-dependent** and not hardcoded. Per-view hierarchy matrix (M1):
 
-| View | Level 0 `root()` | Level 1 `children()` | Level 2 `children()` |
-|------|------------------|----------------------|----------------------|
-| **Lóbulos** | all lobes (≈ #projects) | observations in lobe | — (leaf) |
-| **Temas** | all lobes | topic-neurons in lobe | observations in topic (leaf) |
-| **Orgánico** | all clusters | observations in cluster | — (leaf) |
+| View         | Level 0 `root()`        | Level 1 `children()`    | Level 2 `children()`         |
+| ------------ | ----------------------- | ----------------------- | ---------------------------- |
+| **Lóbulos**  | all lobes (≈ #projects) | observations in lobe    | — (leaf)                     |
+| **Temas**    | all lobes               | topic-neurons in lobe   | observations in topic (leaf) |
+| **Orgánico** | all clusters            | observations in cluster | — (leaf)                     |
 
 `use-brain-navigation.ts` keeps a **path stack** of `BrainNodeRef`. Entering a non-leaf node pushes; breadcrumb/Escape pops. The renderer always shows `children(top-of-stack)` (or `root()` when empty). Selecting a **leaf** opens the right detail panel without pushing a canvas level.
 
@@ -158,8 +173,13 @@ Drill depth is **view-dependent** and not hardcoded. Per-view hierarchy matrix (
 type Easing = (t: number) => number;
 export const easeOutExpo, easeInOutCubic, easeOutCubic, linear: Easing;
 export const DURATIONS = { cameraFlyTo: 700, nodeEnter: 400, dimBrighten: 300 } as const; // ms
-export function useReducedMotion(): boolean;  // true ⇒ all tweens scale to ≤50ms
-export interface TweenSpec<T> { from: T; to: T; durationMs: number; easing?: Easing }
+export function useReducedMotion(): boolean; // true ⇒ all tweens scale to ≤50ms
+export interface TweenSpec<T> {
+  from: T;
+  to: T;
+  durationMs: number;
+  easing?: Easing;
+}
 export function tween<T>(spec, onUpdate, onComplete?): TweenHandle; // number | Vector3 | Color
 ```
 
@@ -176,6 +196,7 @@ Each view module exports `group(nodes) → aggregates`, `defaultColorBy`, and op
 ### 4.6 Synapses (D7)
 
 Extends `tunnel-flow.tsx`:
+
 - **Base ambient** opacity low (~0.12–0.18); the brain "breathes".
 - **Focus state:** hovering/selecting a node raises opacity on its incident edges (eased), dims the rest (`TunnelFocusLayer`, new).
 - **Encoding:** color = dominant relation, **radius** = `edge.weight` (underlying count; aggregate levels = "nerve bundles"), **brightness** = `confidence`.
@@ -209,7 +230,7 @@ Deterministic sequence (prevents camera flying to stale centroids / nodes fading
 
 **Perceived-latency target:** at normal load (≤ a few hundred nodes per level) the full drill transition (dim 300ms → worker layout → camera 700ms + entrance 400ms) should feel under ~1.2s end-to-end; the worker layout step is the only variable cost. If layout exceeds ~600ms, show the dimmed prior level (not a blank canvas) until `layoutReady`. This is an `sdd-verify` acceptance criterion.
 
-**Drill node-set swap (C7) — cross-fade two instance sets:** because a single `InstancedMesh` has a fixed buffer, expanding/collapsing levels does **not** mutate one mesh. Instead: the **outgoing** instance set freezes at old positions and fades 1→0; the **incoming** set renders at the new layout and fades 0→1 over `DURATIONS.nodeEnter` (`easeOutCubic`); the outgoing mesh unmounts on completion. Costs ~one extra draw call during the transition. (Drop the earlier "morph, not pop" hand-waving — this is the committed mechanism; node *identity* is still preserved across view switches via the model's id cache, §4.5.)
+**Drill node-set swap (C7) — cross-fade two instance sets:** because a single `InstancedMesh` has a fixed buffer, expanding/collapsing levels does **not** mutate one mesh. Instead: the **outgoing** instance set freezes at old positions and fades 1→0; the **incoming** set renders at the new layout and fades 0→1 over `DURATIONS.nodeEnter` (`easeOutCubic`); the outgoing mesh unmounts on completion. Costs ~one extra draw call during the transition. (Drop the earlier "morph, not pop" hand-waving — this is the committed mechanism; node _identity_ is still preserved across view switches via the model's id cache, §4.5.)
 
 ---
 
@@ -269,12 +290,14 @@ Single TanStack Query fetch of `/graph` (unchanged). All aggregation, filtering,
 - **Refactored, not deleted:** `project-rail.tsx` → `ProjectFacetGroup` inside `segmentation-panel/`; `color-by-toggle.tsx` → secondary compact control.
 
 **`tunnel-flow.tsx` decomposition (M6, file is ~758 lines — keep PRs < 400):**
+
 - `TunnelFocusLayer` (focus-state dim/brighten) ~120 lines
 - relation-coloring shader tweaks ~80 lines
 - topic-road dashing + tube radius encoding ~100 lines
 - aggregate edge bundling consumed from model ~60 lines
 
 **Post-change page layout (M7):**
+
 ```
 ┌───────────────────────────────────────────────────────────────┐
 │ 🧠 Brain  [Lóbulos·Temas·Orgánico]  Cerebro›engram›…   Color ▾ │
@@ -307,16 +330,16 @@ Suggested PR chain: (1) interpolator + motion-store, (2) brain-model + facets + 
 
 ## 11. Risks & Mitigations
 
-| Risk | Mitigation |
-|------|------------|
+| Risk                                            | Mitigation                                                                                  |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | Orgánico clustering quality (TF-IDF is lexical) | Reuse `deriveSimilarityEdges`; treat Orgánico as exploratory; fixed seed; fallback to Temas |
-| Re-layout on view change feels jarring | Lifecycle sequence §4.9 + cross-fade; node identity preserved via model id cache |
-| Aggregate edge explosion at brain level | Bundle by (src,tgt,family); cull > 200 by confidence×weight |
-| `lineWidth` clamp hides thickness | TubeGeometry radius encoding (C6) |
-| Competing `invalidate()` loops | Single master invalidator / motion-store (C5) |
-| Scope creep (Tool/Session facets need backend) | `availableFacets()` hides them; backend-free per D6 |
-| `tunnel-flow.tsx` mega-diff | Pre-sliced (M6); chained PRs < 400 lines |
-| `features/brain/` move churn | Option A: extend in place, defer bulk move (M8) |
+| Re-layout on view change feels jarring          | Lifecycle sequence §4.9 + cross-fade; node identity preserved via model id cache            |
+| Aggregate edge explosion at brain level         | Bundle by (src,tgt,family); cull > 200 by confidence×weight                                 |
+| `lineWidth` clamp hides thickness               | TubeGeometry radius encoding (C6)                                                           |
+| Competing `invalidate()` loops                  | Single master invalidator / motion-store (C5)                                               |
+| Scope creep (Tool/Session facets need backend)  | `availableFacets()` hides them; backend-free per D6                                         |
+| `tunnel-flow.tsx` mega-diff                     | Pre-sliced (M6); chained PRs < 400 lines                                                    |
+| `features/brain/` move churn                    | Option A: extend in place, defer bulk move (M8)                                             |
 
 ---
 
@@ -334,6 +357,7 @@ Suggested PR chain: (1) interpolator + motion-store, (2) brain-model + facets + 
 ## 13. SDD Handoff
 
 This design becomes the input to the SDD cycle:
+
 - **proposal** ← §1–3 (intent, scope, decisions)
 - **spec** ← §4–8 (requirements & scenarios per module: brain-model incl. leaf/family/aggregation contracts, interpolator, views, navigation, synapses, segmentation, detail, states, a11y)
 - **design** ← §4, §8, §9, §11 (architecture + performance + PR slicing + risks)

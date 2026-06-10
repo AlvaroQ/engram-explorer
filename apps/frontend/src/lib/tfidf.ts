@@ -21,9 +21,37 @@ export const TITLE_TOKEN_WEIGHT = 1;
 // Low-value tokens (stopwords EN+ES + generic engineering verbs) that would
 // otherwise inflate similarity without carrying topic meaning.
 export const STOPWORDS = new Set([
-  'the', 'and', 'for', 'with', 'from', 'this', 'that', 'are', 'was', 'use', 'using',
-  'add', 'set', 'new', 'fix', 'fixed', 'via', 'into', 'per',
-  'los', 'las', 'una', 'con', 'para', 'por', 'del', 'que', 'como', 'sus', 'este', 'esta',
+  'the',
+  'and',
+  'for',
+  'with',
+  'from',
+  'this',
+  'that',
+  'are',
+  'was',
+  'use',
+  'using',
+  'add',
+  'set',
+  'new',
+  'fix',
+  'fixed',
+  'via',
+  'into',
+  'per',
+  'los',
+  'las',
+  'una',
+  'con',
+  'para',
+  'por',
+  'del',
+  'que',
+  'como',
+  'sus',
+  'este',
+  'esta',
 ]);
 
 // Types that carry no topical content: session summaries are template-titled
@@ -77,11 +105,7 @@ export function termFrequencies(text: string | null | undefined): Map<string, nu
  * Tokens whose weight is below `minRatio * maxWeight` are excluded.
  * Returns [] for an empty map or k ≤ 0.
  */
-export function topKeywords(
-  vec: Map<string, number>,
-  k: number,
-  minRatio = 0,
-): string[] {
+export function topKeywords(vec: Map<string, number>, k: number, minRatio = 0): string[] {
   if (vec.size === 0 || k <= 0) return [];
 
   let maxWeight = 0;
@@ -121,10 +145,7 @@ export function topKeywords(
  *
  * Keys the returned Map by GraphNode.id (number).
  */
-export function computeNodeKeywords(
-  nodes: GraphNode[],
-  k = 5,
-): Map<number, string[]> {
+export function computeNodeKeywords(nodes: GraphNode[], k = 5): Map<number, string[]> {
   const result = new Map<number, string[]>();
 
   // Group by project, skipping non-topical types.

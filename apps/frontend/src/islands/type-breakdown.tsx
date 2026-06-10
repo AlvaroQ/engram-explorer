@@ -39,7 +39,10 @@ function TypeBreakdownChart({ by_type }: TypeBreakdownProps) {
 
   const slices: Array<{ type: string; count: number; isOthers?: boolean }> =
     rest.length > 0
-      ? [...visible, { type: 'Others', count: rest.reduce((s, d) => s + d.count, 0), isOthers: true }]
+      ? [
+          ...visible,
+          { type: 'Others', count: rest.reduce((s, d) => s + d.count, 0), isOthers: true },
+        ]
       : visible;
 
   const total = slices.reduce((sum, d) => sum + d.count, 0);
@@ -109,7 +112,11 @@ function TypeBreakdownChart({ by_type }: TypeBreakdownProps) {
         }}
       >
         {legend.map(({ item, colorIdx }) => (
-          <li key={item.type} style={{ display: 'flex', alignItems: 'center', gap: 8 }} title={item.type}>
+          <li
+            key={item.type}
+            style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+            title={item.type}
+          >
             <span
               style={{
                 width: 8,

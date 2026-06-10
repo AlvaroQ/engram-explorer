@@ -7,6 +7,6 @@
  * Uses a sin-based hash so rebuilds don't reshuffle particle phases/speeds.
  */
 export function hash01(n: number): number {
-  const x = Math.sin(n * 127.1) * 43758.5453
-  return x - Math.floor(x)
+  const x = Math.sin(n * 127.1) * 43758.5453;
+  return x - Math.floor(x);
 }

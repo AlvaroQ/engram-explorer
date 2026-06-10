@@ -11,28 +11,28 @@
 //
 // I8 (S8): Roving tabIndex — only the focused item has tabIndex=0; all others
 // are tabIndex=-1. ArrowUp/Down/Home/End move focus within the list.
-import { useRef, type JSX, type KeyboardEvent } from 'react'
-import { useTranslation } from 'react-i18next'
-import type { GraphNode } from '../../lib/api.ts'
-import type { BrainLevel, BrainNode, BrainNodeRef } from './types.ts'
+import { useRef, type JSX, type KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { GraphNode } from '../../lib/api.ts';
+import type { BrainLevel, BrainNode, BrainNodeRef } from './types.ts';
 
 // Cap the DOM size — screen-reader users refine with the search box instead of
 // tabbing through hundreds of nodes.
-const MAX_LIST_ITEMS = 150
+const MAX_LIST_ITEMS = 150;
 
 // ---------------------------------------------------------------------------
 // Legacy props (flat GraphNode list — used when brainLevel is not provided)
 // ---------------------------------------------------------------------------
 
 interface LegacyProps {
-  nodes: GraphNode[]
+  nodes: GraphNode[];
   /** Ids passing the active filters/search; null = no filter. */
-  matchedIds: Set<number> | null
-  onSelect: (node: GraphNode) => void
-  brainLevel?: undefined
-  brainPath?: undefined
-  brainMatchedIds?: undefined
-  onSelectBrain?: undefined
+  matchedIds: Set<number> | null;
+  onSelect: (node: GraphNode) => void;
+  brainLevel?: undefined;
+  brainPath?: undefined;
+  brainMatchedIds?: undefined;
+  onSelectBrain?: undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -40,19 +40,19 @@ interface LegacyProps {
 // ---------------------------------------------------------------------------
 
 interface BrainLevelProps {
-  brainLevel: BrainLevel
+  brainLevel: BrainLevel;
   /** Current navigation path — included in the aria-label for context. */
-  brainPath: BrainNodeRef[]
+  brainPath: BrainNodeRef[];
   /** Ids of brain nodes passing the active filters; null = no filter. */
-  brainMatchedIds: Set<string> | null
+  brainMatchedIds: Set<string> | null;
   /** Called when a brain node is selected via keyboard/SR. */
-  onSelectBrain: (node: BrainNode) => void
-  nodes?: undefined
-  matchedIds?: undefined
-  onSelect?: undefined
+  onSelectBrain: (node: BrainNode) => void;
+  nodes?: undefined;
+  matchedIds?: undefined;
+  onSelect?: undefined;
 }
 
-type Props = LegacyProps | BrainLevelProps
+type Props = LegacyProps | BrainLevelProps;
 
 // ---------------------------------------------------------------------------
 // Shared roving-list keyboard handler
@@ -64,24 +64,24 @@ function makeRovingKeyHandler(
   focusedIndex: React.MutableRefObject<number>,
 ) {
   return function handleKey(e: KeyboardEvent<HTMLButtonElement>, index: number): void {
-    let next: number | null = null
+    let next: number | null = null;
 
     if (e.key === 'ArrowDown') {
-      next = Math.min(index + 1, count - 1)
+      next = Math.min(index + 1, count - 1);
     } else if (e.key === 'ArrowUp') {
-      next = Math.max(index - 1, 0)
+      next = Math.max(index - 1, 0);
     } else if (e.key === 'Home') {
-      next = 0
+      next = 0;
     } else if (e.key === 'End') {
-      next = count - 1
+      next = count - 1;
     }
 
     if (next !== null) {
-      e.preventDefault()
-      focusedIndex.current = next
-      refs.current[next]?.focus()
+      e.preventDefault();
+      focusedIndex.current = next;
+      refs.current[next]?.focus();
     }
-  }
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -94,24 +94,21 @@ function BrainLevelList({
   brainMatchedIds,
   onSelectBrain,
 }: BrainLevelProps): JSX.Element {
-  const { t } = useTranslation()
-  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([])
-  const focusedIndex = useRef(0)
+  const { t } = useTranslation();
+  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const focusedIndex = useRef(0);
 
   const visibleNodes = brainMatchedIds
     ? brainLevel.nodes.filter((n) => brainMatchedIds.has(n.id))
-    : brainLevel.nodes
+    : brainLevel.nodes;
 
-  const capped = visibleNodes.slice(0, MAX_LIST_ITEMS)
-  const overflow = visibleNodes.length - capped.length
+  const capped = visibleNodes.slice(0, MAX_LIST_ITEMS);
+  const overflow = visibleNodes.length - capped.length;
 
-  const handleKey = makeRovingKeyHandler(buttonRefs, capped.length, focusedIndex)
+  const handleKey = makeRovingKeyHandler(buttonRefs, capped.length, focusedIndex);
 
-  const pathContext =
-    brainPath.length > 0
-      ? `: ${brainPath.map((r) => r.label).join(' › ')}`
-      : ''
-  const ariaLabel = `Brain nodes${pathContext} (${visibleNodes.length} visible)`
+  const pathContext = brainPath.length > 0 ? `: ${brainPath.map((r) => r.label).join(' › ')}` : '';
+  const ariaLabel = `Brain nodes${pathContext} (${visibleNodes.length} visible)`;
 
   return (
     <nav
@@ -125,10 +122,14 @@ function BrainLevelList({
         {capped.map((node, index) => (
           <li key={node.id}>
             <button
-              ref={(el) => { buttonRefs.current[index] = el }}
+              ref={(el) => {
+                buttonRefs.current[index] = el;
+              }}
               type="button"
               tabIndex={index === focusedIndex.current ? 0 : -1}
-              onFocus={() => { focusedIndex.current = index }}
+              onFocus={() => {
+                focusedIndex.current = index;
+              }}
               onKeyDown={(e) => handleKey(e, index)}
               onClick={() => onSelectBrain(node)}
               className="w-full rounded px-2 py-1 text-left text-xs text-fg hover:bg-surface-2 focus:bg-surface-2 focus:outline-none"
@@ -151,7 +152,7 @@ function BrainLevelList({
         ) : null}
       </ul>
     </nav>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -159,15 +160,15 @@ function BrainLevelList({
 // ---------------------------------------------------------------------------
 
 function LegacyList({ nodes, matchedIds, onSelect }: LegacyProps): JSX.Element {
-  const { t } = useTranslation()
-  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([])
-  const focusedIndex = useRef(0)
+  const { t } = useTranslation();
+  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const focusedIndex = useRef(0);
 
-  const visible = matchedIds ? nodes.filter((n) => matchedIds.has(n.id)) : nodes
-  const capped = visible.slice(0, MAX_LIST_ITEMS)
-  const overflow = visible.length - capped.length
+  const visible = matchedIds ? nodes.filter((n) => matchedIds.has(n.id)) : nodes;
+  const capped = visible.slice(0, MAX_LIST_ITEMS);
+  const overflow = visible.length - capped.length;
 
-  const handleKey = makeRovingKeyHandler(buttonRefs, capped.length, focusedIndex)
+  const handleKey = makeRovingKeyHandler(buttonRefs, capped.length, focusedIndex);
 
   return (
     <nav
@@ -181,10 +182,14 @@ function LegacyList({ nodes, matchedIds, onSelect }: LegacyProps): JSX.Element {
         {capped.map((node, index) => (
           <li key={node.id}>
             <button
-              ref={(el) => { buttonRefs.current[index] = el }}
+              ref={(el) => {
+                buttonRefs.current[index] = el;
+              }}
               type="button"
               tabIndex={index === focusedIndex.current ? 0 : -1}
-              onFocus={() => { focusedIndex.current = index }}
+              onFocus={() => {
+                focusedIndex.current = index;
+              }}
               onKeyDown={(e) => handleKey(e, index)}
               onClick={() => onSelect(node)}
               className="w-full rounded px-2 py-1 text-left text-xs text-fg hover:bg-surface-2 focus:bg-surface-2 focus:outline-none"
@@ -205,7 +210,7 @@ function LegacyList({ nodes, matchedIds, onSelect }: LegacyProps): JSX.Element {
         ) : null}
       </ul>
     </nav>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -214,7 +219,7 @@ function LegacyList({ nodes, matchedIds, onSelect }: LegacyProps): JSX.Element {
 
 export function AccessibleNodeList(props: Props): JSX.Element {
   if (props.brainLevel !== undefined) {
-    return <BrainLevelList {...props} />
+    return <BrainLevelList {...props} />;
   }
-  return <LegacyList {...props} />
+  return <LegacyList {...props} />;
 }

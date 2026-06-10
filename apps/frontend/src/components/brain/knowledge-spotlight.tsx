@@ -132,14 +132,10 @@ function OptionRow({
       aria-selected={isActive}
       onClick={onClick}
       className={`flex cursor-pointer items-start gap-3 px-3 py-2 transition-colors ${
-        isActive
-          ? 'bg-accent/15 text-fg'
-          : 'text-fg-muted hover:bg-surface-2 hover:text-fg'
+        isActive ? 'bg-accent/15 text-fg' : 'text-fg-muted hover:bg-surface-2 hover:text-fg'
       }`}
     >
-      {icon && (
-        <span className="mt-0.5 shrink-0 text-fg-muted">{icon}</span>
-      )}
+      {icon && <span className="mt-0.5 shrink-0 text-fg-muted">{icon}</span>}
       <div className="min-w-0 flex-1">
         {/* Line 1: label + badge */}
         <div className="flex items-center gap-2">
@@ -263,9 +259,7 @@ export function KnowledgeSpotlight({
       const recentSessions = sessionsData?.items?.slice(0, 5) ?? [];
       recentSessions.forEach((s) => {
         const dateSource = s.last_activity ?? s.started_at;
-        const dateStr = dateSource
-          ? new Date(dateSource).toLocaleDateString()
-          : undefined;
+        const dateStr = dateSource ? new Date(dateSource).toLocaleDateString() : undefined;
         // Line 1: project · date
         const label = [s.project, dateStr].filter(Boolean).join(' · ') || s.id;
         // Line 2: brief summary = summary ?? recent_title
@@ -546,7 +540,9 @@ export function KnowledgeSpotlight({
               <div>
                 <SectionHeader label={t('brain.spotlight.sections.inGraph')} />
                 {localResults.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-fg-muted">{t('brain.spotlight.noMatches')}</div>
+                  <div className="px-3 py-2 text-sm text-fg-muted">
+                    {t('brain.spotlight.noMatches')}
+                  </div>
                 ) : (
                   localResults.map((node, i) => {
                     const rowDef = flatRows[i];
@@ -572,10 +568,14 @@ export function KnowledgeSpotlight({
               <div>
                 <SectionHeader label={t('brain.spotlight.sections.inContent')} />
                 {isSearching && (
-                  <div className="px-3 py-2 text-sm text-fg-muted">{t('brain.spotlight.searching')}</div>
+                  <div className="px-3 py-2 text-sm text-fg-muted">
+                    {t('brain.spotlight.searching')}
+                  </div>
                 )}
                 {!isSearching && contentResults.length === 0 && (
-                  <div className="px-3 py-2 text-sm text-fg-muted">{t('brain.spotlight.noMatches')}</div>
+                  <div className="px-3 py-2 text-sm text-fg-muted">
+                    {t('brain.spotlight.noMatches')}
+                  </div>
                 )}
                 {!isSearching &&
                   contentResults.map((item, i) => {
@@ -610,9 +610,7 @@ export function KnowledgeSpotlight({
 
       {/* aria-live region — announces result count after search settles */}
       <div role="status" aria-live="polite" className="sr-only">
-        {isTyping && !isSearching
-          ? t('brain.spotlight.resultCount', { count: resultCount })
-          : ''}
+        {isTyping && !isSearching ? t('brain.spotlight.resultCount', { count: resultCount }) : ''}
       </div>
     </div>
   );
