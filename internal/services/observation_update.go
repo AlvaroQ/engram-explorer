@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // ---------------------------------------------------------------------------
@@ -43,7 +45,7 @@ type ObservationUpdateResult struct {
 // UpdateObservation applies patch to observation id (and its hash group) inside
 // a single transaction. Returns WriteError "NOT_FOUND" if the observation is
 // absent or deleted.
-func UpdateObservation(ctx context.Context, db *sql.DB, id int64, patch ObservationPatch) (ObservationUpdateResult, error) {
+func UpdateObservation(ctx context.Context, db sqlite.Querier, id int64, patch ObservationPatch) (ObservationUpdateResult, error) {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return ObservationUpdateResult{}, fmt.Errorf("begin tx: %w", err)

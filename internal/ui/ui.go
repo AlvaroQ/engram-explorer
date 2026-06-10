@@ -4,21 +4,28 @@
 package ui
 
 import (
-	"database/sql"
 	"io/fs"
 	"net/http"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/services"
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 	"github.com/a-h/templ"
 )
 
 // Deps carries the concrete dependencies required by the ui module.
 // It mirrors doctor.Deps intentionally — no Container, no import cycle.
 type Deps struct {
-	RoDB   *sql.DB       // read-only pool; may be nil in tests
-	RWDB   *sql.DB       // read-write pool; nil in read-only mode
-	Config config.Config // full runtime configuration
+	RoDB   sqlite.Querier       // read-only pool; may be nil in tests
+	RWDB   sqlite.Querier       // read-write pool; nil in read-only mode
+	Config config.Config        // full runtime configuration (immutable snapshot)
+	Paths  *config.RuntimePaths // live mutable paths; defaulted from Config in Mount
+
+	// Path-edit callbacks, wired from the HTTP container in production and nil in
+	// tests. ReloadEngramDB hot-swaps the SQLite pools; SetClaudeDir updates the
+	// transcript directory. Both validate and persist the override.
+	ReloadEngramDB func(path string) error
+	SetClaudeDir   func(dir string) error
 }
 
 // IsHTMX reports whether the request was issued by HTMX.
@@ -27,9 +34,11 @@ func IsHTMX(r *http.Request) bool {
 }
 
 // render writes a templ component to the response with text/html content type.
+// The context carries the sidebar section-visibility prefs so the shared
+// Sidebar can honour them.
 func render(w http.ResponseWriter, r *http.Request, c templ.Component) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = c.Render(r.Context(), w)
+	_ = c.Render(NavContext(r), w)
 }
 
 // requireRW wraps a write handler with a read-only guard.
@@ -58,6 +67,12 @@ func Mount(mux *http.ServeMux, d Deps) {
 // cloud controller. This overload is used by tests to inject a fake implementation
 // without spawning a real CLI subprocess.
 func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
+	// Default the live path holder from the immutable Config so tests that build
+	// Deps without Paths keep working (handlers read mutable paths via d.Paths).
+	if d.Paths == nil {
+		d.Paths = config.NewRuntimePaths(d.Config.EngramDbPath, d.Config.ClaudeProjectsDir)
+	}
+
 	// Static assets (/static/*).
 	staticSub, err := fs.Sub(StaticFS, "static")
 	if err != nil {
@@ -108,6 +123,9 @@ func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 
 	// Settings routes.
 	mux.HandleFunc("GET /settings", handleSettingsPage(d))
+	mux.HandleFunc("POST /settings/engram-db", handleEngramDBPost(d))
+	mux.HandleFunc("POST /settings/claude-dir", handleClaudeDirPost(d))
+	mux.HandleFunc("POST /settings/nav-visibility", handleNavVisibilityPost())
 	mux.HandleFunc("POST /theme", handleThemePost())
 	mux.HandleFunc("POST /lang", handleLangPost())
 

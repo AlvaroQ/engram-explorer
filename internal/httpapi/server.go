@@ -52,13 +52,17 @@ func NewServeMux(c *Container) http.Handler {
 		RoDB:   c.RoDB,
 		RWDB:   c.RWDB,
 		Config: c.Config,
+		Paths:  c.Paths,
 	})
 
 	// --- UI module — server-rendered pages (templ+HTMX) ---
 	ui.Mount(mux, ui.Deps{
-		RoDB:   c.RoDB,
-		RWDB:   c.RWDB,
-		Config: c.Config,
+		RoDB:           c.RoDB,
+		RWDB:           c.RWDB,
+		Config:         c.Config,
+		Paths:          c.Paths,
+		ReloadEngramDB: c.ReloadEngramDB,
+		SetClaudeDir:   c.SetClaudeDir,
 	})
 
 	// Meta endpoint at /api (was previously at GET /; moved to avoid conflict with
@@ -105,7 +109,7 @@ func healthHandler(c *Container) http.HandlerFunc {
 
 		dbBody := map[string]any{
 			"ok":   dbOk,
-			"path": c.Config.EngramDbPath,
+			"path": c.Paths.EngramDB(),
 		}
 
 		// Daemon ping using the real daemon client.

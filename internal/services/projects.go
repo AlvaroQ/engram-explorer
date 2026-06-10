@@ -1,9 +1,10 @@
 package services
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // projectEntitiesUnionSQL is the core UNION ALL used by both ProjectsList and overview.
@@ -137,7 +138,7 @@ func scanTypeCount(s scanner) (TypeCount, error) {
 // exclusively by cloud:<project> target_key (NOT by the project column of
 // sync_mutations — that belongs to the global 'cloud' target and is not
 // per-project-target-keyed in the daemon schema).
-func ProjectsList(db *sql.DB) ([]ProjectStats, error) {
+func ProjectsList(db sqlite.Querier) ([]ProjectStats, error) {
 	query := fmt.Sprintf(`
 		WITH agg AS (
 		  SELECT COALESCE(project, '') AS project,
@@ -178,13 +179,13 @@ func ProjectsList(db *sql.DB) ([]ProjectStats, error) {
 
 // projectExists checks whether any observation, session, or prompt exists for the
 // project. Delegates to the shared projectExistsVia helper (write_shared.go).
-func projectExists(db *sql.DB, project string) (bool, error) {
+func projectExists(db sqlite.Querier, project string) (bool, error) {
 	return projectExistsVia(db, project)
 }
 
 // ProjectsGetOverview builds the full overview for a single project.
 // Returns nil if the project does not exist.
-func ProjectsGetOverview(db *sql.DB, project string) (*ProjectOverview, error) {
+func ProjectsGetOverview(db sqlite.Querier, project string) (*ProjectOverview, error) {
 	exists, err := projectExists(db, project)
 	if err != nil {
 		return nil, err
@@ -311,7 +312,7 @@ type TopicsListParams struct {
 }
 
 // TopicsList returns all distinct topics, optionally filtered by project.
-func TopicsList(db *sql.DB, p TopicsListParams) ([]TopicRow, error) {
+func TopicsList(db sqlite.Querier, p TopicsListParams) ([]TopicRow, error) {
 	where := "WHERE deleted_at IS NULL AND topic_key IS NOT NULL AND topic_key <> ''"
 	args := []any{}
 	if p.Project != "" {

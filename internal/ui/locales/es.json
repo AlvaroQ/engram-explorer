@@ -21,8 +21,10 @@
     "language": "Idioma"
   },
   "sidebar": {
-    "brand": "Engram",
+    "brand": "Explorer",
     "subtitle": "Panel local",
+    "groupEngram": "Engram",
+    "groupClaudeCode": "Claude Code",
     "overview": "Resumen Engram",
     "knowledge": "Conocimiento",
     "projects": "Proyectos",
@@ -652,8 +654,26 @@
     "cloudCliError": "No se pudieron detectar las capacidades del CLI.",
     "cloudCliTip": "Nota: el CLI no expone `cloud unenroll` (verificado hasta v1.15.1). El panel lo gestiona escribiendo directo a `sync_enrolled_projects`.",
     "runtime": "Runtime",
+    "navTitle": "Secciones del menú",
+    "navHeaderDesc": "Mostrá u ocultá secciones enteras del menú lateral.",
+    "navEngram": "Engram",
+    "navClaude": "Claude Code",
+    "navDescription": "Alterná la visibilidad de esta sección en el menú lateral.",
+    "navShow": "Mostrar",
+    "navHide": "Ocultar",
+    "claude": "Claude Code",
+    "claudeDescription": "Carpeta donde Claude Code guarda los transcripts de sesión (una por proyecto).",
+    "claudeEditLabel": "Directorio de proyectos de Claude Code",
+    "claudeEditHint": "Apuntá a tu carpeta .claude/projects. Se aplica al instante.",
+    "path": {
+      "apply": "Aplicar",
+      "empty": "Ingresá una ruta.",
+      "unavailable": "La edición de rutas no está disponible en este modo."
+    },
     "db": {
       "description": "Exportá un backup o importá (merge) otra base de datos.",
+      "editLabel": "Archivo de base de datos de Engram",
+      "editHint": "Apuntá a otro engram.db; la conexión se recarga en vivo, sin reiniciar.",
       "export": "Exportar",
       "exporting": "Exportando…",
       "import": "Importar",
@@ -682,6 +702,7 @@
       "reachable": "alcanzable",
       "unreachable": "inalcanzable",
       "available": "disponible",
+      "found": "encontrado",
       "missing": "ausente",
       "notInCli": "no está en este CLI"
     }

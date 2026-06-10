@@ -1,9 +1,10 @@
 package services
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // ActivityRow is one (day, project) observation bucket.
@@ -37,7 +38,7 @@ func ValidActivityRange(rng string) bool {
 // ActivityByProject returns per-day, per-project observation counts within the
 // given range. Mirrors Node's activity.service.ts byProject() and reuses the
 // shared cutoffDays() window so the date boundary matches overview/projects.
-func ActivityByProject(db *sql.DB, rng string) (*ActivityResponse, error) {
+func ActivityByProject(db sqlite.Querier, rng string) (*ActivityResponse, error) {
 	days, ok := activityRangeDays[rng]
 	if !ok {
 		days = 30 // caller validates; defensive default

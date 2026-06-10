@@ -21,8 +21,10 @@
     "language": "Language"
   },
   "sidebar": {
-    "brand": "Engram",
+    "brand": "Explorer",
     "subtitle": "Local Dashboard",
+    "groupEngram": "Engram",
+    "groupClaudeCode": "Claude Code",
     "overview": "Engram Overview",
     "knowledge": "Knowledge",
     "projects": "Projects",
@@ -652,8 +654,26 @@
     "cloudCliError": "Could not detect CLI capabilities.",
     "cloudCliTip": "Note: the CLI does not expose `cloud unenroll` (verified up to v1.15.1). The dashboard handles it by writing directly to `sync_enrolled_projects`.",
     "runtime": "Runtime",
+    "navTitle": "Sidebar sections",
+    "navHeaderDesc": "Show or hide whole sections in the left sidebar.",
+    "navEngram": "Engram",
+    "navClaude": "Claude Code",
+    "navDescription": "Toggle this section's visibility in the sidebar.",
+    "navShow": "Show",
+    "navHide": "Hide",
+    "claude": "Claude Code",
+    "claudeDescription": "Where Claude Code stores session transcripts (one folder per project).",
+    "claudeEditLabel": "Claude Code projects directory",
+    "claudeEditHint": "Point to your .claude/projects folder. Applies immediately.",
+    "path": {
+      "apply": "Apply",
+      "empty": "Enter a path.",
+      "unavailable": "Path editing is not available in this mode."
+    },
     "db": {
       "description": "Export a backup or import (merge) another database.",
+      "editLabel": "Engram database file",
+      "editHint": "Point to a different engram.db; the connection reloads live, no restart.",
       "export": "Export",
       "exporting": "Exporting…",
       "import": "Import",
@@ -682,6 +702,7 @@
       "reachable": "reachable",
       "unreachable": "unreachable",
       "available": "available",
+      "found": "found",
       "missing": "missing",
       "notInCli": "not in this CLI"
     }

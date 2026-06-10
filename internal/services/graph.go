@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"sort"
 	"time"
+
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // GraphNodeCap is the maximum number of nodes returned in a single graph response.
@@ -94,7 +96,7 @@ type memberRow struct {
 
 // GraphBuild builds the 3D graph response with an optional project filter.
 // nodeCap overrides GraphNodeCap when > 0 (useful in tests).
-func GraphBuild(db *sql.DB, project string, nodeCap int) (GraphResponse, error) {
+func GraphBuild(db sqlite.Querier, project string, nodeCap int) (GraphResponse, error) {
 	if nodeCap <= 0 {
 		nodeCap = GraphNodeCap
 	}

@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // ---------------------------------------------------------------------------
@@ -43,7 +45,7 @@ func GenSyncID(prefix string) string {
 
 // IsEnrolled returns true when the given project is registered in
 // sync_enrolled_projects. Returns false for empty/nil project.
-func IsEnrolled(db *sql.DB, project string) bool {
+func IsEnrolled(db sqlite.Querier, project string) bool {
 	if project == "" {
 		return false
 	}
@@ -120,7 +122,7 @@ func ProjectExistsTx(tx *sql.Tx, project string) (bool, error) {
 }
 
 // ProjectExistsDB is the same check but uses a plain *sql.DB.
-func ProjectExistsDB(db *sql.DB, project string) (bool, error) {
+func ProjectExistsDB(db sqlite.Querier, project string) (bool, error) {
 	return projectExistsVia(db, project)
 }
 

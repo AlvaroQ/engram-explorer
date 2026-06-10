@@ -58,29 +58,64 @@ templ LayoutFullBleed(title, activeNav, lang, theme string, content templ.Compon
 templ Sidebar(activeNav, lang string) {
 	<aside class="sidebar">
 		<div class="sidebar-brand">
-			<p class="sidebar-brand-label">{ T(lang, "sidebar.brand") }</p>
-			<h1 class="sidebar-brand-title">{ T(lang, "sidebar.subtitle") }</h1>
+			<div class="sidebar-brand-text">
+				<h1 class="sidebar-brand-title">{ T(lang, "sidebar.brand") }</h1>
+				<p class="sidebar-brand-label">{ T(lang, "sidebar.subtitle") }</p>
+			</div>
+			@sidebarSettingsIcon(activeNav, T(lang, "sidebar.settings"))
 		</div>
-		<nav aria-label={ T(lang, "sidebar.primaryNav") }>
-			<ul class="sidebar-nav">
-				@sidebarLink("/", "overview", activeNav, T(lang, "sidebar.overview"))
-				@sidebarLink("/brain", "brain", activeNav, T(lang, "sidebar.knowledge"))
-				@sidebarLink("/observations", "observations", activeNav, T(lang, "sidebar.observations"))
-				@sidebarLink("/sessions", "sessions", activeNav, T(lang, "sidebar.sessions"))
-				@sidebarLink("/projects", "projects", activeNav, T(lang, "sidebar.projects"))
-				@sidebarLink("/prompts", "prompts", activeNav, T(lang, "sidebar.prompts"))
-				@sidebarLink("/topics", "topics", activeNav, T(lang, "sidebar.topics"))
-				@sidebarLink("/settings", "settings", activeNav, T(lang, "sidebar.settings"))
-				<li><div class="sidebar-divider"></div></li>
-				@sidebarExternalLink("/doctor/sync", "syncHealth", activeNav, T(lang, "sidebar.syncHealth"))
-				@sidebarExternalLink("/doctor/orphans", "orphans", activeNav, "Orphans")
-				<li><div class="sidebar-divider"></div></li>
-				@sidebarLink("/cc-overview", "cc-overview", activeNav, T(lang, "sidebar.ccOverview"))
-				@sidebarLink("/cc-sessions", "cc-sessions", activeNav, T(lang, "sidebar.ccSessions"))
-			</ul>
+		<nav class="sidebar-nav-wrap" aria-label={ T(lang, "sidebar.primaryNav") }>
+			if navShowEngram(ctx) {
+				@sidebarGroup(T(lang, "sidebar.groupEngram"), "engram")
+				<ul class="sidebar-nav">
+					@sidebarLink("/", "overview", activeNav, T(lang, "sidebar.overview"))
+					@sidebarLink("/brain", "brain", activeNav, T(lang, "sidebar.knowledge"))
+					@sidebarLink("/observations", "observations", activeNav, T(lang, "sidebar.observations"))
+					@sidebarLink("/sessions", "sessions", activeNav, T(lang, "sidebar.sessions"))
+					@sidebarLink("/projects", "projects", activeNav, T(lang, "sidebar.projects"))
+					@sidebarLink("/prompts", "prompts", activeNav, T(lang, "sidebar.prompts"))
+					@sidebarLink("/topics", "topics", activeNav, T(lang, "sidebar.topics"))
+					@sidebarExternalLink("/doctor/sync", "syncHealth", activeNav, T(lang, "sidebar.syncHealth"))
+					@sidebarExternalLink("/doctor/orphans", "orphans", activeNav, "Orphans")
+				</ul>
+			}
+			if navShowEngram(ctx) && navShowClaude(ctx) {
+				<div class="sidebar-divider"></div>
+			}
+			if navShowClaude(ctx) {
+				@sidebarGroup(T(lang, "sidebar.groupClaudeCode"), "claude")
+				<ul class="sidebar-nav">
+					@sidebarLink("/cc-overview", "cc-overview", activeNav, T(lang, "sidebar.ccOverview"))
+					@sidebarLink("/cc-sessions", "cc-sessions", activeNav, T(lang, "sidebar.ccSessions"))
+				</ul>
+			}
 		</nav>
-		<!-- health-poll placeholder (deferred to Phase 3) -->
 	</aside>
+}
+
+// sidebarGroup renders a section heading that introduces a group of nav links.
+// variant ("engram" or "claude") selects the accent color of the leading dot.
+templ sidebarGroup(label, variant string) {
+	<p class={ "sidebar-group-label sidebar-group-" + variant }>
+		<span class="sidebar-group-dot" aria-hidden="true"></span>
+		<span>{ label }</span>
+	</p>
+}
+
+// sidebarSettingsIcon renders the settings gear in the brand header.
+// It is marked active when the settings page is open.
+templ sidebarSettingsIcon(activeNav, label string) {
+	<a
+		href="/settings"
+		class={ "sidebar-brand-settings", templ.KV("active", activeNav == "settings") }
+		aria-label={ label }
+		title={ label }
+	>
+		<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<circle cx="12" cy="12" r="3"></circle>
+			<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+		</svg>
+	</a>
 }
 
 // sidebarLink renders an internal navigation link.

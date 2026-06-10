@@ -342,11 +342,8 @@ func TestCloudUnenroll_ViaSQL(t *testing.T) {
 
 func TestCloudUnenroll_NoRWDB(t *testing.T) {
 	c, _ := newCloudContainer(t)
-	// Force RWDB to nil.
-	if c.RWDB != nil {
-		c.RWDB.Close()
-		c.RWDB = nil
-	}
+	// Force RWDB to nil to disable write routes (the pool is closed by c.Close).
+	c.RWDB = nil
 	handler := httpapi.NewServeMux(c)
 	rec := doPostJSON(t, handler, "/api/cloud/unenroll", map[string]any{
 		"project": "proj",

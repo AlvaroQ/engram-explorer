@@ -1,7 +1,6 @@
 package config_test
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -9,11 +8,17 @@ import (
 )
 
 func TestLoad_Defaults(t *testing.T) {
+	// Hermetic home so a real ~/.engram/explorer-settings.json on the dev machine
+	// cannot override the defaults under test.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
 	// Ensure the vars we test are not set in the test environment.
 	unset := []string{
 		"ENGRAM_DATA_DIR", "DASHBOARD_HOST", "DASHBOARD_PORT",
 		"ENGRAM_PORT", "ENGRAM_DAEMON_URL", "ENGRAM_DAEMON_TIMEOUT_MS",
-		"LOG_LEVEL", "ENGRAM_DASH_ENV",
+		"LOG_LEVEL", "ENGRAM_DASH_ENV", "CLAUDE_PROJECTS_DIR",
 	}
 	for _, k := range unset {
 		t.Setenv(k, "")
@@ -37,7 +42,6 @@ func TestLoad_Defaults(t *testing.T) {
 		t.Errorf("DaemonBaseURL: got %q, want http://127.0.0.1:7437", cfg.DaemonBaseURL)
 	}
 
-	home, _ := os.UserHomeDir()
 	wantDataDir := filepath.Join(home, ".engram")
 	if cfg.EngramDataDir != wantDataDir {
 		t.Errorf("EngramDataDir: got %q, want %q", cfg.EngramDataDir, wantDataDir)
@@ -121,4 +125,70 @@ func TestLoad_LogLevelDefaults(t *testing.T) {
 			t.Errorf("got %q, want debug", cfg.LogLevel)
 		}
 	})
+}
+
+func TestSaveLoadOverrides_Roundtrip(t *testing.T) {
+	dir := t.TempDir()
+	want := config.Overrides{
+		EngramDbPath:      filepath.Join(dir, "db", "engram.db"),
+		ClaudeProjectsDir: filepath.Join(dir, "claude", "projects"),
+	}
+	if err := config.SaveOverrides(dir, want); err != nil {
+		t.Fatalf("SaveOverrides: %v", err)
+	}
+	got := config.LoadOverrides(dir)
+	if got != want {
+		t.Fatalf("roundtrip mismatch: got %+v, want %+v", got, want)
+	}
+}
+
+func TestLoadOverrides_MissingFileIsEmpty(t *testing.T) {
+	got := config.LoadOverrides(t.TempDir())
+	if got != (config.Overrides{}) {
+		t.Fatalf("missing file should yield empty Overrides, got %+v", got)
+	}
+}
+
+func TestLoad_FileOverridePrecedence(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("ENGRAM_DATA_DIR", "")
+	t.Setenv("CLAUDE_PROJECTS_DIR", "")
+
+	configHome := filepath.Join(home, ".engram")
+	customDB := filepath.Join(home, "custom", "engram.db")
+	customClaude := filepath.Join(home, "custom-claude")
+	if err := config.SaveOverrides(configHome, config.Overrides{
+		EngramDbPath:      customDB,
+		ClaudeProjectsDir: customClaude,
+	}); err != nil {
+		t.Fatalf("SaveOverrides: %v", err)
+	}
+
+	// With no env vars set, the saved override takes precedence over defaults.
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.EngramDbPath != customDB {
+		t.Errorf("EngramDbPath: got %q, want override %q", cfg.EngramDbPath, customDB)
+	}
+	if cfg.EngramDataDir != filepath.Dir(customDB) {
+		t.Errorf("EngramDataDir: got %q, want %q", cfg.EngramDataDir, filepath.Dir(customDB))
+	}
+	if cfg.ClaudeProjectsDir != customClaude {
+		t.Errorf("ClaudeProjectsDir: got %q, want override %q", cfg.ClaudeProjectsDir, customClaude)
+	}
+
+	// The env var wins over the saved override.
+	envDir := filepath.Join(home, "envdir")
+	t.Setenv("ENGRAM_DATA_DIR", envDir)
+	cfg2, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load (env): %v", err)
+	}
+	if want := filepath.Join(envDir, "engram.db"); cfg2.EngramDbPath != want {
+		t.Errorf("env should win: got %q, want %q", cfg2.EngramDbPath, want)
+	}
 }

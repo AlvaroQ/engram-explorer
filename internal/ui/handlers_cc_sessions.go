@@ -34,7 +34,7 @@ func handleCCSessionsListPage(d Deps) http.HandlerFunc {
 		theme := themeForRequest(r)
 		params := ccsListParamsFromQuery(r)
 
-		reader := services.DiskProjectsReader{BaseDir: d.Config.ClaudeProjectsDir}
+		reader := services.DiskProjectsReader{BaseDir: d.Paths.ClaudeDir()}
 		result, err := services.CCSessionsList(reader, params)
 		if err != nil {
 			render(w, r, ErrorPartial("Failed to load Claude Code sessions: "+err.Error()))
@@ -56,7 +56,7 @@ func handleCCSessionsListPartial(d Deps) http.HandlerFunc {
 		lang := langForRequest(r)
 		params := ccsListParamsFromQuery(r)
 
-		reader := services.DiskProjectsReader{BaseDir: d.Config.ClaudeProjectsDir}
+		reader := services.DiskProjectsReader{BaseDir: d.Paths.ClaudeDir()}
 		result, err := services.CCSessionsList(reader, params)
 		if err != nil {
 			render(w, r, ErrorPartial("Failed to load Claude Code sessions: "+err.Error()))
@@ -107,7 +107,7 @@ func handleCCSessionDetailPage(d Deps) http.HandlerFunc {
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
 
-		reader := services.DiskProjectsReader{BaseDir: d.Config.ClaudeProjectsDir}
+		reader := services.DiskProjectsReader{BaseDir: d.Paths.ClaudeDir()}
 		detail, err := services.CCSessionGetDetail(reader, projectFolder, id)
 		if err != nil {
 			render(w, r, ErrorPartial("Failed to load session: "+err.Error()))

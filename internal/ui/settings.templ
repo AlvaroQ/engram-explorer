@@ -2,14 +2,20 @@ package ui
 
 // settingsData carries all data needed to render the settings page.
 type settingsData struct {
-	DBPath      string
-	DBOk        bool
-	DaemonURL   string
-	DaemonOk    bool
-	DaemonError string
-	UptimeS     int
-	Lang        string
-	Theme       string
+	DBPath          string
+	DBOk            bool
+	EngramPathError string
+	ClaudePath      string
+	ClaudeOk        bool
+	ClaudePathError string
+	DaemonURL       string
+	DaemonOk        bool
+	DaemonError     string
+	ShowEngram      bool
+	ShowClaude      bool
+	UptimeS         int
+	Lang            string
+	Theme           string
 }
 
 // SettingsPage renders the full settings page shell.
@@ -23,161 +29,248 @@ templ SettingsPartial(d settingsData) {
 	@settingsContent(d)
 }
 
-// settingsContent is the shared settings body used by both full-page and partial renders.
+// settingsContent is the shared settings body used by both full-page and partial
+// renders. It is a flat list of titled groups (no card chrome) for a clean view.
 templ settingsContent(d settingsData) {
-	<div>
+	<div class="settings-page">
 		<div class="page-header">
 			<h1>{ T(d.Lang, "settings.title") }</h1>
 		</div>
 
-		<!-- Appearance section -->
-		<section class="settings-section">
-			<h2 class="settings-section-title">{ T(d.Lang, "settings.section.appearance") }</h2>
-
-			<div class="card">
-				<div class="card-body">
-					<!-- Language preference -->
-					<div class="preference-row">
-						<div class="preference-label">
-							<p class="preference-name">{ T(d.Lang, "settings.language") }</p>
-							<p class="preference-desc">{ T(d.Lang, "settings.languageDescription") }</p>
-						</div>
-						<div class="preference-controls">
-							<form method="post" action="/lang">
-								<button
-									type="submit"
-									name="value"
-									value="en"
-									class={ "btn btn-sm", templ.KV("btn-primary", d.Lang == "en"), templ.KV("btn-secondary", d.Lang != "en") }
-								>
-									{ T(d.Lang, "lang.en") }
-								</button>
-							</form>
-							<form method="post" action="/lang">
-								<button
-									type="submit"
-									name="value"
-									value="es"
-									class={ "btn btn-sm", templ.KV("btn-primary", d.Lang == "es"), templ.KV("btn-secondary", d.Lang != "es") }
-								>
-									{ T(d.Lang, "lang.es") }
-								</button>
-							</form>
-						</div>
-					</div>
-
-					<!-- Theme preference -->
-					<div class="preference-row">
-						<div class="preference-label">
-							<p class="preference-name">{ T(d.Lang, "settings.theme") }</p>
-						</div>
-						<div class="preference-controls">
-							<form method="post" action="/theme">
-								<button
-									type="submit"
-									name="value"
-									value="dark"
-									class={ "btn btn-sm", templ.KV("btn-primary", d.Theme == "dark"), templ.KV("btn-secondary", d.Theme != "dark") }
-								>
-									{ T(d.Lang, "settings.themeDark") }
-								</button>
-							</form>
-							<form method="post" action="/theme">
-								<button
-									type="submit"
-									name="value"
-									value="light"
-									class={ "btn btn-sm", templ.KV("btn-primary", d.Theme == "light"), templ.KV("btn-secondary", d.Theme != "light") }
-								>
-									{ T(d.Lang, "settings.themeLight") }
-								</button>
-							</form>
-						</div>
-					</div>
+		<!-- Apariencia -->
+		<section class="settings-group">
+			<h2 class="settings-group-title">{ T(d.Lang, "settings.section.appearance") }</h2>
+			<div class="preference-row">
+				<div class="preference-label">
+					<p class="preference-name">{ T(d.Lang, "settings.language") }</p>
+					<p class="preference-desc">{ T(d.Lang, "settings.languageDescription") }</p>
 				</div>
-			</div>
-		</section>
-
-		<!-- System section -->
-		<section class="settings-section">
-			<h2 class="settings-section-title">{ T(d.Lang, "settings.section.system") }</h2>
-
-			<!-- Database card -->
-			<div class="card">
-				<div class="card-header">
-					<h3>{ T(d.Lang, "settings.database") }</h3>
-					<p>{ T(d.Lang, "settings.db.description") }</p>
-				</div>
-				<div class="card-body">
-					<div class="info-row">
-						<span class="info-label muted">{ T(d.Lang, "settings.row.path") }</span>
-						<span class="info-value mono">
-							if d.DBPath != "" {
-								{ d.DBPath }
-							} else {
-								{ "—" }
-							}
-						</span>
-					</div>
-					<div class="info-row">
-						<span class="info-label muted">{ T(d.Lang, "settings.row.status") }</span>
-						<span>
-							if d.DBOk {
-								<span class="badge badge-ok">{ T(d.Lang, "settings.badge.connected") }</span>
-							} else {
-								<span class="badge badge-fail">{ T(d.Lang, "settings.badge.unavailable") }</span>
-							}
-						</span>
-					</div>
-					<!-- Export / Import actions -->
-					<div class="db-actions">
-						<a href="/api/db/export" class="btn btn-sm" download>{ T(d.Lang, "settings.db.export") }</a>
-						<form
-							method="post"
-							action="/api/db/import"
-							enctype="multipart/form-data"
-							onsubmit="return confirm('Import database? Only new memories are added — nothing is overwritten. A backup is taken first.')"
+				<div class="preference-controls">
+					<form method="post" action="/lang">
+						<button
+							type="submit"
+							name="value"
+							value="en"
+							class={ "btn btn-sm", templ.KV("btn-primary", d.Lang == "en"), templ.KV("btn-secondary", d.Lang != "en") }
 						>
-							<label class="btn btn-sm" style="cursor:pointer;">
-								{ T(d.Lang, "settings.db.import") }
-								<input type="file" name="file" accept=".db,.sqlite,.sqlite3,application/octet-stream" style="display:none;" onchange="this.form.submit()"/>
-							</label>
-						</form>
-					</div>
+							{ T(d.Lang, "lang.en") }
+						</button>
+					</form>
+					<form method="post" action="/lang">
+						<button
+							type="submit"
+							name="value"
+							value="es"
+							class={ "btn btn-sm", templ.KV("btn-primary", d.Lang == "es"), templ.KV("btn-secondary", d.Lang != "es") }
+						>
+							{ T(d.Lang, "lang.es") }
+						</button>
+					</form>
 				</div>
 			</div>
-
-			<!-- Daemon card -->
-			<div class="card">
-				<div class="card-header">
-					<h3>{ T(d.Lang, "settings.daemon") }</h3>
+			<div class="preference-row">
+				<div class="preference-label">
+					<p class="preference-name">{ T(d.Lang, "settings.theme") }</p>
 				</div>
-				<div class="card-body">
-					<div class="info-row">
-						<span class="info-label muted">{ T(d.Lang, "settings.row.url") }</span>
-						<span class="info-value mono">
-							if d.DaemonURL != "" {
-								{ d.DaemonURL }
-							} else {
-								{ "—" }
-							}
-						</span>
-					</div>
-					<div class="info-row">
-						<span class="info-label muted">{ T(d.Lang, "settings.row.status") }</span>
-						<span>
-							if d.DaemonOk {
-								<span class="badge badge-ok">{ T(d.Lang, "settings.badge.reachable") }</span>
-							} else {
-								<span class="badge badge-fail">{ T(d.Lang, "settings.badge.unreachable") }</span>
-							}
-						</span>
-					</div>
-					if !d.DaemonOk && d.DaemonError != "" {
-						<p class="error-hint">{ d.DaemonError }</p>
-					}
+				<div class="preference-controls">
+					<form method="post" action="/theme">
+						<button
+							type="submit"
+							name="value"
+							value="dark"
+							class={ "btn btn-sm", templ.KV("btn-primary", d.Theme == "dark"), templ.KV("btn-secondary", d.Theme != "dark") }
+						>
+							{ T(d.Lang, "settings.themeDark") }
+						</button>
+					</form>
+					<form method="post" action="/theme">
+						<button
+							type="submit"
+							name="value"
+							value="light"
+							class={ "btn btn-sm", templ.KV("btn-primary", d.Theme == "light"), templ.KV("btn-secondary", d.Theme != "light") }
+						>
+							{ T(d.Lang, "settings.themeLight") }
+						</button>
+					</form>
 				</div>
 			</div>
 		</section>
+
+		<!-- Secciones del menú -->
+		<section class="settings-group">
+			<h2 class="settings-group-title">{ T(d.Lang, "settings.navTitle") }</h2>
+			<p class="settings-group-desc">{ T(d.Lang, "settings.navHeaderDesc") }</p>
+			<div class="preference-row">
+				<div class="preference-label">
+					<p class="preference-name">{ T(d.Lang, "settings.navEngram") }</p>
+					<p class="preference-desc">{ T(d.Lang, "settings.navDescription") }</p>
+				</div>
+				@navVisibilityControls(d.Lang, "engram", d.ShowEngram)
+			</div>
+			<div class="preference-row">
+				<div class="preference-label">
+					<p class="preference-name">{ T(d.Lang, "settings.navClaude") }</p>
+				</div>
+				@navVisibilityControls(d.Lang, "claude", d.ShowClaude)
+			</div>
+		</section>
+
+		<!-- Sistema (Engram database) -->
+		<section class="settings-group">
+			<h2 class="settings-group-title">{ T(d.Lang, "settings.section.system") }</h2>
+			<p class="settings-group-desc">{ T(d.Lang, "settings.db.description") }</p>
+			<div class="info-row">
+				<span class="info-label muted">{ T(d.Lang, "settings.row.path") }</span>
+				<span class="info-value mono">
+					if d.DBPath != "" {
+						{ d.DBPath }
+					} else {
+						{ "—" }
+					}
+				</span>
+			</div>
+			<div class="info-row">
+				<span class="info-label muted">{ T(d.Lang, "settings.row.status") }</span>
+				<span>
+					if d.DBOk {
+						<span class="badge badge-ok">{ T(d.Lang, "settings.badge.connected") }</span>
+					} else {
+						<span class="badge badge-fail">{ T(d.Lang, "settings.badge.unavailable") }</span>
+					}
+				</span>
+			</div>
+			<form class="path-edit-form" method="post" action="/settings/engram-db">
+				<input
+					type="text"
+					name="path"
+					value={ d.DBPath }
+					class="path-input mono"
+					autocomplete="off"
+					autocapitalize="off"
+					spellcheck="false"
+					aria-label={ T(d.Lang, "settings.db.editLabel") }
+				/>
+				<button type="submit" class="btn btn-sm btn-primary">{ T(d.Lang, "settings.path.apply") }</button>
+			</form>
+			<p class="preference-desc">{ T(d.Lang, "settings.db.editHint") }</p>
+			if d.EngramPathError != "" {
+				<p class="error-hint">{ d.EngramPathError }</p>
+			}
+			<div class="db-actions">
+				<a href="/api/db/export" class="btn btn-sm" download>{ T(d.Lang, "settings.db.export") }</a>
+				<form
+					method="post"
+					action="/api/db/import"
+					enctype="multipart/form-data"
+					onsubmit="return confirm('Import database? Only new memories are added — nothing is overwritten. A backup is taken first.')"
+				>
+					<label class="btn btn-sm" style="cursor:pointer;">
+						{ T(d.Lang, "settings.db.import") }
+						<input type="file" name="file" accept=".db,.sqlite,.sqlite3,application/octet-stream" style="display:none;" onchange="this.form.submit()"/>
+					</label>
+				</form>
+			</div>
+		</section>
+
+		<!-- Claude Code -->
+		<section class="settings-group">
+			<h2 class="settings-group-title">{ T(d.Lang, "settings.claude") }</h2>
+			<p class="settings-group-desc">{ T(d.Lang, "settings.claudeDescription") }</p>
+			<div class="info-row">
+				<span class="info-label muted">{ T(d.Lang, "settings.row.path") }</span>
+				<span class="info-value mono">
+					if d.ClaudePath != "" {
+						{ d.ClaudePath }
+					} else {
+						{ "—" }
+					}
+				</span>
+			</div>
+			<div class="info-row">
+				<span class="info-label muted">{ T(d.Lang, "settings.row.status") }</span>
+				<span>
+					if d.ClaudeOk {
+						<span class="badge badge-ok">{ T(d.Lang, "settings.badge.found") }</span>
+					} else {
+						<span class="badge badge-fail">{ T(d.Lang, "settings.badge.missing") }</span>
+					}
+				</span>
+			</div>
+			<form class="path-edit-form" method="post" action="/settings/claude-dir">
+				<input
+					type="text"
+					name="path"
+					value={ d.ClaudePath }
+					class="path-input mono"
+					autocomplete="off"
+					autocapitalize="off"
+					spellcheck="false"
+					aria-label={ T(d.Lang, "settings.claudeEditLabel") }
+				/>
+				<button type="submit" class="btn btn-sm btn-primary">{ T(d.Lang, "settings.path.apply") }</button>
+			</form>
+			<p class="preference-desc">{ T(d.Lang, "settings.claudeEditHint") }</p>
+			if d.ClaudePathError != "" {
+				<p class="error-hint">{ d.ClaudePathError }</p>
+			}
+		</section>
+
+		<!-- Daemon de Engram -->
+		<section class="settings-group">
+			<h2 class="settings-group-title">{ T(d.Lang, "settings.daemon") }</h2>
+			<div class="info-row">
+				<span class="info-label muted">{ T(d.Lang, "settings.row.url") }</span>
+				<span class="info-value mono">
+					if d.DaemonURL != "" {
+						{ d.DaemonURL }
+					} else {
+						{ "—" }
+					}
+				</span>
+			</div>
+			<div class="info-row">
+				<span class="info-label muted">{ T(d.Lang, "settings.row.status") }</span>
+				<span>
+					if d.DaemonOk {
+						<span class="badge badge-ok">{ T(d.Lang, "settings.badge.reachable") }</span>
+					} else {
+						<span class="badge badge-fail">{ T(d.Lang, "settings.badge.unreachable") }</span>
+					}
+				</span>
+			</div>
+			if !d.DaemonOk && d.DaemonError != "" {
+				<p class="error-hint">{ d.DaemonError }</p>
+			}
+		</section>
+	</div>
+}
+
+// navVisibilityControls renders Show/Hide toggle buttons for a sidebar section
+// (section is "engram" or "claude"). The active state is highlighted.
+templ navVisibilityControls(lang, section string, shown bool) {
+	<div class="preference-controls">
+		<form method="post" action="/settings/nav-visibility">
+			<input type="hidden" name="section" value={ section }/>
+			<button
+				type="submit"
+				name="value"
+				value="show"
+				class={ "btn btn-sm", templ.KV("btn-primary", shown), templ.KV("btn-secondary", !shown) }
+			>
+				{ T(lang, "settings.navShow") }
+			</button>
+		</form>
+		<form method="post" action="/settings/nav-visibility">
+			<input type="hidden" name="section" value={ section }/>
+			<button
+				type="submit"
+				name="value"
+				value="hide"
+				class={ "btn btn-sm", templ.KV("btn-primary", !shown), templ.KV("btn-secondary", shown) }
+			>
+				{ T(lang, "settings.navHide") }
+			</button>
+		</form>
 	</div>
 }

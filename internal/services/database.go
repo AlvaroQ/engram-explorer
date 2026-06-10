@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // ---------------------------------------------------------------------------
@@ -74,7 +76,7 @@ var requiredTables = []string{"sessions", "observations", "user_prompts"}
 // ExportSnapshot creates a consistent read-only snapshot of the DB at rwDB
 // using VACUUM INTO and writes it to a temp file. Returns the temp file path.
 // The caller is responsible for deleting the temp file.
-func ExportSnapshot(ctx context.Context, rwDB *sql.DB) (string, error) {
+func ExportSnapshot(ctx context.Context, rwDB sqlite.Querier) (string, error) {
 	dest := filepath.Join(os.TempDir(), fmt.Sprintf("engram-export-%s.db", fileTimestamp()))
 
 	// VACUUM INTO works with WAL mode and is safe for online backup.
@@ -99,7 +101,7 @@ func fileTimestamp() string {
 // pre-import safety backup, then merges it into rwDB inside a single pinned
 // connection. Returns MergeResult on success or a DatabaseImportError on
 // known failures.
-func ImportMerge(ctx context.Context, rwDB *sql.DB, uploadPath, dataDir string) (MergeResult, error) {
+func ImportMerge(ctx context.Context, rwDB sqlite.Querier, uploadPath, dataDir string) (MergeResult, error) {
 	// 1. Validate schema before touching the live DB.
 	if err := validateImportSchema(ctx, rwDB, uploadPath); err != nil {
 		return MergeResult{}, err
@@ -178,7 +180,7 @@ func ImportMerge(ctx context.Context, rwDB *sql.DB, uploadPath, dataDir string) 
 // validateImportSchema
 // ---------------------------------------------------------------------------
 
-func validateImportSchema(ctx context.Context, rwDB *sql.DB, uploadPath string) error {
+func validateImportSchema(ctx context.Context, rwDB sqlite.Querier, uploadPath string) error {
 	// Verify SQLite magic header (16 bytes: "SQLite format 3\000").
 	f, err := os.Open(uploadPath)
 	if err != nil {

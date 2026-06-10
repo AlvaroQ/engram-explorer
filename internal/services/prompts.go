@@ -1,10 +1,10 @@
 package services
 
 import (
-	"database/sql"
 	"strings"
 
 	"github.com/AlvaroQ/engram-explorer/internal/fts"
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // PromptRow mirrors the user_prompts DB row.
@@ -30,7 +30,7 @@ type PromptsListParams struct {
 }
 
 // PromptsList returns user_prompts ordered by created_at DESC, id DESC.
-func PromptsList(db *sql.DB, p PromptsListParams) ([]PromptRow, error) {
+func PromptsList(db sqlite.Querier, p PromptsListParams) ([]PromptRow, error) {
 	var conditions []string
 	var args []any
 	if p.Project != "" {
@@ -58,7 +58,7 @@ func scanPromptRow(s scanner) (PromptRow, error) {
 }
 
 // PromptsSearch runs FTS5 search on the prompts_fts table.
-func PromptsSearch(db *sql.DB, rawQ string, limit int) ([]PromptWithSnippet, error) {
+func PromptsSearch(db sqlite.Querier, rawQ string, limit int) ([]PromptWithSnippet, error) {
 	sanitized := fts.SanitizeQuery(rawQ)
 	if sanitized == "" {
 		return []PromptWithSnippet{}, nil

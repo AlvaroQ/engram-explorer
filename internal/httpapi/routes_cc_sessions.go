@@ -25,7 +25,7 @@ type ccStatsCache struct {
 // analytics over all Claude Code transcripts (by project, model, day, top cost).
 func handleCCSessionsStats(c *Container, cache *ccStatsCache) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		reader := services.DiskProjectsReader{BaseDir: c.Config.ClaudeProjectsDir}
+		reader := services.DiskProjectsReader{BaseDir: c.Paths.ClaudeDir()}
 
 		fp := services.CCSessionsFingerprint(reader)
 		cache.mu.RLock()
