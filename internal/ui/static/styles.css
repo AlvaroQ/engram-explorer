@@ -317,6 +317,154 @@ a:hover {
   margin-bottom: 16px;
 }
 
+/* Card header with an inline filter on the right (e.g. CC sessions list). */
+.card-header-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.cc-list-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cc-list-filter .filter-label {
+  font-size: 12px;
+  color: hsl(var(--fg-muted));
+  white-space: nowrap;
+}
+
+.cc-list-filter select.input {
+  width: auto;
+  min-width: 200px;
+}
+
+/* Session count shown inline after the list title ("Sessions: 50 loaded"). */
+.cc-list-count {
+  font-weight: 400;
+  color: hsl(var(--fg-muted));
+}
+
+/* CC session detail: metadata shown as 3 symmetric columns of 4 rows each. */
+.cc-detail-cols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 28px;
+}
+@media (max-width: 720px) {
+  .cc-detail-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cc-detail-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* One metadata cell: small uppercase label above, value below. Values stay on a
+   single line (ellipsis + title tooltip) so every cell is the same height. */
+.cc-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cc-detail-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-muted));
+}
+.cc-detail-val {
+  font-size: 13px;
+  color: hsl(var(--fg));
+  font-family: ui-monospace, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cc-detail-val.muted {
+  color: hsl(var(--fg-muted));
+}
+
+/* Descriptive detail title (first user prompt) — wrap fully, no truncation. */
+.cc-detail-title {
+  overflow-wrap: anywhere;
+}
+
+/* Raw session id shown small/muted under the descriptive detail title. */
+.cc-detail-id {
+  font-size: 12px;
+  margin-top: 2px;
+  word-break: break-all;
+}
+
+/* ---------- Conversation filter (CC session detail) ---------- */
+/* Toolbar lives on the right of the conversation card-header (next to the
+   "Conversación: N turnos" title), so it is just an inline flex row. */
+.cc-conv-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.cc-conv-sep {
+  width: 1px;
+  align-self: stretch;
+  background: hsl(var(--border));
+}
+
+.cc-conv-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: hsl(var(--fg-muted));
+  cursor: pointer;
+  user-select: none;
+}
+
+.cc-conv-toggle input {
+  accent-color: hsl(var(--accent));
+  cursor: pointer;
+}
+
+.btn.is-active {
+  background: hsl(var(--accent));
+  border-color: hsl(var(--accent));
+  color: #fff;
+}
+
+/* Hide block groups when the wrapper carries the matching class. */
+.cc-conv.cc-hide-thinking [data-cc-block="thinking"],
+.cc-conv.cc-hide-tool [data-cc-block="tool"],
+.cc-conv.cc-hide-attachment [data-cc-block="attachment"] {
+  display: none;
+}
+
+/* Drop turns left with no visible block after filtering. */
+.cc-conv .timeline-event.cc-turn-empty {
+  display: none;
+}
+
+/* Inline paperclip marking an attached file in the prompt column. */
+.cc-prompt-clip {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-right: 5px;
+  color: hsl(var(--fg-muted));
+}
+
 /* ---------- Topics specific ---------- */
 code {
   font-family: ui-monospace, monospace;
@@ -324,6 +472,12 @@ code {
   background: hsl(var(--surface-2));
   padding: 1px 4px;
   border-radius: 3px;
+}
+
+/* Inline path shown as a bordered chip (e.g. ~/.claude/projects in headers). */
+.path-chip {
+  border: 1px solid hsl(var(--border));
+  white-space: nowrap;
 }
 
 /* ---------- Badge tones ---------- */

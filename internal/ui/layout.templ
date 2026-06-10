@@ -75,6 +75,7 @@ templ Sidebar(activeNav, lang string) {
 				@sidebarExternalLink("/doctor/sync", "syncHealth", activeNav, T(lang, "sidebar.syncHealth"))
 				@sidebarExternalLink("/doctor/orphans", "orphans", activeNav, "Orphans")
 				<li><div class="sidebar-divider"></div></li>
+				@sidebarLink("/cc-overview", "cc-overview", activeNav, T(lang, "sidebar.ccOverview"))
 				@sidebarLink("/cc-sessions", "cc-sessions", activeNav, T(lang, "sidebar.ccSessions"))
 			</ul>
 		</nav>

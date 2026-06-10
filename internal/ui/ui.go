@@ -80,6 +80,9 @@ func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 	mux.HandleFunc("GET /sessions", handleSessionsListPage(d))
 	mux.HandleFunc("GET /sessions/list", handleSessionsListPartial(d))
 
+	// Claude Code overview route (usage charts only — no list, no filter).
+	mux.HandleFunc("GET /cc-overview", handleCCOverviewPage(d))
+
 	// Claude Code sessions routes (live .jsonl reader — no SQLite).
 	// /list and /{project}/{id} must be registered before the wildcard so Go 1.22
 	// exact matching takes precedence over the two-segment wildcard.

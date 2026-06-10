@@ -1,0 +1,26 @@
+package ui
+
+// CCOverviewPage renders the "Claude Code Overview" page: the usage charts only,
+// without the project filter or the sessions list (those live on /cc-sessions).
+templ CCOverviewPage(lang, theme string) {
+	@Layout(T(lang, "ccOverview.title"), "cc-overview", lang, theme, ccOverviewContent(lang))
+}
+
+// ccOverviewContent is the shared body, reused for full-page and HTMX renders.
+templ ccOverviewContent(lang string) {
+	<div>
+		<div class="page-header">
+			<h1>{ T(lang, "ccOverview.title") }</h1>
+			<p>{ T(lang, "ccOverview.description") }</p>
+		</div>
+		<div class="card">
+			<div class="card-header">
+				<h2>{ T(lang, "ccSessions.charts.title") }</h2>
+				<p>{ T(lang, "ccSessions.charts.description") }</p>
+			</div>
+			<div class="card-body">
+				@Island("cc-usage-charts", ccUsageChartsProps(lang))
+			</div>
+		</div>
+	</div>
+}

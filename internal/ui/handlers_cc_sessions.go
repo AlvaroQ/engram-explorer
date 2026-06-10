@@ -8,6 +8,21 @@ import (
 )
 
 // ---------------------------------------------------------------------------
+// Overview handler
+// ---------------------------------------------------------------------------
+
+// handleCCOverviewPage serves GET /cc-overview — the usage charts only (no
+// project filter, no sessions list). The cc-usage-charts island fetches its own
+// data from /api/cc-sessions/stats, so this handler needs no service call.
+func handleCCOverviewPage(d Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		lang := langForRequest(r)
+		theme := themeForRequest(r)
+		render(w, r, CCOverviewPage(lang, theme))
+	}
+}
+
+// ---------------------------------------------------------------------------
 // List handlers
 // ---------------------------------------------------------------------------
 

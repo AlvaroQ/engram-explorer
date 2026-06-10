@@ -23,12 +23,13 @@
   "sidebar": {
     "brand": "Engram",
     "subtitle": "Panel local",
-    "overview": "Resumen",
+    "overview": "Resumen Engram",
     "knowledge": "Conocimiento",
     "projects": "Proyectos",
     "observations": "Observaciones",
     "sessions": "Sesiones",
-    "ccSessions": "Claude Code",
+    "ccOverview": "Resumen Claude Code",
+    "ccSessions": "Sesiones de Claude Code",
     "syncHealth": "Salud del Sync",
     "prompts": "Prompts",
     "topics": "Temas",
@@ -687,8 +688,15 @@
   },
   "ccSessions": {
     "title": "Claude Code",
-    "description": "Transcripts en vivo desde ~/.claude/projects — una fila por sesión.",
+    "description": "Transcripts en vivo desde",
     "filterProject": "Proyecto",
+    "attachment": "Adjuntó un fichero",
+    "filter": {
+      "compact": "Compactar",
+      "thinking": "Thinking",
+      "tools": "Herramientas",
+      "attachments": "Adjuntos"
+    },
     "listTitle": "Sesiones",
     "listLoaded": "{{count}} cargadas",
     "noMatch": "No se encontraron sesiones de Claude Code.",
@@ -746,6 +754,10 @@
       "untitled": "(sin título)",
       "costEstimateNote": "El coste excluye turnos con modelos sin precio — el gasto real puede ser mayor."
     }
+  },
+  "ccOverview": {
+    "title": "Resumen Claude Code",
+    "description": "Tokens y coste de todas tus sesiones de Claude Code."
   },
   "placeholder": {
     "comingSoon": "Próximamente.",

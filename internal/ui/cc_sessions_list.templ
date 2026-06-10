@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/AlvaroQ/engram-explorer/internal/services"
@@ -23,19 +24,13 @@ templ ccsListContent(result services.CCSessionListResult, params services.CCSess
 	<div>
 		<div class="page-header">
 			<h1>{ T(lang, "ccSessions.title") }</h1>
-			<p>{ T(lang, "ccSessions.description") }</p>
+			<p>{ T(lang, "ccSessions.description") } <code class="path-chip">~/.claude/projects</code></p>
 		</div>
 		<div class="card">
-			<div class="card-header">
-				<h2>{ T(lang, "ccSessions.charts.title") }</h2>
-				<p>{ T(lang, "ccSessions.charts.description") }</p>
-			</div>
-			<div class="card-body">
-				@Island("cc-usage-charts", ccUsageChartsProps(lang))
-			</div>
-		</div>
-		<div class="card filter-bar">
-			<div class="card-body">
+			<div class="card-header card-header-flex">
+				<div>
+					<h2>{ T(lang, "ccSessions.listTitle") }: <span class="cc-list-count">{ T(lang, "ccSessions.listLoaded", "count", fmt.Sprintf("%d", len(result.Items))) }</span></h2>
+				</div>
 				<form
 					method="get"
 					action="/cc-sessions/list"
@@ -43,24 +38,16 @@ templ ccsListContent(result services.CCSessionListResult, params services.CCSess
 					hx-target="#cc-sessions-table-container"
 					hx-trigger="change"
 					hx-push-url="false"
-					class="filter-row"
+					class="cc-list-filter"
 				>
-					<div class="filter-group">
-						<label class="filter-label">{ T(lang, "ccSessions.filterProject") }</label>
-						<select name="project" class="input input-sm">
-							<option value="" selected?={ params.Project == "" }>{ T(lang, "common.all") }</option>
-							for _, proj := range result.Projects {
-								<option value={ proj } selected?={ params.Project == proj }>{ proj }</option>
-							}
-						</select>
-					</div>
+					<label class="filter-label">{ T(lang, "ccSessions.filterProject") }</label>
+					<select name="project" class="input input-sm">
+						<option value="" selected?={ params.Project == "" }>{ T(lang, "common.all") }</option>
+						for _, proj := range result.Projects {
+							<option value={ proj } selected?={ params.Project == proj }>{ proj }</option>
+						}
+					</select>
 				</form>
-			</div>
-		</div>
-		<div class="card">
-			<div class="card-header">
-				<h2>{ T(lang, "ccSessions.listTitle") }</h2>
-				<p>{ T(lang, "ccSessions.listLoaded", "count", fmt.Sprintf("%d", len(result.Items))) }</p>
 			</div>
 			<div class="card-body p-0" id="cc-sessions-table-container">
 				@CCSListBodyPartial(result, params, lang)
@@ -122,8 +109,17 @@ templ ccsSessionRow(s services.CCSessionListItem, lang string) {
 				href={ templ.SafeURL("/cc-sessions/" + url.PathEscape(s.ProjectFolder) + "/" + s.ID) }
 				class="text-sm text-fg hover:text-accent"
 			>
-				if s.FirstPrompt != "" {
-					{ ccsPromptOneLine(s.FirstPrompt) }
+				if clean, hasAttach := ccsStripAttachments(s.FirstPrompt); hasAttach {
+					<span class="cc-prompt-clip" title={ T(lang, "ccSessions.attachment") }>
+						@ccsPaperclip()
+					</span>
+					if clean != "" {
+						{ clean }
+					} else {
+						<span class="muted">{ T(lang, "ccSessions.attachment") }</span>
+					}
+				} else if clean != "" {
+					{ clean }
 				} else {
 					<span class="muted">{ T(lang, "common.untitled") }</span>
 				}
@@ -190,6 +186,37 @@ func ccsPromptPreview(s string) string {
 // column is the most important one and is shown in full (no ellipsis).
 func ccsPromptOneLine(s string) string {
 	return strings.Join(strings.Fields(s), " ")
+}
+
+// ccsAttachTags are IDE wrapper tags that mean the user attached file or editor
+// context to the prompt. In the list these segments are dropped from the preview
+// and replaced by a paperclip, so the row shows the user's actual message.
+var ccsAttachTags = []string{"ide_opened_file", "ide_selection", "ide_diagnostics"}
+
+// ccsAttachRe holds one compiled matcher per attach tag. RE2 has no
+// backreferences, so each tag gets its own paired <tag ...>...</tag> pattern,
+// non-greedy and dot-matches-newline (?s) so multi-line blocks are removed whole.
+var ccsAttachRe = buildCCSAttachRe()
+
+func buildCCSAttachRe() []*regexp.Regexp {
+	res := make([]*regexp.Regexp, 0, len(ccsAttachTags))
+	for _, tag := range ccsAttachTags {
+		res = append(res, regexp.MustCompile(`(?s)<`+tag+`\b[^>]*>.*?</`+tag+`>`))
+	}
+	return res
+}
+
+// ccsStripAttachments removes IDE attachment segments from a prompt and reports
+// whether any were present. Whitespace in the result is collapsed to one line.
+func ccsStripAttachments(s string) (string, bool) {
+	found := false
+	for _, re := range ccsAttachRe {
+		if re.MatchString(s) {
+			found = true
+			s = re.ReplaceAllString(s, " ")
+		}
+	}
+	return strings.Join(strings.Fields(s), " "), found
 }
 
 // ccsFormatTokens renders a token count compactly (e.g. 850, 12.3k, 1.45M).

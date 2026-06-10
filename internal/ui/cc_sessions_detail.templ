@@ -25,50 +25,93 @@ templ ccsDetailContent(detail *services.CCSessionDetail, lang string) {
 			<div class="page-header-back">
 				<a href="/cc-sessions">← { T(lang, "common.back") }</a>
 			</div>
-			<h1 class="mono">{ detail.ID }</h1>
+			if title := ccsFirstUserPrompt(detail.Turns); title != "" {
+				<h1 class="cc-detail-title">{ title }</h1>
+			} else {
+				<h1>{ T(lang, "common.untitled") }</h1>
+			}
+			<p class="muted mono cc-detail-id">{ detail.ID }</p>
 		</div>
-		<div class="detail-grid">
-			<!-- Metadata card -->
-			<div class="card">
-				<div class="card-header">
-					<h2>{ T(lang, "ccSessions.session") }</h2>
-				</div>
-				<div class="card-body">
-					@detailRow(T(lang, "ccSessions.fields.project"), detail.ProjectDisplay)
-					@detailRow(T(lang, "ccSessions.fields.cwd"), detail.CWD)
-					@detailRow(T(lang, "ccSessions.fields.branch"), detail.GitBranch)
-					@detailRow(T(lang, "ccSessions.fields.version"), detail.CCVersion)
-					@detailRow(T(lang, "ccSessions.fields.started"), ccsFormatTime(detail.StartedAt))
-					@detailRow(T(lang, "ccSessions.fields.ended"), ccsFormatTime(detail.EndedAt))
-					@detailRow(T(lang, "ccSessions.fields.size"), ccsFormatSize(detail.FileSizeBytes))
-				</div>
-			</div>
-			<!-- Stats card -->
-			<div class="card">
-				<div class="card-header">
-					<h2>{ T(lang, "ccSessions.counts") }</h2>
-				</div>
-				<div class="card-body">
-					@detailRow(T(lang, "ccSessions.fields.turns"), fmt.Sprintf("%d", len(detail.Turns)))
-					@detailRow(T(lang, "ccSessions.fields.userTurns"),
-						fmt.Sprintf("%d", countTurnsByRole(detail.Turns, "user")))
-					@detailRow(T(lang, "ccSessions.fields.assistantTurns"),
-						fmt.Sprintf("%d", countTurnsByRole(detail.Turns, "assistant")))
-					@detailRow(T(lang, "ccSessions.fields.tokens"), ccsFormatTokens(detail.Usage.TotalTokens))
-					@detailRow(T(lang, "ccSessions.fields.cost"), ccsFormatCost(detail.Usage))
+		<div class="card">
+			<div class="card-body">
+				<div class="cc-detail-cols">
+					<div class="cc-detail-col">
+						@ccsDetailField(T(lang, "ccSessions.fields.project"), detail.ProjectDisplay)
+						@ccsDetailField(T(lang, "ccSessions.fields.cwd"), detail.CWD)
+						@ccsDetailField(T(lang, "ccSessions.fields.branch"), detail.GitBranch)
+						@ccsDetailField(T(lang, "ccSessions.fields.version"), detail.CCVersion)
+					</div>
+					<div class="cc-detail-col">
+						@ccsDetailField(T(lang, "ccSessions.fields.started"), ccsFormatTime(detail.StartedAt))
+						@ccsDetailField(T(lang, "ccSessions.fields.ended"), ccsFormatTime(detail.EndedAt))
+						@ccsDetailField(T(lang, "ccSessions.fields.size"), ccsFormatSize(detail.FileSizeBytes))
+						@ccsDetailField(T(lang, "ccSessions.fields.turns"), fmt.Sprintf("%d", len(detail.Turns)))
+					</div>
+					<div class="cc-detail-col">
+						@ccsDetailField(T(lang, "ccSessions.fields.userTurns"), fmt.Sprintf("%d", countTurnsByRole(detail.Turns, "user")))
+						@ccsDetailField(T(lang, "ccSessions.fields.assistantTurns"), fmt.Sprintf("%d", countTurnsByRole(detail.Turns, "assistant")))
+						@ccsDetailField(T(lang, "ccSessions.fields.tokens"), ccsFormatTokens(detail.Usage.TotalTokens))
+						@ccsDetailField(T(lang, "ccSessions.fields.cost"), ccsFormatCost(detail.Usage))
+					</div>
 				</div>
 			</div>
 		</div>
 		<!-- Conversation timeline -->
-		<div class="card" style="margin-top: 1rem;">
-			<div class="card-header">
-				<h2>{ T(lang, "ccSessions.conversation") }</h2>
-				<p>{ T(lang, "ccSessions.conversationDesc", "count", fmt.Sprintf("%d", len(detail.Turns))) }</p>
+		<div class="card cc-conv" style="margin-top: 1rem;">
+			<div class="card-header card-header-flex">
+				<div>
+					<h2>{ T(lang, "ccSessions.conversation") }: <span class="cc-list-count">{ T(lang, "ccSessions.conversationDesc", "count", fmt.Sprintf("%d", len(detail.Turns))) }</span></h2>
+				</div>
+				if len(detail.Turns) > 0 {
+					@ccsConvToolbar(lang)
+				}
 			</div>
 			<div class="card-body">
 				@ccsTurns(detail.Turns, lang)
 			</div>
 		</div>
+		if len(detail.Turns) > 0 {
+			<script src="/static/cc-conv-filter.js" defer></script>
+		}
+	</div>
+}
+
+// ccsConvToolbar renders the client-side conversation filter controls: a
+// one-click "Compact" preset plus per-group toggles (thinking / tools /
+// attachments). It lives in the conversation card-header (right side); the .cc-conv
+// wrapper is the card itself, so the filtering JS (/static/cc-conv-filter.js) can
+// reach both these controls and the turns in the card-body.
+templ ccsConvToolbar(lang string) {
+	<div class="cc-conv-toolbar">
+		<button type="button" class="btn btn-secondary btn-sm" data-cc-compact aria-pressed="false">{ T(lang, "ccSessions.filter.compact") }</button>
+		<span class="cc-conv-sep"></span>
+		<label class="cc-conv-toggle">
+			<input type="checkbox" data-cc-toggle="thinking" checked/>
+			{ T(lang, "ccSessions.filter.thinking") }
+		</label>
+		<label class="cc-conv-toggle">
+			<input type="checkbox" data-cc-toggle="tool" checked/>
+			{ T(lang, "ccSessions.filter.tools") }
+		</label>
+		<label class="cc-conv-toggle">
+			<input type="checkbox" data-cc-toggle="attachment" checked/>
+			{ T(lang, "ccSessions.filter.attachments") }
+		</label>
+	</div>
+}
+
+// ccsDetailField renders one metadata cell as a stacked label/value pair (label
+// above, value below). Long values stay on one line and overflow with an ellipsis
+// while the full text remains available via the title tooltip — this keeps the
+// 3-column grid rows the same height for a symmetric look.
+templ ccsDetailField(label, value string) {
+	<div class="cc-detail-field">
+		<span class="cc-detail-label">{ label }</span>
+		if value != "" {
+			<span class="cc-detail-val" title={ value }>{ value }</span>
+		} else {
+			<span class="cc-detail-val muted">—</span>
+		}
 	</div>
 }
 
@@ -91,7 +134,7 @@ templ ccsTurns(turns []services.CCTurn, lang string) {
 							if tag, ok := ccsAttachment(turn.Text); ok {
 								@ccsAttachChip(tag, turn.Text)
 							} else {
-								<pre class="event-content">{ turn.Text }</pre>
+								<pre class="event-content" data-cc-block="text">{ turn.Text }</pre>
 							}
 						} else {
 							@ccsTurnBlocks(turn.Blocks)
@@ -112,10 +155,10 @@ templ ccsTurnBlocks(blocks []services.CCMessageBlock) {
 					if tag, ok := ccsAttachment(b.Text); ok {
 						@ccsAttachChip(tag, b.Text)
 					} else {
-						<pre class="event-content">{ b.Text }</pre>
+						<pre class="event-content" data-cc-block="text">{ b.Text }</pre>
 					}
 				case "tool_use":
-					<details class="cc-tool-block">
+					<details class="cc-tool-block" data-cc-block="tool">
 						<summary class="cc-tool-summary">
 							<span class="badge badge-neutral">tool_use</span>
 							<span class="mono text-xs">{ b.Name }</span>
@@ -126,7 +169,7 @@ templ ccsTurnBlocks(blocks []services.CCMessageBlock) {
 						<pre class="event-content cc-tool-input">{ ccsTruncateRaw(b.RawInput, 500) }</pre>
 					</details>
 				case "tool_result":
-					<details class="cc-tool-block">
+					<details class="cc-tool-block" data-cc-block="tool">
 						<summary class="cc-tool-summary">
 							<span class="badge badge-neutral">tool_result</span>
 							if b.ToolUseID != "" {
@@ -136,14 +179,14 @@ templ ccsTurnBlocks(blocks []services.CCMessageBlock) {
 						<pre class="event-content cc-tool-input">{ ccsTruncateRaw(b.Content, 500) }</pre>
 					</details>
 				case "thinking":
-					<details class="cc-tool-block cc-thinking">
+					<details class="cc-tool-block cc-thinking" data-cc-block="thinking">
 						<summary class="cc-tool-summary">
 							<span class="badge badge-neutral">thinking</span>
 						</summary>
 						<pre class="event-content cc-tool-input">{ b.Text }</pre>
 					</details>
 				default:
-					<div class="muted mono text-xs">{ b.Type }</div>
+					<div class="muted mono text-xs" data-cc-block="other">{ b.Type }</div>
 			}
 		}
 	</div>
@@ -152,7 +195,7 @@ templ ccsTurnBlocks(blocks []services.CCMessageBlock) {
 // ccsAttachChip renders a marker/attachment block (e.g. <ide_opened_file>) as a
 // compact paperclip chip. The full marker text is exposed via the title tooltip.
 templ ccsAttachChip(tag, full string) {
-	<span class="cc-attach" title={ full }>
+	<span class="cc-attach" data-cc-block="attachment" title={ full }>
 		@ccsPaperclip()
 		<span class="cc-attach-label">{ tag }</span>
 	</span>
@@ -194,6 +237,42 @@ func ccsAttachment(text string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// ccsTurnPlainText returns the human-readable text of a turn: the direct Text,
+// or the first non-empty text block.
+func ccsTurnPlainText(t services.CCTurn) string {
+	if strings.TrimSpace(t.Text) != "" {
+		return t.Text
+	}
+	for _, b := range t.Blocks {
+		if b.Type == "text" && strings.TrimSpace(b.Text) != "" {
+			return b.Text
+		}
+	}
+	return ""
+}
+
+// ccsFirstUserPrompt returns the first real user message — skipping marker-only
+// turns and stripping IDE attachment segments — for use as a descriptive page
+// title (the raw session ID is shown as a subtitle instead).
+func ccsFirstUserPrompt(turns []services.CCTurn) string {
+	for _, t := range turns {
+		if t.Role != "user" {
+			continue
+		}
+		text := ccsTurnPlainText(t)
+		if text == "" {
+			continue
+		}
+		if _, isMarker := ccsAttachment(text); isMarker {
+			continue
+		}
+		if clean, _ := ccsStripAttachments(text); strings.TrimSpace(clean) != "" {
+			return clean
+		}
+	}
+	return ""
 }
 
 // ccsTurnBadgeClass returns the badge class based on role.

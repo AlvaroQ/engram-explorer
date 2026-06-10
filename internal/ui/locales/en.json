@@ -23,12 +23,13 @@
   "sidebar": {
     "brand": "Engram",
     "subtitle": "Local Dashboard",
-    "overview": "Overview",
+    "overview": "Engram Overview",
     "knowledge": "Knowledge",
     "projects": "Projects",
     "observations": "Observations",
     "sessions": "Sessions",
-    "ccSessions": "Claude Code",
+    "ccOverview": "Claude Code Overview",
+    "ccSessions": "Claude Code Sessions",
     "syncHealth": "Sync Health",
     "prompts": "Prompts",
     "topics": "Topics",
@@ -687,8 +688,15 @@
   },
   "ccSessions": {
     "title": "Claude Code",
-    "description": "Live transcripts from ~/.claude/projects — one row per session.",
+    "description": "Live transcripts from",
     "filterProject": "Project",
+    "attachment": "Attached a file",
+    "filter": {
+      "compact": "Compact",
+      "thinking": "Thinking",
+      "tools": "Tools",
+      "attachments": "Attachments"
+    },
     "listTitle": "Sessions",
     "listLoaded": "{{count}} loaded",
     "noMatch": "No Claude Code sessions found.",
@@ -746,6 +754,10 @@
       "untitled": "(untitled)",
       "costEstimateNote": "Cost excludes turns on unpriced models — actual spend may be higher."
     }
+  },
+  "ccOverview": {
+    "title": "Claude Code Overview",
+    "description": "Token usage and cost across all your Claude Code sessions."
   },
   "placeholder": {
     "comingSoon": "Coming soon.",
