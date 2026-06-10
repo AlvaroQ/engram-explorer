@@ -647,7 +647,6 @@
     "themeLight": "light",
     "language": "Language",
     "languageDescription": "Choose the interface language",
-    "database": "Database",
     "daemon": "Engram daemon",
     "cloudCli": "Cloud CLI capabilities",
     "cloudCliDesc": "Detected from `engram cloud --help`",

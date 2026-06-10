@@ -1,20 +1,11 @@
 package ui
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"sync"
-)
-
-// contextKey is the unexported type for context keys in this package.
-type contextKey int
-
-const (
-	langContextKey  contextKey = iota
-	themeContextKey contextKey = iota
 )
 
 // catalogs holds the parsed locale maps, loaded once at first use.
@@ -115,20 +106,6 @@ func langForRequest(r *http.Request) string {
 	return "en"
 }
 
-// withLang stores the resolved language in the request context.
-func withLang(r *http.Request, lang string) *http.Request {
-	return r.WithContext(context.WithValue(r.Context(), langContextKey, lang))
-}
-
-// langFromContext retrieves the language set by withLang.
-// Falls back to "en" when not present.
-func langFromContext(ctx context.Context) string {
-	if v, ok := ctx.Value(langContextKey).(string); ok && v != "" {
-		return v
-	}
-	return "en"
-}
-
 // themeForRequest resolves the theme from an *http.Request.
 // Cookie "theme" ("dark"/"light"), default "dark".
 func themeForRequest(r *http.Request) string {
@@ -148,16 +125,3 @@ func LangForRequest(r *http.Request) string { return langForRequest(r) }
 // ThemeForRequest is the exported wrapper around themeForRequest, for sibling
 // modules that render inside the shared app shell.
 func ThemeForRequest(r *http.Request) string { return themeForRequest(r) }
-
-// withTheme stores the resolved theme in the request context.
-func withTheme(r *http.Request, theme string) *http.Request {
-	return r.WithContext(context.WithValue(r.Context(), themeContextKey, theme))
-}
-
-// themeFromContext retrieves the theme set by withTheme.
-func themeFromContext(ctx context.Context) string {
-	if v, ok := ctx.Value(themeContextKey).(string); ok && v != "" {
-		return v
-	}
-	return "dark"
-}
