@@ -60,6 +60,7 @@ changelog:
 
 brews:
   - name: engram-explorer
+    directory: Formula
     repository:
       owner: AlvaroQ
       name: homebrew-tap
