@@ -4,11 +4,16 @@ package services
 import (
 	"database/sql"
 	"strings"
+	"time"
 
 	"github.com/AlvaroQ/engram-explorer/internal/cursor"
 	"github.com/AlvaroQ/engram-explorer/internal/fts"
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
+
+// sqliteTimeLayout is the format used by all TEXT timestamp columns in the
+// Engram DB (matching NowSqlite() in write_shared.go). All stored times are UTC.
+const sqliteTimeLayout = "2006-01-02 15:04:05"
 
 // ObservationRow mirrors the DB row exactly (snake_case, pointer fields for
 // nullable columns so they serialize as JSON null, never "" or 0).
@@ -30,6 +35,23 @@ type ObservationRow struct {
 	UpdatedAt      *string `json:"updated_at"`
 	DeletedAt      *string `json:"deleted_at"`
 	SyncID         *string `json:"sync_id"`
+	// ReviewAfter is a nullable ISO timestamp indicating when a review is due.
+	// It is intentionally not exposed as a user-facing label (see ReviewDue).
+	ReviewAfter *string `json:"review_after"`
+}
+
+// ReviewDue returns true when ReviewAfter is set and the review date is in the
+// past or exactly now (UTC). Comparison uses second-level granularity to match
+// the "YYYY-MM-DD HH:MM:SS" format stored in the DB (see sqliteTimeLayout).
+func (r ObservationRow) ReviewDue() bool {
+	if r.ReviewAfter == nil || *r.ReviewAfter == "" {
+		return false
+	}
+	t, err := time.Parse(sqliteTimeLayout, *r.ReviewAfter)
+	if err != nil {
+		return false
+	}
+	return !t.After(time.Now().UTC())
 }
 
 // ObservationWithSnippet is used by the search endpoint.
@@ -58,7 +80,8 @@ const obsCols = `
   o.id, o.session_id, o.type, o.title, o.content, o.tool_name,
   o.project, o.scope, o.topic_key, o.normalized_hash,
   o.revision_count, o.duplicate_count,
-  o.last_seen_at, o.created_at, o.updated_at, o.deleted_at, o.sync_id`
+  o.last_seen_at, o.created_at, o.updated_at, o.deleted_at, o.sync_id,
+  o.review_after`
 
 func placeholders(n int) string {
 	parts := make([]string, n)
@@ -75,7 +98,7 @@ func coalesceStr(s *string, fallback string) string {
 	return fallback
 }
 
-// scanObservation is the single source of truth for scanning the 17 obsCols
+// scanObservation is the single source of truth for scanning the 18 obsCols
 // columns into an ObservationRow. The destination order MUST match obsCols.
 func scanObservation(s scanner) (ObservationRow, error) {
 	var r ObservationRow
@@ -84,11 +107,12 @@ func scanObservation(s scanner) (ObservationRow, error) {
 		&r.Project, &r.Scope, &r.TopicKey, &r.NormalizedHash,
 		&r.RevisionCount, &r.DuplicateCount,
 		&r.LastSeenAt, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt, &r.SyncID,
+		&r.ReviewAfter,
 	)
 	return r, err
 }
 
-// scanObservationWithSnippet scans the 17 obsCols columns plus the trailing
+// scanObservationWithSnippet scans the 18 obsCols columns plus the trailing
 // snippet column produced by the FTS search query.
 func scanObservationWithSnippet(s scanner) (ObservationWithSnippet, error) {
 	var r ObservationWithSnippet
@@ -97,6 +121,7 @@ func scanObservationWithSnippet(s scanner) (ObservationWithSnippet, error) {
 		&r.Project, &r.Scope, &r.TopicKey, &r.NormalizedHash,
 		&r.RevisionCount, &r.DuplicateCount,
 		&r.LastSeenAt, &r.CreatedAt, &r.UpdatedAt, &r.DeletedAt, &r.SyncID,
+		&r.ReviewAfter,
 		&r.Snippet,
 	)
 	return r, err

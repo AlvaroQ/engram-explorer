@@ -60,6 +60,7 @@ func seedEngramDB(t *testing.T) string {
 			updated_at      TEXT    NOT NULL DEFAULT (datetime('now')),
 			deleted_at      TEXT,
 			sync_id         TEXT,
+			review_after    TEXT,
 			FOREIGN KEY (session_id) REFERENCES sessions(id)
 		)`,
 		`CREATE VIRTUAL TABLE observations_fts USING fts5(
