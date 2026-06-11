@@ -5,13 +5,6 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-// OrphansPage renders the full orphans page wrapped in the Layout shell.
-// It delegates content to OrphansList.
-// sidebarState is "expanded" or "collapsed" (server-side initial state).
-templ OrphansPage(data *services.OrphansResponse, projects []services.ProjectStats, lang, theme, sidebarState string) {
-	@Layout("Orphans", "orphans", lang, theme, sidebarState, orphansContent(data, projects))
-}
-
 // OrphansList renders only the orphans content fragment — no Layout shell.
 // Used by HTMX for initial deferred load and post-action refresh.
 templ OrphansList(data *services.OrphansResponse, projects []services.ProjectStats) {

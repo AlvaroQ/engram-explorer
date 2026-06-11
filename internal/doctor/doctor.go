@@ -91,22 +91,30 @@ func Mount(mux *http.ServeMux, d Deps) {
 		http.StripPrefix("/doctor/static/", fileServer),
 	)
 
-	// Root: redirect to orphans page.
+	// Consolidated maintenance page — reachable from Settings.
+	// Registered before /doctor/* redirects so Go's ServeMux matches the literal
+	// path first (exact wins over prefix).
+	mux.HandleFunc("GET /settings/maintenance", handleMaintenancePage(d))
+
+	// Root: redirect to consolidated maintenance page.
 	mux.HandleFunc("GET /doctor/", func(w http.ResponseWriter, r *http.Request) {
 		// Only match the exact root; sub-paths are handled by their own entries.
 		if r.URL.Path != "/doctor/" {
 			http.NotFound(w, r)
 			return
 		}
-		http.Redirect(w, r, "/doctor/orphans", http.StatusFound)
+		http.Redirect(w, r, "/settings/maintenance", http.StatusMovedPermanently)
 	})
 
 	// -----------------------------------------------------------------------
 	// Orphans routes (Slice 1)
 	// -----------------------------------------------------------------------
 
-	// GET /doctor/orphans — full page or HTMX partial based on HX-Request header.
-	mux.HandleFunc("GET /doctor/orphans", handleOrphansPage(d))
+	// GET /doctor/orphans — 301 redirect to the consolidated maintenance page.
+	// HTMX partials (/doctor/orphans/list, etc.) are NOT redirected.
+	mux.HandleFunc("GET /doctor/orphans", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/settings/maintenance#unassigned", http.StatusMovedPermanently)
+	})
 
 	// GET /doctor/orphans/list — bare list partial; hx-get deferred load target.
 	mux.HandleFunc("GET /doctor/orphans/list", handleOrphansListPartial(d))
@@ -141,8 +149,11 @@ func Mount(mux *http.ServeMux, d Deps) {
 		})
 	}
 
-	// GET /doctor/sync — full sync shell page (deferred-load regions).
-	mux.HandleFunc("GET /doctor/sync", handleSyncPage(d))
+	// GET /doctor/sync — 301 redirect to the consolidated maintenance page.
+	// HTMX partials (/doctor/sync/projects, etc.) are NOT redirected.
+	mux.HandleFunc("GET /doctor/sync", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/settings/maintenance#cloud", http.StatusMovedPermanently)
+	})
 
 	// GET /doctor/sync/projects — projects table partial (polled every 15s).
 	// Must be registered before /doctor/sync/{project} so the literal path wins.

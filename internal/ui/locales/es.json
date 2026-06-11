@@ -654,12 +654,27 @@
       "title": "Prompts recientes"
     }
   },
+  "maintenance": {
+    "title": "Mantenimiento",
+    "description": "Herramientas de diagnóstico y limpieza de datos. Usalas para ordenar elementos sin asignar y gestionar la copia de seguridad en la nube.",
+    "unassigned": {
+      "title": "Elementos sin asignar"
+    },
+    "cloud": {
+      "title": "Copia de seguridad en la nube"
+    }
+  },
   "settings": {
     "title": "Ajustes",
     "section": {
       "appearance": "Apariencia",
       "system": "Sistema",
       "cloud": "Nube"
+    },
+    "maintenance": {
+      "title": "Mantenimiento",
+      "description": "Herramientas para limpiar elementos sin asignar y gestionar la copia de seguridad en la nube.",
+      "open": "Abrir herramientas de mantenimiento"
     },
     "modules": {
       "title": "Fuentes de datos",

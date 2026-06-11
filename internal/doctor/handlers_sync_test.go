@@ -163,15 +163,32 @@ func seedObservationForProject(t *testing.T, db *sql.DB, project string) {
 // Phase 2.1: Template render tests (RED until sync templates + handlers exist)
 // ---------------------------------------------------------------------------
 
-// TestSyncFullPage verifies GET /doctor/sync with no HX-Request returns
-// a full HTML page containing <html> and <head>.
-func TestSyncFullPage(t *testing.T) {
-	db := openSyncTestDB(t)
-
+// TestSyncRedirect verifies GET /doctor/sync returns a 301 redirect to
+// /settings/maintenance#cloud (PR4 consolidation).
+func TestSyncRedirect(t *testing.T) {
 	mux := http.NewServeMux()
-	doctor.Mount(mux, doctor.Deps{RoDB: db})
+	doctor.Mount(mux, doctor.Deps{})
 
 	req := httptest.NewRequest(http.MethodGet, "/doctor/sync", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMovedPermanently {
+		t.Fatalf("expected 301 redirect, got %d; body: %s", w.Code, w.Body.String())
+	}
+	loc := w.Header().Get("Location")
+	if loc != "/settings/maintenance#cloud" {
+		t.Errorf("redirect Location = %q; want /settings/maintenance#cloud", loc)
+	}
+}
+
+// TestMaintenancePage verifies GET /settings/maintenance returns 200 and
+// contains both section anchors (#unassigned, #cloud).
+func TestMaintenancePage(t *testing.T) {
+	mux := http.NewServeMux()
+	doctor.Mount(mux, doctor.Deps{})
+
+	req := httptest.NewRequest(http.MethodGet, "/settings/maintenance", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
@@ -179,45 +196,24 @@ func TestSyncFullPage(t *testing.T) {
 		t.Fatalf("expected 200, got %d; body: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
+	if !strings.Contains(body, `id="unassigned"`) {
+		t.Error("maintenance page must contain section id=\"unassigned\"")
+	}
+	if !strings.Contains(body, `id="cloud"`) {
+		t.Error("maintenance page must contain section id=\"cloud\"")
+	}
 	if !strings.Contains(body, "<html") {
-		t.Error("full page must contain <html>")
-	}
-	if !strings.Contains(body, "<head") {
-		t.Error("full page must contain <head>")
+		t.Error("maintenance page must be a full HTML page")
 	}
 }
 
-// TestSyncHTMXPartial verifies GET /doctor/sync with HX-Request: true
-// returns a fragment — no <html>, no <head>.
-func TestSyncHTMXPartial(t *testing.T) {
-	db := openSyncTestDB(t)
-
+// TestMaintenancePageContainsHxTrigger verifies the maintenance page (cloud
+// section) still embeds the sync shell with hx-trigger="every 15s".
+func TestMaintenancePageContainsHxTrigger(t *testing.T) {
 	mux := http.NewServeMux()
-	doctor.Mount(mux, doctor.Deps{RoDB: db})
+	doctor.Mount(mux, doctor.Deps{})
 
-	req := httptest.NewRequest(http.MethodGet, "/doctor/sync", nil)
-	req.Header.Set("HX-Request", "true")
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
-	}
-	body := w.Body.String()
-	if strings.Contains(body, "<html") {
-		t.Error("partial must NOT contain <html>")
-	}
-}
-
-// TestSyncPageContainsHxTrigger verifies the sync shell page contains at
-// least one hx-trigger attribute including "every 15s" (spec requirement).
-func TestSyncPageContainsHxTrigger(t *testing.T) {
-	db := openSyncTestDB(t)
-
-	mux := http.NewServeMux()
-	doctor.Mount(mux, doctor.Deps{RoDB: db})
-
-	req := httptest.NewRequest(http.MethodGet, "/doctor/sync", nil)
+	req := httptest.NewRequest(http.MethodGet, "/settings/maintenance", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
@@ -226,7 +222,7 @@ func TestSyncPageContainsHxTrigger(t *testing.T) {
 	}
 	body := w.Body.String()
 	if !strings.Contains(body, "every 15s") {
-		t.Error("sync page must contain hx-trigger with 'every 15s'")
+		t.Error("maintenance page cloud section must contain hx-trigger with 'every 15s'")
 	}
 }
 

@@ -654,12 +654,27 @@
       "title": "Recent prompts"
     }
   },
+  "maintenance": {
+    "title": "Maintenance",
+    "description": "Diagnostic and data-cleanup tools. Use these to tidy up unassigned items and manage cloud backup.",
+    "unassigned": {
+      "title": "Unassigned items"
+    },
+    "cloud": {
+      "title": "Cloud backup"
+    }
+  },
   "settings": {
     "title": "Settings",
     "section": {
       "appearance": "Appearance",
       "system": "System",
       "cloud": "Cloud"
+    },
+    "maintenance": {
+      "title": "Maintenance",
+      "description": "Tools for cleaning up unassigned items and managing cloud backup.",
+      "open": "Open maintenance tools"
     },
     "modules": {
       "title": "Data sources",

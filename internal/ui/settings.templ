@@ -403,6 +403,15 @@ templ settingsContent(d settingsData) {
 			</section>
 		}
 
+		<!-- Maintenance tools -->
+		<section class="settings-group">
+			<h2 class="settings-group-title">{ T(d.Lang, "settings.maintenance.title") }</h2>
+			<p class="settings-group-desc">{ T(d.Lang, "settings.maintenance.description") }</p>
+			<a href="/settings/maintenance" class="btn btn-sm btn-secondary">
+				{ T(d.Lang, "settings.maintenance.open") }
+			</a>
+		</section>
+
 		<!-- Daemon de Engram -->
 		<section class="settings-group">
 			<h2 class="settings-group-title">{ T(d.Lang, "settings.daemon") }</h2>
