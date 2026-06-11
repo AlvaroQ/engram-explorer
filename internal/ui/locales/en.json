@@ -74,14 +74,18 @@
   },
   "overview": {
     "kpi": {
-      "observations": "Observations",
+      "observations": "Memories saved",
       "browseAll": "Browse all",
-      "sessions": "Sessions",
+      "sessions": "AI conversations",
       "seeTimeline": "See timeline",
       "projects": "Projects",
       "drillProject": "Drill into a project",
       "prompts": "Prompts",
       "searchPrompts": "Search prompts"
+    },
+    "alert": {
+      "syncIssues": "{{count}} sync issue(s) need attention",
+      "review": "Review"
     },
     "activity": {
       "title": "Activity by project",

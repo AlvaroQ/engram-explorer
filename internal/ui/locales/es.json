@@ -74,14 +74,18 @@
   },
   "overview": {
     "kpi": {
-      "observations": "Observaciones",
+      "observations": "Memorias guardadas",
       "browseAll": "Ver todas",
-      "sessions": "Sesiones",
+      "sessions": "Conversaciones IA",
       "seeTimeline": "Ver línea de tiempo",
       "projects": "Proyectos",
       "drillProject": "Explorar un proyecto",
       "prompts": "Prompts",
       "searchPrompts": "Buscar prompts"
+    },
+    "alert": {
+      "syncIssues": "{{count}} problema(s) de sincronización requieren atención",
+      "review": "Revisar"
     },
     "activity": {
       "title": "Actividad por proyecto",
