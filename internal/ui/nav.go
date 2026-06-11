@@ -92,6 +92,36 @@ func NavContextWithGroups(r *http.Request, groupsFn func() []providers.NavGroup)
 	return ctx
 }
 
+// NavContextWithGroupsAndProfiles returns r's context enriched with nav prefs,
+// NavGroups, and ProfileInfo slice for the account switcher.
+func NavContextWithGroupsAndProfiles(r *http.Request, groupsFn func() []providers.NavGroup, profilesFn func() []ProfileInfo) context.Context {
+	ctx := NavContextWithGroups(r, groupsFn)
+	if profilesFn != nil {
+		ctx = WithProfiles(ctx, profilesFn())
+	}
+	return ctx
+}
+
+// ---------------------------------------------------------------------------
+// Profiles context — carries profile list per-request for the account switcher
+// ---------------------------------------------------------------------------
+
+type profilesKeyType struct{}
+
+var profilesContextKey = profilesKeyType{}
+
+// WithProfiles returns a context enriched with the given ProfileInfo slice.
+// The Sidebar component reads them via profilesFromContext.
+func WithProfiles(ctx context.Context, profiles []ProfileInfo) context.Context {
+	return context.WithValue(ctx, profilesContextKey, profiles)
+}
+
+// profilesFromContext returns the ProfileInfo slice stored in ctx, or nil if none.
+func profilesFromContext(ctx context.Context) []ProfileInfo {
+	v, _ := ctx.Value(profilesContextKey).([]ProfileInfo)
+	return v
+}
+
 func navPrefsFromContext(ctx context.Context) navPrefs {
 	if v, ok := ctx.Value(navPrefsContextKey).(navPrefs); ok {
 		return v

@@ -673,6 +673,20 @@
         "registered": "no detectado"
       }
     },
+    "accounts": {
+      "title": "Cuentas",
+      "profilesTitle": "Perfiles",
+      "profilesDesc": "Cada perfil tiene su propio conjunto de rutas y configuración de proveedores. Cambiá de perfil para trabajar con distintas fuentes de datos.",
+      "active": "activo",
+      "switch": "Cambiar",
+      "delete": "Eliminar",
+      "createTitle": "Crear perfil",
+      "create": "Crear",
+      "namePlaceholder": "Nombre del perfil",
+      "nameEmpty": "El nombre del perfil no puede estar vacío.",
+      "noProfiles": "No se encontraron perfiles.",
+      "manage": "Gestionar perfiles"
+    },
     "theme": "Tema",
     "themeDark": "oscuro",
     "themeLight": "claro",

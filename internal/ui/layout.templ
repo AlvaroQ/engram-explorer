@@ -69,7 +69,11 @@ templ Sidebar(activeNav, lang string) {
 		<div class="sidebar-brand">
 			<div class="sidebar-brand-text">
 				<h1 class="sidebar-brand-title">{ T(lang, "sidebar.brand") }</h1>
-				<p class="sidebar-brand-label">{ T(lang, "sidebar.subtitle") }</p>
+				if profiles := profilesFromContext(ctx); len(profiles) > 1 {
+					@accountSwitcher(lang, profiles)
+				} else {
+					<p class="sidebar-brand-label">{ T(lang, "sidebar.subtitle") }</p>
+				}
 			</div>
 			@sidebarSettingsIcon(activeNav, T(lang, "sidebar.settings"))
 		</div>
@@ -140,6 +144,44 @@ templ sidebarGroup(label, variant string) {
 		<span class="sidebar-group-dot" aria-hidden="true"></span>
 		<span>{ label }</span>
 	</p>
+}
+
+// accountSwitcher renders the profile switcher dropdown in the sidebar brand area.
+// It is shown only when 2+ profiles exist (injected via context by renderDeps).
+templ accountSwitcher(lang string, profiles []ProfileInfo) {
+	<div class="account-switcher">
+		if active := activeProfileFromProfiles(profiles); active != "" {
+			<span class="sidebar-brand-label">{ active }</span>
+		}
+		<div class="account-switcher-menu">
+			for _, p := range profiles {
+				if !p.Active {
+					<form method="post" action="/settings/profile/switch"
+						hx-post="/settings/profile/switch"
+						hx-target="body"
+						hx-swap="outerHTML">
+						<input type="hidden" name="name" value={ p.Name }/>
+						<button type="submit" class="account-switcher-item">
+							{ p.Name }
+						</button>
+					</form>
+				}
+			}
+			<a href="/settings/accounts" class="account-switcher-item account-switcher-manage">
+				{ T(lang, "settings.accounts.manage") }
+			</a>
+		</div>
+	</div>
+}
+
+// activeProfileFromProfiles returns the name of the active profile in the list.
+func activeProfileFromProfiles(profiles []ProfileInfo) string {
+	for _, p := range profiles {
+		if p.Active {
+			return p.Name
+		}
+	}
+	return ""
 }
 
 // sidebarSettingsIcon renders the settings gear in the brand header.

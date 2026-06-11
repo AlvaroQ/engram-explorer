@@ -49,6 +49,29 @@ type Deps struct {
 	// path entry). On success the provider is opened and the path is persisted.
 	// When nil the path-entry endpoint returns 503.
 	ValidateModulePath func(ctx context.Context, id, path string) error
+
+	// Profiles, when non-nil, returns the list of named profiles for the
+	// Settings → Accounts page and the account switcher in the sidebar.
+	Profiles func() []ProfileInfo
+
+	// ActiveProfile, when non-nil, returns the name of the currently active profile.
+	ActiveProfile func() string
+
+	// SwitchProfile switches the registry and persistent config to the named profile.
+	// Returns an error if any provider fails to open in the target profile — the old
+	// profile remains fully active on failure (abort-on-error per design verdict 2).
+	// When nil the switch endpoint returns 503.
+	SwitchProfile func(name string) error
+
+	// CreateProfile creates a new named profile (empty, or cloned from active).
+	// Returns an error if a profile with that name already exists.
+	// When nil the create endpoint returns 503.
+	CreateProfile func(name string) error
+
+	// DeleteProfile deletes the named profile from the persistent store.
+	// Returns an error if the profile is active or if it is the last remaining one.
+	// When nil the delete endpoint returns 503.
+	DeleteProfile func(name string) error
 }
 
 // ---------------------------------------------------------------------------
@@ -91,17 +114,28 @@ type ModuleInfo struct {
 	Err         string // error message when State == ModuleErrored
 }
 
+// ---------------------------------------------------------------------------
+// Accounts view-models (Settings → Accounts page + account switcher)
+// ---------------------------------------------------------------------------
+
+// ProfileInfo is a view-model for one profile row in the Settings → Accounts
+// page and the sidebar account switcher.
+type ProfileInfo struct {
+	Name   string
+	Active bool
+}
+
 // IsHTMX reports whether the request was issued by HTMX.
 func IsHTMX(r *http.Request) bool {
 	return r.Header.Get("HX-Request") == "true"
 }
 
 // renderDeps writes a templ component to the response with text/html content
-// type. It enriches the context with nav prefs AND, when d.NavGroups is set,
-// the current NavGroups from the registry for the data-driven sidebar.
+// type. It enriches the context with nav prefs, NavGroups from the registry
+// for the data-driven sidebar, and Profiles for the account switcher.
 func renderDeps(w http.ResponseWriter, r *http.Request, d Deps, c templ.Component) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = c.Render(NavContextWithGroups(r, d.NavGroups), w)
+	_ = c.Render(NavContextWithGroupsAndProfiles(r, d.NavGroups, d.Profiles), w)
 }
 
 // render writes a templ component to the response with text/html content type.
@@ -204,6 +238,12 @@ func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 	// Settings → Modules routes (WU-8).
 	mux.HandleFunc("POST /settings/modules/{id}/toggle", handleModulesTogglePost(d))
 	mux.HandleFunc("POST /settings/modules/{id}/path", handleModulesPathPost(d))
+
+	// Settings → Accounts routes (WU-9).
+	mux.HandleFunc("GET /settings/accounts", handleAccountsPage(d))
+	mux.HandleFunc("POST /settings/profile/switch", handleProfileSwitchPost(d))
+	mux.HandleFunc("POST /settings/profile/create", handleProfileCreatePost(d))
+	mux.HandleFunc("POST /settings/profile/delete", handleProfileDeletePost(d))
 
 	// Observations routes.
 	// /list and /{id} must be registered before the wildcard so Go 1.22 exact

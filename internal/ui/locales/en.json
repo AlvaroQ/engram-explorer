@@ -673,6 +673,20 @@
         "registered": "not detected"
       }
     },
+    "accounts": {
+      "title": "Accounts",
+      "profilesTitle": "Profiles",
+      "profilesDesc": "Each profile holds a separate set of provider paths and settings. Switch profiles to work with different data sources.",
+      "active": "active",
+      "switch": "Switch",
+      "delete": "Delete",
+      "createTitle": "Create profile",
+      "create": "Create",
+      "namePlaceholder": "Profile name",
+      "nameEmpty": "Profile name cannot be empty.",
+      "noProfiles": "No profiles found.",
+      "manage": "Manage profiles"
+    },
     "theme": "Theme",
     "themeDark": "dark",
     "themeLight": "light",

@@ -125,11 +125,14 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 	reg := c.Registry
 	engramMounted := false
 
-	// Resolve active profile name for WU-8 Modules callbacks.
-	activeProfileName := "default"
+	// Resolve active profile name for WU-8 Modules callbacks and WU-9 Accounts.
+	// We hold a pointer so that buildSwitchProfileFn can mutate it in-place and
+	// buildProfilesFn / buildActiveProfileFn always read the live value.
+	activeProfileNameVal := "default"
 	if c.ProfileStore != nil && c.ProfileStore.ActiveProfile != "" {
-		activeProfileName = c.ProfileStore.ActiveProfile
+		activeProfileNameVal = c.ProfileStore.ActiveProfile
 	}
+	activeProfileName := &activeProfileNameVal
 
 	for _, entry := range reg.Entries() {
 		if entry.State != providers.Enabled {
@@ -171,9 +174,15 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 				// Wire NavGroups so the sidebar is data-driven from the registry.
 				deps.NavGroups = reg.NavGroups
 				// Wire WU-8 Modules callbacks.
-				deps.Modules = buildModulesFn(reg, c.ProfileStore, activeProfileName)
-				deps.ToggleModule = buildToggleModuleFn(reg, c.ProfileStore, activeProfileName, c.Config.ConfigHome)
-				deps.ValidateModulePath = buildValidateModulePathFn(reg, c.ProfileStore, activeProfileName, c.Config.ConfigHome)
+				deps.Modules = buildModulesFn(reg, c.ProfileStore, *activeProfileName)
+				deps.ToggleModule = buildToggleModuleFn(reg, c.ProfileStore, *activeProfileName, c.Config.ConfigHome)
+				deps.ValidateModulePath = buildValidateModulePathFn(reg, c.ProfileStore, *activeProfileName, c.Config.ConfigHome)
+				// Wire WU-9 Accounts callbacks.
+				deps.Profiles = buildProfilesFn(c.ProfileStore, activeProfileName)
+				deps.ActiveProfile = buildActiveProfileFn(activeProfileName)
+				deps.SwitchProfile = buildSwitchProfileFn(reg, c.ProfileStore, activeProfileName, c.Config.ConfigHome)
+				deps.CreateProfile = buildCreateProfileFn(c.ProfileStore, c.Config.ConfigHome)
+				deps.DeleteProfile = buildDeleteProfileFn(c.ProfileStore, activeProfileName, c.Config.ConfigHome)
 				ui.Mount(mux, deps)
 				engramMounted = true
 			}
@@ -202,9 +211,14 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 			ReloadEngramDB:     c.ReloadEngramDB,
 			SetClaudeDir:       c.SetClaudeDir,
 			NavGroups:          reg.NavGroups,
-			Modules:            buildModulesFn(reg, c.ProfileStore, activeProfileName),
-			ToggleModule:       buildToggleModuleFn(reg, c.ProfileStore, activeProfileName, c.Config.ConfigHome),
-			ValidateModulePath: buildValidateModulePathFn(reg, c.ProfileStore, activeProfileName, c.Config.ConfigHome),
+			Modules:            buildModulesFn(reg, c.ProfileStore, *activeProfileName),
+			ToggleModule:       buildToggleModuleFn(reg, c.ProfileStore, *activeProfileName, c.Config.ConfigHome),
+			ValidateModulePath: buildValidateModulePathFn(reg, c.ProfileStore, *activeProfileName, c.Config.ConfigHome),
+			Profiles:           buildProfilesFn(c.ProfileStore, activeProfileName),
+			ActiveProfile:      buildActiveProfileFn(activeProfileName),
+			SwitchProfile:      buildSwitchProfileFn(reg, c.ProfileStore, activeProfileName, c.Config.ConfigHome),
+			CreateProfile:      buildCreateProfileFn(c.ProfileStore, c.Config.ConfigHome),
+			DeleteProfile:      buildDeleteProfileFn(c.ProfileStore, activeProfileName, c.Config.ConfigHome),
 		})
 	}
 }
@@ -442,6 +456,144 @@ func buildValidateModulePathFn(reg *providers.Registry, store *config.ProfileSto
 		existing.Path = path
 		profile.Providers[id] = existing
 		store.Profiles[activeProfileName] = profile
+		return config.SaveProfileStore(configHome, store)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// WU-9: Accounts page helpers — profile CRUD + switch wiring
+// ---------------------------------------------------------------------------
+
+// buildProfilesFn returns a closure that maps ProfileStore profiles to []ui.ProfileInfo
+// view-models for the Settings → Accounts page and account switcher.
+func buildProfilesFn(store *config.ProfileStore, activeProfileName *string) func() []ui.ProfileInfo {
+	return func() []ui.ProfileInfo {
+		if store == nil {
+			return nil
+		}
+		out := make([]ui.ProfileInfo, 0, len(store.Profiles))
+		// Stable order: default first, then alphabetical.
+		names := make([]string, 0, len(store.Profiles))
+		for name := range store.Profiles {
+			names = append(names, name)
+		}
+		sortProfileNames(names)
+		active := ""
+		if activeProfileName != nil {
+			active = *activeProfileName
+		}
+		for _, name := range names {
+			out = append(out, ui.ProfileInfo{
+				Name:   name,
+				Active: name == active,
+			})
+		}
+		return out
+	}
+}
+
+// sortProfileNames sorts profile names: "default" first, rest alphabetically.
+func sortProfileNames(names []string) {
+	// Simple insertion sort — profile count is tiny (< 20 in practice).
+	for i := 1; i < len(names); i++ {
+		for j := i; j > 0; j-- {
+			a, b := names[j-1], names[j]
+			if a == "default" {
+				break
+			}
+			if b == "default" || a > b {
+				names[j-1], names[j] = names[j], names[j-1]
+			} else {
+				break
+			}
+		}
+	}
+}
+
+// buildActiveProfileFn returns a closure that reads the current active profile name.
+func buildActiveProfileFn(activeProfileName *string) func() string {
+	return func() string {
+		if activeProfileName == nil {
+			return ""
+		}
+		return *activeProfileName
+	}
+}
+
+// buildSwitchProfileFn returns a closure that switches the active profile in the
+// registry and persists the new active profile name to config.json.
+//
+// Hot-swap semantics (design verdict 2):
+//   - Opens next profile's provider instances BEFORE closing old (validate-first).
+//   - On ANY open failure: aborts, keeps old profile active, returns error.
+//   - On success: swaps handles, persists activeProfile atomically.
+//   - A missing-path provider degrades to unavailable (not fatal) — design spec §5.
+func buildSwitchProfileFn(reg *providers.Registry, store *config.ProfileStore, activeProfileName *string, configHome string) func(name string) error {
+	return func(name string) error {
+		if store == nil {
+			return fmt.Errorf("profile store not available")
+		}
+		if activeProfileName == nil {
+			return fmt.Errorf("active profile name pointer is nil")
+		}
+		nextProfile, ok := store.Profiles[name]
+		if !ok {
+			return fmt.Errorf("profile %q not found", name)
+		}
+
+		// Attempt hot-swap via registry.SwitchProfile (open-before-close, abort-on-error).
+		// Per spec §5: if a Tier-1 source is missing, that provider degrades — not fatal.
+		if err := reg.SwitchProfile(context.Background(), configProfileAdapter{p: nextProfile}); err != nil {
+			// SwitchProfile returns error only when a critical open fails.
+			// Degraded (path-missing) providers are handled internally with state=Detected.
+			return fmt.Errorf("profile switch failed: %w", err)
+		}
+
+		// Persist the new active profile only after all opens succeeded.
+		*activeProfileName = name
+		store.ActiveProfile = name
+		return config.SaveProfileStore(configHome, store)
+	}
+}
+
+// buildCreateProfileFn returns a closure that creates a new named profile in
+// the ProfileStore. The new profile starts empty (no provider configs).
+// Returns an error if a profile with that name already exists.
+func buildCreateProfileFn(store *config.ProfileStore, configHome string) func(name string) error {
+	return func(name string) error {
+		if store == nil {
+			return fmt.Errorf("profile store not available")
+		}
+		if _, exists := store.Profiles[name]; exists {
+			return fmt.Errorf("profile already exists: %q", name)
+		}
+		if store.Profiles == nil {
+			store.Profiles = make(map[string]config.Profile)
+		}
+		store.Profiles[name] = config.Profile{}
+		return config.SaveProfileStore(configHome, store)
+	}
+}
+
+// buildDeleteProfileFn returns a closure that deletes the named profile from
+// the ProfileStore. Returns an error if:
+//   - The profile is the currently active profile.
+//   - It is the last remaining profile (must always have ≥1).
+func buildDeleteProfileFn(store *config.ProfileStore, activeProfileName *string, configHome string) func(name string) error {
+	return func(name string) error {
+		if store == nil {
+			return fmt.Errorf("profile store not available")
+		}
+		if activeProfileName != nil && *activeProfileName == name {
+			return fmt.Errorf("cannot delete active profile %q; switch to another profile first", name)
+		}
+		if len(store.Profiles) <= 1 {
+			return fmt.Errorf("cannot delete the last remaining profile")
+		}
+		if _, exists := store.Profiles[name]; !exists {
+			return fmt.Errorf("profile %q not found", name)
+		}
+		delete(store.Profiles, name)
 		return config.SaveProfileStore(configHome, store)
 	}
 }

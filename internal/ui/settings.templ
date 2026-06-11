@@ -1,5 +1,103 @@
 package ui
 
+// accountsPage.templ is co-located here because the accounts page shares the
+// same settings layout shell and view-model infrastructure.
+
+// AccountsPage renders the full accounts management page (layout shell + content).
+templ AccountsPage(d accountsData) {
+	@Layout(T(d.Lang, "settings.accounts.title"), "settings", d.Lang, d.Theme, accountsContent(d))
+}
+
+// AccountsPartial renders only the accounts content (no HTML shell).
+// Used when HTMX requests a partial update.
+templ AccountsPartial(d accountsData) {
+	@accountsContent(d)
+}
+
+// accountsContent renders the accounts management body: profile list, create form.
+templ accountsContent(d accountsData) {
+	<div class="settings-page" id="settings-accounts">
+		<div class="page-header">
+			<h1>{ T(d.Lang, "settings.accounts.title") }</h1>
+		</div>
+		if d.AccountsError != "" {
+			<div class="settings-group">
+				<p class="error-hint">{ d.AccountsError }</p>
+			</div>
+		}
+		<section class="settings-group">
+			<h2 class="settings-group-title">{ T(d.Lang, "settings.accounts.profilesTitle") }</h2>
+			<p class="settings-group-desc">{ T(d.Lang, "settings.accounts.profilesDesc") }</p>
+			if len(d.Profiles) > 0 {
+				<div class="modules-list">
+					for _, p := range d.Profiles {
+						@profileRow(d.Lang, p)
+					}
+				</div>
+			} else {
+				<p class="preference-desc">{ T(d.Lang, "settings.accounts.noProfiles") }</p>
+			}
+		</section>
+		<section class="settings-group">
+			<h2 class="settings-group-title">{ T(d.Lang, "settings.accounts.createTitle") }</h2>
+			<form class="path-edit-form" method="post" action="/settings/profile/create"
+				hx-post="/settings/profile/create"
+				hx-target="#settings-accounts"
+				hx-swap="outerHTML">
+				<input
+					type="text"
+					name="name"
+					class="path-input"
+					autocomplete="off"
+					autocapitalize="off"
+					spellcheck="false"
+					aria-label={ T(d.Lang, "settings.accounts.namePlaceholder") }
+					placeholder={ T(d.Lang, "settings.accounts.namePlaceholder") }
+				/>
+				<button type="submit" class="btn btn-sm btn-primary">
+					{ T(d.Lang, "settings.accounts.create") }
+				</button>
+			</form>
+		</section>
+	</div>
+}
+
+// profileRow renders one profile row in the Settings → Accounts section.
+templ profileRow(lang string, p ProfileInfo) {
+	<div class="module-row">
+		<div class="module-row-header">
+			<div class="module-row-identity">
+				<span class="module-name">{ p.Name }</span>
+				if p.Active {
+					<span class="badge badge-ok">{ T(lang, "settings.accounts.active") }</span>
+				}
+			</div>
+			<div class="module-row-toggle">
+				if !p.Active {
+					<form method="post" action="/settings/profile/switch"
+						hx-post="/settings/profile/switch"
+						hx-target="#settings-accounts"
+						hx-swap="outerHTML">
+						<input type="hidden" name="name" value={ p.Name }/>
+						<button type="submit" class="btn btn-sm btn-primary">
+							{ T(lang, "settings.accounts.switch") }
+						</button>
+					</form>
+					<form method="post" action="/settings/profile/delete"
+						hx-post="/settings/profile/delete"
+						hx-target="#settings-accounts"
+						hx-swap="outerHTML">
+						<input type="hidden" name="name" value={ p.Name }/>
+						<button type="submit" class="btn btn-sm btn-secondary">
+							{ T(lang, "settings.accounts.delete") }
+						</button>
+					</form>
+				}
+			</div>
+		</div>
+	</div>
+}
+
 // settingsData carries all data needed to render the settings page.
 type settingsData struct {
 	DBPath          string
