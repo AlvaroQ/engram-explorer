@@ -398,6 +398,13 @@
     "obsCount": "{{count}} obs",
     "revisions": "{{count}} rev"
   },
+  "memory": {
+    "tabs": {
+      "memories": "Memories",
+      "threads": "Threads",
+      "conversations": "Conversations"
+    }
+  },
   "observations": {
     "title": "Observations",
     "description": "Filter, search and inspect every observation in the local database.",
@@ -410,8 +417,8 @@
       "project": "Project",
       "type": "Type",
       "toolName": "Tool name",
-      "scope": "Scope",
-      "topicKey": "Topic key",
+      "scope": "Visibility",
+      "topicKey": "Thread",
       "deletedRows": "Deleted rows"
     },
     "placeholders": {
@@ -437,7 +444,7 @@
       "type": "Type",
       "title": "Title",
       "tool": "Tool",
-      "topic": "Topic",
+      "topic": "Thread",
       "rev": "Rev",
       "dup": "Dup",
       "empty": "empty",
@@ -451,7 +458,7 @@
       "deleted": "deleted",
       "fields": {
         "project": "Project",
-        "topicKey": "Topic key",
+        "topicKey": "Thread",
         "created": "Created",
         "updated": "Updated",
         "revisions": "Revisions",

@@ -244,7 +244,12 @@ func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 	mux.HandleFunc("GET /{$}", handleOverviewPage(d))
 
 	// Topics routes.
-	mux.HandleFunc("GET /topics", handleTopicsPage(d))
+	// GET /topics redirects to the Threads tab on the Memory page (PR6a).
+	// GET /topics/list (HTMX partial) is kept intact — unaffected by the redirect.
+	// Note: Go 1.22 ServeMux exact-path patterns ensure /topics/list wins over /topics.
+	mux.HandleFunc("GET /topics", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/observations?view=threads", http.StatusMovedPermanently)
+	})
 	mux.HandleFunc("GET /topics/list", handleTopicsListPartial(d))
 
 	// Sessions list routes (must be registered before {id} wildcard).
@@ -265,7 +270,12 @@ func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 	mux.HandleFunc("GET /sessions/{id}", handleSessionDetailPage(d))
 
 	// Prompts routes.
-	mux.HandleFunc("GET /prompts", handlePromptsPage(d))
+	// GET /prompts redirects to the Conversations tab on the Memory page (PR6a).
+	// GET /prompts/list (HTMX partial) is kept intact — unaffected by the redirect.
+	// Note: Go 1.22 ServeMux exact-path patterns ensure /prompts/list wins over /prompts.
+	mux.HandleFunc("GET /prompts", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/observations?view=conversations", http.StatusMovedPermanently)
+	})
 	mux.HandleFunc("GET /prompts/list", handlePromptsListPartial(d))
 
 	// Projects routes.

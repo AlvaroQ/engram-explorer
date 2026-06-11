@@ -7,6 +7,34 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
+// memoryTabBar renders the three-tab navigation for the Memory page.
+// activeView is "", "threads", or "conversations".
+templ memoryTabBar(activeView string, lang string) {
+	<nav class="flex gap-1 border-b border-border mb-4" aria-label="Memory tabs">
+		<a
+			href="/observations"
+			class={ "px-4 py-2 text-sm font-medium rounded-t-md border border-transparent -mb-px", templ.KV("border-border border-b-bg text-fg bg-surface", activeView == ""), templ.KV("text-fg-muted hover:text-fg", activeView != "") }
+			if activeView == "" {
+				aria-current="page"
+			}
+		>{ T(lang, "memory.tabs.memories") }</a>
+		<a
+			href="/observations?view=threads"
+			class={ "px-4 py-2 text-sm font-medium rounded-t-md border border-transparent -mb-px", templ.KV("border-border border-b-bg text-fg bg-surface", activeView == "threads"), templ.KV("text-fg-muted hover:text-fg", activeView != "threads") }
+			if activeView == "threads" {
+				aria-current="page"
+			}
+		>{ T(lang, "memory.tabs.threads") }</a>
+		<a
+			href="/observations?view=conversations"
+			class={ "px-4 py-2 text-sm font-medium rounded-t-md border border-transparent -mb-px", templ.KV("border-border border-b-bg text-fg bg-surface", activeView == "conversations"), templ.KV("text-fg-muted hover:text-fg", activeView != "conversations") }
+			if activeView == "conversations" {
+				aria-current="page"
+			}
+		>{ T(lang, "memory.tabs.conversations") }</a>
+	</nav>
+}
+
 // ObservationsPage renders the full page shell for the observations view.
 templ ObservationsPage(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang, theme, sidebarState string) {
 	@Layout(T(lang, "observations.title"), "observations", lang, theme, sidebarState, observationsContent(items, nextCursor, params, projects, lang))
@@ -18,9 +46,46 @@ templ ObservationsPartial(items []services.ObservationRow, nextCursor *string, p
 	@observationsContent(items, nextCursor, params, projects, lang)
 }
 
+// MemoryThreadsPage renders the full Memory page shell with the Threads tab active.
+templ MemoryThreadsPage(topics []services.TopicRow, query, lang, theme, sidebarState string) {
+	@Layout(T(lang, "observations.title"), "observations", lang, theme, sidebarState, memoryThreadsContent(topics, query, lang))
+}
+
+// MemoryThreadsPartial renders only the Threads tab content (no HTML shell).
+templ MemoryThreadsPartial(topics []services.TopicRow, query, lang string) {
+	@memoryThreadsContent(topics, query, lang)
+}
+
+// memoryThreadsContent wraps the tab bar + TopicsPartial content for the Threads view.
+templ memoryThreadsContent(topics []services.TopicRow, query, lang string) {
+	<div class="flex flex-col gap-4">
+		@memoryTabBar("threads", lang)
+		@TopicsPartial(topics, query, lang)
+	</div>
+}
+
+// MemoryConversationsPage renders the full Memory page shell with the Conversations tab active.
+templ MemoryConversationsPage(items []services.PromptRow, searchItems []services.PromptWithSnippet, query, lang, theme, sidebarState string) {
+	@Layout(T(lang, "observations.title"), "observations", lang, theme, sidebarState, memoryConversationsContent(items, searchItems, query, lang))
+}
+
+// MemoryConversationsPartial renders only the Conversations tab content (no HTML shell).
+templ MemoryConversationsPartial(items []services.PromptRow, searchItems []services.PromptWithSnippet, query, lang string) {
+	@memoryConversationsContent(items, searchItems, query, lang)
+}
+
+// memoryConversationsContent wraps the tab bar + PromptsPartial content for the Conversations view.
+templ memoryConversationsContent(items []services.PromptRow, searchItems []services.PromptWithSnippet, query, lang string) {
+	<div class="flex flex-col gap-4">
+		@memoryTabBar("conversations", lang)
+		@PromptsPartial(items, searchItems, query, lang)
+	</div>
+}
+
 // observationsContent is the shared observations body.
 templ observationsContent(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang string) {
 	<div class="flex flex-col gap-4">
+		@memoryTabBar("", lang)
 		<div class="page-header">
 			<h1>{ T(lang, "observations.title") }</h1>
 			<p>{ T(lang, "observations.description") }</p>

@@ -398,6 +398,13 @@
     "obsCount": "{{count}} obs",
     "revisions": "{{count}} rev"
   },
+  "memory": {
+    "tabs": {
+      "memories": "Memorias",
+      "threads": "Hilos",
+      "conversations": "Conversaciones"
+    }
+  },
   "observations": {
     "title": "Observaciones",
     "description": "Filtra, busca e inspecciona cada observación de la base de datos local.",
@@ -410,8 +417,8 @@
       "project": "Proyecto",
       "type": "Tipo",
       "toolName": "Tool name",
-      "scope": "Scope",
-      "topicKey": "Topic key",
+      "scope": "Visibilidad",
+      "topicKey": "Hilo",
       "deletedRows": "Filas eliminadas"
     },
     "placeholders": {
@@ -437,7 +444,7 @@
       "type": "Tipo",
       "title": "Título",
       "tool": "Herramienta",
-      "topic": "Topic",
+      "topic": "Hilo",
       "rev": "Rev",
       "dup": "Dup",
       "empty": "vacío",
@@ -451,7 +458,7 @@
       "deleted": "eliminada",
       "fields": {
         "project": "Proyecto",
-        "topicKey": "Topic key",
+        "topicKey": "Hilo",
         "created": "Creada",
         "updated": "Actualizada",
         "revisions": "Revisiones",
