@@ -54,7 +54,7 @@ This is the centerpiece. **The Brain renders every observation in your database 
 | **Sync project**   | Per-project cloud sync detail and mutation queue                                                                              |
 | **Orphans**        | Observations captured without a project — the capture bugs the CLI can't show                                                 |
 | **Diagnostics**    | Orphan projects, broken sync — a diagnostic engine across all 13 views                                                        |
-| **Settings**       | UI preferences, language, theme                                                                                               |
+| **Settings**       | UI preferences, language, theme, Modules (provider toggles + path entry), and Accounts (profiles)                             |
 
 ---
 
@@ -63,8 +63,8 @@ This is the centerpiece. **The Brain renders every observation in your database 
 ### To run a pre-built binary
 
 - The `engram-explorer` binary for your platform (macOS, Linux, Windows) — download from [GitHub Releases](https://github.com/AlvaroQ/engram-explorer/releases)
-- An existing Engram install: `~/.engram/engram.db` — **or** use the demo seeder (see Quick Start)
 - No Node.js, no runtime dependencies
+- An Engram or Claude Code install is **optional** — the dashboard starts without any data source and walks you through setup on first run (see [First-run onboarding](#first-run-onboarding))
 
 ### To build from source
 
@@ -150,6 +150,153 @@ The `*_templ.go` generated files are committed so `go build ./...` works without
 
 ---
 
+## First-run onboarding
+
+When you start Engram Explorer for the first time — or any time no data source is active — the dashboard shows an **onboarding screen** instead of an error. It does not exit and it does not require Engram to be installed.
+
+The onboarding screen:
+
+- Lists the Tier-1 providers that were auto-detected (Engram database, Claude Code projects directory).
+- Offers a manual path entry field for each provider that was not detected automatically.
+- Activates the first provider you configure and transitions directly to the main overview — no restart required.
+
+Once at least one provider is active, the onboarding screen is no longer shown on subsequent starts.
+
+---
+
+## Modules
+
+**Modules** are the data-source providers that Engram Explorer knows how to connect to. You manage them in **Settings → Modules**.
+
+### Tier-1 providers (shipped)
+
+| Provider                 | ID            | What it reads                                    | Default auto-detect path                         |
+| ------------------------ | ------------- | ------------------------------------------------ | ------------------------------------------------ |
+| **Engram**               | `engram`      | SQLite database written by the Engram daemon     | `~/.engram/engram.db` (or `$ENGRAM_DATA_DIR`)    |
+| **Claude Code Sessions** | `cc-sessions` | JSONL session transcripts written by Claude Code | `~/.claude/projects` (or `$CLAUDE_PROJECTS_DIR`) |
+
+Both are Tier-1: if they are not found at their default paths the UI keeps them visible in Settings with a path entry field, so you can point the dashboard at a non-default location without restarting.
+
+### Tier-2 providers (planned)
+
+Tier-2 providers are silent auto-detect only — shown only when detected, no manual path affordance. None ship in the current release; the framework seam is in place for future extensions.
+
+### Provider states
+
+Each provider row in **Settings → Modules** displays one of these state badges:
+
+| Badge          | Meaning                                                                   |
+| -------------- | ------------------------------------------------------------------------- |
+| **enabled**    | Provider is open and serving requests; its sidebar section is visible     |
+| **detected**   | Source was found but the provider has not been activated yet              |
+| **disabled**   | User toggled the provider off; handles are closed, sidebar section hidden |
+| **errored**    | Provider failed to open; check the path and data source health            |
+| **registered** | Provider type is known but detection has not been attempted yet           |
+
+### Activating a provider manually (Tier-1)
+
+1. Open **Settings → Modules**.
+2. Find the provider row showing **detected** (not configured) or **registered**.
+3. Enter the path to the data source in the path field.
+4. Click **Validate & Activate** — the dashboard validates the path before opening it.
+5. On success the provider becomes **enabled** and its sidebar section appears immediately; no restart is needed.
+6. The path is persisted to `~/.engram/config.json` and survives restarts.
+
+---
+
+## Accounts
+
+**Accounts** are named configuration profiles. Each profile stores a discrete set of provider paths and activation states, so you can maintain separate configurations for (for example) a personal Engram database and a work one.
+
+You manage profiles in **Settings → Accounts**.
+
+### Creating a profile
+
+1. Open **Settings → Accounts**.
+2. Enter a name for the new profile and click **Create**.
+3. The profile is created with empty provider settings. Go to **Settings → Modules** to configure providers for it.
+
+### Switching profiles
+
+1. Open **Settings → Accounts** (or use the account switcher dropdown in the sidebar header when two or more profiles exist).
+2. Click **Switch** next to the profile you want to activate.
+
+Profile switches are **hot-swap** — no restart required. The server closes the current profile's provider handles and opens the new profile's handles. In-flight requests complete against the previous profile before the switch takes effect.
+
+If a profile references a path that no longer exists, the affected provider is marked **unavailable** and an inline warning is shown; other providers in the profile still load normally.
+
+### Default profile
+
+A **default** profile is created automatically on first run. It is seeded from environment variables and the legacy `~/.engram/explorer-settings.json` file if one exists, so existing users see no behavior change after upgrading.
+
+### Persistence
+
+The active profile name and all profile settings are stored in `~/.engram/config.json`. The active profile is restored on restart.
+
+---
+
+## Configuration
+
+### config.json (persistent settings)
+
+Provider paths and account profiles are stored in a JSON file written atomically on every change.
+
+**Location:** `$ENGRAM_DATA_DIR/config.json` (default: `~/.engram/config.json`)
+
+**Schema:**
+
+```json
+{
+  "version": 1,
+  "activeProfile": "default",
+  "profiles": {
+    "default": {
+      "providers": {
+        "engram": {
+          "enabled": true,
+          "path": "/Users/you/.engram/engram.db",
+          "daemonUrl": "http://127.0.0.1:7437"
+        },
+        "cc-sessions": {
+          "enabled": true,
+          "path": "/Users/you/.claude/projects"
+        }
+      }
+    }
+  }
+}
+```
+
+You do not need to edit this file manually — the Settings UI writes it for you.
+
+### Precedence
+
+When resolving a data-source path or daemon URL, the server applies this order (highest wins):
+
+1. **Environment variable** — `ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR`, `ENGRAM_DAEMON_URL`, etc.
+2. **config.json** — the active profile's per-provider settings.
+3. **Legacy `explorer-settings.json`** — read once on first run to seed the default profile; not re-read on subsequent starts.
+4. **Built-in default** — `~/.engram/engram.db`, `~/.claude/projects`, port 7437, etc.
+
+Existing users who rely on environment variables see no change — env vars continue to take the highest precedence.
+
+### Environment variables
+
+| Env var                    | Default                 | Purpose                                                                            |
+| -------------------------- | ----------------------- | ---------------------------------------------------------------------------------- |
+| `ENGRAM_DATA_DIR`          | `~/.engram`             | Directory containing `engram.db`; also the location of `config.json`               |
+| `CLAUDE_PROJECTS_DIR`      | `~/.claude/projects`    | Directory where Claude Code stores session transcripts                             |
+| `DASHBOARD_HOST`           | `127.0.0.1`             | HTTP bind address                                                                  |
+| `DASHBOARD_PORT`           | `8787`                  | HTTP listen port                                                                   |
+| `ENGRAM_PORT`              | `7437`                  | Port of the local `engram serve` daemon (used when `ENGRAM_DAEMON_URL` is not set) |
+| `ENGRAM_DAEMON_URL`        | `http://127.0.0.1:7437` | Full base URL of the Engram daemon (overrides `ENGRAM_PORT`)                       |
+| `ENGRAM_DAEMON_TIMEOUT_MS` | `1500`                  | HTTP timeout for daemon proxy calls (milliseconds)                                 |
+| `LOG_LEVEL`                | `info` / `debug` in dev | Logging verbosity: `debug`, `info`, `warn`, `error`                                |
+| `ENGRAM_DASH_ENV`          | `production`            | Set to `development` to expose internal error details in API responses             |
+| `ENGRAM_DASH_READONLY`     | `false`                 | Set to `true` to disable all mutating routes (returns `503`)                       |
+
+---
+
 ## Editing your memory
 
 Engram Explorer is **read-first**: every view works against the read-only pool and never touches your data. On top of that it offers a few **explicit, user-confirmed** edits so you can fix the operational problems it surfaces without dropping to the CLI:
@@ -191,8 +338,12 @@ engram-explorer/
 │   ├── engram-explorer/            # Binary entry point — config → container → serve
 │   └── seed-demo/                  # Demo database seeder (generates ./demo/engram.db)
 ├── internal/
-│   ├── config/                     # Env-var config (Config struct + Load())
+│   ├── config/                     # Env-var config, ProfileStore, EnsureConfig (config.json read/write)
 │   ├── httpapi/                    # net/http mux, routes_*.go, middleware, container (JSON API /api/*)
+│   ├── providers/                  # Provider port + Registry (ordered, state-machine, hot-swap)
+│   │   ├── engram/                 # Engram provider adapter (SQLite, daemon proxy, health)
+│   │   ├── ccsessions/             # Claude Code Sessions provider adapter (JSONL reader)
+│   │   └── providertest/           # FakeProvider + test helpers
 │   ├── ui/                         # templ+HTMX server-rendered UI (all pages): handlers_*.go, *.templ, i18n.go
 │   │   ├── locales/                # en.json, es.json
 │   │   └── static/                 # app.css (Tailwind CLI output), styles.css, htmx.min.js
@@ -214,23 +365,6 @@ engram-explorer/
 └── testdata/
     └── schema/engram-schema.sql    # Reference schema used by Go integration tests
 ```
-
----
-
-## Configuration
-
-All configuration is via environment variables. Defaults work out of the box for a standard Engram install.
-
-| Env var                | Default                       | Purpose                                                                                                                      |
-| ---------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `ENGRAM_DATA_DIR`      | `~/.engram`                   | Directory where `engram.db` lives                                                                                            |
-| `DASHBOARD_PORT`       | `8787`                        | HTTP listen port                                                                                                             |
-| `DASHBOARD_HOST`       | `127.0.0.1`                   | HTTP bind address (LAN exposure not recommended)                                                                             |
-| `ENGRAM_PORT`          | `7437`                        | Port of the local `engram serve` daemon                                                                                      |
-| `ENGRAM_DAEMON_URL`    | `http://127.0.0.1:7437`       | Full base URL of the daemon (overrides `ENGRAM_PORT`)                                                                        |
-| `LOG_LEVEL`            | `info` (prod) / `debug` (dev) | Logging verbosity: `debug`, `info`, `warn`, `error`                                                                          |
-| `ENGRAM_DASH_ENV`      | `production`                  | Set to `development` to expose internal error details in API responses                                                       |
-| `ENGRAM_DASH_READONLY` | `false`                       | Set to `true` to run as a pure read-only viewer — the read-write pool is never opened and every mutating route returns `503` |
 
 ---
 
@@ -264,14 +398,18 @@ go run ./cmd/engram-explorer
 
 ## Troubleshooting
 
-### Database not found
+### No data sources detected on first run
 
-**`failed to open Engram database: ...`** — the binary looks for `engram.db` in `ENGRAM_DATA_DIR` (default `~/.engram`). Two options:
+The dashboard starts without any data source and shows the **onboarding screen** instead of crashing. From there you can activate Engram or Claude Code Sessions (see [First-run onboarding](#first-run-onboarding)).
 
-1. **No Engram yet?** Run `go run ./cmd/seed-demo` to generate `./demo/engram.db`, then `ENGRAM_DATA_DIR=./demo ./engram-explorer`.
-2. **Engram installed elsewhere?** Set `ENGRAM_DATA_DIR=/path/to/dir`.
+If you have Engram installed but the dashboard does not detect it automatically:
 
-The binary does **not** create the database. To get a real one: `brew install gentleman-programming/tap/engram && engram serve`.
+1. Go to **Settings → Modules** and enter the path to your `engram.db` file manually.
+2. Or set `ENGRAM_DATA_DIR=/path/to/dir` before starting the binary.
+
+To get a real Engram database: `brew install gentleman-programming/tap/engram && engram serve`.
+
+To try the dashboard with demo data: `go run ./cmd/seed-demo`, then `ENGRAM_DATA_DIR=./demo ./engram-explorer`.
 
 ### Daemon offline
 
