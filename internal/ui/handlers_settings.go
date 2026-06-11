@@ -20,9 +20,9 @@ func handleSettingsPage(d Deps) http.HandlerFunc {
 		data := buildSettingsData(d, r, lang, theme)
 
 		if IsHTMX(r) {
-			render(w, r, SettingsPartial(data))
+			renderDeps(w, r, d, SettingsPartial(data))
 		} else {
-			render(w, r, SettingsPage(data))
+			renderDeps(w, r, d, SettingsPage(data))
 		}
 	}
 }
@@ -36,12 +36,16 @@ func handleNavVisibilityPost() http.HandlerFunc {
 			http.Error(w, "bad form", http.StatusBadRequest)
 			return
 		}
+		// Section values are provider IDs: "engram", "cc-sessions".
+		// The legacy "claude" value is also accepted for backward compat.
+		section := r.FormValue("section")
 		var cookieName string
-		switch r.FormValue("section") {
+		switch section {
 		case "engram":
 			cookieName = "nav_engram"
-		case "claude":
-			cookieName = "nav_claude"
+		case "cc-sessions", "claude":
+			// "claude" is the legacy value; map to the provider-ID cookie.
+			cookieName = "nav_cc-sessions"
 		default:
 			http.Error(w, "invalid section", http.StatusBadRequest)
 			return
@@ -181,10 +185,12 @@ func buildSettingsData(d Deps, r *http.Request, lang, theme string) settingsData
 		DaemonURL:   d.Config.DaemonBaseURL,
 		DaemonOk:    daemonResult.OK,
 		DaemonError: daemonErrMsg,
-		ShowEngram:  prefs.ShowEngram,
-		ShowClaude:  prefs.ShowClaude,
-		Lang:        lang,
-		Theme:       theme,
+		ShowNavGroups: map[string]bool{
+			"engram":      prefs.isShown("engram"),
+			"cc-sessions": prefs.isShown("cc-sessions"),
+		},
+		Lang:  lang,
+		Theme: theme,
 	}
 }
 
@@ -216,7 +222,7 @@ func handleEngramDBPost(d Deps) http.HandlerFunc {
 		if errMsg != "" {
 			data := buildSettingsData(d, r, lang, theme)
 			data.EngramPathError = errMsg
-			renderSettings(w, r, data)
+			renderSettings(w, r, d, data)
 			return
 		}
 		redirectSettings(w, r)
@@ -250,7 +256,7 @@ func handleClaudeDirPost(d Deps) http.HandlerFunc {
 		if errMsg != "" {
 			data := buildSettingsData(d, r, lang, theme)
 			data.ClaudePathError = errMsg
-			renderSettings(w, r, data)
+			renderSettings(w, r, d, data)
 			return
 		}
 		redirectSettings(w, r)
@@ -258,11 +264,12 @@ func handleClaudeDirPost(d Deps) http.HandlerFunc {
 }
 
 // renderSettings renders the settings page (partial for HTMX, full otherwise).
-func renderSettings(w http.ResponseWriter, r *http.Request, data settingsData) {
+// d is used to pass NavGroups into the render context.
+func renderSettings(w http.ResponseWriter, r *http.Request, d Deps, data settingsData) {
 	if IsHTMX(r) {
-		render(w, r, SettingsPartial(data))
+		renderDeps(w, r, d, SettingsPartial(data))
 	} else {
-		render(w, r, SettingsPage(data))
+		renderDeps(w, r, d, SettingsPage(data))
 	}
 }
 

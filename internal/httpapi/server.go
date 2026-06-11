@@ -160,6 +160,8 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 				// keep working on the registry-backed path.
 				deps.ReloadEngramDB = c.ReloadEngramDB
 				deps.SetClaudeDir = c.SetClaudeDir
+				// Wire NavGroups so the sidebar is data-driven from the registry.
+				deps.NavGroups = reg.NavGroups
 				ui.Mount(mux, deps)
 				engramMounted = true
 			}
@@ -187,6 +189,7 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 			Paths:          c.Paths,
 			ReloadEngramDB: c.ReloadEngramDB,
 			SetClaudeDir:   c.SetClaudeDir,
+			NavGroups:      reg.NavGroups,
 		})
 	}
 }

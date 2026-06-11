@@ -52,7 +52,7 @@ func handleProjectDetailPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, ProjectDetailPartial(*overview, syncRow, lang))
 		} else {
-			render(w, r, ProjectDetailPage(*overview, syncRow, lang, theme))
+			renderDeps(w, r, d, ProjectDetailPage(*overview, syncRow, lang, theme))
 		}
 	}
 }

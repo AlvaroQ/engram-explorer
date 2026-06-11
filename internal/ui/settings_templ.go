@@ -19,11 +19,12 @@ type settingsData struct {
 	DaemonURL       string
 	DaemonOk        bool
 	DaemonError     string
-	ShowEngram      bool
-	ShowClaude      bool
-	UptimeS         int
-	Lang            string
-	Theme           string
+	// ShowNavGroups maps provider ID to visibility (true=shown).
+	// Keys: "engram", "cc-sessions". Replaces the old ShowEngram/ShowClaude booleans.
+	ShowNavGroups map[string]bool
+	UptimeS       int
+	Lang          string
+	Theme         string
 }
 
 // SettingsPage renders the full settings page shell.
@@ -117,7 +118,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 37, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 38, Col: 36}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -130,7 +131,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.section.appearance"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 42, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 43, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -143,7 +144,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.language"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 45, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 46, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -156,7 +157,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.languageDescription"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 46, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 47, Col: 75}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -178,7 +179,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var8).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -191,7 +192,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "lang.en"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 56, Col: 29}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 57, Col: 29}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -213,7 +214,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var11).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -226,7 +227,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "lang.es"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 66, Col: 29}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 67, Col: 29}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -239,7 +240,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.theme"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 73, Col: 61}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 74, Col: 61}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -261,7 +262,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var15).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
@@ -274,7 +275,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.themeDark"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 83, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 84, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
@@ -296,7 +297,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var18).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
@@ -309,7 +310,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var20 string
 		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.themeLight"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 93, Col: 41}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 94, Col: 41}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 		if templ_7745c5c3_Err != nil {
@@ -322,7 +323,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var21 string
 		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.navTitle"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 102, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 103, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 		if templ_7745c5c3_Err != nil {
@@ -335,7 +336,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var22 string
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.navHeaderDesc"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 103, Col: 71}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 104, Col: 71}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 		if templ_7745c5c3_Err != nil {
@@ -348,7 +349,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var23 string
 		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.navEngram"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 106, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 107, Col: 65}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 		if templ_7745c5c3_Err != nil {
@@ -361,7 +362,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var24 string
 		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.navDescription"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 107, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 108, Col: 70}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 		if templ_7745c5c3_Err != nil {
@@ -371,7 +372,7 @@ func settingsContent(d settingsData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = navVisibilityControls(d.Lang, "engram", d.ShowEngram).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = navVisibilityControls(d.Lang, "engram", d.ShowNavGroups["engram"]).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -382,7 +383,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.navClaude"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 113, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 114, Col: 65}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
@@ -392,7 +393,7 @@ func settingsContent(d settingsData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = navVisibilityControls(d.Lang, "claude", d.ShowClaude).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = navVisibilityControls(d.Lang, "cc-sessions", d.ShowNavGroups["cc-sessions"]).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -403,7 +404,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.section.system"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 121, Col: 74}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 122, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 		if templ_7745c5c3_Err != nil {
@@ -416,7 +417,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var27 string
 		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.db.description"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 122, Col: 72}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 123, Col: 72}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 		if templ_7745c5c3_Err != nil {
@@ -429,7 +430,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var28 string
 		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.row.path"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 124, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 125, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 		if templ_7745c5c3_Err != nil {
@@ -443,7 +444,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var29 string
 			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(d.DBPath)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 127, Col: 16}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 128, Col: 16}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 			if templ_7745c5c3_Err != nil {
@@ -453,7 +454,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var30 string
 			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs("—")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 129, Col: 13}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 130, Col: 13}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 			if templ_7745c5c3_Err != nil {
@@ -467,7 +468,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var31 string
 		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.row.status"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 134, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 135, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 		if templ_7745c5c3_Err != nil {
@@ -485,7 +486,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var32 string
 			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.badge.connected"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 137, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 138, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 			if templ_7745c5c3_Err != nil {
@@ -503,7 +504,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var33 string
 			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.badge.unavailable"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 139, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 140, Col: 78}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 			if templ_7745c5c3_Err != nil {
@@ -521,7 +522,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var34 string
 		templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(d.DBPath)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 147, Col: 21}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 148, Col: 21}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 		if templ_7745c5c3_Err != nil {
@@ -534,7 +535,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var35 string
 		templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.db.editLabel"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 152, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 153, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 		if templ_7745c5c3_Err != nil {
@@ -547,7 +548,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var36 string
 		templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.path.apply"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 154, Col: 91}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 155, Col: 91}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 		if templ_7745c5c3_Err != nil {
@@ -560,7 +561,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.db.editHint"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 156, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 157, Col: 65}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 		if templ_7745c5c3_Err != nil {
@@ -578,7 +579,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var38 string
 			templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(d.EngramPathError)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 158, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 159, Col: 45}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 			if templ_7745c5c3_Err != nil {
@@ -596,7 +597,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var39 string
 		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.db.export"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 161, Col: 90}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 162, Col: 90}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {
@@ -609,7 +610,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var40 string
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.db.import"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 169, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 170, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
@@ -622,7 +623,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var41 string
 		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.claude"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 178, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 179, Col: 66}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 		if templ_7745c5c3_Err != nil {
@@ -635,7 +636,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var42 string
 		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.claudeDescription"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 179, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 180, Col: 75}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 		if templ_7745c5c3_Err != nil {
@@ -648,7 +649,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var43 string
 		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.row.path"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 181, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 182, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 		if templ_7745c5c3_Err != nil {
@@ -662,7 +663,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var44 string
 			templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(d.ClaudePath)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 184, Col: 20}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 185, Col: 20}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 			if templ_7745c5c3_Err != nil {
@@ -672,7 +673,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var45 string
 			templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs("—")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 186, Col: 13}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 187, Col: 13}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 			if templ_7745c5c3_Err != nil {
@@ -686,7 +687,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var46 string
 		templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.row.status"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 191, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 192, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 		if templ_7745c5c3_Err != nil {
@@ -704,7 +705,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var47 string
 			templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.badge.found"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 194, Col: 70}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 195, Col: 70}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 			if templ_7745c5c3_Err != nil {
@@ -722,7 +723,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var48 string
 			templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.badge.missing"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 196, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 197, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 			if templ_7745c5c3_Err != nil {
@@ -740,7 +741,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var49 string
 		templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(d.ClaudePath)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 204, Col: 25}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 205, Col: 25}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 		if templ_7745c5c3_Err != nil {
@@ -753,7 +754,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var50 string
 		templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.claudeEditLabel"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 209, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 210, Col: 55}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 		if templ_7745c5c3_Err != nil {
@@ -766,7 +767,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var51 string
 		templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.path.apply"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 211, Col: 91}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 212, Col: 91}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
 		if templ_7745c5c3_Err != nil {
@@ -779,7 +780,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var52 string
 		templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.claudeEditHint"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 213, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 214, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 		if templ_7745c5c3_Err != nil {
@@ -797,7 +798,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var53 string
 			templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(d.ClaudePathError)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 215, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 216, Col: 45}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
 			if templ_7745c5c3_Err != nil {
@@ -815,7 +816,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var54 string
 		templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.daemon"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 221, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 222, Col: 66}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var54))
 		if templ_7745c5c3_Err != nil {
@@ -828,7 +829,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var55 string
 		templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.row.url"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 223, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 224, Col: 66}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var55))
 		if templ_7745c5c3_Err != nil {
@@ -842,7 +843,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var56 string
 			templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(d.DaemonURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 226, Col: 19}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 227, Col: 19}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 			if templ_7745c5c3_Err != nil {
@@ -852,7 +853,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var57 string
 			templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.JoinStringErrs("—")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 228, Col: 13}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 229, Col: 13}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var57))
 			if templ_7745c5c3_Err != nil {
@@ -866,7 +867,7 @@ func settingsContent(d settingsData) templ.Component {
 		var templ_7745c5c3_Var58 string
 		templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.row.status"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 233, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 234, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var58))
 		if templ_7745c5c3_Err != nil {
@@ -884,7 +885,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var59 string
 			templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.badge.reachable"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 236, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 237, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var59))
 			if templ_7745c5c3_Err != nil {
@@ -902,7 +903,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var60 string
 			templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "settings.badge.unreachable"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 238, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 239, Col: 78}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var60))
 			if templ_7745c5c3_Err != nil {
@@ -925,7 +926,7 @@ func settingsContent(d settingsData) templ.Component {
 			var templ_7745c5c3_Var61 string
 			templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.JoinStringErrs(d.DaemonError)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 243, Col: 41}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 244, Col: 41}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var61))
 			if templ_7745c5c3_Err != nil {
@@ -974,7 +975,7 @@ func navVisibilityControls(lang, section string, shown bool) templ.Component {
 		var templ_7745c5c3_Var63 string
 		templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.JoinStringErrs(section)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 254, Col: 54}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 255, Col: 54}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var63))
 		if templ_7745c5c3_Err != nil {
@@ -996,7 +997,7 @@ func navVisibilityControls(lang, section string, shown bool) templ.Component {
 		var templ_7745c5c3_Var65 string
 		templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var64).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var65))
 		if templ_7745c5c3_Err != nil {
@@ -1009,7 +1010,7 @@ func navVisibilityControls(lang, section string, shown bool) templ.Component {
 		var templ_7745c5c3_Var66 string
 		templ_7745c5c3_Var66, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "settings.navShow"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 261, Col: 33}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 262, Col: 33}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var66))
 		if templ_7745c5c3_Err != nil {
@@ -1022,7 +1023,7 @@ func navVisibilityControls(lang, section string, shown bool) templ.Component {
 		var templ_7745c5c3_Var67 string
 		templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinStringErrs(section)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 265, Col: 54}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 266, Col: 54}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var67))
 		if templ_7745c5c3_Err != nil {
@@ -1044,7 +1045,7 @@ func navVisibilityControls(lang, section string, shown bool) templ.Component {
 		var templ_7745c5c3_Var69 string
 		templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var68).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var69))
 		if templ_7745c5c3_Err != nil {
@@ -1057,7 +1058,7 @@ func navVisibilityControls(lang, section string, shown bool) templ.Component {
 		var templ_7745c5c3_Var70 string
 		templ_7745c5c3_Var70, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "settings.navHide"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 272, Col: 33}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `settings.templ`, Line: 273, Col: 33}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var70))
 		if templ_7745c5c3_Err != nil {

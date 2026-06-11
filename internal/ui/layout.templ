@@ -1,5 +1,11 @@
 package ui
 
+import (
+	"context"
+
+	"github.com/AlvaroQ/engram-explorer/internal/providers"
+)
+
 // Layout renders the full HTML shell with sidebar navigation and a padded main content area.
 // activeNav should match one of the nav item keys (e.g. "topics", "observations").
 templ Layout(title, activeNav, lang, theme string, content templ.Component) {
@@ -55,6 +61,9 @@ templ LayoutFullBleed(title, activeNav, lang, theme string, content templ.Compon
 
 // Sidebar renders the primary navigation sidebar.
 // activeNav is compared against each item's key to mark the active link.
+// When NavGroups are present in ctx (injected by renderDeps via NavContextWithGroups),
+// the sidebar is data-driven from the registry NavGroups; otherwise it falls back
+// to the legacy hardcoded two-section layout (engram + cc-sessions).
 templ Sidebar(activeNav, lang string) {
 	<aside class="sidebar">
 		<div class="sidebar-brand">
@@ -65,36 +74,67 @@ templ Sidebar(activeNav, lang string) {
 			@sidebarSettingsIcon(activeNav, T(lang, "sidebar.settings"))
 		</div>
 		<nav class="sidebar-nav-wrap" aria-label={ T(lang, "sidebar.primaryNav") }>
-			if navShowEngram(ctx) {
-				@sidebarGroup(T(lang, "sidebar.groupEngram"), "engram")
-				<ul class="sidebar-nav">
-					@sidebarLink("/", "overview", activeNav, T(lang, "sidebar.overview"))
-					@sidebarLink("/brain", "brain", activeNav, T(lang, "sidebar.knowledge"))
-					@sidebarLink("/observations", "observations", activeNav, T(lang, "sidebar.observations"))
-					@sidebarLink("/sessions", "sessions", activeNav, T(lang, "sidebar.sessions"))
-					@sidebarLink("/projects", "projects", activeNav, T(lang, "sidebar.projects"))
-					@sidebarLink("/prompts", "prompts", activeNav, T(lang, "sidebar.prompts"))
-					@sidebarLink("/topics", "topics", activeNav, T(lang, "sidebar.topics"))
-					@sidebarExternalLink("/doctor/sync", "syncHealth", activeNav, T(lang, "sidebar.syncHealth"))
-					@sidebarExternalLink("/doctor/orphans", "orphans", activeNav, "Orphans")
-				</ul>
-			}
-			if navShowEngram(ctx) && navShowClaude(ctx) {
-				<div class="sidebar-divider"></div>
-			}
-			if navShowClaude(ctx) {
-				@sidebarGroup(T(lang, "sidebar.groupClaudeCode"), "claude")
-				<ul class="sidebar-nav">
-					@sidebarLink("/cc-overview", "cc-overview", activeNav, T(lang, "sidebar.ccOverview"))
-					@sidebarLink("/cc-sessions", "cc-sessions", activeNav, T(lang, "sidebar.ccSessions"))
-				</ul>
+			if groups := navGroupsFromContext(ctx); len(groups) > 0 {
+				// Data-driven path: registry provided NavGroups (WU-7+).
+				for i, group := range groups {
+					if navShowGroup(ctx, group.ID) {
+						@sidebarGroup(T(lang, group.LabelKey), group.ID)
+						<ul class="sidebar-nav">
+							for _, link := range group.Links {
+								if link.External {
+									@sidebarExternalLink(link.Href, link.Key, activeNav, T(lang, link.LabelKey))
+								} else {
+									@sidebarLink(link.Href, link.Key, activeNav, T(lang, link.LabelKey))
+								}
+							}
+						</ul>
+					}
+					if i < len(groups)-1 {
+						@sidebarDividerIfBothVisible(ctx, groups, i, lang)
+					}
+				}
+			} else {
+				// Legacy fallback: hardcoded two-section layout when no NavGroups
+				// are provided (e.g. existing tests, legacy container path).
+				if navShowEngram(ctx) {
+					@sidebarGroup(T(lang, "sidebar.groupEngram"), "engram")
+					<ul class="sidebar-nav">
+						@sidebarLink("/", "overview", activeNav, T(lang, "sidebar.overview"))
+						@sidebarLink("/brain", "brain", activeNav, T(lang, "sidebar.knowledge"))
+						@sidebarLink("/observations", "observations", activeNav, T(lang, "sidebar.observations"))
+						@sidebarLink("/sessions", "sessions", activeNav, T(lang, "sidebar.sessions"))
+						@sidebarLink("/projects", "projects", activeNav, T(lang, "sidebar.projects"))
+						@sidebarLink("/prompts", "prompts", activeNav, T(lang, "sidebar.prompts"))
+						@sidebarLink("/topics", "topics", activeNav, T(lang, "sidebar.topics"))
+						@sidebarExternalLink("/doctor/sync", "syncHealth", activeNav, T(lang, "sidebar.syncHealth"))
+						@sidebarExternalLink("/doctor/orphans", "orphans", activeNav, "Orphans")
+					</ul>
+				}
+				if navShowEngram(ctx) && navShowClaude(ctx) {
+					<div class="sidebar-divider"></div>
+				}
+				if navShowClaude(ctx) {
+					@sidebarGroup(T(lang, "sidebar.groupClaudeCode"), "claude")
+					<ul class="sidebar-nav">
+						@sidebarLink("/cc-overview", "cc-overview", activeNav, T(lang, "sidebar.ccOverview"))
+						@sidebarLink("/cc-sessions", "cc-sessions", activeNav, T(lang, "sidebar.ccSessions"))
+					</ul>
+				}
 			}
 		</nav>
 	</aside>
 }
 
+// sidebarDividerIfBothVisible renders a divider between two sidebar groups
+// only when both the current and next group are visible (cookie-check).
+templ sidebarDividerIfBothVisible(ctx context.Context, groups []providers.NavGroup, idx int, lang string) {
+	if navShowGroup(ctx, groups[idx].ID) && navShowGroup(ctx, groups[idx+1].ID) {
+		<div class="sidebar-divider"></div>
+	}
+}
+
 // sidebarGroup renders a section heading that introduces a group of nav links.
-// variant ("engram" or "claude") selects the accent color of the leading dot.
+// variant ("engram", "claude", or provider ID) selects the accent color CSS class.
 templ sidebarGroup(label, variant string) {
 	<p class={ "sidebar-group-label sidebar-group-" + variant }>
 		<span class="sidebar-group-dot" aria-hidden="true"></span>

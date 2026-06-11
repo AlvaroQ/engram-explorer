@@ -24,7 +24,7 @@ func handleTopicsPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, TopicsPartial(topics, q, lang))
 		} else {
-			render(w, r, TopicsPage(topics, q, lang, theme))
+			renderDeps(w, r, d, TopicsPage(topics, q, lang, theme))
 		}
 	}
 }

@@ -77,7 +77,7 @@ func handleOverviewPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, OverviewPartial(data.Overview, data.Issues, lang))
 		} else {
-			render(w, r, OverviewPage(data.Overview, data.Issues, lang, theme))
+			renderDeps(w, r, d, OverviewPage(data.Overview, data.Issues, lang, theme))
 		}
 	}
 }

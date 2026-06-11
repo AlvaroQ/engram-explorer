@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
+	"github.com/AlvaroQ/engram-explorer/internal/providers"
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 	"github.com/a-h/templ"
@@ -26,6 +27,12 @@ type Deps struct {
 	// transcript directory. Both validate and persist the override.
 	ReloadEngramDB func(path string) error
 	SetClaudeDir   func(dir string) error
+
+	// NavGroups, when non-nil, is called per-request to obtain the current
+	// sidebar navigation groups from the provider registry. When nil the sidebar
+	// falls back to the legacy hardcoded two-section layout (engram + claude).
+	// Wired in production from Registry.NavGroups via NewContainerWithRegistry.
+	NavGroups func() []providers.NavGroup
 }
 
 // IsHTMX reports whether the request was issued by HTMX.
@@ -33,9 +40,18 @@ func IsHTMX(r *http.Request) bool {
 	return r.Header.Get("HX-Request") == "true"
 }
 
+// renderDeps writes a templ component to the response with text/html content
+// type. It enriches the context with nav prefs AND, when d.NavGroups is set,
+// the current NavGroups from the registry for the data-driven sidebar.
+func renderDeps(w http.ResponseWriter, r *http.Request, d Deps, c templ.Component) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = c.Render(NavContextWithGroups(r, d.NavGroups), w)
+}
+
 // render writes a templ component to the response with text/html content type.
 // The context carries the sidebar section-visibility prefs so the shared
 // Sidebar can honour them.
+// Deprecated: use renderDeps when a Deps is available (passes NavGroups).
 func render(w http.ResponseWriter, r *http.Request, c templ.Component) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = c.Render(NavContext(r), w)

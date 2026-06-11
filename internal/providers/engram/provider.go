@@ -169,6 +169,7 @@ func (p *engramProvider) Routes(mux *http.ServeMux, inst providers.Instance, log
 }
 
 // Nav returns the sidebar NavGroup for the Engram provider.
+// Link order matches the legacy hardcoded sidebar for behavioral parity.
 func (p *engramProvider) Nav(inst providers.Instance) providers.NavGroup {
 	return providers.NavGroup{
 		ID:       "engram",
@@ -176,12 +177,14 @@ func (p *engramProvider) Nav(inst providers.Instance) providers.NavGroup {
 		Featured: true,
 		Links: []providers.NavLink{
 			{Href: "/", Key: "overview", LabelKey: "nav.overview"},
+			{Href: "/brain", Key: "brain", LabelKey: "nav.brain"},
 			{Href: "/observations", Key: "observations", LabelKey: "nav.observations"},
 			{Href: "/sessions", Key: "sessions", LabelKey: "nav.sessions"},
+			{Href: "/projects", Key: "projects", LabelKey: "nav.projects"},
 			{Href: "/prompts", Key: "prompts", LabelKey: "nav.prompts"},
 			{Href: "/topics", Key: "topics", LabelKey: "nav.topics"},
-			{Href: "/projects", Key: "projects", LabelKey: "nav.projects"},
-			{Href: "/brain", Key: "brain", LabelKey: "nav.brain"},
+			{Href: "/doctor/sync", Key: "syncHealth", LabelKey: "nav.syncHealth", External: true},
+			{Href: "/doctor/orphans", Key: "orphans", LabelKey: "nav.orphans", External: true},
 		},
 	}
 }

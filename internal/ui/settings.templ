@@ -11,11 +11,12 @@ type settingsData struct {
 	DaemonURL       string
 	DaemonOk        bool
 	DaemonError     string
-	ShowEngram      bool
-	ShowClaude      bool
-	UptimeS         int
-	Lang            string
-	Theme           string
+	// ShowNavGroups maps provider ID to visibility (true=shown).
+	// Keys: "engram", "cc-sessions". Replaces the old ShowEngram/ShowClaude booleans.
+	ShowNavGroups map[string]bool
+	UptimeS       int
+	Lang          string
+	Theme         string
 }
 
 // SettingsPage renders the full settings page shell.
@@ -106,13 +107,13 @@ templ settingsContent(d settingsData) {
 					<p class="preference-name">{ T(d.Lang, "settings.navEngram") }</p>
 					<p class="preference-desc">{ T(d.Lang, "settings.navDescription") }</p>
 				</div>
-				@navVisibilityControls(d.Lang, "engram", d.ShowEngram)
+				@navVisibilityControls(d.Lang, "engram", d.ShowNavGroups["engram"])
 			</div>
 			<div class="preference-row">
 				<div class="preference-label">
 					<p class="preference-name">{ T(d.Lang, "settings.navClaude") }</p>
 				</div>
-				@navVisibilityControls(d.Lang, "claude", d.ShowClaude)
+				@navVisibilityControls(d.Lang, "cc-sessions", d.ShowNavGroups["cc-sessions"])
 			</div>
 		</section>
 

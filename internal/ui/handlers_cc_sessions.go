@@ -18,7 +18,7 @@ func handleCCOverviewPage(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
-		render(w, r, CCOverviewPage(lang, theme))
+		renderDeps(w, r, d, CCOverviewPage(lang, theme))
 	}
 }
 
@@ -44,7 +44,7 @@ func handleCCSessionsListPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, CCSListPartial(result, params, lang))
 		} else {
-			render(w, r, CCSListPage(result, params, lang, theme))
+			renderDeps(w, r, d, CCSListPage(result, params, lang, theme))
 		}
 	}
 }
@@ -121,7 +121,7 @@ func handleCCSessionDetailPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, CCSDetailPartial(detail, lang))
 		} else {
-			render(w, r, CCSDetailPage(detail, lang, theme))
+			renderDeps(w, r, d, CCSDetailPage(detail, lang, theme))
 		}
 	}
 }

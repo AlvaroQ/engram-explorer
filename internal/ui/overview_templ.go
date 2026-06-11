@@ -124,7 +124,7 @@ func overviewContent(data services.OverviewResponse, issues services.SyncIssuesR
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.activity.title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 36, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 36, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -137,7 +137,7 @@ func overviewContent(data services.OverviewResponse, issues services.SyncIssuesR
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.activity.description"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 37, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 37, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -158,7 +158,7 @@ func overviewContent(data services.OverviewResponse, issues services.SyncIssuesR
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.byType.title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 48, Col: 44}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 48, Col: 44}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -171,7 +171,7 @@ func overviewContent(data services.OverviewResponse, issues services.SyncIssuesR
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.byType.description"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 49, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 49, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -218,7 +218,7 @@ func overviewContent(data services.OverviewResponse, issues services.SyncIssuesR
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.recent.title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 74, Col: 43}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 74, Col: 43}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -231,7 +231,7 @@ func overviewContent(data services.OverviewResponse, issues services.SyncIssuesR
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.recent.description"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 75, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 75, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -252,7 +252,7 @@ func overviewContent(data services.OverviewResponse, issues services.SyncIssuesR
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.issues.title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 86, Col: 43}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 86, Col: 43}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -265,7 +265,7 @@ func overviewContent(data services.OverviewResponse, issues services.SyncIssuesR
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.issues.description"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 87, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 87, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -283,7 +283,7 @@ func overviewContent(data services.OverviewResponse, issues services.SyncIssuesR
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.issues.generatedAt", "time", issues.GeneratedAt))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 90, Col: 109}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 90, Col: 109}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
@@ -339,7 +339,7 @@ func overviewKPICard(href, label, sublabel, value string) templ.Component {
 		var templ_7745c5c3_Var14 templ.SafeURL
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 103, Col: 28}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 103, Col: 28}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -352,7 +352,7 @@ func overviewKPICard(href, label, sublabel, value string) templ.Component {
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 108, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 108, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
@@ -365,7 +365,7 @@ func overviewKPICard(href, label, sublabel, value string) templ.Component {
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 109, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 109, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
@@ -378,7 +378,7 @@ func overviewKPICard(href, label, sublabel, value string) templ.Component {
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(sublabel)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 111, Col: 15}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 111, Col: 15}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
@@ -421,7 +421,7 @@ func overviewSyncSummaryCard(s services.SyncSummary, lang string) templ.Componen
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "syncSummary.title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 123, Col: 38}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 123, Col: 38}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
@@ -434,7 +434,7 @@ func overviewSyncSummaryCard(s services.SyncSummary, lang string) templ.Componen
 		var templ_7745c5c3_Var20 string
 		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "syncSummary.description"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 124, Col: 43}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 124, Col: 43}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 		if templ_7745c5c3_Err != nil {
@@ -447,7 +447,7 @@ func overviewSyncSummaryCard(s services.SyncSummary, lang string) templ.Componen
 		var templ_7745c5c3_Var21 string
 		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "syncSummary.open"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 127, Col: 33}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 127, Col: 33}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 		if templ_7745c5c3_Err != nil {
@@ -510,7 +510,7 @@ func overviewSyncRow(label, value, toneClass string) templ.Component {
 		var templ_7745c5c3_Var23 string
 		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 142, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 142, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 		if templ_7745c5c3_Err != nil {
@@ -532,7 +532,7 @@ func overviewSyncRow(label, value, toneClass string) templ.Component {
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var24).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
@@ -545,7 +545,7 @@ func overviewSyncRow(label, value, toneClass string) templ.Component {
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 143, Col: 83}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 143, Col: 83}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 		if templ_7745c5c3_Err != nil {
@@ -589,7 +589,7 @@ func overviewRecentTable(items []services.OverviewRecentObs, lang string) templ.
 			var templ_7745c5c3_Var28 string
 			templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.recent.empty"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 150, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 150, Col: 79}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 			if templ_7745c5c3_Err != nil {
@@ -607,7 +607,7 @@ func overviewRecentTable(items []services.OverviewRecentObs, lang string) templ.
 			var templ_7745c5c3_Var29 string
 			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.recent.col.created"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 156, Col: 90}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 156, Col: 90}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 			if templ_7745c5c3_Err != nil {
@@ -620,7 +620,7 @@ func overviewRecentTable(items []services.OverviewRecentObs, lang string) templ.
 			var templ_7745c5c3_Var30 string
 			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.recent.col.type"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 157, Col: 87}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 157, Col: 87}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 			if templ_7745c5c3_Err != nil {
@@ -633,7 +633,7 @@ func overviewRecentTable(items []services.OverviewRecentObs, lang string) templ.
 			var templ_7745c5c3_Var31 string
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.recent.col.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 158, Col: 88}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 158, Col: 88}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 			if templ_7745c5c3_Err != nil {
@@ -646,7 +646,7 @@ func overviewRecentTable(items []services.OverviewRecentObs, lang string) templ.
 			var templ_7745c5c3_Var32 string
 			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.recent.col.project"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 159, Col: 90}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 159, Col: 90}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 			if templ_7745c5c3_Err != nil {
@@ -664,7 +664,7 @@ func overviewRecentTable(items []services.OverviewRecentObs, lang string) templ.
 				var templ_7745c5c3_Var33 string
 				templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(derefStr(o.CreatedAt, "—"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 165, Col: 99}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 165, Col: 99}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 				if templ_7745c5c3_Err != nil {
@@ -677,7 +677,7 @@ func overviewRecentTable(items []services.OverviewRecentObs, lang string) templ.
 				var templ_7745c5c3_Var34 string
 				templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(o.Type)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 167, Col: 50}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 167, Col: 50}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 				if templ_7745c5c3_Err != nil {
@@ -690,7 +690,7 @@ func overviewRecentTable(items []services.OverviewRecentObs, lang string) templ.
 				var templ_7745c5c3_Var35 string
 				templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(derefStr(o.Title, T(lang, "common.untitled")))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 170, Col: 88}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 170, Col: 88}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 				if templ_7745c5c3_Err != nil {
@@ -708,7 +708,7 @@ func overviewRecentTable(items []services.OverviewRecentObs, lang string) templ.
 					var templ_7745c5c3_Var36 string
 					templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(*o.Project)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 174, Col: 47}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 174, Col: 47}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 					if templ_7745c5c3_Err != nil {
@@ -769,7 +769,7 @@ func overviewIssuesTable(resp services.SyncIssuesResponse, lang string) templ.Co
 			var templ_7745c5c3_Var38 string
 			templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.issues.none"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 191, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 191, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 			if templ_7745c5c3_Err != nil {
@@ -792,7 +792,7 @@ func overviewIssuesTable(resp services.SyncIssuesResponse, lang string) templ.Co
 				var templ_7745c5c3_Var39 string
 				templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(resp.GeneratedAt)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 198, Col: 78}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 198, Col: 78}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 				if templ_7745c5c3_Err != nil {
@@ -810,7 +810,7 @@ func overviewIssuesTable(resp services.SyncIssuesResponse, lang string) templ.Co
 					var templ_7745c5c3_Var40 string
 					templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "overview.issues.global"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 200, Col: 77}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 200, Col: 77}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 					if templ_7745c5c3_Err != nil {
@@ -828,7 +828,7 @@ func overviewIssuesTable(resp services.SyncIssuesResponse, lang string) templ.Co
 					var templ_7745c5c3_Var41 string
 					templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(group.Key)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 202, Col: 52}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 202, Col: 52}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 					if templ_7745c5c3_Err != nil {
@@ -851,7 +851,7 @@ func overviewIssuesTable(resp services.SyncIssuesResponse, lang string) templ.Co
 				var templ_7745c5c3_Var43 string
 				templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var42).String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 1, Col: 0}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 1, Col: 0}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 				if templ_7745c5c3_Err != nil {
@@ -864,7 +864,7 @@ func overviewIssuesTable(resp services.SyncIssuesResponse, lang string) templ.Co
 				var templ_7745c5c3_Var44 string
 				templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(string(group.MaxSeverity))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 205, Col: 34}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 205, Col: 34}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 				if templ_7745c5c3_Err != nil {
@@ -877,7 +877,7 @@ func overviewIssuesTable(resp services.SyncIssuesResponse, lang string) templ.Co
 				var templ_7745c5c3_Var45 string
 				templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(overviewIssueCountLabel(len(group.Issues), lang))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 208, Col: 57}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 208, Col: 57}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 				if templ_7745c5c3_Err != nil {
@@ -904,7 +904,7 @@ func overviewIssuesTable(resp services.SyncIssuesResponse, lang string) templ.Co
 					var templ_7745c5c3_Var47 string
 					templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var46).String())
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 1, Col: 0}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 1, Col: 0}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 					if templ_7745c5c3_Err != nil {
@@ -917,7 +917,7 @@ func overviewIssuesTable(resp services.SyncIssuesResponse, lang string) templ.Co
 					var templ_7745c5c3_Var48 string
 					templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(string(issue.Severity))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 216, Col: 101}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 216, Col: 101}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 					if templ_7745c5c3_Err != nil {
@@ -930,7 +930,7 @@ func overviewIssuesTable(resp services.SyncIssuesResponse, lang string) templ.Co
 					var templ_7745c5c3_Var49 string
 					templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(issue.Code)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 217, Col: 95}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 217, Col: 95}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 					if templ_7745c5c3_Err != nil {
@@ -943,7 +943,7 @@ func overviewIssuesTable(resp services.SyncIssuesResponse, lang string) templ.Co
 					var templ_7745c5c3_Var50 string
 					templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(issue.Message)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 220, Col: 49}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 220, Col: 49}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 					if templ_7745c5c3_Err != nil {
@@ -961,7 +961,7 @@ func overviewIssuesTable(resp services.SyncIssuesResponse, lang string) templ.Co
 						var templ_7745c5c3_Var51 string
 						templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(*issue.Hint)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/overview.templ`, Line: 222, Col: 75}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `overview.templ`, Line: 222, Col: 75}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
 						if templ_7745c5c3_Err != nil {

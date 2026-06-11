@@ -1,4 +1,19 @@
 {
+  "nav": {
+    "engram": "Engram",
+    "overview": "Resumen Engram",
+    "observations": "Observaciones",
+    "sessions": "Sesiones",
+    "prompts": "Prompts",
+    "topics": "Temas",
+    "projects": "Proyectos",
+    "brain": "Conocimiento",
+    "syncHealth": "Salud del Sync",
+    "orphans": "Huérfanos",
+    "ccsessions": "Claude Code",
+    "ccsessions.list": "Sesiones de Claude Code",
+    "ccsessions.overview": "Resumen Claude Code"
+  },
   "common": {
     "loading": "Cargando…",
     "loadMore": "Cargar más",

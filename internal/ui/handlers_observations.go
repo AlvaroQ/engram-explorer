@@ -100,7 +100,7 @@ func handleObservationsPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, ObservationsPartial(items, nextCursor, params, projects, lang))
 		} else {
-			render(w, r, ObservationsPage(items, nextCursor, params, projects, lang, theme))
+			renderDeps(w, r, d, ObservationsPage(items, nextCursor, params, projects, lang, theme))
 		}
 	}
 }
