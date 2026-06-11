@@ -36,7 +36,7 @@ func makeTier1Module(id, displayName string, state ui.ModuleState) ui.ModuleInfo
 func TestGetRoot_ZeroProviders_ShowsOnboarding(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{
-		RoDB: nil, // no DB — zero-provider state
+		RoDB:        nil, // no DB — zero-provider state
 		ActiveCount: func() int { return 0 },
 		Modules: func() []ui.ModuleInfo {
 			return []ui.ModuleInfo{
@@ -70,7 +70,7 @@ func TestGetRoot_WithProvider_ShowsOverview(t *testing.T) {
 	db := openTestDB(t)
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{
-		RoDB: db,
+		RoDB:        db,
 		ActiveCount: func() int { return 1 },
 	})
 
@@ -113,7 +113,7 @@ func TestGetRoot_NilActiveCount_ShowsOverview(t *testing.T) {
 func TestGetRoot_ZeroProviders_HTMX_ShowsOnboardingPartial(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{
-		RoDB: nil,
+		RoDB:        nil,
 		ActiveCount: func() int { return 0 },
 		Modules: func() []ui.ModuleInfo {
 			return []ui.ModuleInfo{
