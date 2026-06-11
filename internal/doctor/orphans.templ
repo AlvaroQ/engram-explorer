@@ -7,8 +7,9 @@ import (
 
 // OrphansPage renders the full orphans page wrapped in the Layout shell.
 // It delegates content to OrphansList.
-templ OrphansPage(data *services.OrphansResponse, projects []services.ProjectStats, lang, theme string) {
-	@Layout("Orphans", "orphans", lang, theme, orphansContent(data, projects))
+// sidebarState is "expanded" or "collapsed" (server-side initial state).
+templ OrphansPage(data *services.OrphansResponse, projects []services.ProjectStats, lang, theme, sidebarState string) {
+	@Layout("Orphans", "orphans", lang, theme, sidebarState, orphansContent(data, projects))
 }
 
 // OrphansList renders only the orphans content fragment — no Layout shell.
@@ -20,6 +21,9 @@ templ OrphansList(data *services.OrphansResponse, projects []services.ProjectSta
 // orphansContent is the shared inner content for both full-page and partial renders.
 templ orphansContent(data *services.OrphansResponse, projects []services.ProjectStats) {
 	<div id="orphans-list">
+		<!-- Host for the observation-detail dialog. HTMX swaps the rendered
+		     <dialog> into here; the dialog's close button clears it again. -->
+		<div id="orphan-dialog-host"></div>
 		if data.Totals.Observations == 0 && data.Totals.Sessions == 0 && data.Totals.Prompts == 0 {
 			@EmptyState("No orphaned entities found. All observations, sessions, and prompts are assigned to a project.")
 		} else {
@@ -41,7 +45,16 @@ templ orphansContent(data *services.OrphansResponse, projects []services.Project
 						<tbody>
 							for _, obs := range data.Observations {
 								<tr>
-									<td>{ fmt.Sprintf("%d", obs.ID) }</td>
+									<td>
+										<button
+											type="button"
+											class="orphan-detail-link"
+											hx-get={ fmt.Sprintf("/doctor/orphans/observations/%d/detail", obs.ID) }
+											hx-target="#orphan-dialog-host"
+											hx-swap="innerHTML"
+											title="View details to help assign a project"
+										>{ fmt.Sprintf("%d", obs.ID) }</button>
+									</td>
 									<td>{ obs.Type }</td>
 									<td>
 										if obs.Title != nil {
@@ -198,4 +211,148 @@ templ projectSelect(projects []services.ProjectStats) {
 templ OrphansListWithError(data *services.OrphansResponse, projects []services.ProjectStats, errMsg string) {
 	@ErrorPartial(errMsg)
 	@orphansContent(data, projects)
+}
+
+// OrphanObservationDetailDialog renders the observation-detail modal. It is
+// swapped into #orphan-dialog-host. The dialog surfaces the metadata, the
+// originating session's working directory (the key project hint) and the full
+// observation content, and embeds the same assign-to-project dropdown and delete
+// action used in the row so the user can act without leaving the dialog.
+// Assigning/deleting refreshes #orphans-list (outerHTML), which removes the
+// dialog along with the rest of the list markup. The close button clears the
+// host directly. All strings stay in English to match the doctor view.
+templ OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects []services.ProjectStats) {
+	<dialog class="orphan-dialog" open aria-modal="true" aria-labelledby="orphan-dialog-title">
+		<div class="orphan-dialog-backdrop" onclick="document.getElementById('orphan-dialog-host').innerHTML=''" aria-hidden="true"></div>
+		<article class="orphan-dialog-card">
+			<header class="orphan-dialog-header">
+				<h3 id="orphan-dialog-title">
+					if d.Title != nil && *d.Title != "" {
+						{ *d.Title }
+					} else {
+						Observation #{ fmt.Sprintf("%d", d.ID) }
+					}
+				</h3>
+				<button
+					type="button"
+					class="orphan-dialog-close"
+					aria-label="Close"
+					onclick="document.getElementById('orphan-dialog-host').innerHTML=''"
+				>&times;</button>
+			</header>
+			<div class="orphan-dialog-body">
+				if d.SessionDirectory != nil && *d.SessionDirectory != "" {
+					<div class="orphan-dialog-dir">
+						<span class="orphan-dialog-dir-label">Session working directory</span>
+						<code class="orphan-dialog-dir-value">{ *d.SessionDirectory }</code>
+					</div>
+				} else {
+					<div class="orphan-dialog-dir orphan-dialog-dir-empty">
+						<span class="orphan-dialog-dir-label">Session working directory</span>
+						<span class="orphan-dialog-dir-value">— unknown (no session directory recorded)</span>
+					</div>
+				}
+				<dl class="orphan-dialog-meta">
+					<div>
+						<dt>ID</dt>
+						<dd>{ fmt.Sprintf("%d", d.ID) }</dd>
+					</div>
+					<div>
+						<dt>Type</dt>
+						<dd>{ d.Type }</dd>
+					</div>
+					<div>
+						<dt>Topic Key</dt>
+						<dd>
+							if d.TopicKey != nil && *d.TopicKey != "" {
+								{ *d.TopicKey }
+							} else {
+								—
+							}
+						</dd>
+					</div>
+					<div>
+						<dt>Tool</dt>
+						<dd>
+							if d.ToolName != nil && *d.ToolName != "" {
+								{ *d.ToolName }
+							} else {
+								—
+							}
+						</dd>
+					</div>
+					<div>
+						<dt>Session</dt>
+						<dd>
+							if d.SessionID != nil && *d.SessionID != "" {
+								{ *d.SessionID }
+							} else {
+								—
+							}
+						</dd>
+					</div>
+					<div>
+						<dt>Created</dt>
+						<dd>
+							if d.CreatedAt != nil {
+								{ *d.CreatedAt }
+							} else {
+								—
+							}
+						</dd>
+					</div>
+					<div>
+						<dt>Updated</dt>
+						<dd>
+							if d.UpdatedAt != nil {
+								{ *d.UpdatedAt }
+							} else {
+								—
+							}
+						</dd>
+					</div>
+				</dl>
+				<div class="orphan-dialog-content-block">
+					<span class="orphan-dialog-content-label">Content</span>
+					if d.Content != nil && *d.Content != "" {
+						<pre class="orphan-dialog-content">{ *d.Content }</pre>
+					} else {
+						<p class="orphan-dialog-content-empty">No content recorded for this observation.</p>
+					}
+				</div>
+			</div>
+			<footer class="orphan-dialog-footer">
+				<form
+					hx-post={ orphanActionURL("observations", fmt.Sprintf("%d", d.ID), "project") }
+					hx-target="#orphans-list"
+					hx-swap="outerHTML"
+					class="orphan-dialog-assign"
+				>
+					@projectSelect(projects)
+					<button type="submit">Assign</button>
+				</form>
+				<button
+					hx-delete={ orphanActionURL("observations", fmt.Sprintf("%d", d.ID), "") }
+					hx-target="#orphans-list"
+					hx-swap="outerHTML"
+					hx-confirm="Delete this orphaned observation? This action cannot be undone."
+					class="btn-danger"
+				>Delete</button>
+			</footer>
+		</article>
+	</dialog>
+	<!-- Esc-to-close: native <dialog open> (attribute, not showModal) does not
+	     handle Esc, so register a one-shot listener that clears the host. -->
+	<script>
+		(function () {
+			function onKey(e) {
+				if (e.key === "Escape") {
+					var host = document.getElementById("orphan-dialog-host");
+					if (host) host.innerHTML = "";
+					document.removeEventListener("keydown", onKey);
+				}
+			}
+			document.addEventListener("keydown", onKey);
+		})();
+	</script>
 }

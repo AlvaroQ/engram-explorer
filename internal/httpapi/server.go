@@ -15,6 +15,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
 	"github.com/AlvaroQ/engram-explorer/internal/providers/ccsessions"
 	engramprovider "github.com/AlvaroQ/engram-explorer/internal/providers/engram"
+	"github.com/AlvaroQ/engram-explorer/internal/services"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
 )
 
@@ -185,6 +186,13 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 				deps.DeleteProfile = buildDeleteProfileFn(c.ProfileStore, activeProfileName, c.Config.ConfigHome)
 				// Wire WU-10 ActiveCount for onboarding zero-state branching.
 				deps.ActiveCount = reg.ActiveCount
+				// Wire WU-11 CC account sources for multi-account read path.
+				deps.CCAccountSources = buildCCAccountSourcesFn(c.ProfileStore, c.Paths.ClaudeDir(), c.Config.ConfigHome)
+				// Wire Slice 2b CC accounts management callbacks.
+				deps.CCAccounts = buildCCAccountsFn(c.ProfileStore)
+				deps.AddCCAccount = buildAddCCAccountFn(reg, c.ProfileStore, c.Config.ConfigHome)
+				deps.UpdateCCAccount = buildUpdateCCAccountFn(c.ProfileStore, c.Config.ConfigHome)
+				deps.RemoveCCAccount = buildRemoveCCAccountFn(c.ProfileStore, c.Config.ConfigHome)
 				ui.Mount(mux, deps)
 				engramMounted = true
 			}
@@ -223,6 +231,13 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 			DeleteProfile:      buildDeleteProfileFn(c.ProfileStore, activeProfileName, c.Config.ConfigHome),
 			// WU-10: wire ActiveCount for onboarding zero-state branching.
 			ActiveCount: reg.ActiveCount,
+			// WU-11: wire CC account sources for multi-account read path.
+			CCAccountSources: buildCCAccountSourcesFn(c.ProfileStore, c.Paths.ClaudeDir(), c.Config.ConfigHome),
+			// Slice 2b: CC accounts management callbacks.
+			CCAccounts:      buildCCAccountsFn(c.ProfileStore),
+			AddCCAccount:    buildAddCCAccountFn(reg, c.ProfileStore, c.Config.ConfigHome),
+			UpdateCCAccount: buildUpdateCCAccountFn(c.ProfileStore, c.Config.ConfigHome),
+			RemoveCCAccount: buildRemoveCCAccountFn(c.ProfileStore, c.Config.ConfigHome),
 		})
 	}
 }
@@ -599,6 +614,125 @@ func buildDeleteProfileFn(store *config.ProfileStore, activeProfileName *string,
 		}
 		delete(store.Profiles, name)
 		return config.SaveProfileStore(configHome, store)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// WU-11: CC account sources — multi-account read path
+// ---------------------------------------------------------------------------
+
+// buildCCAccountSourcesFn returns a closure that builds []services.CCAccountSource
+// from the enabled CC accounts in the ProfileStore.
+//
+// Lazy seed: if the store has no CC accounts yet (users who existed before this
+// feature was added), a single "Personal" account is seeded pointing at
+// defaultClaudeDir and immediately persisted to disk so the next call returns a
+// populated list.
+//
+// Guard nil store: if the store is nil (legacy/no-registry paths that build Deps
+// without a ProfileStore), falls back to a single source using defaultClaudeDir.
+func buildCCAccountSourcesFn(store *config.ProfileStore, defaultClaudeDir, configHome string) func() []services.CCAccountSource {
+	return func() []services.CCAccountSource {
+		if store == nil {
+			return []services.CCAccountSource{
+				{
+					ID:     "default",
+					Label:  "Personal",
+					Reader: services.DiskProjectsReader{BaseDir: defaultClaudeDir},
+				},
+			}
+		}
+		// Lazy seed: if this is an existing install with no CCAccounts yet, create
+		// the default account and persist it once.
+		if len(store.CCAccounts) == 0 {
+			config.SeedDefaultAccount(store, defaultClaudeDir)
+			// Best-effort persist; if it fails the seed stays in memory for this run.
+			_ = config.SaveProfileStore(configHome, store)
+		}
+		enabled := config.ListEnabledCCAccounts(store)
+		if len(enabled) == 0 {
+			// All accounts disabled — fall back so the UI still shows something.
+			return []services.CCAccountSource{
+				{
+					ID:     "default",
+					Label:  "Personal",
+					Reader: services.DiskProjectsReader{BaseDir: defaultClaudeDir},
+				},
+			}
+		}
+		out := make([]services.CCAccountSource, 0, len(enabled))
+		for _, acc := range enabled {
+			out = append(out, services.CCAccountSource{
+				ID:     acc.ID,
+				Label:  acc.Label,
+				Reader: services.DiskProjectsReader{BaseDir: acc.Path},
+			})
+		}
+		return out
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Slice 2b: CC Accounts settings helpers
+// ---------------------------------------------------------------------------
+
+// buildCCAccountsFn returns a closure that maps all CC accounts in the
+// ProfileStore to []ui.CCAccountInfo view-models (enabled and disabled).
+func buildCCAccountsFn(store *config.ProfileStore) func() []ui.CCAccountInfo {
+	return func() []ui.CCAccountInfo {
+		if store == nil {
+			return nil
+		}
+		out := make([]ui.CCAccountInfo, 0, len(store.CCAccounts))
+		for _, acc := range store.CCAccounts {
+			out = append(out, ui.CCAccountInfo{
+				ID:      acc.ID,
+				Label:   acc.Label,
+				Path:    acc.Path,
+				Enabled: acc.Enabled,
+			})
+		}
+		return out
+	}
+}
+
+// buildAddCCAccountFn returns a closure that validates a path via the
+// cc-sessions provider and then creates a new CC account in the store.
+func buildAddCCAccountFn(reg *providers.Registry, store *config.ProfileStore, configHome string) func(label, path string) error {
+	return func(label, path string) error {
+		if store == nil {
+			return fmt.Errorf("profile store not available")
+		}
+		// Validate the path using the cc-sessions provider.
+		cfg := providers.ProviderConfig{Enabled: false, Path: path}
+		if err := reg.Validate(context.Background(), "cc-sessions", cfg); err != nil {
+			return err
+		}
+		_, err := config.AddCCAccount(configHome, store, label, path)
+		return err
+	}
+}
+
+// buildUpdateCCAccountFn returns a closure that updates a CC account's
+// label, path and enabled state and persists via SaveProfileStore.
+func buildUpdateCCAccountFn(store *config.ProfileStore, configHome string) func(id, label, path string, enabled bool) error {
+	return func(id, label, path string, enabled bool) error {
+		if store == nil {
+			return fmt.Errorf("profile store not available")
+		}
+		return config.UpdateCCAccount(configHome, store, id, label, path, enabled)
+	}
+}
+
+// buildRemoveCCAccountFn returns a closure that removes a CC account from
+// the store. It delegates to config.RemoveCCAccount which already guards
+// against removing the last account.
+func buildRemoveCCAccountFn(store *config.ProfileStore, configHome string) func(id string) error {
+	return func(id string) error {
+		if store == nil {
+			return fmt.Errorf("profile store not available")
+		}
+		return config.RemoveCCAccount(configHome, store, id)
 	}
 }
 

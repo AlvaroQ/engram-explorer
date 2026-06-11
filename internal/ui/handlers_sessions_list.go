@@ -24,7 +24,7 @@ func handleSessionsListPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, SessionsListPartial(result, params, lang))
 		} else {
-			renderDeps(w, r, d, SessionsListPage(result, params, lang, theme))
+			renderDeps(w, r, d, SessionsListPage(result, params, lang, theme, sidebarStateForRequest(r)))
 		}
 	}
 }

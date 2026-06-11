@@ -78,6 +78,40 @@ type Deps struct {
 	// onboarding zero-state or the regular overview. When nil (legacy/no-registry
 	// path), the overview is always shown.
 	ActiveCount func() int
+
+	// CCAccountSources, when non-nil, returns the list of enabled CC account
+	// sources (each source wraps a CCProjectsReader for one ~/.claude directory).
+	// When nil the CC handlers fall back to a single DiskProjectsReader using
+	// d.Paths.ClaudeDir(), preserving backward compatibility with legacy/test paths.
+	CCAccountSources func() []services.CCAccountSource
+
+	// CCAccounts, when non-nil, returns all CC accounts (enabled and disabled)
+	// as CCAccountInfo view-models for the Settings → CC Accounts section.
+	CCAccounts func() []CCAccountInfo
+
+	// AddCCAccount validates the given path (via the cc-sessions provider) and
+	// then creates a new CC account in the profile store.
+	AddCCAccount func(label, path string) error
+
+	// UpdateCCAccount updates an existing CC account's label, path and enabled
+	// state. Used by the toggle and edit flows.
+	UpdateCCAccount func(id, label, path string, enabled bool) error
+
+	// RemoveCCAccount removes the CC account with the given id from the store.
+	// Returns an error if it is the last remaining account.
+	RemoveCCAccount func(id string) error
+}
+
+// ---------------------------------------------------------------------------
+// CC Accounts view-models (Settings → CC Accounts section)
+// ---------------------------------------------------------------------------
+
+// CCAccountInfo is a view-model for one CC account row in the Settings page.
+type CCAccountInfo struct {
+	ID      string
+	Label   string
+	Path    string
+	Enabled bool
 }
 
 // ---------------------------------------------------------------------------
@@ -251,6 +285,11 @@ func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 	mux.HandleFunc("POST /settings/profile/create", handleProfileCreatePost(d))
 	mux.HandleFunc("POST /settings/profile/delete", handleProfileDeletePost(d))
 
+	// Settings → CC Accounts routes (Slice 2b).
+	mux.HandleFunc("POST /settings/cc-accounts", handleCCAccountAddPost(d))
+	mux.HandleFunc("POST /settings/cc-accounts/{id}/remove", handleCCAccountRemovePost(d))
+	mux.HandleFunc("POST /settings/cc-accounts/{id}/toggle", handleCCAccountTogglePost(d))
+
 	// Observations routes.
 	// /list and /{id} must be registered before the wildcard so Go 1.22 exact
 	// matching takes precedence.
@@ -260,4 +299,11 @@ func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 
 	// Brain page (React island — Three.js graph).
 	mux.HandleFunc("GET /brain", handleBrainPage(d))
+
+	// Sidebar status pill partial (polled by HTMX from the sidebar footer).
+	mux.HandleFunc("GET /partials/status-pill", handleStatusPillPartial(d))
+
+	// Sidebar "Sync cloud" action — triggers a cloud sync for all enrolled
+	// projects and renders the result fragment back into the sidebar.
+	mux.HandleFunc("POST /partials/sync-cloud", handleSyncCloudPost(d, cloud))
 }

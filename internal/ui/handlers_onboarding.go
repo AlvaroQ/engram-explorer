@@ -15,9 +15,10 @@ type OnboardingProviderInfo struct {
 
 // onboardingData bundles everything needed to render the onboarding page.
 type onboardingData struct {
-	Providers []OnboardingProviderInfo
-	Lang      string
-	Theme     string
+	Providers    []OnboardingProviderInfo
+	Lang         string
+	Theme        string
+	SidebarState string
 }
 
 // buildOnboardingData constructs the onboarding view-model from Deps.

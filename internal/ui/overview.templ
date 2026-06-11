@@ -7,8 +7,8 @@ import (
 )
 
 // OverviewPage renders the full overview page shell.
-templ OverviewPage(data services.OverviewResponse, issues services.SyncIssuesResponse, lang, theme string) {
-	@Layout(T(lang, "sidebar.overview"), "overview", lang, theme, overviewContent(data, issues, lang))
+templ OverviewPage(data services.OverviewResponse, issues services.SyncIssuesResponse, lang, theme, sidebarState string) {
+	@Layout(T(lang, "sidebar.overview"), "overview", lang, theme, sidebarState, overviewContent(data, issues, lang))
 }
 
 // OverviewPartial renders only the overview content (no HTML shell).

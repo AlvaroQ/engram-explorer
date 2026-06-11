@@ -106,6 +106,11 @@ func Mount(mux *http.ServeMux, d Deps) {
 	// GET /doctor/orphans/list — bare list partial; hx-get deferred load target.
 	mux.HandleFunc("GET /doctor/orphans/list", handleOrphansListPartial(d))
 
+	// GET /doctor/orphans/observations/{id}/detail — observation detail dialog.
+	// Renders a modal with metadata, session working directory, full content,
+	// and the assign/delete actions, so the user can assign from inside it.
+	mux.HandleFunc("GET /doctor/orphans/observations/{id}/detail", handleOrphanObservationDetail(d))
+
 	// POST /doctor/orphans/{entity}/{id}/project — assign entity to a project.
 	mux.HandleFunc("POST /doctor/orphans/{entity}/{id}/project", requireRW(d, handleOrphansAssign(d)))
 

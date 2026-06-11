@@ -57,7 +57,7 @@ func handleSyncPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, SyncShell())
 		} else {
-			render(w, r, SyncPage(ui.LangForRequest(r), ui.ThemeForRequest(r)))
+			render(w, r, SyncPage(ui.LangForRequest(r), ui.ThemeForRequest(r), ui.SidebarStateForRequest(r)))
 		}
 	}
 }
@@ -138,7 +138,7 @@ func handleSyncProjectDetail(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, SyncProjectDetailPartial(detail))
 		} else {
-			render(w, r, Layout("Sync: "+project, "syncHealth", ui.LangForRequest(r), ui.ThemeForRequest(r), SyncProjectDetailPartial(detail)))
+			render(w, r, Layout("Sync: "+project, "syncHealth", ui.LangForRequest(r), ui.ThemeForRequest(r), ui.SidebarStateForRequest(r), SyncProjectDetailPartial(detail)))
 		}
 	}
 }

@@ -129,8 +129,8 @@ func (p *ccProvider) Nav(inst providers.Instance) providers.NavGroup {
 		LabelKey: "nav.ccsessions",
 		Featured: false,
 		Links: []providers.NavLink{
-			{Href: "/cc-sessions", Key: "cc-sessions", LabelKey: "nav.ccsessions.list"},
-			{Href: "/cc-overview", Key: "cc-overview", LabelKey: "nav.ccsessions.overview"},
+			{Href: "/cc-sessions", Key: "cc-sessions", LabelKey: "nav.ccsessionsList", Icon: "cc-sessions"},
+			{Href: "/cc-overview", Key: "cc-overview", LabelKey: "nav.ccsessionsOverview", Icon: "cc-overview"},
 		},
 	}
 }

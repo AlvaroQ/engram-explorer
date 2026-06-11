@@ -33,7 +33,7 @@ func handleSessionDetailPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, SessionDetailPartial(detail, lang))
 		} else {
-			renderDeps(w, r, d, SessionDetailPage(detail, lang, theme))
+			renderDeps(w, r, d, SessionDetailPage(detail, lang, theme, sidebarStateForRequest(r)))
 		}
 	}
 }

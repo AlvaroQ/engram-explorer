@@ -12,6 +12,7 @@ type accountsData struct {
 	AccountsError string
 	Lang          string
 	Theme         string
+	SidebarState  string
 }
 
 // handleAccountsPage serves GET /settings/accounts.

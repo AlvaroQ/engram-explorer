@@ -253,6 +253,12 @@ func buildSettingsData(d Deps, r *http.Request, lang, theme string) settingsData
 		modules = d.Modules()
 	}
 
+	// Collect CC accounts data when the callback is wired.
+	var ccAccounts []CCAccountInfo
+	if d.CCAccounts != nil {
+		ccAccounts = d.CCAccounts()
+	}
+
 	return settingsData{
 		DBPath:      d.Paths.EngramDB(),
 		DBOk:        dbOk,
@@ -269,6 +275,7 @@ func buildSettingsData(d Deps, r *http.Request, lang, theme string) settingsData
 		Theme:            theme,
 		Modules:          modules,
 		ModulePathErrors: make(map[string]string),
+		CCAccounts:       ccAccounts,
 	}
 }
 

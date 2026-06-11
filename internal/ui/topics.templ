@@ -6,8 +6,8 @@ import (
 )
 
 // TopicsPage renders the full page shell wrapping the topics content.
-templ TopicsPage(topics []services.TopicRow, query, lang, theme string) {
-	@Layout(T(lang, "topics.title"), "topics", lang, theme, topicsContent(topics, query, lang))
+templ TopicsPage(topics []services.TopicRow, query, lang, theme, sidebarState string) {
+	@Layout(T(lang, "topics.title"), "topics", lang, theme, sidebarState, topicsContent(topics, query, lang))
 }
 
 // TopicsPartial renders only the topics content (no HTML shell).

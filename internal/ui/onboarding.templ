@@ -3,7 +3,7 @@ package ui
 // OnboardingPage renders the full onboarding zero-state page (layout shell + content).
 // Shown when no provider is active (ActiveCount == 0).
 templ OnboardingPage(d onboardingData) {
-	@Layout(T(d.Lang, "onboarding.title"), "overview", d.Lang, d.Theme, onboardingContent(d))
+	@Layout(T(d.Lang, "onboarding.title"), "overview", d.Lang, d.Theme, d.SidebarState, onboardingContent(d))
 }
 
 // OnboardingPartial renders only the onboarding content (no HTML shell).

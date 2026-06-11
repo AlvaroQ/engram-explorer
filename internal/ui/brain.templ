@@ -3,8 +3,8 @@ package ui
 // BrainPage renders the full brain page shell with the brain React island.
 // The brain island fetches /api/graph itself — no props needed.
 // The main-content area is full-bleed (no padding) so the 3D canvas fills the viewport.
-templ BrainPage(lang, theme string) {
-	@LayoutFullBleed(T(lang, "brain.title"), "brain", lang, theme, brainContent())
+templ BrainPage(lang, theme, sidebarState string) {
+	@LayoutFullBleed(T(lang, "brain.title"), "brain", lang, theme, sidebarState, brainContent())
 }
 
 // brainContent renders the brain island mount point.

@@ -8,8 +8,8 @@ import (
 )
 
 // ProjectDetailPage renders the full project-detail page shell.
-templ ProjectDetailPage(data services.ProjectOverview, sync *services.SyncProjectRow, lang, theme string) {
-	@Layout(data.Project, "projects", lang, theme, projectDetailContent(data, sync, lang))
+templ ProjectDetailPage(data services.ProjectOverview, sync *services.SyncProjectRow, lang, theme, sidebarState string) {
+	@Layout(data.Project, "projects", lang, theme, sidebarState, projectDetailContent(data, sync, lang))
 }
 
 // ProjectDetailPartial renders only the project-detail content (no HTML shell).

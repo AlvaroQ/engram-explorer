@@ -8,8 +8,8 @@ import (
 )
 
 // ObservationsPage renders the full page shell for the observations view.
-templ ObservationsPage(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang, theme string) {
-	@Layout(T(lang, "observations.title"), "observations", lang, theme, observationsContent(items, nextCursor, params, projects, lang))
+templ ObservationsPage(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang, theme, sidebarState string) {
+	@Layout(T(lang, "observations.title"), "observations", lang, theme, sidebarState, observationsContent(items, nextCursor, params, projects, lang))
 }
 
 // ObservationsPartial renders only the observations content (no HTML shell).

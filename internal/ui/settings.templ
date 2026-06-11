@@ -5,7 +5,7 @@ package ui
 
 // AccountsPage renders the full accounts management page (layout shell + content).
 templ AccountsPage(d accountsData) {
-	@Layout(T(d.Lang, "settings.accounts.title"), "settings", d.Lang, d.Theme, accountsContent(d))
+	@Layout(T(d.Lang, "settings.accounts.title"), "settings", d.Lang, d.Theme, d.SidebarState, accountsContent(d))
 }
 
 // AccountsPartial renders only the accounts content (no HTML shell).
@@ -115,6 +115,7 @@ type settingsData struct {
 	UptimeS       int
 	Lang          string
 	Theme         string
+	SidebarState  string
 
 	// WU-8: Modules section data.
 	// Modules is the list of registered providers for the Settings → Modules page.
@@ -124,11 +125,18 @@ type settingsData struct {
 	ModuleError string
 	// ModulePathErrors maps provider ID to a path-validation error message.
 	ModulePathErrors map[string]string
+
+	// Slice 2b: Claude Code accounts section.
+	// CCAccounts is the list of all CC accounts (enabled+disabled) for the
+	// Settings → Claude Code accounts section. Nil when callbacks are not wired.
+	CCAccounts []CCAccountInfo
+	// CCAccountError is a generic error from an add / remove / toggle operation.
+	CCAccountError string
 }
 
 // SettingsPage renders the full settings page shell.
 templ SettingsPage(d settingsData) {
-	@Layout(T(d.Lang, "settings.title"), "settings", d.Lang, d.Theme, settingsContent(d))
+	@Layout(T(d.Lang, "settings.title"), "settings", d.Lang, d.Theme, d.SidebarState, settingsContent(d))
 }
 
 // SettingsPartial renders only the settings content (no HTML shell).
@@ -344,6 +352,57 @@ templ settingsContent(d settingsData) {
 			</section>
 		}
 
+		<!-- Claude Code accounts (Slice 2b) -->
+		if d.CCAccountError != "" {
+			<div class="settings-group">
+				<p class="error-hint">{ d.CCAccountError }</p>
+			</div>
+		}
+		if d.CCAccounts != nil {
+			<section class="settings-group" id="settings-cc-accounts">
+				<h2 class="settings-group-title">{ T(d.Lang, "settings.ccAccounts.title") }</h2>
+				<p class="settings-group-desc">{ T(d.Lang, "settings.ccAccounts.description") }</p>
+				if len(d.CCAccounts) > 0 {
+					<div class="modules-list">
+						for _, acc := range d.CCAccounts {
+							@ccAccountRow(d.Lang, acc, len(d.CCAccounts) == 1)
+						}
+					</div>
+				}
+				<section class="settings-group">
+					<h2 class="settings-group-title">{ T(d.Lang, "settings.ccAccounts.addTitle") }</h2>
+					<form class="path-edit-form" method="post" action="/settings/cc-accounts"
+						hx-post="/settings/cc-accounts"
+						hx-target="#settings-cc-accounts"
+						hx-swap="outerHTML">
+						<input
+							type="text"
+							name="label"
+							class="path-input"
+							autocomplete="off"
+							autocapitalize="off"
+							spellcheck="false"
+							aria-label={ T(d.Lang, "settings.ccAccounts.labelPlaceholder") }
+							placeholder={ T(d.Lang, "settings.ccAccounts.labelPlaceholder") }
+						/>
+						<input
+							type="text"
+							name="path"
+							class="path-input mono"
+							autocomplete="off"
+							autocapitalize="off"
+							spellcheck="false"
+							aria-label={ T(d.Lang, "settings.ccAccounts.pathPlaceholder") }
+							placeholder={ T(d.Lang, "settings.ccAccounts.pathPlaceholder") }
+						/>
+						<button type="submit" class="btn btn-sm btn-primary">
+							{ T(d.Lang, "settings.ccAccounts.add") }
+						</button>
+					</form>
+				</section>
+			</section>
+		}
+
 		<!-- Daemon de Engram -->
 		<section class="settings-group">
 			<h2 class="settings-group-title">{ T(d.Lang, "settings.daemon") }</h2>
@@ -460,6 +519,66 @@ templ moduleRow(lang string, m ModuleInfo, pathError string) {
 			if pathError != "" {
 				<p class="error-hint">{ pathError }</p>
 			}
+		}
+	</div>
+}
+
+// ccAccountRow renders one CC account row in the Settings → CC Accounts section.
+// isLast is true when this is the only remaining account (disables the remove button).
+templ ccAccountRow(lang string, acc CCAccountInfo, isLast bool) {
+	<div class="module-row" id={ "cc-account-" + acc.ID }>
+		<div class="module-row-header">
+			<div class="module-row-identity">
+				<span class="module-name">{ acc.Label }</span>
+				if acc.Enabled {
+					<span class="badge badge-ok">{ T(lang, "settings.ccAccounts.enabled") }</span>
+				} else {
+					<span class="badge badge-fail">{ T(lang, "settings.ccAccounts.disabled") }</span>
+				}
+			</div>
+			<div class="module-row-toggle">
+				if acc.Enabled {
+					<form method="post" action={ templ.SafeURL("/settings/cc-accounts/" + acc.ID + "/toggle") }
+						hx-post={ "/settings/cc-accounts/" + acc.ID + "/toggle" }
+						hx-target="#settings-cc-accounts"
+						hx-swap="outerHTML">
+						<input type="hidden" name="enabled" value="false"/>
+						<button type="submit" class="btn btn-sm btn-secondary">
+							{ T(lang, "settings.modules.disable") }
+						</button>
+					</form>
+				} else {
+					<form method="post" action={ templ.SafeURL("/settings/cc-accounts/" + acc.ID + "/toggle") }
+						hx-post={ "/settings/cc-accounts/" + acc.ID + "/toggle" }
+						hx-target="#settings-cc-accounts"
+						hx-swap="outerHTML">
+						<input type="hidden" name="enabled" value="true"/>
+						<button type="submit" class="btn btn-sm btn-primary">
+							{ T(lang, "settings.modules.enable") }
+						</button>
+					</form>
+				}
+				if isLast {
+					<button type="button" class="btn btn-sm btn-secondary" disabled title={ T(lang, "settings.ccAccounts.cannotRemoveLast") }>
+						{ T(lang, "settings.ccAccounts.remove") }
+					</button>
+				} else {
+					<form method="post" action={ templ.SafeURL("/settings/cc-accounts/" + acc.ID + "/remove") }
+						hx-post={ "/settings/cc-accounts/" + acc.ID + "/remove" }
+						hx-target="#settings-cc-accounts"
+						hx-swap="outerHTML">
+						<button type="submit" class="btn btn-sm btn-secondary">
+							{ T(lang, "settings.ccAccounts.remove") }
+						</button>
+					</form>
+				}
+			</div>
+		</div>
+		if acc.Path != "" {
+			<div class="info-row">
+				<span class="info-label muted">{ T(lang, "settings.row.path") }</span>
+				<span class="info-value mono">{ acc.Path }</span>
+			</div>
 		}
 	</div>
 }

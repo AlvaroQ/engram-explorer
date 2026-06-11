@@ -69,10 +69,12 @@ func handleOverviewPage(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
+		sidebarState := sidebarStateForRequest(r)
 
 		// Onboarding branch: zero active providers → show onboarding page.
 		if d.ActiveCount != nil && d.ActiveCount() == 0 {
 			od := buildOnboardingData(d, lang, theme)
+			od.SidebarState = sidebarState
 			if IsHTMX(r) {
 				renderDeps(w, r, d, OnboardingPartial(od))
 			} else {
@@ -90,7 +92,7 @@ func handleOverviewPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			renderDeps(w, r, d, OverviewPartial(data.Overview, data.Issues, lang))
 		} else {
-			renderDeps(w, r, d, OverviewPage(data.Overview, data.Issues, lang, theme))
+			renderDeps(w, r, d, OverviewPage(data.Overview, data.Issues, lang, theme, sidebarState))
 		}
 	}
 }

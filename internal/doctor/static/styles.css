@@ -325,3 +325,166 @@
 .htmx-indicator { opacity: 0; transition: opacity 0.2s ease; }
 .htmx-request .htmx-indicator,
 .htmx-request.htmx-indicator { opacity: 1; }
+
+/* ── Orphan observation detail dialog ─────────────────────────────────
+   The observation ID is a button that opens a modal with the session
+   working directory, full content, and the assign/delete actions. */
+.orphan-detail-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--pico-primary, #60a5fa);
+  cursor: pointer;
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+}
+.orphan-detail-link:hover { text-decoration: underline; }
+
+.orphan-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.orphan-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.55);
+}
+.orphan-dialog-card {
+  position: relative;
+  z-index: 1;
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  background: hsl(var(--surface));
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgb(0 0 0 / 0.45);
+  overflow: hidden;
+  animation: orphan-dialog-in 160ms ease-out;
+}
+@keyframes orphan-dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .orphan-dialog-card { animation: none; }
+}
+.orphan-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 18px 20px;
+  border-bottom: 1px solid hsl(var(--border));
+}
+.orphan-dialog-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+.orphan-dialog-close {
+  flex: none;
+  background: transparent;
+  border: none;
+  color: hsl(var(--fg-muted));
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+.orphan-dialog-close:hover { color: hsl(var(--fg)); }
+.orphan-dialog-body {
+  padding: 18px 20px;
+  overflow-y: auto;
+}
+.orphan-dialog-dir {
+  background: hsl(var(--surface-2));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.orphan-dialog-dir-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(var(--fg-muted));
+  margin-bottom: 4px;
+}
+.orphan-dialog-dir-value {
+  display: block;
+  font-family: var(--pico-font-family-monospace, monospace);
+  font-size: 0.82rem;
+  color: hsl(var(--fg));
+  word-break: break-all;
+}
+.orphan-dialog-dir-empty .orphan-dialog-dir-value { color: hsl(var(--fg-muted)); }
+.orphan-dialog-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px 16px;
+  margin: 0 0 16px;
+}
+.orphan-dialog-meta > div { display: flex; flex-direction: column; gap: 2px; }
+.orphan-dialog-meta dt {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(var(--fg-muted));
+}
+.orphan-dialog-meta dd {
+  margin: 0;
+  font-size: 0.84rem;
+  word-break: break-word;
+}
+.orphan-dialog-content-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(var(--fg-muted));
+  margin-bottom: 6px;
+}
+.orphan-dialog-content {
+  margin: 0;
+  max-height: 280px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: hsl(var(--surface-2));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-family: var(--pico-font-family-monospace, monospace);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: hsl(var(--fg));
+}
+.orphan-dialog-content-empty { margin: 0; color: hsl(var(--fg-muted)); font-style: italic; }
+.orphan-dialog-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  border-top: 1px solid hsl(var(--border));
+}
+.orphan-dialog-assign { display: inline-flex; gap: 0.5rem; margin: 0; }

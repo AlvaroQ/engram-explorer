@@ -10,8 +10,8 @@ import (
 )
 
 // CCSListPage renders the full page shell for the Claude Code sessions list.
-templ CCSListPage(result services.CCSessionListResult, params services.CCSessionListParams, lang, theme string) {
-	@Layout(T(lang, "ccSessions.title"), "cc-sessions", lang, theme, ccsListContent(result, params, lang))
+templ CCSListPage(result services.CCSessionListResult, params services.CCSessionListParams, lang, theme, sidebarState string) {
+	@Layout(T(lang, "ccSessions.title"), "cc-sessions", lang, theme, sidebarState, ccsListContent(result, params, lang))
 }
 
 // CCSListPartial renders only the content for HTMX partial swaps.
@@ -40,6 +40,15 @@ templ ccsListContent(result services.CCSessionListResult, params services.CCSess
 					hx-push-url="false"
 					class="cc-list-filter"
 				>
+					if len(result.Accounts) > 1 {
+						<label class="filter-label">{ T(lang, "ccSessions.filter.account") }</label>
+						<select name="account" class="input input-sm">
+							<option value="" selected?={ params.Account == "" }>{ T(lang, "ccSessions.filter.allAccounts") }</option>
+							for _, acct := range result.Accounts {
+								<option value={ acct.ID } selected?={ params.Account == acct.ID }>{ acct.Label }</option>
+							}
+						</select>
+					}
 					<label class="filter-label">{ T(lang, "ccSessions.filterProject") }</label>
 					<select name="project" class="input input-sm">
 						<option value="" selected?={ params.Project == "" }>{ T(lang, "common.all") }</option>
@@ -73,9 +82,12 @@ templ CCSListBodyPartial(result services.CCSessionListResult, params services.CC
 						<th class="px-4 py-2 text-right">{ T(lang, "ccSessions.col.size") }</th>
 						<th class="px-4 py-2 text-left">{ T(lang, "ccSessions.col.project") }</th>
 						<th class="px-4 py-2 text-left">{ T(lang, "ccSessions.col.branch") }</th>
+						if len(result.Accounts) > 1 {
+							<th class="px-4 py-2 text-left">{ T(lang, "ccSessions.col.account") }</th>
+						}
 					</tr>
 				</thead>
-				<tbody id="cc-sessions-tbody" class="divide-y">
+				<tbody id="cc-sessions-tbody" class="table-divide">
 					@CCSRowsPartial(result, params, lang)
 				</tbody>
 			</table>
@@ -86,7 +98,7 @@ templ CCSListBodyPartial(result services.CCSessionListResult, params services.CC
 // CCSRowsPartial renders only the <tr> rows, used by load-more (hx-swap="beforeend").
 templ CCSRowsPartial(result services.CCSessionListResult, params services.CCSessionListParams, lang string) {
 	for _, s := range result.Items {
-		@ccsSessionRow(s, lang)
+		@ccsSessionRow(s, len(result.Accounts) > 1, lang)
 	}
 	if result.NextCursor != nil {
 		@ccsLoadMoreRow(*result.NextCursor, params, lang)
@@ -94,11 +106,8 @@ templ CCSRowsPartial(result services.CCSessionListResult, params services.CCSess
 }
 
 // ccsSessionRow renders a single session row.
-// Column order puts Last modified first (the marker used to locate a session —
-// the list is sorted by it, newest first; date and time stack on two lines to
-// keep the column narrow), then the full First prompt (the most important
-// column), then project, tokens, cost, etc.
-templ ccsSessionRow(s services.CCSessionListItem, lang string) {
+// showAccount controls whether the account column is rendered (only when >1 account).
+templ ccsSessionRow(s services.CCSessionListItem, showAccount bool, lang string) {
 	<tr class="hover:bg-surface-2 align-top">
 		<td class="px-4 py-2 mono text-xs text-fg-muted whitespace-nowrap">
 			<div>{ ccsFormatDate(s.EndedAt) }</div>
@@ -106,7 +115,7 @@ templ ccsSessionRow(s services.CCSessionListItem, lang string) {
 		</td>
 		<td class="px-4 py-2">
 			<a
-				href={ templ.SafeURL("/cc-sessions/" + url.PathEscape(s.ProjectFolder) + "/" + s.ID) }
+				href={ templ.SafeURL(ccsDetailURL(s)) }
 				class="text-sm text-fg hover:text-accent"
 			>
 				if clean, hasAttach := ccsStripAttachments(s.FirstPrompt); hasAttach {
@@ -142,13 +151,25 @@ templ ccsSessionRow(s services.CCSessionListItem, lang string) {
 				<span class="muted">—</span>
 			}
 		</td>
+		if showAccount {
+			<td class="px-4 py-2 text-fg-muted text-xs whitespace-nowrap">
+				if s.Account != "" {
+					<span class="badge badge-neutral">{ s.Account }</span>
+				} else {
+					<span class="muted">—</span>
+				}
+			</td>
+		}
 	</tr>
 }
 
 // ccsLoadMoreRow renders the "Load more" trigger row.
+// colspan is 8 when the account column is visible, 7 otherwise — but we always
+// render it with 8 because in load-more context we do not know showAccount from
+// outside. The extra cell is harmless.
 templ ccsLoadMoreRow(cursor string, params services.CCSessionListParams, lang string) {
 	<tr id="cc-sessions-load-more-row">
-		<td colspan="7" class="px-4 py-3">
+		<td colspan="8" class="px-4 py-3">
 			<button
 				class="btn btn-secondary btn-sm"
 				hx-get={ ccsNextURL(cursor, params) }
@@ -165,6 +186,16 @@ templ ccsLoadMoreRow(cursor string, params services.CCSessionListParams, lang st
 // ---------------------------------------------------------------------------
 // Helper functions
 // ---------------------------------------------------------------------------
+
+// ccsDetailURL builds the URL to the session detail page, including the
+// ?account= param so the detail handler can use the correct reader.
+func ccsDetailURL(s services.CCSessionListItem) string {
+	base := "/cc-sessions/" + url.PathEscape(s.ProjectFolder) + "/" + s.ID
+	if s.AccountID != "" && s.AccountID != "default" {
+		return base + "?account=" + url.QueryEscape(s.AccountID)
+	}
+	return base
+}
 
 // ccsPromptPreview truncates the prompt for the table preview.
 func ccsPromptPreview(s string) string {
@@ -311,6 +342,9 @@ func ccsNextURL(cursor string, params services.CCSessionListParams) string {
 	v.Set("append", "true")
 	if params.Project != "" {
 		v.Set("project", params.Project)
+	}
+	if params.Account != "" {
+		v.Set("account", params.Account)
 	}
 	return "/cc-sessions/list?" + v.Encode()
 }

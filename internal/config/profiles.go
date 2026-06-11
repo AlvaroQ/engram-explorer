@@ -55,6 +55,11 @@ type ProfileStore struct {
 
 	// Profiles maps profile names to their per-provider configurations.
 	Profiles map[string]Profile `json:"profiles,omitempty"`
+
+	// CCAccounts is the list of Claude Code installations tracked by the
+	// explorer. Each entry points to a separate ~/.claude/projects directory.
+	// Populated on first boot via SeedDefaultAccount.
+	CCAccounts []CCAccount `json:"ccAccounts,omitempty"`
 }
 
 // configFilePath returns the absolute path of config.json in configHome.
@@ -135,6 +140,7 @@ func EnsureConfig(configHome string, resolved Config) (*ProfileStore, error) {
 			"default": profileFromResolved(resolved),
 		},
 	}
+	SeedDefaultAccount(seed, resolved.ClaudeProjectsDir)
 	if err := SaveProfileStore(configHome, seed); err != nil {
 		return nil, err
 	}

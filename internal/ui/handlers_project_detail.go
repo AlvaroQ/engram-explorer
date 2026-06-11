@@ -29,6 +29,7 @@ func handleProjectDetailPage(d Deps) http.HandlerFunc {
 		project, _ := url.PathUnescape(r.PathValue("project"))
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
+		sidebarState := sidebarStateForRequest(r)
 
 		if d.RoDB == nil {
 			http.NotFound(w, r)
@@ -52,7 +53,7 @@ func handleProjectDetailPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, ProjectDetailPartial(*overview, syncRow, lang))
 		} else {
-			renderDeps(w, r, d, ProjectDetailPage(*overview, syncRow, lang, theme))
+			renderDeps(w, r, d, ProjectDetailPage(*overview, syncRow, lang, theme, sidebarState))
 		}
 	}
 }

@@ -7,8 +7,9 @@ import (
 
 // SyncPage renders the full sync health page wrapped in the Layout shell.
 // The actual content is deferred to HTMX via hx-trigger="load, every 15s".
-templ SyncPage(lang, theme string) {
-	@Layout("Sync Health", "syncHealth", lang, theme, syncShellContent())
+// sidebarState is "expanded" or "collapsed" (server-side initial state).
+templ SyncPage(lang, theme, sidebarState string) {
+	@Layout("Sync Health", "syncHealth", lang, theme, sidebarState, syncShellContent())
 }
 
 // SyncShell renders only the sync shell content fragment — no Layout.

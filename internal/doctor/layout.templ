@@ -10,7 +10,8 @@ import "github.com/AlvaroQ/engram-explorer/internal/ui"
 //
 // activeNav must match a sidebar key so the correct item is highlighted:
 // "syncHealth" for the sync pages, "orphans" for the orphans page.
-templ Layout(title, activeNav, lang, theme string, content templ.Component) {
+// sidebarState is "expanded" or "collapsed" (server-side initial state, read from cookie).
+templ Layout(title, activeNav, lang, theme, sidebarState string, content templ.Component) {
 	<!DOCTYPE html>
 	<html class={ theme } data-theme={ theme } lang={ lang }>
 		<head>
@@ -23,8 +24,10 @@ templ Layout(title, activeNav, lang, theme string, content templ.Component) {
 			<script src="/static/htmx.min.js" defer></script>
 		</head>
 		<body>
-			<div class="app-shell">
-				@ui.Sidebar(activeNav, lang)
+			<!-- Scrim for modal drawer on compact viewports -->
+			<div class="sidebar-scrim" id="sidebar-scrim" aria-hidden="true"></div>
+			<div class={ "app-shell", templ.KV("sidebar-collapsed", sidebarState == "collapsed") }>
+				@ui.Sidebar(activeNav, lang, sidebarState)
 				<main class="main-content">
 					<div class="page-header">
 						<h1>{ title }</h1>
@@ -32,6 +35,7 @@ templ Layout(title, activeNav, lang, theme string, content templ.Component) {
 					@content
 				</main>
 			</div>
+			<script src="/static/sidebar.js" defer></script>
 		</body>
 	</html>
 }

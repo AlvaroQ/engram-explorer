@@ -9,8 +9,8 @@ import (
 )
 
 // SessionsListPage renders the full page shell for the sessions list view.
-templ SessionsListPage(result services.SessionListResult, params services.SessionListParams, lang, theme string) {
-	@Layout(T(lang, "sessions.title"), "sessions", lang, theme, sessionsListContent(result, params, lang))
+templ SessionsListPage(result services.SessionListResult, params services.SessionListParams, lang, theme, sidebarState string) {
+	@Layout(T(lang, "sessions.title"), "sessions", lang, theme, sidebarState, sessionsListContent(result, params, lang))
 }
 
 // SessionsListPartial renders only the sessions list content (no HTML shell).
@@ -77,7 +77,7 @@ templ SessionsListBodyPartial(result services.SessionListResult, params services
 						<th class="px-4 py-2 text-left">{ T(lang, "sessions.col.prompts") }</th>
 					</tr>
 				</thead>
-				<tbody id="sessions-tbody" class="divide-y">
+				<tbody id="sessions-tbody" class="table-divide">
 					@SessionsRowsPartial(result, params, lang)
 				</tbody>
 			</table>

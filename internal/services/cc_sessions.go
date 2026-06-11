@@ -48,6 +48,12 @@ type CCSessionListItem struct {
 	// For the list it is populated only for the rows actually returned (the
 	// current page), via a full-file scan — the list scan itself reads only HEAD.
 	Usage CCSessionUsage `json:"usage"`
+	// Account is the human-readable label of the CCAccount this session belongs to.
+	// Empty for single-account queries.
+	Account string `json:"account,omitempty"`
+	// AccountID is the ID of the CCAccount this session belongs to.
+	// Empty for single-account queries.
+	AccountID string `json:"account_id,omitempty"`
 }
 
 // CCSessionUsage holds the aggregated token usage and computed cost for a
@@ -79,12 +85,22 @@ type CCSessionListParams struct {
 	Cursor string
 	// Limit is rows per page (default 50, max 500).
 	Limit int
+	// Account filters by AccountID. Empty = all accounts.
+	Account string
+}
+
+// CCAccountInfo is a minimal account descriptor used in the list result for
+// building filter chips in the UI without importing config types into templates.
+type CCAccountInfo struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
 }
 
 // CCSessionListResult is the paginated list response.
 type CCSessionListResult struct {
 	Items      []CCSessionListItem `json:"items"`
 	Projects   []string            `json:"projects"`   // unique project display names for the filter selector
+	Accounts   []CCAccountInfo     `json:"accounts"`   // participating accounts for the account filter chips
 	NextCursor *string             `json:"nextCursor"` // nil when no more pages
 }
 

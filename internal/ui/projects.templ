@@ -8,8 +8,8 @@ import (
 )
 
 // ProjectsListPage renders the full page shell for the projects list view.
-templ ProjectsListPage(stats []services.ProjectStats, sync services.SyncProjectsResponse, caps services.CloudCapabilities, q, lang, theme string) {
-	@Layout(T(lang, "projects.title"), "projects", lang, theme, projectsContent(stats, sync, caps, q, lang))
+templ ProjectsListPage(stats []services.ProjectStats, sync services.SyncProjectsResponse, caps services.CloudCapabilities, q, lang, theme, sidebarState string) {
+	@Layout(T(lang, "projects.title"), "projects", lang, theme, sidebarState, projectsContent(stats, sync, caps, q, lang))
 }
 
 // ProjectsListPartial renders only the projects content (no HTML shell).
@@ -71,7 +71,7 @@ templ ProjectsTablePartial(stats []services.ProjectStats, sync services.SyncProj
 						<th class="px-3 py-2 text-right">{ T(lang, "syncHealth.projects.table.actions") }</th>
 					</tr>
 				</thead>
-				<tbody class="divide-y">
+				<tbody class="table-divide">
 					for _, p := range stats {
 						@projectRow(p, syncByProject(sync, p.Project), caps, lang)
 					}
@@ -153,11 +153,11 @@ templ enrollUnenrollButton(project string, enrolled bool, caps services.CloudCap
 				title={ T(lang, "syncHealth.projects.actions.unenroll") }
 				aria-label={ T(lang, "syncHealth.projects.actions.unenroll") }
 			>
-				&#8722;
+				@cloudOffIcon()
 			</button>
 		} else {
 			<button class="btn-icon text-fail opacity-40 cursor-not-allowed" disabled title={ T(lang, "syncHealth.projects.actions.unenrollUnsupported") }>
-				&#8722;
+				@cloudOffIcon()
 			</button>
 		}
 	} else {
@@ -170,14 +170,36 @@ templ enrollUnenrollButton(project string, enrolled bool, caps services.CloudCap
 				title={ T(lang, "syncHealth.projects.actions.enroll") }
 				aria-label={ T(lang, "syncHealth.projects.actions.enroll") }
 			>
-				&#43;
+				@cloudUploadIcon()
 			</button>
 		} else {
 			<button class="btn-icon text-accent opacity-40 cursor-not-allowed" disabled title={ T(lang, "syncHealth.projects.actions.enrollUnsupported") }>
-				&#43;
+				@cloudUploadIcon()
 			</button>
 		}
 	}
+}
+
+// cloudUploadIcon is the enroll action glyph: a cloud with an upward arrow,
+// signalling "enroll this project into Engram cloud sync". Stroke style matches
+// the sidebar-sync-icon in layout.templ.
+templ cloudUploadIcon() {
+	<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+		<path d="M12 13v8"></path>
+		<path d="m8 17 4-4 4 4"></path>
+		<path d="M4.5 16.5a4.5 4.5 0 0 1 1-8.86A6 6 0 0 1 17 8a4.5 4.5 0 0 1 2 8.5"></path>
+	</svg>
+}
+
+// cloudOffIcon is the unenroll action glyph: a cloud struck through, signalling
+// "remove this project from Engram cloud sync". Stroke style matches the
+// sidebar-sync-icon in layout.templ.
+templ cloudOffIcon() {
+	<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+		<path d="m2 2 20 20"></path>
+		<path d="M5.8 5.8A6 6 0 0 0 6 18h10.5a4.5 4.5 0 0 0 2.5-.76"></path>
+		<path d="M9.5 6.5A6 6 0 0 1 17 8a4.5 4.5 0 0 1 2.55 8.18"></path>
+	</svg>
 }
 
 // ---------------------------------------------------------------------------

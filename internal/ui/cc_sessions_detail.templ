@@ -9,8 +9,8 @@ import (
 )
 
 // CCSDetailPage renders the full page for a single Claude Code session.
-templ CCSDetailPage(detail *services.CCSessionDetail, lang, theme string) {
-	@Layout(T(lang, "ccSessions.session")+" — "+detail.ID, "cc-sessions", lang, theme, ccsDetailContent(detail, lang))
+templ CCSDetailPage(detail *services.CCSessionDetail, lang, theme, sidebarState string) {
+	@Layout(T(lang, "ccSessions.session")+" — "+detail.ID, "cc-sessions", lang, theme, sidebarState, ccsDetailContent(detail, lang))
 }
 
 // CCSDetailPartial renders only the content for HTMX partial swaps.

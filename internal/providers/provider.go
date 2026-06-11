@@ -141,5 +141,6 @@ type NavLink struct {
 	Href     string
 	Key      string // active-nav match key
 	LabelKey string
-	External bool // true for cross-module links like orphans/doctor
+	External bool   // true for cross-module links like orphans/doctor
+	Icon     string // icon name resolved by navIcon() in layout.templ; empty = no icon
 }

@@ -11,8 +11,8 @@
     "syncHealth": "Sync Health",
     "orphans": "Orphans",
     "ccsessions": "Claude Code",
-    "ccsessions.list": "Claude Code Sessions",
-    "ccsessions.overview": "Claude Code Overview"
+    "ccsessionsList": "Claude Code Sessions",
+    "ccsessionsOverview": "Claude Code Overview"
   },
   "common": {
     "loading": "Loading…",
@@ -687,6 +687,20 @@
       "noProfiles": "No profiles found.",
       "manage": "Manage profiles"
     },
+    "ccAccounts": {
+      "title": "Claude Code accounts",
+      "description": "Add multiple Claude Code directories (e.g. personal and work) to view all sessions in one place.",
+      "addTitle": "Add account",
+      "labelPlaceholder": "Account name (e.g. Work)",
+      "pathPlaceholder": "Path to ~/.claude directory",
+      "add": "Add",
+      "enabled": "enabled",
+      "disabled": "disabled",
+      "remove": "Remove",
+      "cannotRemoveLast": "Cannot remove the last account",
+      "labelEmpty": "Account name cannot be empty.",
+      "notFound": "Account not found."
+    },
     "theme": "Theme",
     "themeDark": "dark",
     "themeLight": "light",
@@ -760,7 +774,9 @@
       "compact": "Compact",
       "thinking": "Thinking",
       "tools": "Tools",
-      "attachments": "Attachments"
+      "attachments": "Attachments",
+      "account": "Account",
+      "allAccounts": "All accounts"
     },
     "listTitle": "Sessions",
     "listLoaded": "{{count}} loaded",
@@ -780,7 +796,8 @@
       "version": "CC version",
       "size": "Size",
       "tokens": "Tokens",
-      "cost": "Cost"
+      "cost": "Cost",
+      "account": "Account"
     },
     "fields": {
       "project": "Project",
@@ -822,7 +839,11 @@
   },
   "ccOverview": {
     "title": "Claude Code Overview",
-    "description": "Token usage and cost across all your Claude Code sessions."
+    "description": "Token usage and cost across all your Claude Code sessions.",
+    "byAccount": {
+      "title": "Per-account breakdown",
+      "total": "All accounts"
+    }
   },
   "placeholder": {
     "comingSoon": "Coming soon.",

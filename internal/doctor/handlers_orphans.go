@@ -68,7 +68,7 @@ func handleOrphansPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, OrphansList(data, projects))
 		} else {
-			render(w, r, OrphansPage(data, projects, ui.LangForRequest(r), ui.ThemeForRequest(r)))
+			render(w, r, OrphansPage(data, projects, ui.LangForRequest(r), ui.ThemeForRequest(r), ui.SidebarStateForRequest(r)))
 		}
 	}
 }
@@ -83,6 +83,40 @@ func handleOrphansListPartial(d Deps) http.HandlerFunc {
 			return
 		}
 		render(w, r, OrphansList(data, projects))
+	}
+}
+
+// handleOrphanObservationDetail serves GET /doctor/orphans/observations/{id}/detail.
+// It renders the observation-detail dialog partial so the user can inspect the
+// content and session working directory before assigning it to a project.
+func handleOrphanObservationDetail(d Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := r.PathValue("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			render(w, r, ErrorPartial(fmt.Sprintf("invalid observation id %q", idStr)))
+			return
+		}
+		if d.RoDB == nil {
+			render(w, r, ErrorPartial("Database is not available."))
+			return
+		}
+
+		detail, err := services.LoadOrphanObservationDetail(d.RoDB, id)
+		if err != nil {
+			render(w, r, ErrorPartial("Failed to load observation: "+err.Error()))
+			return
+		}
+		if detail == nil {
+			render(w, r, ErrorPartial(fmt.Sprintf("Observation %d not found.", id)))
+			return
+		}
+
+		projects, err := services.ProjectsList(d.RoDB)
+		if err != nil {
+			projects = []services.ProjectStats{}
+		}
+		render(w, r, OrphanObservationDetailDialog(detail, projects))
 	}
 }
 

@@ -6,8 +6,8 @@ import (
 )
 
 // PromptsPage renders the full page shell for the prompts list/search view.
-templ PromptsPage(items []services.PromptRow, searchItems []services.PromptWithSnippet, query, lang, theme string) {
-	@Layout(T(lang, "prompts.title"), "prompts", lang, theme, promptsContent(items, searchItems, query, lang))
+templ PromptsPage(items []services.PromptRow, searchItems []services.PromptWithSnippet, query, lang, theme, sidebarState string) {
+	@Layout(T(lang, "prompts.title"), "prompts", lang, theme, sidebarState, promptsContent(items, searchItems, query, lang))
 }
 
 // PromptsPartial renders only the prompts content (no HTML shell).
