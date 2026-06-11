@@ -12,6 +12,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
+	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/doctor"
 )
 
@@ -296,6 +297,31 @@ func TestAssignRWDBNil(t *testing.T) {
 	// Inline error partial uses class "inline-error"
 	if !strings.Contains(body, "inline-error") {
 		t.Errorf("expected inline-error in response body, got: %s", body)
+	}
+}
+
+// TestAssignDemoMode verifies that a write route is blocked with an inline
+// error when the server runs in demo mode, even though RWDB is available.
+func TestAssignDemoMode(t *testing.T) {
+	db := openTestDB(t)
+
+	mux := http.NewServeMux()
+	// RWDB present, but demo mode must still block the write.
+	doctor.Mount(mux, doctor.Deps{RoDB: db, RWDB: db, Config: config.Config{DemoMode: true}})
+
+	form := url.Values{"project": {"myproject"}}
+	req := httptest.NewRequest(http.MethodPost, "/doctor/orphans/observations/1/project",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	if !strings.Contains(body, "inline-error") {
+		t.Errorf("expected inline-error in response body, got: %s", body)
+	}
+	if !strings.Contains(body, "demo mode") {
+		t.Errorf("expected demo-mode message, got: %s", body)
 	}
 }
 

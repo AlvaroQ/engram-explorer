@@ -920,6 +920,12 @@
       "empty": "(empty)"
     }
   },
+  "demo": {
+    "banner": {
+      "text": "Demo data — this is a sample database for previewing Engram Explorer.",
+      "dismiss": "Dismiss"
+    }
+  },
   "onboarding": {
     "title": "Welcome to Engram Explorer",
     "description": "Connect your data sources to get started. Engram Explorer works with Engram memory and Claude Code sessions to give you a unified view of your AI-assisted work.",

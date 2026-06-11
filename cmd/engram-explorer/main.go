@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -27,9 +29,71 @@ import (
 // version is set at build time via -ldflags "-X main.version=<tag>".
 var version = "dev"
 
+// cliFlags holds the parsed subset of CLI flags that main() needs before
+// config.Load() runs. We do a manual scan instead of flag.Parse so that the
+// existing os.Args[1] switch for --version keeps working unchanged.
+type cliFlags struct {
+	demo           bool   // --demo flag or ENGRAM_DEMO=1
+	demoDBOverride string // --demo-db=<path> or ENGRAM_DEMO_DB
+}
+
+// parseFlags scans os.Args[1:] for the flags we care about without consuming
+// them via the standard flag package. This keeps --version handling intact.
+func parseFlags(args []string) cliFlags {
+	var f cliFlags
+	for _, a := range args {
+		switch {
+		case a == "--demo":
+			f.demo = true
+		case strings.HasPrefix(a, "--demo-db="):
+			f.demoDBOverride = strings.TrimSpace(strings.TrimPrefix(a, "--demo-db="))
+		}
+	}
+	// Also honour environment variables as fallback.
+	if !f.demo {
+		v := strings.ToLower(strings.TrimSpace(os.Getenv("ENGRAM_DEMO")))
+		f.demo = v == "1" || v == "true" || v == "yes" || v == "on"
+	}
+	if f.demoDBOverride == "" {
+		f.demoDBOverride = strings.TrimSpace(os.Getenv("ENGRAM_DEMO_DB"))
+	}
+	return f
+}
+
+// resolveDemoDBPath returns the path to the demo database, given an optional
+// explicit override. It looks for demo/engram.db relative to the executable
+// and then relative to the working directory. Returns an error with an
+// actionable message if neither exists.
+func resolveDemoDBPath(override string) (string, error) {
+	if override != "" {
+		if _, err := os.Stat(override); err == nil {
+			return override, nil
+		}
+		return "", fmt.Errorf("demo database not found at %s (from --demo-db / ENGRAM_DEMO_DB)", override)
+	}
+
+	// Candidates: next to the executable, then next to cwd.
+	var candidates []string
+	if exe, err := os.Executable(); err == nil {
+		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "demo", "engram.db"))
+	}
+	if wd, err := os.Getwd(); err == nil {
+		candidates = append(candidates, filepath.Join(wd, "demo", "engram.db"))
+	}
+	for _, p := range candidates {
+		if _, err := os.Stat(p); err == nil {
+			return p, nil
+		}
+	}
+	tried := strings.Join(candidates, ", ")
+	return "", fmt.Errorf("demo database not found (tried: %s); run: go run ./cmd/seed-demo", tried)
+}
+
 func main() {
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
+	// Scan every arg (not just os.Args[1]) so the version flag still works when
+	// combined with other flags, e.g. `engram-explorer --demo --version`.
+	for _, a := range os.Args[1:] {
+		switch a {
 		case "--version", "-v", "version":
 			fmt.Printf("engram-explorer %s\n", version)
 			return
@@ -42,12 +106,27 @@ func main() {
 }
 
 func run() error {
+	flags := parseFlags(os.Args[1:])
+
 	cfg, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 
+	if flags.demo {
+		demoPath, err := resolveDemoDBPath(flags.demoDBOverride)
+		if err != nil {
+			return err
+		}
+		cfg.EngramDbPath = demoPath
+		cfg.DemoMode = true
+	}
+
 	logger := logging.New(cfg.Env, cfg.LogLevel)
+
+	if cfg.DemoMode {
+		logger.Info("demo mode active", "db", cfg.EngramDbPath)
+	}
 
 	// Ensure config.json exists (seeds default profile from env + legacy
 	// explorer-settings.json on first run). This is non-fatal — if it fails

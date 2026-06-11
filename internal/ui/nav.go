@@ -103,6 +103,26 @@ func NavContextWithGroupsAndProfiles(r *http.Request, groupsFn func() []provider
 }
 
 // ---------------------------------------------------------------------------
+// Demo mode context — carries the demo-mode flag per-request for the banner
+// ---------------------------------------------------------------------------
+
+type demoModeKeyType struct{}
+
+var demoModeContextKey = demoModeKeyType{}
+
+// WithDemoMode returns a context enriched with the demo-mode flag.
+// The shared Layout component reads it via demoModeFromContext.
+func WithDemoMode(ctx context.Context, demo bool) context.Context {
+	return context.WithValue(ctx, demoModeContextKey, demo)
+}
+
+// demoModeFromContext returns the demo-mode flag stored in ctx (false if absent).
+func demoModeFromContext(ctx context.Context) bool {
+	v, _ := ctx.Value(demoModeContextKey).(bool)
+	return v
+}
+
+// ---------------------------------------------------------------------------
 // Profiles context — carries profile list per-request for the account switcher
 // ---------------------------------------------------------------------------
 

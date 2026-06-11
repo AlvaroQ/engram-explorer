@@ -920,6 +920,12 @@
       "empty": "(vacío)"
     }
   },
+  "demo": {
+    "banner": {
+      "text": "Datos de demostración — esta es una base de datos de muestra para previsualizar Engram Explorer.",
+      "dismiss": "Cerrar"
+    }
+  },
   "onboarding": {
     "title": "Bienvenido a Engram Explorer",
     "description": "Conecta tus fuentes de datos para comenzar. Engram Explorer funciona con la memoria de Engram y las sesiones de Claude Code para ofrecerte una vista unificada de tu trabajo asistido por IA.",

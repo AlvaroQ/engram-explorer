@@ -53,11 +53,16 @@ func render(w http.ResponseWriter, r *http.Request, c templ.Component) {
 	_ = c.Render(ui.NavContext(r), w)
 }
 
-// requireRW wraps a write handler with a read-only guard. When RWDB is nil
-// (read-only mode) it renders an inline error instead of invoking h, so every
-// write route shares a single source of truth for the read-only check.
+// requireRW wraps a write handler with a read-only guard. It blocks the write
+// in demo mode (the bundled sample DB must stay pristine) and when RWDB is nil
+// (read-only mode), so every write route shares a single source of truth for
+// the writability check.
 func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if d.Config.DemoMode {
+			render(w, r, ErrorPartial("Write operations are disabled in demo mode."))
+			return
+		}
 		if d.RWDB == nil {
 			render(w, r, ErrorPartial("Write operations are not available in read-only mode."))
 			return
