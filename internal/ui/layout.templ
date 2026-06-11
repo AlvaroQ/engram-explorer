@@ -144,18 +144,17 @@ templ Sidebar(activeNav, lang, sidebarState string) {
 			} else {
 				// Legacy fallback: hardcoded two-section layout when no NavGroups
 				// are provided (e.g. existing tests, legacy container path).
+				// sessions, topics, and prompts are intentionally omitted (PR1
+				// UX simplification); they remain accessible via direct URL.
 				if navShowEngram(ctx) {
 					@sidebarGroup(T(lang, "sidebar.groupEngram"), "engram")
 					<ul class="sidebar-nav">
 						@sidebarLink("/", "overview", activeNav, T(lang, "sidebar.overview"), "overview")
 						@sidebarLink("/brain", "brain", activeNav, T(lang, "sidebar.knowledge"), "brain")
 						@sidebarLink("/observations", "observations", activeNav, T(lang, "sidebar.observations"), "observations")
-						@sidebarLink("/sessions", "sessions", activeNav, T(lang, "sidebar.sessions"), "sessions")
 						@sidebarLink("/projects", "projects", activeNav, T(lang, "sidebar.projects"), "projects")
-						@sidebarLink("/prompts", "prompts", activeNav, T(lang, "sidebar.prompts"), "prompts")
-						@sidebarLink("/topics", "topics", activeNav, T(lang, "sidebar.topics"), "topics")
 						@sidebarExternalLink("/doctor/sync", "syncHealth", activeNav, T(lang, "sidebar.syncHealth"), "syncHealth")
-						@sidebarExternalLink("/doctor/orphans", "orphans", activeNav, "Orphans", "orphans")
+						@sidebarExternalLink("/doctor/orphans", "orphans", activeNav, T(lang, "nav.orphans"), "orphans")
 					</ul>
 				}
 				if navShowEngram(ctx) && navShowClaude(ctx) {
@@ -165,7 +164,6 @@ templ Sidebar(activeNav, lang, sidebarState string) {
 					@sidebarGroup(T(lang, "sidebar.groupClaudeCode"), "claude")
 					<ul class="sidebar-nav">
 						@sidebarLink("/cc-overview", "cc-overview", activeNav, T(lang, "sidebar.ccOverview"), "cc-overview")
-						@sidebarLink("/cc-sessions", "cc-sessions", activeNav, T(lang, "sidebar.ccSessions"), "cc-sessions")
 					</ul>
 				}
 			}

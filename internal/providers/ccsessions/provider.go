@@ -123,13 +123,15 @@ func (p *ccProvider) Routes(mux *http.ServeMux, inst providers.Instance, logger 
 }
 
 // Nav returns the sidebar NavGroup for the CC sessions provider.
+// cc-sessions list is intentionally omitted from the primary nav (PR1 UX
+// simplification). The list page remains accessible via direct URL; the
+// overview is the primary entry point.
 func (p *ccProvider) Nav(inst providers.Instance) providers.NavGroup {
 	return providers.NavGroup{
 		ID:       "cc-sessions",
 		LabelKey: "nav.ccsessions",
 		Featured: false,
 		Links: []providers.NavLink{
-			{Href: "/cc-sessions", Key: "cc-sessions", LabelKey: "nav.ccsessionsList", Icon: "cc-sessions"},
 			{Href: "/cc-overview", Key: "cc-overview", LabelKey: "nav.ccsessionsOverview", Icon: "cc-overview"},
 		},
 	}
