@@ -428,6 +428,9 @@
       "all": "include deleted",
       "only": "only deleted"
     },
+    "badge": {
+      "reviewDue": "Review due"
+    },
     "table": {
       "created": "Created",
       "project": "Project",

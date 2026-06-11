@@ -428,6 +428,9 @@
       "all": "incluir eliminados",
       "only": "solo eliminados"
     },
+    "badge": {
+      "reviewDue": "Revisión pendiente"
+    },
     "table": {
       "created": "Creado",
       "project": "Proyecto",

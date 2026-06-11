@@ -211,6 +211,9 @@ templ obsRow(obs services.ObservationRow, lang string) {
 		</td>
 		<td><span class="badge badge-accent">{ obs.Type }</span></td>
 		<td class="text-sm text-fg truncate" style="max-width:320px">
+			if obs.ReviewDue() {
+				<span class="badge badge-warn mr-1">{ T(lang, "observations.badge.reviewDue") }</span>
+			}
 			if obs.Title != nil && *obs.Title != "" {
 				{ *obs.Title }
 			} else {
@@ -268,6 +271,9 @@ templ ObservationDetailPartial(obs *services.ObservationRow, revisions []service
 		<!-- Badges row -->
 		<div class="flex flex-wrap gap-2">
 			<span class="badge badge-accent">{ obs.Type }</span>
+			if obs.ReviewDue() {
+				<span class="badge badge-warn">{ T(lang, "observations.badge.reviewDue") }</span>
+			}
 			if obs.Scope != nil && *obs.Scope != "" {
 				<span class="badge badge-neutral">{ T(lang, "observations.detail.scope", "scope", *obs.Scope) }</span>
 			}
