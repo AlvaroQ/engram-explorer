@@ -234,7 +234,8 @@ func healthHandler(c *Container) http.HandlerFunc {
 			topOk, providerHealths = c.Registry.AggregateHealth(r.Context())
 
 			// Build the "providers" array for the new shape.
-			var provs []map[string]any
+			// Always use a non-nil slice so the JSON output is [] not null.
+			provs := make([]map[string]any, 0, len(providerHealths))
 			for _, ph := range providerHealths {
 				entry := map[string]any{
 					"id":     ph.ID,

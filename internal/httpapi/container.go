@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
@@ -182,7 +183,8 @@ func (c *Container) SetClaudeDir(newDir string) error {
 	return nil
 }
 
-// Close releases database connections.
+// Close releases database connections and shuts down all active provider
+// instances (when the container is registry-backed). Safe to call multiple times.
 func (c *Container) Close() {
 	if c.roSwap != nil {
 		if db := c.roSwap.Current(); db != nil {
@@ -193,6 +195,11 @@ func (c *Container) Close() {
 		if db := c.rwSwap.Current(); db != nil {
 			db.Close()
 		}
+	}
+	// In registry-backed mode the DB handles are owned by the provider
+	// instances — close them via the registry to release file locks.
+	if c.Registry != nil {
+		c.Registry.Shutdown(context.Background())
 	}
 }
 

@@ -253,6 +253,25 @@ func (r *Registry) Instance(providerID string) Instance {
 	return e.inst
 }
 
+// Shutdown closes all active (Enabled) provider instances. It is called on
+// server shutdown or test cleanup to release DB handles, file locks, etc.
+// Errors are logged but do not prevent other providers from being closed.
+func (r *Registry) Shutdown(ctx context.Context) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, id := range r.order {
+		e := r.entries[id]
+		if e.state == Enabled && e.inst != nil {
+			if err := e.inst.Close(ctx); err != nil && r.log != nil {
+				r.log.Warn("provider close on shutdown", "id", id, "err", err)
+			}
+			e.inst = nil
+			e.state = Registered
+		}
+	}
+}
+
 // Entries returns a snapshot of all provider IDs and their states, in order.
 // Primarily for diagnostics and tests.
 func (r *Registry) Entries() []RegistryEntry {
