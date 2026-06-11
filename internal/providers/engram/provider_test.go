@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -442,5 +443,43 @@ func TestDetect_DoesNotOpenLongLivedHandles(t *testing.T) {
 	// Windows test environments may have OS locks unrelated to our code).
 	if _, err := os.Stat(path); err != nil {
 		t.Errorf("file not accessible after Detect: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Regression: Detect/Validate must use busy_timeout (hot-WAL regression)
+// ---------------------------------------------------------------------------
+
+// TestDetect_DSN_IncludesBusyTimeout is the RED test for the modular-providers
+// regression: Detect() opened its own connection with a bare "file:%s?mode=ro"
+// DSN (no busy_timeout), while internal/sqlite/pool.go's OpenReadOnly used
+// "busy_timeout(5000)". Against a hot WAL database written by the Engram
+// daemon, the missing timeout could cause SQLITE_BUSY during WAL
+// checkpoint/recovery windows, making Detect() return schema-invalid even
+// for a valid DB — causing the provider to boot into "Detected" (not
+// "Enabled") state and the dashboard to show Engram as unavailable.
+//
+// The fix: Detect and Validate must use the same busy_timeout as OpenReadOnly.
+// This test verifies that CheckRODSN (the DSN builder used by both) includes
+// busy_timeout.
+func TestDetect_DSN_IncludesBusyTimeout(t *testing.T) {
+	dsn := engram.CheckRODSN("/path/to/engram.db")
+	if !strings.Contains(dsn, "busy_timeout") {
+		t.Errorf(
+			"Detect/Validate DSN must include busy_timeout to match pool.go's open parameters; got: %q",
+			dsn,
+		)
+	}
+}
+
+// TestValidate_DSN_IncludesBusyTimeout verifies that Validate uses the same
+// busy_timeout-aware DSN builder as Detect.
+func TestValidate_DSN_IncludesBusyTimeout(t *testing.T) {
+	dsn := engram.CheckRODSN("/path/to/engram.db")
+	if !strings.Contains(dsn, "busy_timeout(5000)") {
+		t.Errorf(
+			"Validate DSN must include busy_timeout(5000) to match pool.go; got: %q",
+			dsn,
+		)
 	}
 }

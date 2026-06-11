@@ -41,6 +41,17 @@ func SchemaValid(db *sql.DB) bool {
 	return err == nil && n >= 2
 }
 
+// checkRODSN returns the SQLite DSN for one-shot read-only schema checks used
+// by Detect and Validate. It includes the same busy_timeout(5000) as
+// internal/sqlite/pool.go's OpenReadOnly to avoid SQLITE_BUSY during WAL
+// checkpoint windows when the Engram daemon is actively writing. Using a bare
+// "file:%s?mode=ro" DSN (without busy_timeout) is the regression introduced in
+// WU-3/WU-6 that could cause Detect to report schema-invalid on a valid hot-WAL
+// database, making the provider boot into Detected (not Enabled) state.
+func checkRODSN(path string) string {
+	return fmt.Sprintf("file:%s?mode=ro&_pragma=busy_timeout(5000)", path)
+}
+
 // ---------------------------------------------------------------------------
 // engramProvider — implements providers.Provider
 // ---------------------------------------------------------------------------
@@ -87,8 +98,11 @@ func (p *engramProvider) Detect(ctx context.Context, cfg providers.ProviderConfi
 		return providers.Detection{Available: false, Reason: "path-missing", Path: path}
 	}
 
-	// Open read-only, check schema, close immediately — no long-lived handle.
-	db, err := sql.Open("sqlite", fmt.Sprintf("file:%s?mode=ro", path))
+	// Open read-only with busy_timeout to match pool.go's open parameters.
+	// Using a bare "mode=ro" DSN (no busy_timeout) can return SQLITE_BUSY during
+	// WAL checkpoint windows when the Engram daemon is actively writing, making
+	// Detect report schema-invalid on an otherwise valid database.
+	db, err := sql.Open("sqlite", checkRODSN(path))
 	if err != nil {
 		return providers.Detection{Available: false, Reason: "schema-invalid", Path: path}
 	}
@@ -200,7 +214,9 @@ func (p *engramProvider) Validate(ctx context.Context, cfg providers.ProviderCon
 		return fmt.Errorf("engram: database file not found at %q: %w", path, err)
 	}
 
-	db, err := sql.Open("sqlite", fmt.Sprintf("file:%s?mode=ro", path))
+	// Use the same busy_timeout-aware DSN as Detect to be resilient against
+	// WAL checkpoint pressure from the Engram daemon.
+	db, err := sql.Open("sqlite", checkRODSN(path))
 	if err != nil {
 		return fmt.Errorf("engram: cannot open database for validation: %w", err)
 	}
