@@ -4,6 +4,7 @@
 package ui
 
 import (
+	"context"
 	"io/fs"
 	"net/http"
 
@@ -33,6 +34,61 @@ type Deps struct {
 	// falls back to the legacy hardcoded two-section layout (engram + claude).
 	// Wired in production from Registry.NavGroups via NewContainerWithRegistry.
 	NavGroups func() []providers.NavGroup
+
+	// Modules, when non-nil, returns a snapshot of all registered providers for
+	// the Settings → Modules page. When nil the Modules section is hidden.
+	// Wired in production from Registry.AllProviderMetas via mountRegistryRoutes.
+	Modules func() []ModuleInfo
+
+	// ToggleModule enables or disables a provider by ID. When nil the toggle
+	// endpoint returns 503. On success the caller should persist the change to
+	// the active profile in config.json.
+	ToggleModule func(id string, enabled bool) error
+
+	// ValidateModulePath runs provider-specific path validation (Tier-1 manual
+	// path entry). On success the provider is opened and the path is persisted.
+	// When nil the path-entry endpoint returns 503.
+	ValidateModulePath func(ctx context.Context, id, path string) error
+}
+
+// ---------------------------------------------------------------------------
+// Modules view-models (Settings → Modules page)
+// ---------------------------------------------------------------------------
+
+// ModuleState is the display state of a provider in the Settings Modules page.
+type ModuleState int
+
+const (
+	// ModuleEnabled — provider is open and serving requests.
+	ModuleEnabled ModuleState = iota
+	// ModuleDisabled — provider is user-toggled off.
+	ModuleDisabled
+	// ModuleDetected — source is visible on disk but not opened (Tier-1 path entry).
+	ModuleDetected
+	// ModuleErrored — provider failed to open.
+	ModuleErrored
+	// ModuleRegistered — provider is known but not yet detected.
+	ModuleRegistered
+)
+
+// ModuleTier classifies whether a provider supports manual path entry.
+type ModuleTier int
+
+const (
+	// ModuleTier1 providers offer manual path entry when not auto-detected.
+	ModuleTier1 ModuleTier = iota
+	// ModuleTier2 providers are hidden when not auto-detected.
+	ModuleTier2
+)
+
+// ModuleInfo is a view-model for one provider row in the Settings Modules page.
+type ModuleInfo struct {
+	ID          string
+	DisplayName string
+	Tier        ModuleTier
+	State       ModuleState
+	Path        string // current path from config; may be empty
+	Err         string // error message when State == ModuleErrored
 }
 
 // IsHTMX reports whether the request was issued by HTMX.
@@ -144,6 +200,10 @@ func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 	mux.HandleFunc("POST /settings/nav-visibility", handleNavVisibilityPost())
 	mux.HandleFunc("POST /theme", handleThemePost())
 	mux.HandleFunc("POST /lang", handleLangPost())
+
+	// Settings → Modules routes (WU-8).
+	mux.HandleFunc("POST /settings/modules/{id}/toggle", handleModulesTogglePost(d))
+	mux.HandleFunc("POST /settings/modules/{id}/path", handleModulesPathPost(d))
 
 	// Observations routes.
 	// /list and /{id} must be registered before the wildcard so Go 1.22 exact

@@ -17,6 +17,15 @@ type settingsData struct {
 	UptimeS       int
 	Lang          string
 	Theme         string
+
+	// WU-8: Modules section data.
+	// Modules is the list of registered providers for the Settings → Modules page.
+	// Nil when the registry is not wired (legacy mode or nil Deps.Modules).
+	Modules []ModuleInfo
+	// ModuleError is a generic error from a toggle or path operation.
+	ModuleError string
+	// ModulePathErrors maps provider ID to a path-validation error message.
+	ModulePathErrors map[string]string
 }
 
 // SettingsPage renders the full settings page shell.
@@ -217,6 +226,26 @@ templ settingsContent(d settingsData) {
 			}
 		</section>
 
+		<!-- Módulos de proveedores (WU-8) -->
+		<!-- Generic module-level error: shown even when Modules list is nil (e.g. path error on page with no registry) -->
+		if d.ModuleError != "" {
+			<div class="settings-group">
+				<p class="error-hint">{ d.ModuleError }</p>
+			</div>
+		}
+		<!-- Modules section: shown only when registry is wired and has providers -->
+		if len(d.Modules) > 0 {
+			<section class="settings-group" id="settings-modules">
+				<h2 class="settings-group-title">{ T(d.Lang, "settings.modules.title") }</h2>
+				<p class="settings-group-desc">{ T(d.Lang, "settings.modules.description") }</p>
+				<div class="modules-list">
+					for _, m := range d.Modules {
+						@moduleRow(d.Lang, m, d.ModulePathErrors[m.ID])
+					}
+				</div>
+			</section>
+		}
+
 		<!-- Daemon de Engram -->
 		<section class="settings-group">
 			<h2 class="settings-group-title">{ T(d.Lang, "settings.daemon") }</h2>
@@ -244,6 +273,96 @@ templ settingsContent(d settingsData) {
 				<p class="error-hint">{ d.DaemonError }</p>
 			}
 		</section>
+	</div>
+}
+
+// moduleStateBadge returns the i18n key for the module state badge.
+func moduleStateBadgeKey(s ModuleState) string {
+	switch s {
+	case ModuleEnabled:
+		return "settings.modules.state.enabled"
+	case ModuleDisabled:
+		return "settings.modules.state.disabled"
+	case ModuleDetected:
+		return "settings.modules.state.detected"
+	case ModuleErrored:
+		return "settings.modules.state.errored"
+	default:
+		return "settings.modules.state.registered"
+	}
+}
+
+// moduleRow renders one provider row in the Settings → Modules section.
+// It shows: display name, state badge, path (if any), enable/disable toggle,
+// and (for Tier-1 providers in non-Enabled state) a manual path entry form.
+templ moduleRow(lang string, m ModuleInfo, pathError string) {
+	<div class="module-row" id={ "module-" + m.ID }>
+		<div class="module-row-header">
+			<div class="module-row-identity">
+				<span class="module-name">{ m.DisplayName }</span>
+				<span class={ "badge", templ.KV("badge-ok", m.State == ModuleEnabled), templ.KV("badge-warn", m.State == ModuleDetected), templ.KV("badge-fail", m.State == ModuleErrored || m.State == ModuleDisabled) }>
+					{ T(lang, moduleStateBadgeKey(m.State)) }
+				</span>
+			</div>
+			<div class="module-row-toggle">
+				if m.State == ModuleEnabled {
+					<form method="post" action={ templ.SafeURL("/settings/modules/" + m.ID + "/toggle") }
+						hx-post={ "/settings/modules/" + m.ID + "/toggle" }
+						hx-target="#settings-modules"
+						hx-swap="outerHTML">
+						<input type="hidden" name="enabled" value="false"/>
+						<button type="submit" class="btn btn-sm btn-secondary">
+							{ T(lang, "settings.modules.disable") }
+						</button>
+					</form>
+				} else if m.State == ModuleDisabled || m.State == ModuleDetected {
+					<form method="post" action={ templ.SafeURL("/settings/modules/" + m.ID + "/toggle") }
+						hx-post={ "/settings/modules/" + m.ID + "/toggle" }
+						hx-target="#settings-modules"
+						hx-swap="outerHTML">
+						<input type="hidden" name="enabled" value="true"/>
+						<button type="submit" class="btn btn-sm btn-primary">
+							{ T(lang, "settings.modules.enable") }
+						</button>
+					</form>
+				}
+			</div>
+		</div>
+		if m.Path != "" {
+			<div class="info-row">
+				<span class="info-label muted">{ T(lang, "settings.row.path") }</span>
+				<span class="info-value mono">{ m.Path }</span>
+			</div>
+		}
+		if m.Err != "" {
+			<p class="error-hint">{ m.Err }</p>
+		}
+		<!-- Tier-1 manual path entry: show when provider is not enabled -->
+		if m.Tier == ModuleTier1 && m.State != ModuleEnabled {
+			<form class="path-edit-form" method="post"
+				action={ templ.SafeURL("/settings/modules/" + m.ID + "/path") }
+				hx-post={ "/settings/modules/" + m.ID + "/path" }
+				hx-target="#settings-modules"
+				hx-swap="outerHTML">
+				<input
+					type="text"
+					name="path"
+					value={ m.Path }
+					class="path-input mono"
+					autocomplete="off"
+					autocapitalize="off"
+					spellcheck="false"
+					aria-label={ T(lang, "settings.modules.pathLabel") }
+					placeholder={ T(lang, "settings.modules.pathPlaceholder") }
+				/>
+				<button type="submit" class="btn btn-sm btn-primary">
+					{ T(lang, "settings.modules.validateAndActivate") }
+				</button>
+			</form>
+			if pathError != "" {
+				<p class="error-hint">{ pathError }</p>
+			}
+		}
 	</div>
 }
 

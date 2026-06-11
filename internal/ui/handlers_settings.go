@@ -9,6 +9,76 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/daemon"
 )
 
+// handleModulesTogglePost serves POST /settings/modules/{id}/toggle.
+// It enables or disables the named provider via the ToggleModule callback
+// and redirects back to /settings.
+func handleModulesTogglePost(d Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if d.ToggleModule == nil {
+			http.Error(w, "module toggle not available", http.StatusServiceUnavailable)
+			return
+		}
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "bad form", http.StatusBadRequest)
+			return
+		}
+		id := r.PathValue("id")
+		enabled := r.FormValue("enabled") == "true"
+
+		if err := d.ToggleModule(id, enabled); err != nil {
+			lang := langForRequest(r)
+			theme := themeForRequest(r)
+			data := buildSettingsData(d, r, lang, theme)
+			data.ModuleError = err.Error()
+			renderSettings(w, r, d, data)
+			return
+		}
+		redirectSettings(w, r)
+	}
+}
+
+// handleModulesPathPost serves POST /settings/modules/{id}/path.
+// It validates the submitted path via ValidateModulePath; on success it
+// redirects to /settings; on failure it re-renders the settings page with an
+// inline error (partial-swap pattern matching existing settings handlers).
+func handleModulesPathPost(d Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if d.ValidateModulePath == nil {
+			http.Error(w, "module path validation not available", http.StatusServiceUnavailable)
+			return
+		}
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "bad form", http.StatusBadRequest)
+			return
+		}
+
+		id := r.PathValue("id")
+		path := strings.TrimSpace(r.FormValue("path"))
+		lang := langForRequest(r)
+		theme := themeForRequest(r)
+
+		var errMsg string
+		if path == "" {
+			errMsg = T(lang, "settings.path.empty")
+		} else {
+			if err := d.ValidateModulePath(r.Context(), id, path); err != nil {
+				errMsg = err.Error()
+			}
+		}
+
+		if errMsg != "" {
+			data := buildSettingsData(d, r, lang, theme)
+			data.ModulePathErrors[id] = errMsg
+			// Also set ModuleError so the error is visible even when the Modules
+			// section is not rendered (e.g. when registry is not wired in tests).
+			data.ModuleError = errMsg
+			renderSettings(w, r, d, data)
+			return
+		}
+		redirectSettings(w, r)
+	}
+}
+
 // handleSettingsPage serves GET /settings.
 // Collects live system info (DB ping, daemon reachability) and renders the page.
 // Full page on direct GET; partial content when HX-Request: true.
@@ -177,6 +247,12 @@ func buildSettingsData(d Deps, r *http.Request, lang, theme string) settingsData
 
 	prefs := navPrefsForRequest(r)
 
+	// Collect Modules data when the registry callback is wired.
+	var modules []ModuleInfo
+	if d.Modules != nil {
+		modules = d.Modules()
+	}
+
 	return settingsData{
 		DBPath:      d.Paths.EngramDB(),
 		DBOk:        dbOk,
@@ -189,8 +265,10 @@ func buildSettingsData(d Deps, r *http.Request, lang, theme string) settingsData
 			"engram":      prefs.isShown("engram"),
 			"cc-sessions": prefs.isShown("cc-sessions"),
 		},
-		Lang:  lang,
-		Theme: theme,
+		Lang:             lang,
+		Theme:            theme,
+		Modules:          modules,
+		ModulePathErrors: make(map[string]string),
 	}
 }
 

@@ -31,6 +31,11 @@ type Container struct {
 	// and callers that construct via NewContainer).
 	Registry *providers.Registry
 
+	// ProfileStore, when non-nil, is the persistent config used by the Settings
+	// Modules page to read and write per-provider enablement and paths. It is
+	// set from main.go via NewContainerWithRegistry when a registry is used.
+	ProfileStore *config.ProfileStore
+
 	// CloseGrace is how long ReloadEngramDB waits before closing the superseded
 	// pools, letting in-flight queries drain. Tests set it to 0 to close
 	// synchronously (so temp DB files unlock deterministically).

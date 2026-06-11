@@ -657,6 +657,22 @@
       "system": "System",
       "cloud": "Cloud"
     },
+    "modules": {
+      "title": "Modules",
+      "description": "Manage data source providers. Enable or disable providers and configure their paths.",
+      "enable": "Enable",
+      "disable": "Disable",
+      "validateAndActivate": "Validate & Activate",
+      "pathLabel": "Provider path",
+      "pathPlaceholder": "Enter the path to activate this provider",
+      "state": {
+        "enabled": "enabled",
+        "disabled": "disabled",
+        "detected": "not configured",
+        "errored": "error",
+        "registered": "not detected"
+      }
+    },
     "theme": "Theme",
     "themeDark": "dark",
     "themeLight": "light",

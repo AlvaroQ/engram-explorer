@@ -657,6 +657,22 @@
       "system": "Sistema",
       "cloud": "Nube"
     },
+    "modules": {
+      "title": "Módulos",
+      "description": "Administrá los proveedores de datos. Habilitá o deshabilitá proveedores y configurá sus rutas.",
+      "enable": "Habilitar",
+      "disable": "Deshabilitar",
+      "validateAndActivate": "Validar y Activar",
+      "pathLabel": "Ruta del proveedor",
+      "pathPlaceholder": "Ingresá la ruta para activar este proveedor",
+      "state": {
+        "enabled": "habilitado",
+        "disabled": "deshabilitado",
+        "detected": "sin configurar",
+        "errored": "error",
+        "registered": "no detectado"
+      }
+    },
     "theme": "Tema",
     "themeDark": "oscuro",
     "themeLight": "claro",

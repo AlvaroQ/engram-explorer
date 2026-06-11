@@ -1,7 +1,9 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
 	"runtime"
@@ -123,6 +125,12 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 	reg := c.Registry
 	engramMounted := false
 
+	// Resolve active profile name for WU-8 Modules callbacks.
+	activeProfileName := "default"
+	if c.ProfileStore != nil && c.ProfileStore.ActiveProfile != "" {
+		activeProfileName = c.ProfileStore.ActiveProfile
+	}
+
 	for _, entry := range reg.Entries() {
 		if entry.State != providers.Enabled {
 			continue
@@ -162,6 +170,10 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 				deps.SetClaudeDir = c.SetClaudeDir
 				// Wire NavGroups so the sidebar is data-driven from the registry.
 				deps.NavGroups = reg.NavGroups
+				// Wire WU-8 Modules callbacks.
+				deps.Modules = buildModulesFn(reg, c.ProfileStore, activeProfileName)
+				deps.ToggleModule = buildToggleModuleFn(reg, c.ProfileStore, activeProfileName, c.Config.ConfigHome)
+				deps.ValidateModulePath = buildValidateModulePathFn(reg, c.ProfileStore, activeProfileName, c.Config.ConfigHome)
 				ui.Mount(mux, deps)
 				engramMounted = true
 			}
@@ -183,13 +195,16 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 	// data-fetch handlers degrade gracefully, but the shell itself renders.
 	if !engramMounted {
 		ui.Mount(mux, ui.Deps{
-			RoDB:           c.RoDB,
-			RWDB:           c.RWDB,
-			Config:         c.Config,
-			Paths:          c.Paths,
-			ReloadEngramDB: c.ReloadEngramDB,
-			SetClaudeDir:   c.SetClaudeDir,
-			NavGroups:      reg.NavGroups,
+			RoDB:               c.RoDB,
+			RWDB:               c.RWDB,
+			Config:             c.Config,
+			Paths:              c.Paths,
+			ReloadEngramDB:     c.ReloadEngramDB,
+			SetClaudeDir:       c.SetClaudeDir,
+			NavGroups:          reg.NavGroups,
+			Modules:            buildModulesFn(reg, c.ProfileStore, activeProfileName),
+			ToggleModule:       buildToggleModuleFn(reg, c.ProfileStore, activeProfileName, c.Config.ConfigHome),
+			ValidateModulePath: buildValidateModulePathFn(reg, c.ProfileStore, activeProfileName, c.Config.ConfigHome),
 		})
 	}
 }
@@ -295,6 +310,139 @@ func healthHandler(c *Container) http.HandlerFunc {
 		// Node health always returns 200 regardless of db/daemon status.
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(resp)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// WU-8: Modules page helpers — registry → ui.ModuleInfo view-model
+// ---------------------------------------------------------------------------
+
+// buildModulesFn returns a closure that maps Registry.AllProviderMetas() to
+// []ui.ModuleInfo view-models for the Settings → Modules page. The ProfileStore
+// (may be nil) is used to read the current path for each provider.
+func buildModulesFn(reg *providers.Registry, store *config.ProfileStore, activeProfileName string) func() []ui.ModuleInfo {
+	return func() []ui.ModuleInfo {
+		metas := reg.AllProviderMetas()
+		out := make([]ui.ModuleInfo, 0, len(metas))
+		for _, m := range metas {
+			var path string
+			if store != nil {
+				if p, ok := store.Profiles[activeProfileName]; ok {
+					path = p.ProviderCfg(m.ID).Path
+				}
+			}
+			var errMsg string
+			if m.Err != nil {
+				errMsg = m.Err.Error()
+			}
+			out = append(out, ui.ModuleInfo{
+				ID:          m.ID,
+				DisplayName: m.DisplayName,
+				Tier:        registryTierToUITier(m.Tier),
+				State:       registryStateToUIState(m.State),
+				Path:        path,
+				Err:         errMsg,
+			})
+		}
+		return out
+	}
+}
+
+// registryTierToUITier converts a providers.Tier to a ui.ModuleTier.
+func registryTierToUITier(t providers.Tier) ui.ModuleTier {
+	if t == providers.Tier2 {
+		return ui.ModuleTier2
+	}
+	return ui.ModuleTier1
+}
+
+// registryStateToUIState converts a providers.State to a ui.ModuleState.
+func registryStateToUIState(s providers.State) ui.ModuleState {
+	switch s {
+	case providers.Enabled:
+		return ui.ModuleEnabled
+	case providers.Disabled:
+		return ui.ModuleDisabled
+	case providers.Detected:
+		return ui.ModuleDetected
+	case providers.Errored:
+		return ui.ModuleErrored
+	default:
+		return ui.ModuleRegistered
+	}
+}
+
+// buildToggleModuleFn returns a closure that enables or disables a provider in
+// the registry and persists the change to the active profile in config.json.
+func buildToggleModuleFn(reg *providers.Registry, store *config.ProfileStore, activeProfileName, configHome string) func(id string, enabled bool) error {
+	return func(id string, enabled bool) error {
+		if store == nil {
+			return fmt.Errorf("profile store not available")
+		}
+
+		// Get current profile config for this provider.
+		profile, ok := store.Profiles[activeProfileName]
+		if !ok {
+			return fmt.Errorf("active profile %q not found", activeProfileName)
+		}
+		cfg := providerConfigFrom(profile.ProviderCfg(id))
+
+		if enabled {
+			cfg.Enabled = true
+			if err := reg.Enable(context.Background(), id, cfg); err != nil {
+				return err
+			}
+		} else {
+			if err := reg.Disable(context.Background(), id); err != nil {
+				return err
+			}
+		}
+
+		// Persist the updated enablement to the active profile.
+		if profile.Providers == nil {
+			profile.Providers = make(map[string]config.ProviderConfig)
+		}
+		existing := profile.Providers[id]
+		existing.Enabled = enabled
+		profile.Providers[id] = existing
+		store.Profiles[activeProfileName] = profile
+		return config.SaveProfileStore(configHome, store)
+	}
+}
+
+// buildValidateModulePathFn returns a closure that validates a provider path,
+// opens the provider with the validated config, and persists the path to the
+// active profile in config.json.
+func buildValidateModulePathFn(reg *providers.Registry, store *config.ProfileStore, activeProfileName, configHome string) func(ctx context.Context, id, path string) error {
+	return func(ctx context.Context, id, path string) error {
+		if store == nil {
+			return fmt.Errorf("profile store not available")
+		}
+
+		cfg := providers.ProviderConfig{Enabled: true, Path: path}
+		if err := reg.Validate(ctx, id, cfg); err != nil {
+			return err
+		}
+
+		// Validation passed — enable the provider with the new config.
+		if err := reg.Enable(ctx, id, cfg); err != nil {
+			return err
+		}
+
+		// Persist path + enabled to the active profile.
+		profile, ok := store.Profiles[activeProfileName]
+		if !ok {
+			return fmt.Errorf("active profile %q not found", activeProfileName)
+		}
+		if profile.Providers == nil {
+			profile.Providers = make(map[string]config.ProviderConfig)
+		}
+		existing := profile.Providers[id]
+		existing.Enabled = true
+		existing.Path = path
+		profile.Providers[id] = existing
+		store.Profiles[activeProfileName] = profile
+		return config.SaveProfileStore(configHome, store)
 	}
 }
 

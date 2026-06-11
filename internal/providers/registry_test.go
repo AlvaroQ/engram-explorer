@@ -303,6 +303,122 @@ func TestRegistry_DuplicateIDPanics(t *testing.T) {
 	reg.Register(fp2)
 }
 
+// ---------------------------------------------------------------------------
+// WU-8: Registry.Validate, Enable, Disable, ProviderMeta
+// ---------------------------------------------------------------------------
+
+// TestRegistry_Validate_DelegatestoProvider asserts that Registry.Validate
+// delegates to the underlying Provider.Validate and returns its error.
+func TestRegistry_Validate_DelegatestoProvider(t *testing.T) {
+	validateErr := errors.New("schema-invalid")
+	fp := providertest.NewFakeProvider(providertest.FakeProviderOptions{
+		ID:          "engram",
+		ValidateErr: validateErr,
+	})
+	reg := providers.NewRegistry(slog.Default())
+	reg.Register(fp)
+
+	cfg := providers.ProviderConfig{Path: "/some/path"}
+	err := reg.Validate(context.Background(), "engram", cfg)
+	if !errors.Is(err, validateErr) {
+		t.Errorf("Validate: got %v, want %v", err, validateErr)
+	}
+}
+
+// TestRegistry_Validate_UnknownID asserts that Registry.Validate returns an
+// error for an unknown provider ID.
+func TestRegistry_Validate_UnknownID(t *testing.T) {
+	reg := providers.NewRegistry(slog.Default())
+	err := reg.Validate(context.Background(), "nonexistent", providers.ProviderConfig{Path: "/x"})
+	if err == nil {
+		t.Error("Validate with unknown ID: expected error, got nil")
+	}
+}
+
+// TestRegistry_Enable_OpensAndSetsEnabled asserts that Enable transitions a
+// provider from Detected/Disabled state to Enabled.
+func TestRegistry_Enable_OpensAndSetsEnabled(t *testing.T) {
+	fp := providertest.NewFakeProvider(providertest.FakeProviderOptions{
+		ID:              "engram",
+		DetectAvailable: false, // not detected at boot → Detected state
+	})
+	reg := providers.NewRegistry(slog.Default())
+	reg.Register(fp)
+	// Boot without a valid path → provider stays in Detected (not auto-opened).
+	reg.Boot(context.Background(), providertest.NewFakeProfile(nil))
+
+	// Now the user provides a path and enables the provider manually.
+	fp.SetDetectAvailable(true) // path is now valid
+	cfg := providers.ProviderConfig{Enabled: true, Path: "/now/valid"}
+	if err := reg.Enable(context.Background(), "engram", cfg); err != nil {
+		t.Fatalf("Enable: unexpected error: %v", err)
+	}
+	if reg.ActiveCount() != 1 {
+		t.Errorf("ActiveCount after Enable: got %d, want 1", reg.ActiveCount())
+	}
+}
+
+// TestRegistry_Disable_ClosesAndSetsDisabled asserts that Disable transitions
+// an Enabled provider to Disabled state and decrements ActiveCount.
+func TestRegistry_Disable_ClosesAndSetsDisabled(t *testing.T) {
+	fp := providertest.NewFakeProvider(providertest.FakeProviderOptions{
+		ID:              "engram",
+		DetectAvailable: true,
+	})
+	reg := providers.NewRegistry(slog.Default())
+	reg.Register(fp)
+	reg.Boot(context.Background(), makeProfile("engram"))
+
+	if reg.ActiveCount() != 1 {
+		t.Fatalf("pre-condition: want 1 active provider, got %d", reg.ActiveCount())
+	}
+
+	if err := reg.Disable(context.Background(), "engram"); err != nil {
+		t.Fatalf("Disable: unexpected error: %v", err)
+	}
+	if reg.ActiveCount() != 0 {
+		t.Errorf("ActiveCount after Disable: got %d, want 0", reg.ActiveCount())
+	}
+	entries := reg.Entries()
+	if entries[0].State != providers.Disabled {
+		t.Errorf("state after Disable: got %s, want Disabled", entries[0].State)
+	}
+}
+
+// TestRegistry_ProviderMeta_ReturnsInfo asserts that ProviderMeta returns the
+// display name, tier, and detection info for a known provider.
+func TestRegistry_ProviderMeta_ReturnsInfo(t *testing.T) {
+	fp := providertest.NewFakeProvider(providertest.FakeProviderOptions{
+		ID:              "engram",
+		Featured:        true,
+		DetectAvailable: true,
+	})
+	reg := providers.NewRegistry(slog.Default())
+	reg.Register(fp)
+	reg.Boot(context.Background(), makeProfile("engram"))
+
+	meta, ok := reg.ProviderMeta("engram")
+	if !ok {
+		t.Fatal("ProviderMeta: expected ok=true for registered provider, got false")
+	}
+	if meta.ID != "engram" {
+		t.Errorf("meta.ID: got %q, want engram", meta.ID)
+	}
+	if meta.DisplayName == "" {
+		t.Error("meta.DisplayName: expected non-empty")
+	}
+}
+
+// TestRegistry_ProviderMeta_UnknownID asserts that ProviderMeta returns
+// ok=false for a provider that is not registered.
+func TestRegistry_ProviderMeta_UnknownID(t *testing.T) {
+	reg := providers.NewRegistry(slog.Default())
+	_, ok := reg.ProviderMeta("nonexistent")
+	if ok {
+		t.Error("ProviderMeta with unknown ID: expected ok=false, got true")
+	}
+}
+
 // TestDetectValidate_Contract asserts the basic Detect / Validate contract on
 // FakeProvider (the stub used for framework tests).
 func TestDetectValidate_Contract(t *testing.T) {

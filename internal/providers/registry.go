@@ -297,6 +297,134 @@ type RegistryEntry struct {
 	Err   error
 }
 
+// ProviderMeta is a snapshot of a provider's static identity and tier
+// alongside its current runtime state. Used by the Settings Modules page.
+type ProviderMeta struct {
+	ID          string
+	DisplayName string
+	Tier        Tier
+	Featured    bool
+	State       State
+	Err         error
+}
+
+// ProviderMeta returns a snapshot of the named provider's static identity and
+// current runtime state. Returns (meta, true) when the provider is registered,
+// or (zero, false) when the ID is unknown.
+func (r *Registry) ProviderMeta(id string) (ProviderMeta, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	e, ok := r.entries[id]
+	if !ok {
+		return ProviderMeta{}, false
+	}
+	return ProviderMeta{
+		ID:          id,
+		DisplayName: e.p.DisplayName(),
+		Tier:        e.p.ProviderTier(),
+		Featured:    e.p.Featured(),
+		State:       e.state,
+		Err:         e.err,
+	}, true
+}
+
+// AllProviderMetas returns ProviderMeta for every registered provider in order.
+// Used by the Settings Modules page to list all providers regardless of state.
+func (r *Registry) AllProviderMetas() []ProviderMeta {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	out := make([]ProviderMeta, 0, len(r.order))
+	for _, id := range r.order {
+		e := r.entries[id]
+		out = append(out, ProviderMeta{
+			ID:          id,
+			DisplayName: e.p.DisplayName(),
+			Tier:        e.p.ProviderTier(),
+			Featured:    e.p.Featured(),
+			State:       e.state,
+			Err:         e.err,
+		})
+	}
+	return out
+}
+
+// Validate runs the named provider's Validate method with the given config.
+// Returns an error if the provider is not registered or if Validate fails.
+func (r *Registry) Validate(ctx context.Context, id string, cfg ProviderConfig) error {
+	r.mu.RLock()
+	e, ok := r.entries[id]
+	r.mu.RUnlock()
+
+	if !ok {
+		return fmt.Errorf("provider %q is not registered", id)
+	}
+	return e.p.Validate(ctx, cfg)
+}
+
+// Enable opens a provider with the given config and transitions it to Enabled.
+// If the provider is already Enabled it is re-opened with the new config (useful
+// when the user changes the path for a Tier-1 provider). Returns an error if the
+// provider is not registered or if Open fails.
+func (r *Registry) Enable(ctx context.Context, id string, cfg ProviderConfig) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	e, ok := r.entries[id]
+	if !ok {
+		return fmt.Errorf("provider %q is not registered", id)
+	}
+
+	inst, err := e.p.Open(ctx, cfg)
+	if err != nil {
+		e.state = Errored
+		e.err = err
+		if r.log != nil {
+			r.log.Warn("provider enable (open) failed", "id", id, "err", err)
+		}
+		return err
+	}
+
+	// Close the old instance if one exists (idempotent re-enable with new path).
+	if e.inst != nil {
+		if cerr := e.inst.Close(ctx); cerr != nil && r.log != nil {
+			r.log.Warn("close old instance on re-enable", "id", id, "err", cerr)
+		}
+	}
+
+	e.inst = inst
+	e.state = Enabled
+	e.err = nil
+	return nil
+}
+
+// Disable closes the named provider's active instance and transitions it to
+// Disabled state. Returns an error if the provider is not registered. If the
+// provider is not currently Enabled, Disable is a no-op (returns nil).
+func (r *Registry) Disable(ctx context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	e, ok := r.entries[id]
+	if !ok {
+		return fmt.Errorf("provider %q is not registered", id)
+	}
+	if e.state != Enabled {
+		e.state = Disabled
+		return nil
+	}
+
+	if e.inst != nil {
+		if err := e.inst.Close(ctx); err != nil && r.log != nil {
+			r.log.Warn("close instance on disable", "id", id, "err", err)
+		}
+		e.inst = nil
+	}
+	e.state = Disabled
+	return nil
+}
+
 // Profile provides per-provider config for a given profile. The registry reads
 // from this interface so it is not coupled to the config package directly.
 type Profile interface {

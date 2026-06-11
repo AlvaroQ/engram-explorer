@@ -93,6 +93,17 @@ func (f *FakeProvider) SetOpenErr(err error) {
 	f.opts.OpenErr = err
 }
 
+// SetDetectAvailable changes whether Detect reports the source as available.
+// Useful for simulating a path becoming valid after initial boot.
+func (f *FakeProvider) SetDetectAvailable(available bool) {
+	f.opts.DetectAvailable = available
+	if available {
+		f.opts.DetectReason = "ok"
+	} else {
+		f.opts.DetectReason = "path-missing"
+	}
+}
+
 // FakeInstance is a test-double Instance.
 type FakeInstance struct {
 	providerID string
