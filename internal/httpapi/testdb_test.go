@@ -1,10 +1,17 @@
 package httpapi_test
 
 import (
+	"context"
 	"database/sql"
+	"log/slog"
+	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/AlvaroQ/engram-explorer/internal/config"
+	"github.com/AlvaroQ/engram-explorer/internal/httpapi"
+	"github.com/AlvaroQ/engram-explorer/internal/providers"
+	engramprovider "github.com/AlvaroQ/engram-explorer/internal/providers/engram"
 	_ "modernc.org/sqlite"
 )
 
@@ -115,6 +122,36 @@ func seedEngramDB(t *testing.T) string {
 	// Seed minimal data.
 	seedData(t, db)
 	return path
+}
+
+// newTestRegistry creates a Container backed by the provider registry, with the
+// Engram provider booted from a seeded temp DB. This is the registry-equivalent
+// of newEngramContainer: it exercises the WU-5 code path (NewContainerWithRegistry
+// + registry-based route mounting) while keeping the same test behaviour.
+//
+// Use this helper for new tests that want to exercise the registry path.
+// Existing tests continue to use newEngramContainer (legacy path) unchanged.
+func newTestRegistry(t *testing.T) *httpapi.Container {
+	t.Helper()
+	path := seedEngramDB(t)
+	cfg := config.Config{
+		Host:            "127.0.0.1",
+		Port:            8787,
+		EngramDbPath:    path,
+		DaemonBaseURL:   "http://127.0.0.1:7437",
+		DaemonTimeoutMs: 100,
+		Env:             "development",
+		ExposeDetails:   true,
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+
+	reg := providers.NewRegistry(logger)
+	reg.Register(engramprovider.NewProvider(cfg))
+	reg.Boot(context.Background(), httpapi.AdaptProfile(config.ProfileFromConfig(cfg)))
+
+	c := httpapi.NewContainerWithRegistry(reg, cfg, logger)
+	t.Cleanup(c.Close)
+	return c
 }
 
 func truncate(s string, n int) string {

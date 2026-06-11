@@ -141,6 +141,13 @@ func EnsureConfig(configHome string, resolved Config) (*ProfileStore, error) {
 	return seed, nil
 }
 
+// ProfileFromConfig is the exported form of profileFromResolved. It builds a
+// Profile from an already-resolved Config (ENV wins already applied by Load).
+// Used by main.go as a fallback when EnsureConfig fails.
+func ProfileFromConfig(cfg Config) Profile {
+	return profileFromResolved(cfg)
+}
+
 // profileFromResolved builds a Profile from an already-resolved Config (ENV
 // wins already applied by config.Load).
 func profileFromResolved(cfg Config) Profile {

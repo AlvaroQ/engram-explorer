@@ -239,6 +239,20 @@ func (r *Registry) ActiveCount() int {
 	return n
 }
 
+// Instance returns the live Instance for the named provider, or nil if the
+// provider is not in Enabled state (not found, not open, errored, disabled).
+// The returned Instance belongs to the registry — callers must not close it.
+func (r *Registry) Instance(providerID string) Instance {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	e, ok := r.entries[providerID]
+	if !ok || e.state != Enabled || e.inst == nil {
+		return nil
+	}
+	return e.inst
+}
+
 // Entries returns a snapshot of all provider IDs and their states, in order.
 // Primarily for diagnostics and tests.
 func (r *Registry) Entries() []RegistryEntry {

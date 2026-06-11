@@ -218,3 +218,20 @@ func (i *ccInstance) RuntimePaths() *config.RuntimePaths { return i.runtimePaths
 
 // Config returns the app config held by this instance. Used by WU-5.
 func (i *ccInstance) Config() config.Config { return i.cfg }
+
+// ---------------------------------------------------------------------------
+// Package-level accessor helper for WU-5 (container wiring)
+// ---------------------------------------------------------------------------
+
+// CCRuntimePaths extracts the *config.RuntimePaths from a providers.Instance
+// that is an active CC sessions instance. Returns (*config.RuntimePaths, true)
+// on success, or (nil, false) if inst is not a CC sessions instance.
+//
+// This lets httpapi/server.go wire CC routes without exposing ccInstance.
+func CCRuntimePaths(inst providers.Instance) (*config.RuntimePaths, bool) {
+	ci, ok := inst.(*ccInstance)
+	if !ok {
+		return nil, false
+	}
+	return ci.RuntimePaths(), true
+}
