@@ -7,33 +7,33 @@
    hsl(var(--token)). Wrapping the token value itself would produce the
    invalid hsl(hsl(...)) and silently fall back to currentColor / black. */
 :root {
-  --bg: 222 47% 7%;
-  --surface: 223 40% 11%;
-  --surface-2: 222 35% 14%;
-  --border: 222 28% 22%;
-  --fg: 220 25% 92%;
-  --fg-muted: 220 15% 65%;
-  --accent: 224 90% 70%;
-  --ok: 142 76% 60%;
-  --warn: 38 92% 60%;
-  --fail: 0 84% 67%;
-  --brand-engram: 224 90% 70%;
+  --bg: 249 22% 12%;
+  --surface: 247 23% 15%;
+  --surface-2: 248 25% 18%;
+  --border: 249 15% 28%;
+  --fg: 245 50% 91%;
+  --fg-muted: 248 15% 61%;
+  --accent: 343 76% 68%;
+  --ok: 189 43% 73%;
+  --warn: 35 88% 72%;
+  --fail: 343 35% 55%;
+  --brand-engram: 343 76% 68%;
   --brand-cc: 18 72% 62%;
   color-scheme: dark;
 }
 
 :root.light {
-  --bg: 220 25% 98%;
-  --surface: 0 0% 100%;
-  --surface-2: 220 20% 96%;
-  --border: 220 14% 88%;
-  --fg: 222 47% 11%;
-  --fg-muted: 222 15% 45%;
-  --accent: 224 80% 50%;
-  --ok: 142 70% 38%;
-  --warn: 30 90% 50%;
-  --fail: 0 70% 48%;
-  --brand-engram: 224 80% 50%;
+  --bg: 32 57% 95%;
+  --surface: 35 100% 98%;
+  --surface-2: 28 40% 92%;
+  --border: 10 9% 86%;
+  --fg: 248 19% 40%;
+  --fg-muted: 248 12% 52%;
+  --accent: 343 35% 55%;
+  --ok: 189 30% 48%;
+  --warn: 35 81% 56%;
+  --fail: 343 35% 55%;
+  --brand-engram: 343 35% 55%;
   --brand-cc: 16 60% 50%;
   color-scheme: light;
 }
@@ -712,8 +712,9 @@ a:hover {
 }
 
 .badge-accent {
-  background: hsl(224, 90%, 20%);
+  background: hsl(var(--accent) / 0.14);
   color: hsl(var(--accent));
+  border: 1px solid hsl(var(--accent) / 0.35);
 }
 
 .badge-neutral {
@@ -733,7 +734,7 @@ a:hover {
 /* ---------- Inline error ---------- */
 .inline-error {
   padding: 10px 14px;
-  background: hsl(0, 70%, 10%);
+  background: hsl(var(--fail) / 0.14);
   border: 1px solid hsl(var(--fail));
   border-radius: 6px;
   color: hsl(var(--fail));
@@ -910,15 +911,15 @@ code {
 
 /* ---------- Badge tones ---------- */
 .badge-ok {
-  background: hsl(142, 76%, 12%);
+  background: hsl(var(--ok) / 0.14);
   color: hsl(var(--ok));
-  border: 1px solid hsl(142, 76%, 25%);
+  border: 1px solid hsl(var(--ok) / 0.35);
 }
 
 .badge-fail {
-  background: hsl(0, 70%, 10%);
+  background: hsl(var(--fail) / 0.14);
   color: hsl(var(--fail));
-  border: 1px solid hsl(0, 70%, 25%);
+  border: 1px solid hsl(var(--fail) / 0.35);
 }
 
 .badge-warn {
@@ -1055,6 +1056,21 @@ code {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* Selected toggle (language/theme/nav visibility): mark the active choice with
+   an accent border, not a solid fill, so it reads as "selected" without
+   shouting. Real CTAs (Apply, Add) live outside .preference-controls and keep
+   their solid .btn-primary fill. */
+.preference-controls .btn-primary {
+  background: transparent;
+  color: hsl(var(--accent));
+  border-color: hsl(var(--accent));
+}
+
+.preference-controls .btn-primary:hover {
+  background: hsl(var(--accent) / 0.08);
+  opacity: 1;
 }
 
 /* Info rows (settings system section) */

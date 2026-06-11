@@ -20,14 +20,14 @@ export interface TypeBreakdownProps {
 }
 
 const PIE_COLORS = [
-  'hsl(224 90% 70%)',
-  'hsl(142 76% 60%)',
-  'hsl(38 92% 60%)',
-  'hsl(0 84% 67%)',
-  'hsl(280 80% 70%)',
-  'hsl(190 80% 60%)',
-  'hsl(330 70% 65%)',
-  'hsl(60 80% 60%)',
+  'hsl(343 76% 68%)', // love (pink)
+  'hsl(189 43% 73%)', // foam
+  'hsl(267 57% 78%)', // iris
+  'hsl(35 88% 72%)',  // gold
+  'hsl(197 49% 38%)', // pine
+  'hsl(2 55% 83%)',   // rose
+  'hsl(268 21% 57%)', // dawn iris
+  'hsl(189 30% 48%)', // dawn foam
 ];
 
 const MAX_VISIBLE = 6;

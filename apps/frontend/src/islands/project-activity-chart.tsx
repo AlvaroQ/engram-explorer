@@ -61,7 +61,7 @@ function ActivityChart({ activity_30d }: ProjectActivityChartProps) {
             }}
             cursor={{ fill: 'hsl(var(--surface-2, 222 20% 18%))', opacity: 0.4 }}
           />
-          <Bar dataKey="count" fill="hsl(var(--accent, 224 90% 70%))" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="count" fill="hsl(var(--accent, 343 76% 68%))" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -8,11 +8,11 @@
  */
 
 :root {
-  --doc-green:  #16a34a;
-  --doc-amber:  #d97706;
-  --doc-red:    #dc2626;
-  --doc-blue:   #2563eb;
-  --doc-gray:   #525252;
+  --doc-green: #9ccfd8;   /* foam (success) */
+  --doc-amber: #f6c177;   /* gold (warning) */
+  --doc-red:   #eb6f92;   /* love (danger) */
+  --doc-blue:  #c4a7e7;   /* iris (info) */
+  --doc-gray:  #6e6a86;   /* overlay (idle) */
   --doc-radius: 6px;
 
   /* Pico is no longer loaded — alias the --pico-* names this stylesheet still
@@ -122,17 +122,17 @@
 .badge-healthy,
 .badge-enrolled {
   background: color-mix(in srgb, var(--doc-green) 18%, transparent);
-  color: #4ade80;
+  color: var(--doc-green);
   border-color: var(--doc-green);
 }
 .badge-degraded {
   background: color-mix(in srgb, var(--doc-amber) 18%, transparent);
-  color: #fbbf24;
+  color: var(--doc-amber);
   border-color: var(--doc-amber);
 }
 .badge-broken {
   background: color-mix(in srgb, var(--doc-red) 18%, transparent);
-  color: #f87171;
+  color: var(--doc-red);
   border-color: var(--doc-red);
 }
 .badge-idle,
@@ -189,11 +189,11 @@
 .btn-action {
   background: var(--pico-primary-background, #1d3a5f);
   color: var(--pico-primary, #60a5fa);
-  border-color: var(--doc-blue);
+  border-color: var(--pico-primary, #60a5fa);
 }
 .btn-danger {
   background: color-mix(in srgb, var(--doc-red) 14%, transparent);
-  color: #f87171;
+  color: var(--doc-red);
   border-color: var(--doc-red);
 }
 .btn-link {
@@ -308,9 +308,9 @@
   font-weight: 700;
   text-transform: uppercase;
 }
-.severity-high   { background: color-mix(in srgb, var(--doc-red) 18%, transparent);   color: #f87171; border: 1px solid var(--doc-red); }
-.severity-medium { background: color-mix(in srgb, var(--doc-amber) 18%, transparent); color: #fbbf24; border: 1px solid var(--doc-amber); }
-.severity-low    { background: color-mix(in srgb, var(--doc-blue) 18%, transparent);  color: #60a5fa; border: 1px solid var(--doc-blue); }
+.severity-high   { background: color-mix(in srgb, var(--doc-red) 18%, transparent);   color: var(--doc-red);   border: 1px solid var(--doc-red); }
+.severity-medium { background: color-mix(in srgb, var(--doc-amber) 18%, transparent); color: var(--doc-amber); border: 1px solid var(--doc-amber); }
+.severity-low    { background: color-mix(in srgb, var(--doc-blue) 18%, transparent);  color: var(--doc-blue);  border: 1px solid var(--doc-blue); }
 
 /* ── Sync: pending mutations + upgrade ────────────────────────────── */
 .pending-mutations { margin-top: 1.5rem; }

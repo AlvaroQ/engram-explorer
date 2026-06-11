@@ -40,21 +40,21 @@ export interface CCUsageLabels {
 }
 
 const COLORS = [
-  'hsl(224 90% 70%)',
-  'hsl(142 76% 60%)',
-  'hsl(38 92% 60%)',
-  'hsl(280 80% 70%)',
-  'hsl(190 80% 60%)',
-  'hsl(0 84% 67%)',
-  'hsl(48 90% 60%)',
-  'hsl(320 70% 65%)',
+  'hsl(343 76% 68%)', // love (pink)
+  'hsl(189 43% 73%)', // foam
+  'hsl(267 57% 78%)', // iris
+  'hsl(35 88% 72%)',  // gold
+  'hsl(197 49% 38%)', // pine
+  'hsl(2 55% 83%)',   // rose
+  'hsl(268 21% 57%)', // dawn iris
+  'hsl(189 30% 48%)', // dawn foam
 ];
-const FALLBACK_COLOR = 'hsl(220 8% 55%)';
+const FALLBACK_COLOR = 'hsl(248 15% 61%)';  // muted
 const MODEL_COLORS: Record<string, string> = {
-  opus: 'hsl(224 90% 70%)',
-  sonnet: 'hsl(142 76% 60%)',
-  haiku: 'hsl(38 92% 60%)',
-  unknown: 'hsl(220 8% 55%)',
+  opus: 'hsl(343 76% 68%)',   // love (pink)
+  sonnet: 'hsl(189 43% 73%)', // foam
+  haiku: 'hsl(35 88% 72%)',   // gold
+  unknown: 'hsl(248 15% 61%)',// muted
 };
 const TOP_N = 8;
 
@@ -266,7 +266,7 @@ export function CCUsageCharts({ labels }: { labels: CCUsageLabels }): JSX.Elemen
                   yAxisId="left"
                   dataKey="sessions"
                   name={labels.sessions}
-                  fill="hsl(224 90% 70%)"
+                  fill="hsl(343 76% 68%)"
                   radius={[2, 2, 0, 0]}
                 />
                 <Line
@@ -274,7 +274,7 @@ export function CCUsageCharts({ labels }: { labels: CCUsageLabels }): JSX.Elemen
                   type="monotone"
                   dataKey="cost"
                   name={labels.cost}
-                  stroke="hsl(38 92% 60%)"
+                  stroke="hsl(35 88% 72%)"
                   strokeWidth={2}
                   dot={false}
                 />
