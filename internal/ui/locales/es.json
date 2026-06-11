@@ -1,18 +1,18 @@
 {
   "nav": {
     "engram": "Engram",
-    "overview": "Resumen Engram",
-    "observations": "Observaciones",
+    "overview": "Inicio",
+    "observations": "Memoria",
     "sessions": "Sesiones",
     "prompts": "Prompts",
     "topics": "Temas",
     "projects": "Proyectos",
-    "brain": "Conocimiento",
+    "brain": "Grafo de conocimiento",
     "syncHealth": "Salud del Sync",
     "orphans": "Huérfanos",
     "ccsessions": "Claude Code",
     "ccsessionsList": "Sesiones de Claude Code",
-    "ccsessionsOverview": "Resumen Claude Code"
+    "ccsessionsOverview": "Claude Code"
   },
   "common": {
     "loading": "Cargando…",
@@ -40,12 +40,12 @@
     "subtitle": "Panel local",
     "groupEngram": "Engram",
     "groupClaudeCode": "Claude Code",
-    "overview": "Resumen Engram",
-    "knowledge": "Conocimiento",
+    "overview": "Inicio",
+    "knowledge": "Grafo de conocimiento",
     "projects": "Proyectos",
-    "observations": "Observaciones",
+    "observations": "Memoria",
     "sessions": "Sesiones",
-    "ccOverview": "Resumen Claude Code",
+    "ccOverview": "Claude Code",
     "ccSessions": "Sesiones de Claude Code",
     "syncHealth": "Salud del Sync",
     "prompts": "Prompts",
@@ -658,7 +658,7 @@
       "cloud": "Nube"
     },
     "modules": {
-      "title": "Módulos",
+      "title": "Fuentes de datos",
       "description": "Administra los proveedores de datos. Habilita o deshabilita proveedores y configura sus rutas.",
       "enable": "Habilitar",
       "disable": "Deshabilitar",
@@ -706,7 +706,7 @@
     "themeLight": "claro",
     "language": "Idioma",
     "languageDescription": "Elige el idioma de la interfaz",
-    "daemon": "Daemon de Engram",
+    "daemon": "Servicio en segundo plano",
     "cloudCli": "Capacidades del CLI cloud",
     "cloudCliDesc": "Detectado a partir de `engram cloud --help`",
     "cloudCliError": "No se pudieron detectar las capacidades del CLI.",
@@ -838,7 +838,7 @@
     }
   },
   "ccOverview": {
-    "title": "Resumen Claude Code",
+    "title": "Claude Code",
     "description": "Tokens y coste de todas tus sesiones de Claude Code.",
     "byAccount": {
       "title": "Desglose por cuenta",
@@ -932,6 +932,6 @@
       "activate": "Activar"
     },
     "settingsHint": "¿Necesitas más opciones? Ve a ",
-    "settingsLink": "Configuración → Módulos"
+    "settingsLink": "Configuración → Fuentes de datos"
   }
 }

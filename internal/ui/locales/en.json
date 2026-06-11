@@ -1,18 +1,18 @@
 {
   "nav": {
     "engram": "Engram",
-    "overview": "Engram Overview",
-    "observations": "Observations",
+    "overview": "Home",
+    "observations": "Memory",
     "sessions": "Sessions",
     "prompts": "Prompts",
     "topics": "Topics",
     "projects": "Projects",
-    "brain": "Knowledge",
+    "brain": "Knowledge Graph",
     "syncHealth": "Sync Health",
     "orphans": "Orphans",
     "ccsessions": "Claude Code",
     "ccsessionsList": "Claude Code Sessions",
-    "ccsessionsOverview": "Claude Code Overview"
+    "ccsessionsOverview": "Claude Code"
   },
   "common": {
     "loading": "Loading…",
@@ -40,12 +40,12 @@
     "subtitle": "Local Dashboard",
     "groupEngram": "Engram",
     "groupClaudeCode": "Claude Code",
-    "overview": "Engram Overview",
-    "knowledge": "Knowledge",
+    "overview": "Home",
+    "knowledge": "Knowledge Graph",
     "projects": "Projects",
-    "observations": "Observations",
+    "observations": "Memory",
     "sessions": "Sessions",
-    "ccOverview": "Claude Code Overview",
+    "ccOverview": "Claude Code",
     "ccSessions": "Claude Code Sessions",
     "syncHealth": "Sync Health",
     "prompts": "Prompts",
@@ -658,7 +658,7 @@
       "cloud": "Cloud"
     },
     "modules": {
-      "title": "Modules",
+      "title": "Data sources",
       "description": "Manage data source providers. Enable or disable providers and configure their paths.",
       "enable": "Enable",
       "disable": "Disable",
@@ -706,7 +706,7 @@
     "themeLight": "light",
     "language": "Language",
     "languageDescription": "Choose the interface language",
-    "daemon": "Engram daemon",
+    "daemon": "Background service",
     "cloudCli": "Cloud CLI capabilities",
     "cloudCliDesc": "Detected from `engram cloud --help`",
     "cloudCliError": "Could not detect CLI capabilities.",
@@ -838,7 +838,7 @@
     }
   },
   "ccOverview": {
-    "title": "Claude Code Overview",
+    "title": "Claude Code",
     "description": "Token usage and cost across all your Claude Code sessions.",
     "byAccount": {
       "title": "Per-account breakdown",
@@ -932,6 +932,6 @@
       "activate": "Activate"
     },
     "settingsHint": "Need more options? Visit ",
-    "settingsLink": "Settings → Modules"
+    "settingsLink": "Settings → Data sources"
   }
 }

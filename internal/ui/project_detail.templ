@@ -38,7 +38,7 @@ templ projectDetailContent(data services.ProjectOverview, sync *services.SyncPro
 					{ T(lang, "projectDetail.allObservations") }
 				</a>
 				<a
-					href="/sessions"
+					href={ templ.SafeURL("/sessions?project=" + url.QueryEscape(data.Project)) }
 					class="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-xs text-fg-muted hover:text-fg"
 				>
 					{ T(lang, "projectDetail.allSessions") }

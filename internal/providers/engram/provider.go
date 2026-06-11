@@ -183,7 +183,9 @@ func (p *engramProvider) Routes(mux *http.ServeMux, inst providers.Instance, log
 }
 
 // Nav returns the sidebar NavGroup for the Engram provider.
-// Link order matches the legacy hardcoded sidebar for behavioral parity.
+// sessions, topics, and prompts are intentionally omitted from the primary nav
+// (PR1 UX simplification). They remain accessible via direct URL and from the
+// project detail page ("View all sessions →").
 func (p *engramProvider) Nav(inst providers.Instance) providers.NavGroup {
 	return providers.NavGroup{
 		ID:       "engram",
@@ -193,10 +195,7 @@ func (p *engramProvider) Nav(inst providers.Instance) providers.NavGroup {
 			{Href: "/", Key: "overview", LabelKey: "nav.overview", Icon: "overview"},
 			{Href: "/brain", Key: "brain", LabelKey: "nav.brain", Icon: "brain"},
 			{Href: "/observations", Key: "observations", LabelKey: "nav.observations", Icon: "observations"},
-			{Href: "/sessions", Key: "sessions", LabelKey: "nav.sessions", Icon: "sessions"},
 			{Href: "/projects", Key: "projects", LabelKey: "nav.projects", Icon: "projects"},
-			{Href: "/prompts", Key: "prompts", LabelKey: "nav.prompts", Icon: "prompts"},
-			{Href: "/topics", Key: "topics", LabelKey: "nav.topics", Icon: "topics"},
 			{Href: "/doctor/sync", Key: "syncHealth", LabelKey: "nav.syncHealth", Icon: "syncHealth", External: true},
 			{Href: "/doctor/orphans", Key: "orphans", LabelKey: "nav.orphans", Icon: "orphans", External: true},
 		},
