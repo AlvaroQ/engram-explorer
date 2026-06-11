@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
@@ -81,27 +82,56 @@ func loadProjectNames(d Deps) []string {
 	return names
 }
 
-// handleObservationsPage serves GET /observations.
+// handleObservationsPage serves GET /observations (all three Memory tab views).
+// Dispatches on ?view= to render Threads or Conversations sub-views.
 // Full page on direct GET; partial content when HX-Request: true.
 func handleObservationsPage(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
 		sidebarState := sidebarStateForRequest(r)
-		params := observationListParamsFromQuery(r)
+		view := r.URL.Query().Get("view")
 
-		items, nextCursor, err := loadObservations(d, params)
-		if err != nil {
-			render(w, r, ErrorPartial("Failed to load observations: "+err.Error()))
-			return
-		}
+		switch view {
+		case "threads":
+			q := strings.TrimSpace(r.URL.Query().Get("q"))
+			topics, err := loadTopics(r, d, q)
+			if err != nil {
+				render(w, r, ErrorPartial("Failed to load topics: "+err.Error()))
+				return
+			}
+			if IsHTMX(r) {
+				render(w, r, MemoryThreadsPartial(topics, q, lang))
+			} else {
+				renderDeps(w, r, d, MemoryThreadsPage(topics, q, lang, theme, sidebarState))
+			}
 
-		projects := loadProjectNames(d)
+		case "conversations":
+			q := r.URL.Query().Get("q")
+			items, searchItems, err := loadPrompts(d, q)
+			if err != nil {
+				render(w, r, ErrorPartial("Failed to load prompts: "+err.Error()))
+				return
+			}
+			if IsHTMX(r) {
+				render(w, r, MemoryConversationsPartial(items, searchItems, q, lang))
+			} else {
+				renderDeps(w, r, d, MemoryConversationsPage(items, searchItems, q, lang, theme, sidebarState))
+			}
 
-		if IsHTMX(r) {
-			render(w, r, ObservationsPartial(items, nextCursor, params, projects, lang))
-		} else {
-			renderDeps(w, r, d, ObservationsPage(items, nextCursor, params, projects, lang, theme, sidebarState))
+		default:
+			params := observationListParamsFromQuery(r)
+			items, nextCursor, err := loadObservations(d, params)
+			if err != nil {
+				render(w, r, ErrorPartial("Failed to load observations: "+err.Error()))
+				return
+			}
+			projects := loadProjectNames(d)
+			if IsHTMX(r) {
+				render(w, r, ObservationsPartial(items, nextCursor, params, projects, lang))
+			} else {
+				renderDeps(w, r, d, ObservationsPage(items, nextCursor, params, projects, lang, theme, sidebarState))
+			}
 		}
 	}
 }

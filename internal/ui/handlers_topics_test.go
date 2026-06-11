@@ -67,11 +67,11 @@ func seedTopic(t *testing.T, db *sql.DB, topicKey, project string) {
 }
 
 // ---------------------------------------------------------------------------
-// Handler tests
+// Handler tests — /observations?view=threads (was /topics)
 // ---------------------------------------------------------------------------
 
-// TestTopicsFullPage verifies that GET /topics without HX-Request returns
-// a full HTML page containing <html> and <head>.
+// TestTopicsFullPage verifies that GET /observations?view=threads returns
+// a full HTML page containing <html> and the topic data.
 func TestTopicsFullPage(t *testing.T) {
 	db := openTestDB(t)
 	seedTopic(t, db, "architecture/auth-model", "engram-explorer")
@@ -79,7 +79,7 @@ func TestTopicsFullPage(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{RoDB: db})
 
-	req := httptest.NewRequest(http.MethodGet, "/topics", nil)
+	req := httptest.NewRequest(http.MethodGet, "/observations?view=threads", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
@@ -98,8 +98,8 @@ func TestTopicsFullPage(t *testing.T) {
 	}
 }
 
-// TestTopicsHTMXPartial verifies GET /topics with HX-Request: true returns
-// a fragment — no <html> wrapper.
+// TestTopicsHTMXPartial verifies GET /observations?view=threads with HX-Request: true
+// returns a fragment — no <html> wrapper.
 func TestTopicsHTMXPartial(t *testing.T) {
 	db := openTestDB(t)
 	seedTopic(t, db, "some/topic", "myproject")
@@ -107,7 +107,7 @@ func TestTopicsHTMXPartial(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{RoDB: db})
 
-	req := httptest.NewRequest(http.MethodGet, "/topics", nil)
+	req := httptest.NewRequest(http.MethodGet, "/observations?view=threads", nil)
 	req.Header.Set("HX-Request", "true")
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
@@ -121,7 +121,7 @@ func TestTopicsHTMXPartial(t *testing.T) {
 	}
 }
 
-// TestTopicsQueryFilter verifies that ?q= filters the results server-side.
+// TestTopicsQueryFilter verifies that ?q= filters the results server-side via the new URL.
 func TestTopicsQueryFilter(t *testing.T) {
 	db := openTestDB(t)
 	seedTopic(t, db, "architecture/auth-model", "engram-explorer")
@@ -130,7 +130,7 @@ func TestTopicsQueryFilter(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{RoDB: db})
 
-	req := httptest.NewRequest(http.MethodGet, "/topics?q=architecture", nil)
+	req := httptest.NewRequest(http.MethodGet, "/observations?view=threads&q=architecture", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
@@ -192,13 +192,13 @@ func TestTopicsListPartialFilter(t *testing.T) {
 	}
 }
 
-// TestTopicsRoDBNil verifies that when RoDB is nil the handler returns an empty
+// TestTopicsRoDBNil verifies that when RoDB is nil the Threads tab handler returns an empty
 // state without panicking.
 func TestTopicsRoDBNil(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{RoDB: nil})
 
-	req := httptest.NewRequest(http.MethodGet, "/topics", nil)
+	req := httptest.NewRequest(http.MethodGet, "/observations?view=threads", nil)
 	w := httptest.NewRecorder()
 
 	defer func() {
@@ -225,7 +225,7 @@ func TestTopicsEmptyState(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{RoDB: db})
 
-	req := httptest.NewRequest(http.MethodGet, "/topics", nil)
+	req := httptest.NewRequest(http.MethodGet, "/observations?view=threads", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
