@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/AlvaroQ/engram-explorer/internal/services"
-	"github.com/AlvaroQ/engram-explorer/internal/ui"
 )
 
 // entitySegmentMap maps URL path segments to the canonical EntityKind values
@@ -54,23 +53,6 @@ func parseEntityAndID(r *http.Request) (services.EntityKind, any, error) {
 		return "", nil, fmt.Errorf("invalid id %q: %v", idStr, err)
 	}
 	return kind, n, nil
-}
-
-// handleOrphansPage serves GET /doctor/orphans.
-// Full page on direct GET; bare OrphansList partial when HX-Request: true.
-func handleOrphansPage(d Deps) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		data, projects, err := loadOrphansData(r.Context(), d)
-		if err != nil {
-			render(w, r, ErrorPartial("Failed to load orphans: "+err.Error()))
-			return
-		}
-		if IsHTMX(r) {
-			render(w, r, OrphansList(data, projects))
-		} else {
-			render(w, r, OrphansPage(data, projects, ui.LangForRequest(r), ui.ThemeForRequest(r), ui.SidebarStateForRequest(r)))
-		}
-	}
 }
 
 // handleOrphansListPartial serves GET /doctor/orphans/list.

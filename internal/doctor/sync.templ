@@ -5,15 +5,9 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-// SyncPage renders the full sync health page wrapped in the Layout shell.
-// The actual content is deferred to HTMX via hx-trigger="load, every 15s".
-// sidebarState is "expanded" or "collapsed" (server-side initial state).
-templ SyncPage(lang, theme, sidebarState string) {
-	@Layout("Sync Health", "syncHealth", lang, theme, sidebarState, syncShellContent())
-}
-
 // SyncShell renders only the sync shell content fragment — no Layout.
-// Used when HX-Request: true on GET /doctor/sync.
+// Previously used when HX-Request: true on GET /doctor/sync; still kept for
+// completeness but the maintenance page embeds syncShellContent directly.
 templ SyncShell() {
 	@syncShellContent()
 }
@@ -367,7 +361,7 @@ templ SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) {
 				}
 			</div>
 		}
-		<p><a href="/doctor/sync">&larr; Back to Sync Health</a></p>
+		<p><a href="/settings/maintenance#cloud">&larr; Back to Maintenance</a></p>
 	</div>
 }
 

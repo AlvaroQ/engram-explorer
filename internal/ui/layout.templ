@@ -179,8 +179,6 @@ templ Sidebar(activeNav, lang, sidebarState string) {
 						@sidebarLink("/brain", "brain", activeNav, T(lang, "sidebar.knowledge"), "brain")
 						@sidebarLink("/observations", "observations", activeNav, T(lang, "sidebar.observations"), "observations")
 						@sidebarLink("/projects", "projects", activeNav, T(lang, "sidebar.projects"), "projects")
-						@sidebarExternalLink("/doctor/sync", "syncHealth", activeNav, T(lang, "sidebar.syncHealth"), "syncHealth")
-						@sidebarExternalLink("/doctor/orphans", "orphans", activeNav, T(lang, "nav.orphans"), "orphans")
 					</ul>
 				}
 				if navShowEngram(ctx) && navShowClaude(ctx) {
@@ -287,9 +285,6 @@ templ sidebarFooter(lang string) {
 		>
 			@statusPill(statusPillData{Lang: lang, State: statusChecking})
 		</div>
-		if navShowEngram(ctx) {
-			@sidebarSyncButton(lang)
-		}
 	</div>
 }
 

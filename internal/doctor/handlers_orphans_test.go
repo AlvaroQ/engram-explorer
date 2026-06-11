@@ -119,56 +119,29 @@ func seedOrphanSession(t *testing.T, db *sql.DB) string {
 // Phase 1.1: Template render tests (RED until handlers exist)
 // ---------------------------------------------------------------------------
 
-// TestOrphansFullPage verifies GET /doctor/orphans with no HX-Request returns
-// a full HTML page containing <html> and <head>.
-func TestOrphansFullPage(t *testing.T) {
-	db := openTestDB(t)
-	seedOrphanObservation(t, db)
-
+// TestOrphansRedirect verifies GET /doctor/orphans returns a 301 redirect to
+// /settings/maintenance#unassigned (PR4 consolidation).
+func TestOrphansRedirect(t *testing.T) {
 	mux := http.NewServeMux()
-	doctor.Mount(mux, doctor.Deps{RoDB: db})
+	doctor.Mount(mux, doctor.Deps{})
 
 	req := httptest.NewRequest(http.MethodGet, "/doctor/orphans", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d; body: %s", w.Code, w.Body.String())
+	if w.Code != http.StatusMovedPermanently {
+		t.Fatalf("expected 301 redirect, got %d; body: %s", w.Code, w.Body.String())
 	}
-	body := w.Body.String()
-	if !strings.Contains(body, "<html") {
-		t.Error("full page must contain <html>")
-	}
-	if !strings.Contains(body, "<head") {
-		t.Error("full page must contain <head>")
-	}
-}
-
-// TestOrphansHTMXPartial verifies GET /doctor/orphans with HX-Request: true
-// returns a fragment — no <html>, no <head>.
-func TestOrphansHTMXPartial(t *testing.T) {
-	db := openTestDB(t)
-	seedOrphanObservation(t, db)
-
-	mux := http.NewServeMux()
-	doctor.Mount(mux, doctor.Deps{RoDB: db})
-
-	req := httptest.NewRequest(http.MethodGet, "/doctor/orphans", nil)
-	req.Header.Set("HX-Request", "true")
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
-	}
-	body := w.Body.String()
-	if strings.Contains(body, "<html") {
-		t.Error("partial must NOT contain <html>")
+	loc := w.Header().Get("Location")
+	if loc != "/settings/maintenance#unassigned" {
+		t.Errorf("redirect Location = %q; want /settings/maintenance#unassigned", loc)
 	}
 }
 
 // TestOrphansEmptyState verifies that when OrphansList returns zero counts for
 // all types, the EmptyState component is rendered and no table is shown.
+// Uses /doctor/orphans/list (the partial endpoint) since /doctor/orphans now
+// redirects to /settings/maintenance#unassigned (PR4 consolidation).
 func TestOrphansEmptyState(t *testing.T) {
 	db := openTestDB(t)
 	// Do NOT seed orphans — all totals will be zero.
@@ -176,7 +149,7 @@ func TestOrphansEmptyState(t *testing.T) {
 	mux := http.NewServeMux()
 	doctor.Mount(mux, doctor.Deps{RoDB: db})
 
-	req := httptest.NewRequest(http.MethodGet, "/doctor/orphans", nil)
+	req := httptest.NewRequest(http.MethodGet, "/doctor/orphans/list", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
