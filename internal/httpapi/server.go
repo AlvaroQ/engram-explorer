@@ -112,6 +112,7 @@ func mountLegacyRoutes(mux *http.ServeMux, c *Container) {
 		RWDB:           c.RWDB,
 		Config:         c.Config,
 		Paths:          c.Paths,
+		DemoMode:       c.Config.DemoMode,
 		ReloadEngramDB: c.ReloadEngramDB,
 		SetClaudeDir:   c.SetClaudeDir,
 	})
@@ -193,6 +194,8 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 				deps.AddCCAccount = buildAddCCAccountFn(reg, c.ProfileStore, c.Config.ConfigHome)
 				deps.UpdateCCAccount = buildUpdateCCAccountFn(c.ProfileStore, c.Config.ConfigHome)
 				deps.RemoveCCAccount = buildRemoveCCAccountFn(c.ProfileStore, c.Config.ConfigHome)
+				// Thread demo mode into the UI layer.
+				deps.DemoMode = c.Config.DemoMode
 				ui.Mount(mux, deps)
 				engramMounted = true
 			}
@@ -218,6 +221,7 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 			RWDB:               c.RWDB,
 			Config:             c.Config,
 			Paths:              c.Paths,
+			DemoMode:           c.Config.DemoMode,
 			ReloadEngramDB:     c.ReloadEngramDB,
 			SetClaudeDir:       c.SetClaudeDir,
 			NavGroups:          reg.NavGroups,

@@ -18,10 +18,11 @@ import (
 // Deps carries the concrete dependencies required by the ui module.
 // It mirrors doctor.Deps intentionally — no Container, no import cycle.
 type Deps struct {
-	RoDB   sqlite.Querier       // read-only pool; may be nil in tests
-	RWDB   sqlite.Querier       // read-write pool; nil in read-only mode
-	Config config.Config        // full runtime configuration (immutable snapshot)
-	Paths  *config.RuntimePaths // live mutable paths; defaulted from Config in Mount
+	RoDB     sqlite.Querier       // read-only pool; may be nil in tests
+	RWDB     sqlite.Querier       // read-write pool; nil in read-only mode
+	Config   config.Config        // full runtime configuration (immutable snapshot)
+	Paths    *config.RuntimePaths // live mutable paths; defaulted from Config in Mount
+	DemoMode bool                 // when true, show demo banner and block write endpoints
 
 	// Path-edit callbacks, wired from the HTTP container in production and nil in
 	// tests. ReloadEngramDB hot-swaps the SQLite pools; SetClaudeDir updates the
@@ -172,10 +173,15 @@ func IsHTMX(r *http.Request) bool {
 
 // renderDeps writes a templ component to the response with text/html content
 // type. It enriches the context with nav prefs, NavGroups from the registry
-// for the data-driven sidebar, and Profiles for the account switcher.
+// for the data-driven sidebar, Profiles for the account switcher, and the
+// demo-mode flag for the demo banner.
 func renderDeps(w http.ResponseWriter, r *http.Request, d Deps, c templ.Component) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = c.Render(NavContextWithGroupsAndProfiles(r, d.NavGroups, d.Profiles), w)
+	ctx := NavContextWithGroupsAndProfiles(r, d.NavGroups, d.Profiles)
+	if d.DemoMode {
+		ctx = WithDemoMode(ctx, true)
+	}
+	_ = c.Render(ctx, w)
 }
 
 // render writes a templ component to the response with text/html content type.
@@ -190,6 +196,10 @@ func render(w http.ResponseWriter, r *http.Request, c templ.Component) {
 // requireRW wraps a write handler with a read-only guard.
 func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if d.DemoMode {
+			render(w, r, ErrorPartial("Write operations are disabled in demo mode."))
+			return
+		}
 		if d.RWDB == nil {
 			render(w, r, ErrorPartial("Write operations are not available in read-only mode."))
 			return

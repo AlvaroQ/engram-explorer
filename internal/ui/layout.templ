@@ -6,6 +6,26 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
 )
 
+// DemoBanner renders a thin dismissible bar at the top of the page when the
+// server is running in demo mode. Dismissal is client-side only via a hidden
+// checkbox toggle — no JS framework, no round-trip.
+templ DemoBanner(lang string) {
+	<div class="demo-banner" id="demo-banner" role="alert">
+		<span class="demo-banner-text">{ T(lang, "demo.banner.text") }</span>
+		<button
+			type="button"
+			class="demo-banner-dismiss"
+			aria-label={ T(lang, "demo.banner.dismiss") }
+			onclick="document.getElementById('demo-banner').style.display='none'"
+		>
+			<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<line x1="18" y1="6" x2="6" y2="18"></line>
+				<line x1="6" y1="6" x2="18" y2="18"></line>
+			</svg>
+		</button>
+	</div>
+}
+
 // Layout renders the full HTML shell with sidebar navigation and a padded main content area.
 // activeNav should match one of the nav item keys (e.g. "topics", "observations").
 // sidebarState is "expanded" or "collapsed" (server-side initial state, read from cookie).
@@ -45,6 +65,9 @@ templ Layout(title, activeNav, lang, theme, sidebarState string, content templ.C
 			<div class={ "app-shell", templ.KV("sidebar-collapsed", sidebarState == "collapsed") }>
 				@Sidebar(activeNav, lang, sidebarState)
 				<main class="main-content" id="main-content" style="view-transition-name: main-content;">
+					if demoModeFromContext(ctx) {
+						@DemoBanner(lang)
+					}
 					@content
 				</main>
 			</div>
@@ -75,6 +98,9 @@ templ LayoutFullBleed(title, activeNav, lang, theme, sidebarState string, conten
 			<div class={ "app-shell", templ.KV("sidebar-collapsed", sidebarState == "collapsed") }>
 				@Sidebar(activeNav, lang, sidebarState)
 				<main class="main-content-full">
+					if demoModeFromContext(ctx) {
+						@DemoBanner(lang)
+					}
 					@content
 				</main>
 			</div>
