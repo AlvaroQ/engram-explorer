@@ -898,5 +898,19 @@
       "next": "Nuevo",
       "empty": "(vacío)"
     }
+  },
+  "onboarding": {
+    "title": "Bienvenido a Engram Explorer",
+    "description": "Conecta tus fuentes de datos para comenzar. Engram Explorer funciona con la memoria de Engram y las sesiones de Claude Code para ofrecerte una vista unificada de tu trabajo asistido por IA.",
+    "providers": {
+      "title": "Fuentes de datos",
+      "description": "Las siguientes fuentes fueron verificadas al iniciar. Activa al menos una para comenzar.",
+      "none": "No hay fuentes de datos disponibles. Ingresa una ruta a continuación para activar un proveedor manualmente.",
+      "detected": "detectado",
+      "notDetected": "no detectado",
+      "activate": "Activar"
+    },
+    "settingsHint": "¿Necesitas más opciones? Ve a ",
+    "settingsLink": "Configuración → Módulos"
   }
 }

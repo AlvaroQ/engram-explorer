@@ -72,6 +72,12 @@ type Deps struct {
 	// Returns an error if the profile is active or if it is the last remaining one.
 	// When nil the delete endpoint returns 503.
 	DeleteProfile func(name string) error
+
+	// ActiveCount, when non-nil, returns the number of providers currently in
+	// Enabled state. Used by handleOverviewPage to decide whether to show the
+	// onboarding zero-state or the regular overview. When nil (legacy/no-registry
+	// path), the overview is always shown.
+	ActiveCount func() int
 }
 
 // ---------------------------------------------------------------------------

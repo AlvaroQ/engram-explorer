@@ -898,5 +898,19 @@
       "next": "New",
       "empty": "(empty)"
     }
+  },
+  "onboarding": {
+    "title": "Welcome to Engram Explorer",
+    "description": "Connect your data sources to get started. Engram Explorer works with Engram memory and Claude Code sessions to give you a unified view of your AI-assisted work.",
+    "providers": {
+      "title": "Data sources",
+      "description": "The following providers were checked at startup. Activate at least one to begin.",
+      "none": "No data sources are available. Enter a path below to activate a provider manually.",
+      "detected": "detected",
+      "notDetected": "not detected",
+      "activate": "Activate"
+    },
+    "settingsHint": "Need more options? Visit ",
+    "settingsLink": "Settings → Modules"
   }
 }

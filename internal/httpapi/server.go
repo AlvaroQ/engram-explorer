@@ -183,6 +183,8 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 				deps.SwitchProfile = buildSwitchProfileFn(reg, c.ProfileStore, activeProfileName, c.Config.ConfigHome)
 				deps.CreateProfile = buildCreateProfileFn(c.ProfileStore, c.Config.ConfigHome)
 				deps.DeleteProfile = buildDeleteProfileFn(c.ProfileStore, activeProfileName, c.Config.ConfigHome)
+				// Wire WU-10 ActiveCount for onboarding zero-state branching.
+				deps.ActiveCount = reg.ActiveCount
 				ui.Mount(mux, deps)
 				engramMounted = true
 			}
@@ -219,6 +221,8 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 			SwitchProfile:      buildSwitchProfileFn(reg, c.ProfileStore, activeProfileName, c.Config.ConfigHome),
 			CreateProfile:      buildCreateProfileFn(c.ProfileStore, c.Config.ConfigHome),
 			DeleteProfile:      buildDeleteProfileFn(c.ProfileStore, activeProfileName, c.Config.ConfigHome),
+			// WU-10: wire ActiveCount for onboarding zero-state branching.
+			ActiveCount: reg.ActiveCount,
 		})
 	}
 }

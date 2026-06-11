@@ -63,14 +63,27 @@ func loadOverview(d Deps) (overviewData, error) {
 }
 
 // handleOverviewPage serves GET / (the home/overview page).
+// When ActiveCount is non-nil and returns 0, the onboarding zero-state is
+// rendered instead of the regular overview.
 func handleOverviewPage(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
 
+		// Onboarding branch: zero active providers → show onboarding page.
+		if d.ActiveCount != nil && d.ActiveCount() == 0 {
+			od := buildOnboardingData(d, lang, theme)
+			if IsHTMX(r) {
+				renderDeps(w, r, d, OnboardingPartial(od))
+			} else {
+				renderDeps(w, r, d, OnboardingPage(od))
+			}
+			return
+		}
+
 		data, err := loadOverview(d)
 		if err != nil {
-			render(w, r, ErrorPartial("Failed to load overview: "+err.Error()))
+			renderDeps(w, r, d, ErrorPartial("Failed to load overview: "+err.Error()))
 			return
 		}
 
