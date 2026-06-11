@@ -58,10 +58,12 @@ templ onboardingProviderRow(lang string, p OnboardingProviderInfo) {
 			</div>
 			if p.Detected {
 				<div class="module-row-toggle">
+					// Activate button: swap the main content region with the overview
+					// using a View Transitions-compatible innerHTML swap.
 					<form method="post" action={ templ.SafeURL("/settings/modules/" + p.ID + "/path") }
 						hx-post={ "/settings/modules/" + p.ID + "/path" }
-						hx-target="body"
-						hx-swap="outerHTML">
+						hx-target="#main-content"
+						hx-swap="innerHTML transition:true">
 						<input type="hidden" name="path" value={ p.Path }/>
 						<button type="submit" class="btn btn-sm btn-primary">
 							{ T(lang, "onboarding.providers.activate") }
@@ -75,10 +77,12 @@ templ onboardingProviderRow(lang string, p OnboardingProviderInfo) {
 				if p.PathError != "" {
 					<p class="error-hint">{ p.PathError }</p>
 				}
+				// Manual path form: on success the server returns a partial for
+				// #main-content; on error the module row is re-rendered inline.
 				<form class="path-edit-form" method="post" action={ templ.SafeURL("/settings/modules/" + p.ID + "/path") }
 					hx-post={ "/settings/modules/" + p.ID + "/path" }
-					hx-target="body"
-					hx-swap="outerHTML">
+					hx-target="#main-content"
+					hx-swap="innerHTML transition:true">
 					<input
 						type="text"
 						name="path"

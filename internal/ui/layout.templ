@@ -21,11 +21,27 @@ templ Layout(title, activeNav, lang, theme string, content templ.Component) {
 			<!-- Island loader: mounts React components declared with data-island.
 			     Only fetches island bundles when [data-island] elements are present. -->
 			<script type="module" src="/islands/loader.js"></script>
+			<!-- View Transitions API: smooth cross-page transitions via HTMX swap.
+			     Falls back gracefully when the API is unsupported. -->
+			<style>
+				@view-transition { navigation: auto; }
+				::view-transition-old(main-content),
+				::view-transition-new(main-content) {
+					animation-duration: 0.18s;
+					animation-timing-function: ease-out;
+				}
+				@media (prefers-reduced-motion: reduce) {
+					::view-transition-old(main-content),
+					::view-transition-new(main-content) {
+						animation: none;
+					}
+				}
+			</style>
 		</head>
 		<body>
 			<div class="app-shell">
 				@Sidebar(activeNav, lang)
-				<main class="main-content">
+				<main class="main-content" id="main-content" style="view-transition-name: main-content;">
 					@content
 				</main>
 			</div>
@@ -77,7 +93,7 @@ templ Sidebar(activeNav, lang string) {
 			</div>
 			@sidebarSettingsIcon(activeNav, T(lang, "sidebar.settings"))
 		</div>
-		<nav class="sidebar-nav-wrap" aria-label={ T(lang, "sidebar.primaryNav") }>
+		<nav class="sidebar-nav-wrap" id="sidebar-nav" aria-label={ T(lang, "sidebar.primaryNav") } hx-preserve="true">
 			if groups := navGroupsFromContext(ctx); len(groups) > 0 {
 				// Data-driven path: registry provided NavGroups (WU-7+).
 				for i, group := range groups {
@@ -156,10 +172,13 @@ templ accountSwitcher(lang string, profiles []ProfileInfo) {
 		<div class="account-switcher-menu">
 			for _, p := range profiles {
 				if !p.Active {
+					// Use hx-post without explicit hx-target/hx-swap:
+					// handleProfileSwitchPost returns HX-Redirect on success so HTMX
+					// performs a full client-side navigation without a jarring full-body
+					// outerHTML swap.
 					<form method="post" action="/settings/profile/switch"
 						hx-post="/settings/profile/switch"
-						hx-target="body"
-						hx-swap="outerHTML">
+						hx-push-url="true">
 						<input type="hidden" name="name" value={ p.Name }/>
 						<button type="submit" class="account-switcher-item">
 							{ p.Name }
