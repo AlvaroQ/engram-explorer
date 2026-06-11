@@ -58,6 +58,8 @@ func TestOverviewPage_NilRoDB(t *testing.T) {
 }
 
 // TestOverviewPage_KPIsPresent verifies that the KPI section is rendered.
+// The Home row shows 3 cards: Projects, AI conversations, Memories saved.
+// The Prompts card was removed from Home in PR3 (prompts folded into Memory).
 func TestOverviewPage_KPIsPresent(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{})
@@ -68,15 +70,20 @@ func TestOverviewPage_KPIsPresent(t *testing.T) {
 
 	body := w.Body.String()
 
-	// KPI labels from i18n en.json.
-	for _, kpiLabel := range []string{"Projects", "Sessions", "Observations", "Prompts"} {
+	// KPI labels from i18n en.json (plain-language labels introduced in PR3).
+	for _, kpiLabel := range []string{"Projects", "AI conversations", "Memories saved"} {
 		if !strings.Contains(body, kpiLabel) {
 			t.Errorf("KPI label %q not found in overview page", kpiLabel)
 		}
 	}
+
+	// Prompts KPI card removed from Home — must NOT appear as a KPI label.
+	// (The word "Prompts" may appear elsewhere in the page, so we cannot
+	// assert its total absence, but we rely on the three-card grid above.)
 }
 
 // TestOverviewPage_IslandMountDivs verifies that the island mount divs are present.
+// Brain-preview-card islands were removed from Home in PR3 (visual noise + 3D weight).
 func TestOverviewPage_IslandMountDivs(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{})
@@ -97,17 +104,18 @@ func TestOverviewPage_IslandMountDivs(t *testing.T) {
 		t.Errorf("overview must include data-island=\"type-breakdown\"")
 	}
 
-	// Brain preview card islands (two: by project + by type).
+	// Brain preview card islands removed from Home (PR3) — must NOT appear.
 	count := strings.Count(body, `data-island="brain-preview-card"`)
-	if count != 2 {
-		t.Errorf("overview must include 2 brain-preview-card islands, found %d", count)
+	if count != 0 {
+		t.Errorf("overview must NOT include brain-preview-card islands after PR3, found %d", count)
 	}
 }
 
-// TestOverviewPage_IssuesSectionPresent verifies that the issues section is rendered.
-func TestOverviewPage_IssuesSectionPresent(t *testing.T) {
+// TestOverviewPage_NoAlertWhenNoIssues verifies that the sync alert bar is NOT
+// rendered when there are no issues (nil RoDB → empty issues slice).
+func TestOverviewPage_NoAlertWhenNoIssues(t *testing.T) {
 	mux := http.NewServeMux()
-	ui.Mount(mux, ui.Deps{})
+	ui.Mount(mux, ui.Deps{}) // nil RoDB → empty issues
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
@@ -115,9 +123,14 @@ func TestOverviewPage_IssuesSectionPresent(t *testing.T) {
 
 	body := w.Body.String()
 
-	// Issues section header (from i18n).
-	if !strings.Contains(body, "Issues detected") {
-		t.Errorf("overview must include issues section header")
+	// The always-on issues card was replaced by a conditional alert bar (PR3).
+	// With zero issues the alert must NOT appear.
+	if strings.Contains(body, "overview-sync-alert") {
+		t.Error("overview must NOT render the sync alert bar when there are no issues")
+	}
+	// The old full issues table header must also be absent.
+	if strings.Contains(body, "Issues detected") {
+		t.Error("old issues section header must not appear on Home after PR3")
 	}
 }
 
