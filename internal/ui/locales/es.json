@@ -665,6 +665,22 @@
     },
     "recentPrompts": {
       "title": "Prompts recientes"
+    },
+    "combine": {
+      "title": "Combinar con otro proyecto",
+      "description": "Mueve todas las memorias, sesiones y prompts de este proyecto a otro existente. Este proyecto desaparecerá al combinarlo.",
+      "targetLabel": "Combinar en",
+      "submit": "Combinar proyectos",
+      "confirm": "¿Combinar «{{source}}» en «{{target}}»? Esto mueve todas sus memorias y no se puede deshacer.",
+      "noTargets": "No hay otros proyectos disponibles para combinar.",
+      "error": {
+        "sameName": "Elige un proyecto diferente.",
+        "sourceNotFound": "Este proyecto ya no existe.",
+        "targetNotFound": "El proyecto seleccionado ya no existe.",
+        "enrolledSource": "Este proyecto está inscrito en cloud sync. La combinación de proyectos inscritos será soportada en una actualización futura.",
+        "enrolledTarget": "El proyecto seleccionado está inscrito en cloud sync. La combinación en proyectos inscritos será soportada en una actualización futura.",
+        "generic": "No se pudieron combinar los proyectos: {{message}}"
+      }
     }
   },
   "maintenance": {
