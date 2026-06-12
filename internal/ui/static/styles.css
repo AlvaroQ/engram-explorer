@@ -431,7 +431,7 @@ a:hover {
 }
 .status-pill--allOk {
   color: hsl(var(--ok));
-  border-color: hsl(var(--ok) / 0.35);
+  border-color: transparent;
 }
 
 .status-pill--dbError .status-pill-dot,
@@ -629,6 +629,44 @@ a:hover {
   padding: 0;
 }
 
+/* ---------- KPI tiles (project detail) ----------
+   The app.css `.card` ships a 1.25rem padding that stacks on top of the
+   `.card-body` padding, leaving these tiny stat tiles tall and empty. Scope a
+   reset to the KPI grid so the tiles are compact and uniform. */
+.kpi-grid > .card {
+  padding: 0;
+  margin-bottom: 0;
+}
+.kpi-grid > .card > .card-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kpi-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: hsl(var(--fg-muted));
+}
+.kpi-value {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: hsl(var(--fg));
+}
+/* Sync tile caption (acked / enqueued): keep it to a single compact line so the
+   sync tile doesn't tower over the numeric tiles. */
+.kpi-sync-caption {
+  font-size: 10px;
+  line-height: 1.3;
+  color: hsl(var(--fg-muted));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
 /* ---------- Input ---------- */
 .input {
   width: 100%;
@@ -753,6 +791,9 @@ a:hover {
 /* ---------- Filter bar ---------- */
 .filter-bar {
   margin-bottom: 16px;
+  /* The card default is overflow:hidden (for rounded corners); allow the
+     project/type dropdown popups to overflow the card instead of being clipped. */
+  overflow: visible;
 }
 
 /* Card header with an inline filter on the right (e.g. CC sessions list). */
@@ -1609,4 +1650,145 @@ code {
 .demo-banner-dismiss:hover {
   background: hsl(var(--surface-2));
   color: hsl(var(--fg));
+}
+
+/* ---------- Observations filter disclosure ---------- */
+.obs-filters-disclosure {
+  margin-top: 8px;
+}
+
+.obs-filters-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--fg-muted));
+  padding: 4px 0;
+  list-style: none;
+  user-select: none;
+}
+
+.obs-filters-summary::-webkit-details-marker {
+  display: none;
+}
+
+.obs-filters-summary::before {
+  content: "▸";
+  font-size: 10px;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+
+.obs-filters-disclosure[open] > .obs-filters-summary::before {
+  transform: rotate(90deg);
+}
+
+.obs-filters-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: hsl(var(--accent) / 0.14);
+  color: hsl(var(--accent));
+  border: 1px solid hsl(var(--accent) / 0.35);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.obs-filters-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+@media (min-width: 640px) {
+  .obs-filters-body {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .obs-filters-body {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.obs-filter-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* Anchor for the absolutely-positioned options popup below. */
+  position: relative;
+}
+
+.obs-filter-dropdown-summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  /* Match the native .input.input-sm <select> (Scope/Visibility) box exactly:
+     same height, padding, border and font so the three filter controls line up. */
+  display: flex;
+  align-items: center;
+  background: hsl(var(--surface-2));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  color: hsl(var(--fg-muted));
+  font-size: 12px;
+  padding: 4px 8px;
+  min-width: 120px;
+  min-height: 28px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.obs-filter-dropdown-summary:hover,
+.obs-filter-dropdown[open] > .obs-filter-dropdown-summary {
+  border-color: hsl(var(--accent));
+}
+
+.obs-filter-dropdown-summary::-webkit-details-marker,
+.obs-filter-dropdown-summary::marker {
+  display: none;
+}
+
+.obs-filter-dropdown-summary::after {
+  content: " ▾";
+  font-size: 9px;
+  margin-left: auto;
+}
+
+.obs-filter-dropdown[open] > .obs-filter-dropdown-summary::after {
+  content: " ▴";
+}
+
+.obs-filter-dropdown-body {
+  /* Float the options above the layout like a native <select> popup instead of
+     pushing the filter row down when the dropdown opens. Anchored to the
+     .obs-filter-dropdown wrapper (position: relative). */
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  margin-top: 4px;
+  background: hsl(var(--surface));
+  box-shadow: 0 10px 30px hsl(222 47% 4% / 0.5);
+}
+
+/* ---------- Shared filter label (used in observations and other filter bars) ---------- */
+.filter-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--fg-muted));
+  white-space: nowrap;
+}
+
+/* ---------- Compact input variant (used in filter controls) ---------- */
+.input-sm {
+  font-size: 12px;
+  padding: 4px 8px;
 }
