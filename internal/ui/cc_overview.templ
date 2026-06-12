@@ -6,6 +6,27 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
+// ccTabBar renders the two-tab navigation for the Claude Code page.
+// activeTab is "" (Overview) or "sessions".
+templ ccTabBar(activeTab string, lang string) {
+	<nav class="flex gap-1 border-b border-border mb-4" aria-label="Claude Code tabs">
+		<a
+			href="/cc-overview"
+			class={ "px-4 py-2 text-sm font-medium rounded-t-md border border-transparent -mb-px", templ.KV("border-border border-b-bg text-fg bg-surface", activeTab == ""), templ.KV("text-fg-muted hover:text-fg", activeTab != "") }
+			if activeTab == "" {
+				aria-current="page"
+			}
+		>{ T(lang, "ccOverview.tabs.overview") }</a>
+		<a
+			href="/cc-overview?tab=sessions"
+			class={ "px-4 py-2 text-sm font-medium rounded-t-md border border-transparent -mb-px", templ.KV("border-border border-b-bg text-fg bg-surface", activeTab == "sessions"), templ.KV("text-fg-muted hover:text-fg", activeTab != "sessions") }
+			if activeTab == "sessions" {
+				aria-current="page"
+			}
+		>{ T(lang, "ccOverview.tabs.sessions") }</a>
+	</nav>
+}
+
 // CCOverviewPage renders the "Claude Code Overview" page: usage charts + a
 // server-rendered per-account breakdown.
 templ CCOverviewPage(multi *services.CCStatsMultiResult, lang, theme, sidebarState string) {
@@ -15,6 +36,7 @@ templ CCOverviewPage(multi *services.CCStatsMultiResult, lang, theme, sidebarSta
 // ccOverviewContent is the shared body, reused for full-page and HTMX renders.
 templ ccOverviewContent(multi *services.CCStatsMultiResult, lang string) {
 	<div>
+		@ccTabBar("", lang)
 		<div class="page-header">
 			<h1>{ T(lang, "ccOverview.title") }</h1>
 			<p>{ T(lang, "ccOverview.description") }</p>
@@ -31,6 +53,24 @@ templ ccOverviewContent(multi *services.CCStatsMultiResult, lang string) {
 		if multi != nil && len(multi.ByAccount) > 1 {
 			@ccOverviewByAccount(multi, lang)
 		}
+	</div>
+}
+
+// CCSessionsTabPage renders the full CC page shell with the Sessions tab active.
+templ CCSessionsTabPage(result services.CCSessionListResult, params services.CCSessionListParams, lang, theme, sidebarState string) {
+	@Layout(T(lang, "ccOverview.title"), "cc-overview", lang, theme, sidebarState, ccSessionsTabContent(result, params, lang))
+}
+
+// CCSessionsTabPartial renders only the Sessions tab content (no HTML shell).
+templ CCSessionsTabPartial(result services.CCSessionListResult, params services.CCSessionListParams, lang string) {
+	@ccSessionsTabContent(result, params, lang)
+}
+
+// ccSessionsTabContent wraps the tab bar + sessions list content for the Sessions view.
+templ ccSessionsTabContent(result services.CCSessionListResult, params services.CCSessionListParams, lang string) {
+	<div class="flex flex-col gap-4">
+		@ccTabBar("sessions", lang)
+		@CCSListPartial(result, params, lang)
 	</div>
 }
 

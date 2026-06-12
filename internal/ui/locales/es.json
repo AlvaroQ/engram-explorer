@@ -891,6 +891,10 @@
     "byAccount": {
       "title": "Desglose por cuenta",
       "total": "Todas las cuentas"
+    },
+    "tabs": {
+      "overview": "Resumen",
+      "sessions": "Sesiones"
     }
   },
   "placeholder": {

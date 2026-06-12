@@ -264,13 +264,16 @@ func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 	mux.HandleFunc("GET /sessions", handleSessionsListPage(d))
 	mux.HandleFunc("GET /sessions/list", handleSessionsListPartial(d))
 
-	// Claude Code overview route (usage charts only — no list, no filter).
+	// Claude Code route — Overview tab (charts) and Sessions tab (?tab=sessions).
 	mux.HandleFunc("GET /cc-overview", handleCCOverviewPage(d))
 
-	// Claude Code sessions routes (live .jsonl reader — no SQLite).
-	// /list and /{project}/{id} must be registered before the wildcard so Go 1.22
-	// exact matching takes precedence over the two-segment wildcard.
-	mux.HandleFunc("GET /cc-sessions", handleCCSessionsListPage(d))
+	// GET /cc-sessions redirects to the Sessions tab on the CC page (PR8).
+	// /cc-sessions/list (HTMX load-more partial) and /cc-sessions/{project}/{id}
+	// (detail) are kept intact — Go 1.22 exact-path matching ensures they win
+	// over the shorter /cc-sessions pattern.
+	mux.HandleFunc("GET /cc-sessions", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/cc-overview?tab=sessions", http.StatusMovedPermanently)
+	})
 	mux.HandleFunc("GET /cc-sessions/list", handleCCSessionsListPartial(d))
 	mux.HandleFunc("GET /cc-sessions/{project}/{id}", handleCCSessionDetailPage(d))
 
