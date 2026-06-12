@@ -243,14 +243,6 @@ a:hover {
   border-radius: 4px;
 }
 
-/* The Engram elephant has a dark-grey body that camouflages against the dark
-   sidebar — only its pink outline survives. Sit it on a light rounded badge so
-   the whole mark reads clearly, the way a small app icon does. */
-.sidebar-group-engram .sidebar-group-icon {
-  background: #f4f4f5;
-  padding: 1.5px;
-}
-
 .sidebar-group-engram .sidebar-group-dot {
   background: hsl(var(--brand-engram));
 }
