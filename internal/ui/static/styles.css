@@ -234,6 +234,15 @@ a:hover {
   box-shadow: 0 0 0 3px hsl(var(--surface));
 }
 
+/* Brand image shown in place of the accent dot for groups that have one. */
+.sidebar-group-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  object-fit: contain;
+  border-radius: 3px;
+}
+
 .sidebar-group-engram .sidebar-group-dot {
   background: hsl(var(--brand-engram));
 }

@@ -376,11 +376,29 @@ templ sidebarDividerIfBothVisible(ctx context.Context, groups []providers.NavGro
 
 // sidebarGroup renders a section heading that introduces a group of nav links.
 // variant ("engram", "claude", or provider ID) selects the accent color CSS class.
+// When the variant has a brand image it is shown in place of the accent dot.
 templ sidebarGroup(label, variant string) {
 	<p class={ "sidebar-group-label sidebar-group-" + variant }>
-		<span class="sidebar-group-dot" aria-hidden="true"></span>
+		if src := sidebarGroupIconSrc(variant); src != "" {
+			<img src={ src } class="sidebar-group-icon" alt="" aria-hidden="true"/>
+		} else {
+			<span class="sidebar-group-dot" aria-hidden="true"></span>
+		}
 		<span class="sidebar-group-text">{ label }</span>
 	</p>
+}
+
+// sidebarGroupIconSrc maps a group variant/ID to its brand image, or "" when
+// the group should fall back to the plain accent dot.
+func sidebarGroupIconSrc(variant string) string {
+	switch variant {
+	case "engram":
+		return "/static/engram.png"
+	case "cc-sessions", "claude":
+		return "/static/claude.png"
+	default:
+		return ""
+	}
 }
 
 // accountSwitcher renders the profile switcher dropdown in the sidebar brand area.
