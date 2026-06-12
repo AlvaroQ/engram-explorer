@@ -743,3 +743,37 @@ func TestSyncIssuesNoIssues(t *testing.T) {
 		t.Errorf("issues partial must contain 'No sync issues detected.' when state is healthy; body: %.400s", body)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Sync-all control in Maintenance > Cloud
+// ---------------------------------------------------------------------------
+
+// TestMaintenancePageContainsSyncAllControl verifies that GET /settings/maintenance
+// includes the CloudSyncAllControl component: the #cloud-sync-all container id
+// and the POST /partials/sync-cloud button must be present in the rendered page.
+func TestMaintenancePageContainsSyncAllControl(t *testing.T) {
+	mux := http.NewServeMux()
+	doctor.Mount(mux, doctor.Deps{})
+
+	req := httptest.NewRequest(http.MethodGet, "/settings/maintenance", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+
+	// The exported CloudSyncAllControl component must render the container.
+	if !strings.Contains(body, `id="cloud-sync-all"`) {
+		t.Error("maintenance page must contain id=\"cloud-sync-all\" (CloudSyncAllControl)")
+	}
+	// The button must target the sync-all endpoint.
+	if !strings.Contains(body, `hx-post="/partials/sync-cloud"`) {
+		t.Error("maintenance page sync-all button must have hx-post=\"/partials/sync-cloud\"")
+	}
+	// The swap target must be #cloud-sync-all (consistent with the POST response container).
+	if !strings.Contains(body, `hx-target="#cloud-sync-all"`) {
+		t.Error("maintenance page sync-all button must have hx-target=\"#cloud-sync-all\"")
+	}
+}

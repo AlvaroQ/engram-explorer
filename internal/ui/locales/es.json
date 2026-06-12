@@ -690,7 +690,13 @@
       "title": "Elementos sin asignar"
     },
     "cloud": {
-      "title": "Copia de seguridad en la nube"
+      "title": "Copia de seguridad en la nube",
+      "syncAll": {
+        "label": "Sincronizar todos",
+        "tooltip": "Sincronizar todos los proyectos inscritos a la nube de engram",
+        "ariaLabel": "Sincronizar todos los proyectos inscritos a la nube de engram",
+        "description": "Inicia una sincronización en la nube para cada proyecto inscrito."
+      }
     }
   },
   "settings": {
