@@ -42,6 +42,10 @@ templ maintenanceContent(lang string) {
 		<!-- Cloud backup (was /doctor/sync). Shell embedded inline; content polled via HTMX. -->
 		<section class="settings-group" id="cloud">
 			<h2 class="settings-group-title">{ ui.T(lang, "maintenance.cloud.title") }</h2>
+			<div class="cloud-sync-all-wrapper">
+				<p class="settings-group-desc">{ ui.T(lang, "maintenance.cloud.syncAll.description") }</p>
+				@ui.CloudSyncAllControl(lang)
+			</div>
 			@syncShellContent()
 		</section>
 	</div>

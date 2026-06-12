@@ -690,7 +690,13 @@
       "title": "Unassigned items"
     },
     "cloud": {
-      "title": "Cloud backup"
+      "title": "Cloud backup",
+      "syncAll": {
+        "label": "Sync all",
+        "tooltip": "Sync all enrolled projects to engram cloud",
+        "ariaLabel": "Sync all enrolled projects to engram cloud",
+        "description": "Triggers a cloud sync for every enrolled project."
+      }
     }
   },
   "settings": {

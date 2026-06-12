@@ -338,11 +338,9 @@ func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 	// Sidebar status pill partial (polled by HTMX from the sidebar footer).
 	mux.HandleFunc("GET /partials/status-pill", handleStatusPillPartial(d))
 
-	// "Sync cloud" action — triggers a cloud sync for all enrolled projects.
-	// DEPRECATED UI WIRING: the sidebar-footer button that triggered this was
-	// removed when diagnostics moved into /settings/maintenance. The route is
-	// kept (its sync-all logic has no per-project equivalent yet) pending a
-	// follow-up that re-exposes "sync all" inside the Maintenance > Cloud
-	// section. Not reachable from the current UI; see syncCloudButtonWithResult.
+	// "Sync all" action — triggers a cloud sync for all enrolled projects.
+	// Powers the CloudSyncAllControl button embedded in Maintenance > Cloud
+	// (internal/doctor/maintenance.templ). Returns an HTML fragment via
+	// syncCloudButtonWithResult that replaces #cloud-sync-all (outerHTML swap).
 	mux.HandleFunc("POST /partials/sync-cloud", handleSyncCloudPost(d, cloud))
 }

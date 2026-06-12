@@ -205,6 +205,30 @@
 .btn-danger:hover  { filter: brightness(1.2); }
 .btn-link:hover    { text-decoration: underline; }
 
+/* ── Maintenance > Cloud: sync-all control ───────────────────────── */
+.cloud-sync-all-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+.cloud-sync-all {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.cloud-sync-result {
+  font-size: 0.8rem;
+  color: var(--doc-muted, #9ca3af);
+  margin: 0;
+}
+.cloud-sync-result:empty { display: none; }
+.cloud-sync-result--ok      { color: var(--doc-green,  #4ade80); }
+.cloud-sync-result--partial { color: var(--doc-yellow, #facc15); }
+.cloud-sync-result--failed  { color: var(--doc-red,    #f87171); }
+.cloud-sync-result--noEnrolled { color: var(--doc-muted, #9ca3af); }
+
 /* ── Orphans sections ─────────────────────────────────────────────── */
 .orphans-section { margin-bottom: 2rem; }
 .orphans-section h2 {
