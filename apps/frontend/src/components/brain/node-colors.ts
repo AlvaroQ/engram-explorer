@@ -6,7 +6,7 @@ import type { GraphNode } from '../../lib/api.ts';
 export type ColorBy = 'project' | 'type';
 
 // Muted gray used for null/unknown values in dynamic palettes.
-export const NULL_HEX = '#4b5563'; // gray-600
+export const NULL_HEX = '#6e6a86'; // RP overlay
 
 // Stable key used to group / filter nodes that have no value under the active
 // colorBy (e.g. observations with no project). Kept distinct from any real value.
@@ -22,7 +22,7 @@ export function buildHexPalette(
   const n = sorted.length || 1;
   sorted.forEach((v, i) => {
     const hue = (i * 360) / n;
-    palette.set(v, `hsl(${hue}, 65%, 60%)`);
+    palette.set(v, `hsl(${hue}, 55%, 68%)`);
   });
   return palette;
 }

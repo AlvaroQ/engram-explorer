@@ -6,8 +6,8 @@ import (
 )
 
 // SessionDetailPage renders the full page shell for a session detail view.
-templ SessionDetailPage(sess *services.SessionDetailResponse, lang, theme string) {
-	@Layout(T(lang, "sessions.session")+" — "+sess.Session.ID, "sessions", lang, theme, sessionDetailContent(sess, lang))
+templ SessionDetailPage(sess *services.SessionDetailResponse, lang, theme, sidebarState string) {
+	@Layout(T(lang, "sessions.session")+" — "+sess.Session.ID, "sessions", lang, theme, sidebarState, sessionDetailContent(sess, lang))
 }
 
 // SessionDetailPartial renders only the content (no HTML shell) for HTMX.

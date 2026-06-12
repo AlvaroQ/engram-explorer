@@ -1,0 +1,52 @@
+package doctor
+
+import "github.com/AlvaroQ/engram-explorer/internal/ui"
+
+// MaintenancePage renders the consolidated maintenance page in the shared app
+// shell. activeNav="settings" keeps the Settings gear highlighted.
+// Both subsections defer their content to HTMX so the page load is fast and
+// the partial endpoints (/doctor/orphans/list, /doctor/sync/projects, etc.)
+// continue to work unchanged.
+templ MaintenancePage(lang, theme, sidebarState string) {
+	@ui.Layout("Maintenance", "settings", lang, theme, sidebarState, maintenanceContent(lang))
+}
+
+// maintenanceContent is the body of the maintenance page. It contains two
+// anchor-linked sections so URL fragments (#unassigned, #cloud) from the
+// 301 redirects land in the right place.
+templ maintenanceContent(lang string) {
+	<!-- Diagnostics widgets (orphans/sync) rely on classes defined only in the
+	     doctor stylesheet. The shared ui.Layout head does not include it, so we
+	     link it here (HTML5 permits stylesheet links in the body). -->
+	<link rel="stylesheet" href="/doctor/static/styles.css"/>
+	<div class="settings-page" id="maintenance-page">
+		<div class="page-header">
+			<h1>{ ui.T(lang, "maintenance.title") }</h1>
+			<p class="settings-group-desc">{ ui.T(lang, "maintenance.description") }</p>
+		</div>
+
+		<!-- Unassigned items (was /doctor/orphans). Deferred via HTMX. -->
+		<section class="settings-group" id="unassigned">
+			<h2 class="settings-group-title">{ ui.T(lang, "maintenance.unassigned.title") }</h2>
+			<div
+				id="orphans-container"
+				hx-get="/doctor/orphans/list"
+				hx-trigger="load"
+				hx-target="#orphans-container"
+				hx-swap="innerHTML"
+			>
+				<p class="loading">Loading…</p>
+			</div>
+		</section>
+
+		<!-- Cloud backup (was /doctor/sync). Shell embedded inline; content polled via HTMX. -->
+		<section class="settings-group" id="cloud">
+			<h2 class="settings-group-title">{ ui.T(lang, "maintenance.cloud.title") }</h2>
+			<div class="cloud-sync-all-wrapper">
+				<p class="settings-group-desc">{ ui.T(lang, "maintenance.cloud.syncAll.description") }</p>
+				@ui.CloudSyncAllControl(lang)
+			</div>
+			@syncShellContent()
+		</section>
+	</div>
+}

@@ -9,8 +9,8 @@ import (
 )
 
 // SessionsListPage renders the full page shell for the sessions list view.
-templ SessionsListPage(result services.SessionListResult, params services.SessionListParams, lang, theme string) {
-	@Layout(T(lang, "sessions.title"), "sessions", lang, theme, sessionsListContent(result, params, lang))
+templ SessionsListPage(result services.SessionListResult, params services.SessionListParams, lang, theme, sidebarState string) {
+	@Layout(T(lang, "sessions.title"), "sessions", lang, theme, sidebarState, sessionsListContent(result, params, lang))
 }
 
 // SessionsListPartial renders only the sessions list content (no HTML shell).
@@ -70,14 +70,14 @@ templ SessionsListBodyPartial(result services.SessionListResult, params services
 			<table class="w-full text-sm">
 				<thead class="table-head">
 					<tr>
-						<th class="px-4 py-2 text-left">{ T(lang, "sessions.col.id") }</th>
+						<th class="px-4 py-2 text-left">{ T(lang, "sessions.col.session") }</th>
 						<th class="px-4 py-2 text-left">{ T(lang, "sessions.col.project") }</th>
 						<th class="px-4 py-2 text-left">{ T(lang, "sessions.col.started") }</th>
 						<th class="px-4 py-2 text-left">{ T(lang, "sessions.col.observations") }</th>
 						<th class="px-4 py-2 text-left">{ T(lang, "sessions.col.prompts") }</th>
 					</tr>
 				</thead>
-				<tbody id="sessions-tbody" class="divide-y">
+				<tbody id="sessions-tbody" class="table-divide">
 					@SessionsRowsPartial(result, params, lang)
 				</tbody>
 			</table>
@@ -99,7 +99,10 @@ templ SessionsRowsPartial(result services.SessionListResult, params services.Ses
 templ sessionRow(s services.SessionListItem, lang string) {
 	<tr class="hover:bg-surface-2">
 		<td class="px-4 py-2">
-			<a href={ templ.SafeURL("/sessions/" + s.ID) } class="mono text-xs text-fg hover:text-accent">{ truncateID(s.ID) }</a>
+			<a href={ templ.SafeURL("/sessions/" + s.ID) } class="text-sm text-fg hover:text-accent leading-snug">
+				{ sessionTitle(s, lang) }
+			</a>
+			<div class="mono text-xs text-fg-muted mt-0.5">{ truncateID(s.ID) }</div>
 		</td>
 		<td class="px-4 py-2 text-fg-muted text-xs">
 			if s.Project != nil && *s.Project != "" {
@@ -108,7 +111,9 @@ templ sessionRow(s services.SessionListItem, lang string) {
 				<span class="muted">—</span>
 			}
 		</td>
-		<td class="px-4 py-2 mono text-xs text-fg-muted">{ nilStr(s.StartedAt) }</td>
+		<td class="px-4 py-2 mono text-xs text-fg-muted">
+			@dateClockCell(derefStr(s.StartedAt, ""))
+		</td>
 		<td class="px-4 py-2 text-fg-muted">
 			<span class="badge badge-neutral">{ fmt.Sprintf("%d", s.ObsCount) }</span>
 		</td>
@@ -116,7 +121,7 @@ templ sessionRow(s services.SessionListItem, lang string) {
 			<span class={ sessionPromptBadge(s.PromptsCount) }>{ fmt.Sprintf("%d", s.PromptsCount) }</span>
 		</td>
 	</tr>
-	if s.Summary != nil && *s.Summary != "" {
+	if s.Summary != nil && *s.Summary != "" && !sessionHasFirstPrompt(s) {
 		<tr class="hover:bg-surface-2">
 			<td colspan="5" class="px-4 pb-2 text-xs text-fg-muted italic">{ summarySummary(*s.Summary) }</td>
 		</tr>
@@ -172,6 +177,41 @@ func sessionsNextURL(cursor string, params services.SessionListParams) string {
 		v.Add("project", p)
 	}
 	return "/sessions/list?" + v.Encode()
+}
+
+// sessionTitle returns a human-readable title for a session list row.
+// Fallback chain: FirstPrompt (trimmed, ≤80 chars) → Summary (≤80 chars) → untitled label.
+func sessionTitle(s services.SessionListItem, lang string) string {
+	if s.FirstPrompt != nil && *s.FirstPrompt != "" {
+		return truncateTitle(*s.FirstPrompt, 80)
+	}
+	if s.Summary != nil && *s.Summary != "" {
+		return truncateTitle(*s.Summary, 80)
+	}
+	return T(lang, "sessions.untitled")
+}
+
+// sessionHasFirstPrompt reports whether the session has a first user prompt to
+// use as its title. Used to decide whether to also show the summary preview row.
+func sessionHasFirstPrompt(s services.SessionListItem) bool {
+	return s.FirstPrompt != nil && *s.FirstPrompt != ""
+}
+
+// truncateTitle trims whitespace, collapses internal newlines to a space,
+// and truncates to maxRunes runes.
+func truncateTitle(s string, maxRunes int) string {
+	// Collapse newlines and extra whitespace to a single space.
+	cleaned := strings.Map(func(r rune) rune {
+		if r == '\n' || r == '\r' || r == '\t' {
+			return ' '
+		}
+		return r
+	}, strings.TrimSpace(s))
+	runes := []rune(cleaned)
+	if len(runes) <= maxRunes {
+		return cleaned
+	}
+	return string(runes[:maxRunes]) + "…"
 }
 
 // truncateID shortens a UUID-style session ID for display.

@@ -1,4 +1,19 @@
 {
+  "nav": {
+    "engram": "Engram",
+    "overview": "Resumen",
+    "observations": "Memoria",
+    "sessions": "Sesiones",
+    "prompts": "Prompts",
+    "topics": "Temas",
+    "projects": "Proyectos",
+    "brain": "Grafo de conocimiento",
+    "syncHealth": "Salud del Sync",
+    "orphans": "Huérfanos",
+    "ccsessions": "Claude Code",
+    "ccsessionsList": "Sesiones de Claude Code",
+    "ccsessionsOverview": "Resumen"
+  },
   "common": {
     "loading": "Cargando…",
     "loadMore": "Cargar más",
@@ -25,12 +40,12 @@
     "subtitle": "Panel local",
     "groupEngram": "Engram",
     "groupClaudeCode": "Claude Code",
-    "overview": "Resumen Engram",
-    "knowledge": "Conocimiento",
+    "overview": "Resumen",
+    "knowledge": "Grafo de conocimiento",
     "projects": "Proyectos",
-    "observations": "Observaciones",
+    "observations": "Memoria",
     "sessions": "Sesiones",
-    "ccOverview": "Resumen Claude Code",
+    "ccOverview": "Claude Code",
     "ccSessions": "Sesiones de Claude Code",
     "syncHealth": "Salud del Sync",
     "prompts": "Prompts",
@@ -59,14 +74,18 @@
   },
   "overview": {
     "kpi": {
-      "observations": "Observaciones",
+      "observations": "Memorias guardadas",
       "browseAll": "Ver todas",
-      "sessions": "Sesiones",
+      "sessions": "Conversaciones IA",
       "seeTimeline": "Ver línea de tiempo",
       "projects": "Proyectos",
       "drillProject": "Explorar un proyecto",
       "prompts": "Prompts",
       "searchPrompts": "Buscar prompts"
+    },
+    "alert": {
+      "syncIssues": "{{count}} problema(s) de sincronización requieren atención",
+      "review": "Revisar"
     },
     "activity": {
       "title": "Actividad por proyecto",
@@ -139,7 +158,7 @@
     "nodesLabel": "nodos",
     "edgesLabel": "aristas",
     "emptyGraph": "Sin datos del grafo",
-    "graphError": "Grafo no disponible — recargá la página",
+    "graphError": "Grafo no disponible — recarga la página",
     "openHint": "Abrir en Observaciones",
     "expandHint": "Ver contenido completo",
     "collapseHint": "Ocultar contenido",
@@ -202,7 +221,7 @@
       "notInView": "No está en la vista actual",
       "noMatches": "Sin resultados",
       "searching": "Buscando…",
-      "hint": "Presioná Cmd/Ctrl+K para buscar",
+      "hint": "Presiona Cmd/Ctrl+K para buscar",
       "resultCount": "{{count}} resultados"
     },
     "segments": {
@@ -280,7 +299,7 @@
     },
     "editType": {
       "label": "Tipo",
-      "placeholder": "Escribí o elegí un tipo…",
+      "placeholder": "Escribe o elige un tipo…",
       "createOption": "Nuevo tipo: {{name}}",
       "error": {
         "generic": "No se pudo cambiar el tipo: {{message}}"
@@ -297,7 +316,7 @@
     },
     "editProject": {
       "label": "Proyecto",
-      "placeholder": "Escribí o elegí un proyecto…",
+      "placeholder": "Escribe o elige un proyecto…",
       "createOption": "Nuevo proyecto: {{name}}",
       "move": "Mover",
       "renameMerge": "Renombrar",
@@ -310,7 +329,7 @@
       "success": "Listo.",
       "error": {
         "enrolled": "Los proyectos sincronizados con la nube no se pueden renombrar aún (Fase 2).",
-        "targetExists": "Ya existe un proyecto llamado «{{target}}». Usá el modo fusión.",
+        "targetExists": "Ya existe un proyecto llamado «{{target}}». Usa el modo fusión.",
         "generic": "La operación falló: {{message}}"
       }
     }
@@ -341,6 +360,7 @@
     "promptsCount": "{{count}} prompts",
     "notFound": "Sesión no encontrada.",
     "session": "Sesión",
+    "untitled": "(sesión sin título)",
     "counts": "Conteos",
     "summaryCard": "Resumen",
     "summaryEmpty": "No hay resumen guardado para esta sesión.",
@@ -348,6 +368,13 @@
     "timelineDesc": "{{count}} eventos ordenados cronológicamente",
     "noEvents": "Sin eventos capturados.",
     "noTimestamps": "Los eventos no tienen timestamps; no hay nada que graficar. Mira la lista debajo.",
+    "col": {
+      "session": "Sesión",
+      "project": "Proyecto",
+      "started": "Inicio",
+      "observations": "Observaciones",
+      "prompts": "Prompts"
+    },
     "fields": {
       "project": "Proyecto",
       "directory": "Directorio",
@@ -360,8 +387,8 @@
   },
   "prompts": {
     "title": "Prompts del usuario",
-    "description": "Prompts del usuario capturados por Engram. Usa la búsqueda para FTS5 con resaltado de fragmentos.",
-    "searchPlaceholder": "Buscar prompts (FTS5)…",
+    "description": "Tus preguntas capturadas por Engram. Busca para resaltar fragmentos coincidentes.",
+    "searchPlaceholder": "Buscar conversaciones…",
     "resultsFor": "Resultados de \"{{q}}\"",
     "recent": "Prompts recientes",
     "matches": "{{count}} coincidencias",
@@ -379,20 +406,33 @@
     "obsCount": "{{count}} obs",
     "revisions": "{{count}} rev"
   },
+  "memory": {
+    "tabs": {
+      "memories": "Memorias",
+      "threads": "Hilos",
+      "conversations": "Conversaciones"
+    },
+    "advancedView": {
+      "label": "Vista avanzada"
+    }
+  },
   "observations": {
     "title": "Observaciones",
     "description": "Filtra, busca e inspecciona cada observación de la base de datos local.",
     "loaded": "{{count}} cargadas",
     "loadError": "Falló la carga de observaciones: {{message}}",
-    "searchPlaceholder": "Búsqueda de texto completo en título + contenido (FTS5)…",
-    "filters": "Filtros",
+    "searchPlaceholder": "Buscar por título o contenido…",
+    "filters": {
+      "toggle": "Filtros",
+      "active": "{{count}} activos"
+    },
     "clear": "Limpiar",
     "labels": {
       "project": "Proyecto",
       "type": "Tipo",
       "toolName": "Tool name",
-      "scope": "Scope",
-      "topicKey": "Topic key",
+      "scope": "Visibilidad",
+      "topicKey": "Hilo",
       "deletedRows": "Filas eliminadas"
     },
     "placeholders": {
@@ -409,13 +449,16 @@
       "all": "incluir eliminados",
       "only": "solo eliminados"
     },
+    "badge": {
+      "reviewDue": "Revisión pendiente"
+    },
     "table": {
       "created": "Creado",
       "project": "Proyecto",
       "type": "Tipo",
       "title": "Título",
       "tool": "Herramienta",
-      "topic": "Topic",
+      "topic": "Hilo",
       "rev": "Rev",
       "dup": "Dup",
       "empty": "vacío",
@@ -429,7 +472,7 @@
       "deleted": "eliminada",
       "fields": {
         "project": "Proyecto",
-        "topicKey": "Topic key",
+        "topicKey": "Hilo",
         "created": "Creada",
         "updated": "Actualizada",
         "revisions": "Revisiones",
@@ -633,6 +676,38 @@
     },
     "recentPrompts": {
       "title": "Prompts recientes"
+    },
+    "combine": {
+      "title": "Combinar con otro proyecto",
+      "description": "Mueve todas las memorias, sesiones y prompts de este proyecto a otro existente. Este proyecto desaparecerá al combinarlo.",
+      "targetLabel": "Combinar en",
+      "submit": "Combinar proyectos",
+      "confirm": "¿Combinar «{{source}}» en «{{target}}»? Esto mueve todas sus memorias y no se puede deshacer.",
+      "noTargets": "No hay otros proyectos disponibles para combinar.",
+      "error": {
+        "sameName": "Elige un proyecto diferente.",
+        "sourceNotFound": "Este proyecto ya no existe.",
+        "targetNotFound": "El proyecto seleccionado ya no existe.",
+        "enrolledSource": "Este proyecto está inscrito en cloud sync. La combinación de proyectos inscritos será soportada en una actualización futura.",
+        "enrolledTarget": "El proyecto seleccionado está inscrito en cloud sync. La combinación en proyectos inscritos será soportada en una actualización futura.",
+        "generic": "No se pudieron combinar los proyectos: {{message}}"
+      }
+    }
+  },
+  "maintenance": {
+    "title": "Mantenimiento",
+    "description": "Herramientas de diagnóstico y limpieza de datos. Usalas para ordenar elementos sin asignar y gestionar la copia de seguridad en la nube.",
+    "unassigned": {
+      "title": "Elementos sin asignar"
+    },
+    "cloud": {
+      "title": "Copia de seguridad en la nube",
+      "syncAll": {
+        "label": "Sincronizar todos",
+        "tooltip": "Sincronizar todos los proyectos inscritos a la nube de engram",
+        "ariaLabel": "Sincronizar todos los proyectos inscritos a la nube de engram",
+        "description": "Inicia una sincronización en la nube para cada proyecto inscrito."
+      }
     }
   },
   "settings": {
@@ -642,12 +717,61 @@
       "system": "Sistema",
       "cloud": "Nube"
     },
+    "maintenance": {
+      "title": "Mantenimiento",
+      "description": "Herramientas para limpiar elementos sin asignar y gestionar la copia de seguridad en la nube.",
+      "open": "Abrir herramientas de mantenimiento"
+    },
+    "modules": {
+      "title": "Fuentes de datos",
+      "description": "Administra los proveedores de datos. Habilita o deshabilita proveedores y configura sus rutas.",
+      "enable": "Habilitar",
+      "disable": "Deshabilitar",
+      "validateAndActivate": "Validar y Activar",
+      "pathLabel": "Ruta del proveedor",
+      "pathPlaceholder": "Ingresa la ruta para activar este proveedor",
+      "state": {
+        "enabled": "habilitado",
+        "disabled": "deshabilitado",
+        "detected": "sin configurar",
+        "errored": "error",
+        "registered": "no detectado"
+      }
+    },
+    "accounts": {
+      "title": "Cuentas",
+      "profilesTitle": "Perfiles",
+      "profilesDesc": "Cada perfil tiene su propio conjunto de rutas y configuración de proveedores. Cambia de perfil para trabajar con distintas fuentes de datos.",
+      "active": "activo",
+      "switch": "Cambiar",
+      "delete": "Eliminar",
+      "createTitle": "Crear perfil",
+      "create": "Crear",
+      "namePlaceholder": "Nombre del perfil",
+      "nameEmpty": "El nombre del perfil no puede estar vacío.",
+      "noProfiles": "No se encontraron perfiles.",
+      "manage": "Gestionar perfiles"
+    },
+    "ccAccounts": {
+      "title": "Cuentas de Claude Code",
+      "description": "Agrega varios directorios de Claude Code (por ejemplo, personal y trabajo) para ver todas las sesiones en un solo lugar.",
+      "addTitle": "Agregar cuenta",
+      "labelPlaceholder": "Nombre de la cuenta (p. ej. Trabajo)",
+      "pathPlaceholder": "Ruta al directorio ~/.claude",
+      "add": "Agregar",
+      "enabled": "habilitada",
+      "disabled": "deshabilitada",
+      "remove": "Eliminar",
+      "cannotRemoveLast": "No es posible eliminar la última cuenta",
+      "labelEmpty": "El nombre de la cuenta no puede estar vacío.",
+      "notFound": "Cuenta no encontrada."
+    },
     "theme": "Tema",
     "themeDark": "oscuro",
     "themeLight": "claro",
     "language": "Idioma",
     "languageDescription": "Elige el idioma de la interfaz",
-    "daemon": "Daemon de Engram",
+    "daemon": "Servicio en segundo plano",
     "cloudCli": "Capacidades del CLI cloud",
     "cloudCliDesc": "Detectado a partir de `engram cloud --help`",
     "cloudCliError": "No se pudieron detectar las capacidades del CLI.",
@@ -666,7 +790,7 @@
     "claudeEditHint": "Apuntá a tu carpeta .claude/projects. Se aplica al instante.",
     "path": {
       "apply": "Aplicar",
-      "empty": "Ingresá una ruta.",
+      "empty": "Ingresa una ruta.",
       "unavailable": "La edición de rutas no está disponible en este modo."
     },
     "db": {
@@ -715,7 +839,9 @@
       "compact": "Compactar",
       "thinking": "Thinking",
       "tools": "Herramientas",
-      "attachments": "Adjuntos"
+      "attachments": "Adjuntos",
+      "account": "Cuenta",
+      "allAccounts": "Todas las cuentas"
     },
     "listTitle": "Sesiones",
     "listLoaded": "{{count}} cargadas",
@@ -735,7 +861,8 @@
       "version": "Versión CC",
       "size": "Tamaño",
       "tokens": "Tokens",
-      "cost": "Coste"
+      "cost": "Coste",
+      "account": "Cuenta"
     },
     "fields": {
       "project": "Proyecto",
@@ -776,8 +903,16 @@
     }
   },
   "ccOverview": {
-    "title": "Resumen Claude Code",
-    "description": "Tokens y coste de todas tus sesiones de Claude Code."
+    "title": "Claude Code",
+    "description": "Tokens y coste de todas tus sesiones de Claude Code.",
+    "byAccount": {
+      "title": "Desglose por cuenta",
+      "total": "Todas las cuentas"
+    },
+    "tabs": {
+      "overview": "Resumen",
+      "sessions": "Sesiones"
+    }
   },
   "placeholder": {
     "comingSoon": "Próximamente.",
@@ -853,5 +988,25 @@
       "next": "Nuevo",
       "empty": "(vacío)"
     }
+  },
+  "demo": {
+    "banner": {
+      "text": "Datos de demostración — esta es una base de datos de muestra para previsualizar Engram Explorer.",
+      "dismiss": "Cerrar"
+    }
+  },
+  "onboarding": {
+    "title": "Bienvenido a Engram Explorer",
+    "description": "Conecta tus fuentes de datos para comenzar. Engram Explorer funciona con la memoria de Engram y las sesiones de Claude Code para ofrecerte una vista unificada de tu trabajo asistido por IA.",
+    "providers": {
+      "title": "Fuentes de datos",
+      "description": "Las siguientes fuentes fueron verificadas al iniciar. Activa al menos una para comenzar.",
+      "none": "No hay fuentes de datos disponibles. Ingresa una ruta a continuación para activar un proveedor manualmente.",
+      "detected": "detectado",
+      "notDetected": "no detectado",
+      "activate": "Activar"
+    },
+    "settingsHint": "¿Necesitas más opciones? Ve a ",
+    "settingsLink": "Configuración → Fuentes de datos"
   }
 }

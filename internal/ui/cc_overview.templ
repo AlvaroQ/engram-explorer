@@ -1,14 +1,42 @@
 package ui
 
-// CCOverviewPage renders the "Claude Code Overview" page: the usage charts only,
-// without the project filter or the sessions list (those live on /cc-sessions).
-templ CCOverviewPage(lang, theme string) {
-	@Layout(T(lang, "ccOverview.title"), "cc-overview", lang, theme, ccOverviewContent(lang))
+import (
+	"fmt"
+
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+)
+
+// ccTabBar renders the two-tab navigation for the Claude Code page.
+// activeTab is "" (Overview) or "sessions".
+templ ccTabBar(activeTab string, lang string) {
+	<nav class="flex gap-1 border-b border-border mb-4" aria-label="Claude Code tabs">
+		<a
+			href="/cc-overview"
+			class={ "px-4 py-2 text-sm font-medium rounded-t-md border border-transparent -mb-px", templ.KV("border-border border-b-bg text-fg bg-surface", activeTab == ""), templ.KV("text-fg-muted hover:text-fg", activeTab != "") }
+			if activeTab == "" {
+				aria-current="page"
+			}
+		>{ T(lang, "ccOverview.tabs.overview") }</a>
+		<a
+			href="/cc-overview?tab=sessions"
+			class={ "px-4 py-2 text-sm font-medium rounded-t-md border border-transparent -mb-px", templ.KV("border-border border-b-bg text-fg bg-surface", activeTab == "sessions"), templ.KV("text-fg-muted hover:text-fg", activeTab != "sessions") }
+			if activeTab == "sessions" {
+				aria-current="page"
+			}
+		>{ T(lang, "ccOverview.tabs.sessions") }</a>
+	</nav>
+}
+
+// CCOverviewPage renders the "Claude Code Overview" page: usage charts + a
+// server-rendered per-account breakdown.
+templ CCOverviewPage(multi *services.CCStatsMultiResult, lang, theme, sidebarState string) {
+	@Layout(T(lang, "ccOverview.title"), "cc-overview", lang, theme, sidebarState, ccOverviewContent(multi, lang))
 }
 
 // ccOverviewContent is the shared body, reused for full-page and HTMX renders.
-templ ccOverviewContent(lang string) {
+templ ccOverviewContent(multi *services.CCStatsMultiResult, lang string) {
 	<div>
+		@ccTabBar("", lang)
 		<div class="page-header">
 			<h1>{ T(lang, "ccOverview.title") }</h1>
 			<p>{ T(lang, "ccOverview.description") }</p>
@@ -22,5 +50,82 @@ templ ccOverviewContent(lang string) {
 				@Island("cc-usage-charts", ccUsageChartsProps(lang))
 			</div>
 		</div>
+		if multi != nil && len(multi.ByAccount) > 1 {
+			@ccOverviewByAccount(multi, lang)
+		}
 	</div>
+}
+
+// CCSessionsTabPage renders the full CC page shell with the Sessions tab active.
+templ CCSessionsTabPage(result services.CCSessionListResult, params services.CCSessionListParams, lang, theme, sidebarState string) {
+	@Layout(T(lang, "ccOverview.title"), "cc-overview", lang, theme, sidebarState, ccSessionsTabContent(result, params, lang))
+}
+
+// CCSessionsTabPartial renders only the Sessions tab content (no HTML shell).
+templ CCSessionsTabPartial(result services.CCSessionListResult, params services.CCSessionListParams, lang string) {
+	@ccSessionsTabContent(result, params, lang)
+}
+
+// ccSessionsTabContent wraps the tab bar + sessions list content for the Sessions view.
+templ ccSessionsTabContent(result services.CCSessionListResult, params services.CCSessionListParams, lang string) {
+	<div class="flex flex-col gap-4">
+		@ccTabBar("sessions", lang)
+		@CCSListPartial(result, params, lang)
+	</div>
+}
+
+// ccOverviewByAccount renders the combined total + per-account breakdown cards.
+// Only shown when there are multiple accounts (single-account installs skip it).
+templ ccOverviewByAccount(multi *services.CCStatsMultiResult, lang string) {
+	<div class="card" style="margin-top: 1.5rem;">
+		<div class="card-header">
+			<h2>{ T(lang, "ccOverview.byAccount.title") }</h2>
+		</div>
+		<div class="card-body p-0">
+			<div class="cc-account-stats-grid">
+				if multi.Total != nil {
+					@ccAccountStatCard(T(lang, "ccOverview.byAccount.total"), multi.Total, lang)
+				}
+				for _, acct := range multi.ByAccount {
+					if acct.Stats != nil {
+						@ccAccountStatCard(acct.Label, acct.Stats, lang)
+					}
+				}
+			</div>
+		</div>
+	</div>
+}
+
+// ccAccountStatCard renders a single stat card for one account (or the total).
+templ ccAccountStatCard(label string, stats *services.CCStatsResult, lang string) {
+	<div class="cc-account-stat-card">
+		<div class="cc-account-stat-label">{ label }</div>
+		<dl class="cc-account-stat-rows">
+			<div class="cc-account-stat-row">
+				<dt>{ T(lang, "ccSessions.charts.sessions") }</dt>
+				<dd>{ fmt.Sprintf("%d", stats.Sessions) }</dd>
+			</div>
+			<div class="cc-account-stat-row">
+				<dt>{ T(lang, "ccSessions.charts.tokens") }</dt>
+				<dd>{ ccsFormatTokens(stats.Totals.TotalTokens) }</dd>
+			</div>
+			<div class="cc-account-stat-row">
+				<dt>{ T(lang, "ccSessions.charts.cost") }</dt>
+				<dd>{ ccFormatStatCost(stats) }</dd>
+			</div>
+		</dl>
+	</div>
+}
+
+// ccFormatStatCost formats the cost from CCStatsResult.Totals.
+func ccFormatStatCost(stats *services.CCStatsResult) string {
+	c := stats.Totals.CostUSD
+	if c <= 0 {
+		return "—"
+	}
+	s := fmt.Sprintf("$%.2f", c)
+	if stats.HasUnknownModel {
+		s += "~"
+	}
+	return s
 }

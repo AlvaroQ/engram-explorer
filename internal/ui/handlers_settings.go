@@ -9,6 +9,103 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/daemon"
 )
 
+// handleAdvancedViewPost serves POST /settings/advanced-view.
+// It sets the advanced-view preference on the active profile and redirects back
+// to /observations so the table re-renders with/without the technical columns.
+func handleAdvancedViewPost(d Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if d.SetAdvancedView == nil {
+			http.Error(w, "advanced view toggle not available", http.StatusServiceUnavailable)
+			return
+		}
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "bad form", http.StatusBadRequest)
+			return
+		}
+		enabled := r.FormValue("enabled") == "true"
+		if err := d.SetAdvancedView(enabled); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if IsHTMX(r) {
+			w.Header().Set("HX-Redirect", "/observations")
+			w.WriteHeader(http.StatusOK)
+		} else {
+			http.Redirect(w, r, "/observations", http.StatusSeeOther)
+		}
+	}
+}
+
+// handleModulesTogglePost serves POST /settings/modules/{id}/toggle.
+// It enables or disables the named provider via the ToggleModule callback
+// and redirects back to /settings.
+func handleModulesTogglePost(d Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if d.ToggleModule == nil {
+			http.Error(w, "module toggle not available", http.StatusServiceUnavailable)
+			return
+		}
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "bad form", http.StatusBadRequest)
+			return
+		}
+		id := r.PathValue("id")
+		enabled := r.FormValue("enabled") == "true"
+
+		if err := d.ToggleModule(id, enabled); err != nil {
+			lang := langForRequest(r)
+			theme := themeForRequest(r)
+			data := buildSettingsData(d, r, lang, theme)
+			data.ModuleError = err.Error()
+			renderSettings(w, r, d, data)
+			return
+		}
+		redirectSettings(w, r)
+	}
+}
+
+// handleModulesPathPost serves POST /settings/modules/{id}/path.
+// It validates the submitted path via ValidateModulePath; on success it
+// redirects to /settings; on failure it re-renders the settings page with an
+// inline error (partial-swap pattern matching existing settings handlers).
+func handleModulesPathPost(d Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if d.ValidateModulePath == nil {
+			http.Error(w, "module path validation not available", http.StatusServiceUnavailable)
+			return
+		}
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "bad form", http.StatusBadRequest)
+			return
+		}
+
+		id := r.PathValue("id")
+		path := strings.TrimSpace(r.FormValue("path"))
+		lang := langForRequest(r)
+		theme := themeForRequest(r)
+
+		var errMsg string
+		if path == "" {
+			errMsg = T(lang, "settings.path.empty")
+		} else {
+			if err := d.ValidateModulePath(r.Context(), id, path); err != nil {
+				errMsg = err.Error()
+			}
+		}
+
+		if errMsg != "" {
+			data := buildSettingsData(d, r, lang, theme)
+			data.ModulePathErrors[id] = errMsg
+			// Also set ModuleError so the error is visible even when the Modules
+			// section is not rendered (e.g. when registry is not wired in tests).
+			data.ModuleError = errMsg
+			renderSettings(w, r, d, data)
+			return
+		}
+		redirectSettings(w, r)
+	}
+}
+
 // handleSettingsPage serves GET /settings.
 // Collects live system info (DB ping, daemon reachability) and renders the page.
 // Full page on direct GET; partial content when HX-Request: true.
@@ -20,9 +117,9 @@ func handleSettingsPage(d Deps) http.HandlerFunc {
 		data := buildSettingsData(d, r, lang, theme)
 
 		if IsHTMX(r) {
-			render(w, r, SettingsPartial(data))
+			renderDeps(w, r, d, SettingsPartial(data))
 		} else {
-			render(w, r, SettingsPage(data))
+			renderDeps(w, r, d, SettingsPage(data))
 		}
 	}
 }
@@ -36,12 +133,16 @@ func handleNavVisibilityPost() http.HandlerFunc {
 			http.Error(w, "bad form", http.StatusBadRequest)
 			return
 		}
+		// Section values are provider IDs: "engram", "cc-sessions".
+		// The legacy "claude" value is also accepted for backward compat.
+		section := r.FormValue("section")
 		var cookieName string
-		switch r.FormValue("section") {
+		switch section {
 		case "engram":
 			cookieName = "nav_engram"
-		case "claude":
-			cookieName = "nav_claude"
+		case "cc-sessions", "claude":
+			// "claude" is the legacy value; map to the provider-ID cookie.
+			cookieName = "nav_cc-sessions"
 		default:
 			http.Error(w, "invalid section", http.StatusBadRequest)
 			return
@@ -173,6 +274,18 @@ func buildSettingsData(d Deps, r *http.Request, lang, theme string) settingsData
 
 	prefs := navPrefsForRequest(r)
 
+	// Collect Modules data when the registry callback is wired.
+	var modules []ModuleInfo
+	if d.Modules != nil {
+		modules = d.Modules()
+	}
+
+	// Collect CC accounts data when the callback is wired.
+	var ccAccounts []CCAccountInfo
+	if d.CCAccounts != nil {
+		ccAccounts = d.CCAccounts()
+	}
+
 	return settingsData{
 		DBPath:      d.Paths.EngramDB(),
 		DBOk:        dbOk,
@@ -181,10 +294,15 @@ func buildSettingsData(d Deps, r *http.Request, lang, theme string) settingsData
 		DaemonURL:   d.Config.DaemonBaseURL,
 		DaemonOk:    daemonResult.OK,
 		DaemonError: daemonErrMsg,
-		ShowEngram:  prefs.ShowEngram,
-		ShowClaude:  prefs.ShowClaude,
-		Lang:        lang,
-		Theme:       theme,
+		ShowNavGroups: map[string]bool{
+			"engram":      prefs.isShown("engram"),
+			"cc-sessions": prefs.isShown("cc-sessions"),
+		},
+		Lang:             lang,
+		Theme:            theme,
+		Modules:          modules,
+		ModulePathErrors: make(map[string]string),
+		CCAccounts:       ccAccounts,
 	}
 }
 
@@ -216,7 +334,7 @@ func handleEngramDBPost(d Deps) http.HandlerFunc {
 		if errMsg != "" {
 			data := buildSettingsData(d, r, lang, theme)
 			data.EngramPathError = errMsg
-			renderSettings(w, r, data)
+			renderSettings(w, r, d, data)
 			return
 		}
 		redirectSettings(w, r)
@@ -250,7 +368,7 @@ func handleClaudeDirPost(d Deps) http.HandlerFunc {
 		if errMsg != "" {
 			data := buildSettingsData(d, r, lang, theme)
 			data.ClaudePathError = errMsg
-			renderSettings(w, r, data)
+			renderSettings(w, r, d, data)
 			return
 		}
 		redirectSettings(w, r)
@@ -258,11 +376,12 @@ func handleClaudeDirPost(d Deps) http.HandlerFunc {
 }
 
 // renderSettings renders the settings page (partial for HTMX, full otherwise).
-func renderSettings(w http.ResponseWriter, r *http.Request, data settingsData) {
+// d is used to pass NavGroups into the render context.
+func renderSettings(w http.ResponseWriter, r *http.Request, d Deps, data settingsData) {
 	if IsHTMX(r) {
-		render(w, r, SettingsPartial(data))
+		renderDeps(w, r, d, SettingsPartial(data))
 	} else {
-		render(w, r, SettingsPage(data))
+		renderDeps(w, r, d, SettingsPage(data))
 	}
 }
 

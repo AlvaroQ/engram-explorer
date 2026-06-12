@@ -1,6 +1,9 @@
 package services
 
 import (
+	"database/sql"
+	"errors"
+
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
@@ -15,6 +18,23 @@ type OrphanObservation struct {
 	UpdatedAt *string `json:"updated_at"`
 	SessionID *string `json:"session_id"`
 	SyncID    *string `json:"sync_id"`
+}
+
+// OrphanObservationDetail is the full detail of a single orphaned observation,
+// used to populate the assign-help dialog. It adds the observation body
+// (Content) and the working directory of the originating session (the strongest
+// hint for picking the right project) on top of the list-row fields.
+type OrphanObservationDetail struct {
+	ID               int64   `json:"id"`
+	Type             string  `json:"type"`
+	Title            *string `json:"title"`
+	ToolName         *string `json:"tool_name"`
+	TopicKey         *string `json:"topic_key"`
+	CreatedAt        *string `json:"created_at"`
+	UpdatedAt        *string `json:"updated_at"`
+	SessionID        *string `json:"session_id"`
+	Content          *string `json:"content"`
+	SessionDirectory *string `json:"session_directory"`
 }
 
 // OrphanSession is a session with no project.
@@ -102,4 +122,31 @@ func OrphansList(db sqlite.Querier) (*OrphansResponse, error) {
 			Prompts:      len(prompts),
 		},
 	}, nil
+}
+
+// LoadOrphanObservationDetail fetches a single orphaned observation by id, joining
+// the originating session so the caller can surface its working directory — the
+// strongest hint for assigning the observation to the right project. Read-only.
+// Returns (nil, nil) when no matching observation exists, so the handler can
+// render a soft "not found" message instead of a 500.
+func LoadOrphanObservationDetail(db sqlite.Querier, id int64) (*OrphanObservationDetail, error) {
+	var d OrphanObservationDetail
+	err := db.QueryRow(`
+		SELECT o.id, o.type, o.title, o.tool_name, o.topic_key,
+		       o.created_at, o.updated_at, o.session_id, o.content,
+		       s.directory
+		  FROM observations o
+		  LEFT JOIN sessions s ON o.session_id = s.id
+		 WHERE o.id = ?`, id).Scan(
+		&d.ID, &d.Type, &d.Title, &d.ToolName, &d.TopicKey,
+		&d.CreatedAt, &d.UpdatedAt, &d.SessionID, &d.Content,
+		&d.SessionDirectory,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &d, nil
 }

@@ -5,14 +5,9 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-// SyncPage renders the full sync health page wrapped in the Layout shell.
-// The actual content is deferred to HTMX via hx-trigger="load, every 15s".
-templ SyncPage(lang, theme string) {
-	@Layout("Sync Health", "syncHealth", lang, theme, syncShellContent())
-}
-
 // SyncShell renders only the sync shell content fragment — no Layout.
-// Used when HX-Request: true on GET /doctor/sync.
+// Previously used when HX-Request: true on GET /doctor/sync; still kept for
+// completeness but the maintenance page embeds syncShellContent directly.
 templ SyncShell() {
 	@syncShellContent()
 }
@@ -66,17 +61,17 @@ templ SyncProjectsPartial(resp services.SyncProjectsResponse, caps services.Clou
 			<div class="global-target-card">
 				<h3>Global Target</h3>
 				<dl>
-					<dt>Target Key</dt><dd>{ resp.GlobalTarget.TargetKey }</dd>
+					<div class="gt-stat"><dt>Target Key</dt><dd>{ resp.GlobalTarget.TargetKey }</dd></div>
 					if resp.GlobalTarget.Lifecycle != nil {
-						<dt>Lifecycle</dt><dd>{ *resp.GlobalTarget.Lifecycle }</dd>
+						<div class="gt-stat"><dt>Lifecycle</dt><dd>{ *resp.GlobalTarget.Lifecycle }</dd></div>
 					}
 					if resp.GlobalTarget.LastEnqueuedSeq != nil {
-						<dt>Last Enqueued Seq</dt><dd>{ fmt.Sprintf("%d", *resp.GlobalTarget.LastEnqueuedSeq) }</dd>
+						<div class="gt-stat"><dt>Last Enqueued Seq</dt><dd>{ fmt.Sprintf("%d", *resp.GlobalTarget.LastEnqueuedSeq) }</dd></div>
 					}
 					if resp.GlobalTarget.LastAckedSeq != nil {
-						<dt>Last Acked Seq</dt><dd>{ fmt.Sprintf("%d", *resp.GlobalTarget.LastAckedSeq) }</dd>
+						<div class="gt-stat"><dt>Last Acked Seq</dt><dd>{ fmt.Sprintf("%d", *resp.GlobalTarget.LastAckedSeq) }</dd></div>
 					}
-					<dt>Pending Mutations</dt><dd>{ fmt.Sprintf("%d", resp.GlobalTarget.PendingMutations) }</dd>
+					<div class="gt-stat"><dt>Pending Mutations</dt><dd>{ fmt.Sprintf("%d", resp.GlobalTarget.PendingMutations) }</dd></div>
 				</dl>
 			</div>
 		}
@@ -366,7 +361,7 @@ templ SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) {
 				}
 			</div>
 		}
-		<p><a href="/doctor/sync">&larr; Back to Sync Health</a></p>
+		<p><a href="/settings/maintenance#cloud">&larr; Back to Maintenance</a></p>
 	</div>
 }
 

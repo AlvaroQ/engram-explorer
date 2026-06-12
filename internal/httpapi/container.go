@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
+	"github.com/AlvaroQ/engram-explorer/internal/providers"
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
@@ -22,6 +24,17 @@ type Container struct {
 	RoDB   sqlite.Querier       // read-only pool (hot-swappable)
 	RWDB   sqlite.Querier       // read-write pool (hot-swappable); nil when unavailable
 	Logger *slog.Logger
+
+	// Registry, when non-nil, is the provider registry used for data-driven
+	// route mounting and health aggregation (WU-5+ path). When nil, the
+	// container operates in legacy direct-mount mode (backward compat for tests
+	// and callers that construct via NewContainer).
+	Registry *providers.Registry
+
+	// ProfileStore, when non-nil, is the persistent config used by the Settings
+	// Modules page to read and write per-provider enablement and paths. It is
+	// set from main.go via NewContainerWithRegistry when a registry is used.
+	ProfileStore *config.ProfileStore
 
 	// CloseGrace is how long ReloadEngramDB waits before closing the superseded
 	// pools, letting in-flight queries drain. Tests set it to 0 to close
@@ -175,7 +188,8 @@ func (c *Container) SetClaudeDir(newDir string) error {
 	return nil
 }
 
-// Close releases database connections.
+// Close releases database connections and shuts down all active provider
+// instances (when the container is registry-backed). Safe to call multiple times.
 func (c *Container) Close() {
 	if c.roSwap != nil {
 		if db := c.roSwap.Current(); db != nil {
@@ -185,6 +199,72 @@ func (c *Container) Close() {
 	if c.rwSwap != nil {
 		if db := c.rwSwap.Current(); db != nil {
 			db.Close()
+		}
+	}
+	// In registry-backed mode the DB handles are owned by the provider
+	// instances — close them via the registry to release file locks.
+	if c.Registry != nil {
+		c.Registry.Shutdown(context.Background())
+	}
+}
+
+// NewContainerWithRegistry creates a Container backed by a provider Registry.
+// Unlike NewContainer it does NOT call sqlite.OpenReadOnly at construction
+// time — database handles are owned by the registry's Engram provider instance.
+// Boot (registry.Boot) must be called BEFORE NewContainerWithRegistry so that
+// provider instances are already open; this constructor only links the registry
+// into the container for route mounting and health aggregation.
+//
+// When the Engram provider is active in the registry, RoDB/RWDB are populated
+// from its instance's Deps (via the engramDepsAccessor interface) so that
+// legacy route handlers still work. When Engram is absent (zero providers),
+// RoDB/RWDB remain nil — which is the correct non-fatal-boot state.
+func NewContainerWithRegistry(reg *providers.Registry, cfg config.Config, logger *slog.Logger) *Container {
+	c := &Container{
+		Config:     cfg,
+		Paths:      config.NewRuntimePaths(cfg.EngramDbPath, cfg.ClaudeProjectsDir),
+		Logger:     logger,
+		Registry:   reg,
+		CloseGrace: 5 * time.Second,
+	}
+
+	if reg != nil {
+		populateFromRegistry(c, reg)
+	}
+
+	return c
+}
+
+// engramDepsAccessor is a narrow interface satisfied by the Engram provider's
+// engramInstance. It exposes the DB handles and RuntimePaths needed to
+// populate Container fields without importing internal/providers/engram
+// (avoiding any import-cycle risk in container.go).
+//
+// The Engram provider implements this interface via its ContainerDeps() method.
+type engramDepsAccessor interface {
+	ContainerDeps() (roDB sqlite.Querier, rwDB sqlite.Querier, paths *config.RuntimePaths)
+}
+
+// populateFromRegistry inspects the registry for an active Engram provider
+// instance and extracts its DB handles and RuntimePaths into the container's
+// legacy fields (RoDB, RWDB, Paths). This keeps existing route handlers and
+// tests that read c.RoDB / c.Paths working on the new registry-based path.
+func populateFromRegistry(c *Container, reg *providers.Registry) {
+	for _, entry := range reg.Entries() {
+		if entry.State != providers.Enabled {
+			continue
+		}
+		inst := reg.Instance(entry.ID)
+		if inst == nil {
+			continue
+		}
+		if ea, ok := inst.(engramDepsAccessor); ok {
+			roDB, rwDB, paths := ea.ContainerDeps()
+			c.RoDB = roDB
+			c.RWDB = rwDB
+			if paths != nil {
+				c.Paths = paths
+			}
 		}
 	}
 }

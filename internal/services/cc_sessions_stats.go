@@ -97,6 +97,8 @@ func ccModelKey(model string) string {
 		return "sonnet"
 	case strings.Contains(m, "haiku"):
 		return "haiku"
+	case strings.Contains(m, "fable"):
+		return "fable"
 	default:
 		return "unknown"
 	}
@@ -149,7 +151,10 @@ func scanSessionForStats(r io.Reader) ccStatsScan {
 			}
 		}
 		if s.firstPrompt == "" && raw.Type == "user" && len(raw.Message) > 0 {
-			if txt := extractFirstUserText(raw.Message); txt != "" {
+			// Skip harness-injected, marker-only turns (e.g. a lone
+			// <local-command-caveat> or <ide_opened_file>) so the first *human*
+			// prompt is surfaced instead of a bare paperclip.
+			if txt := extractFirstUserText(raw.Message); txt != "" && !IsMarkerOnly(txt) {
 				s.firstPrompt = txt
 			}
 		}
@@ -279,7 +284,7 @@ func CCSessionsStats(reader CCProjectsReader) (*CCStatsResult, error) {
 				ID:            strings.TrimSuffix(name, ".jsonl"),
 				ProjectFolder: projectFolder,
 				Project:       display,
-				FirstPrompt:   truncateForLabel(scan.firstPrompt, 80),
+				FirstPrompt:   truncateForLabel(CleanPromptPreview(scan.firstPrompt), 80),
 				StartedAt:     scan.firstAt,
 				Usage:         scan.total,
 			})

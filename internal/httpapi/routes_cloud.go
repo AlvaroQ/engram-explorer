@@ -59,6 +59,9 @@ type syncBody struct {
 
 func handleCloudEnroll(c *Container, cloud *services.CloudControlService) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if guardDemo(w, c) {
+			return
+		}
 		project, ok := parseMutationBody(w, r, c)
 		if !ok {
 			return
@@ -74,6 +77,9 @@ func handleCloudEnroll(c *Container, cloud *services.CloudControlService) http.H
 
 func handleCloudUnenroll(c *Container, cloud *services.CloudControlService) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if guardDemo(w, c) {
+			return
+		}
 		project, ok := parseMutationBody(w, r, c)
 		if !ok {
 			return
@@ -95,6 +101,9 @@ func handleCloudUnenroll(c *Container, cloud *services.CloudControlService) http
 
 func handleCloudSync(c *Container, cloud *services.CloudControlService) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if guardDemo(w, c) {
+			return
+		}
 		var body syncBody
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			writeError(w, http.StatusBadRequest, "BAD_INPUT", "expected JSON body", nil, c.Config.ExposeDetails)
@@ -129,6 +138,9 @@ type syncAllError struct {
 
 func handleCloudSyncAll(c *Container, cloud *services.CloudControlService) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if guardDemo(w, c) {
+			return
+		}
 		// Read the enrolled project list via the read-only path.
 		syncData, err := services.SyncListProjects(c.RoDB)
 		if err != nil {

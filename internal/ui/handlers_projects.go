@@ -92,6 +92,7 @@ func handleProjectsPage(d Deps, cloud projectsCloud) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
+		sidebarState := sidebarStateForRequest(r)
 		q := strings.TrimSpace(r.URL.Query().Get("q"))
 
 		data, err := loadProjects(r.Context(), d, cloud)
@@ -105,7 +106,7 @@ func handleProjectsPage(d Deps, cloud projectsCloud) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, ProjectsListPartial(filtered, data.Sync, data.Caps, q, lang))
 		} else {
-			render(w, r, ProjectsListPage(filtered, data.Sync, data.Caps, q, lang, theme))
+			renderDeps(w, r, d, ProjectsListPage(filtered, data.Sync, data.Caps, q, lang, theme, sidebarState))
 		}
 	}
 }

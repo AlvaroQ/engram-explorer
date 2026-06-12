@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
@@ -81,26 +82,57 @@ func loadProjectNames(d Deps) []string {
 	return names
 }
 
-// handleObservationsPage serves GET /observations.
+// handleObservationsPage serves GET /observations (all three Memory tab views).
+// Dispatches on ?view= to render Threads or Conversations sub-views.
 // Full page on direct GET; partial content when HX-Request: true.
 func handleObservationsPage(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
-		params := observationListParamsFromQuery(r)
+		sidebarState := sidebarStateForRequest(r)
+		view := r.URL.Query().Get("view")
 
-		items, nextCursor, err := loadObservations(d, params)
-		if err != nil {
-			render(w, r, ErrorPartial("Failed to load observations: "+err.Error()))
-			return
-		}
+		switch view {
+		case "threads":
+			q := strings.TrimSpace(r.URL.Query().Get("q"))
+			topics, err := loadTopics(r, d, q)
+			if err != nil {
+				render(w, r, ErrorPartial("Failed to load topics: "+err.Error()))
+				return
+			}
+			if IsHTMX(r) {
+				render(w, r, MemoryThreadsPartial(topics, q, lang))
+			} else {
+				renderDeps(w, r, d, MemoryThreadsPage(topics, q, lang, theme, sidebarState))
+			}
 
-		projects := loadProjectNames(d)
+		case "conversations":
+			q := r.URL.Query().Get("q")
+			items, searchItems, err := loadPrompts(d, q)
+			if err != nil {
+				render(w, r, ErrorPartial("Failed to load prompts: "+err.Error()))
+				return
+			}
+			if IsHTMX(r) {
+				render(w, r, MemoryConversationsPartial(items, searchItems, q, lang))
+			} else {
+				renderDeps(w, r, d, MemoryConversationsPage(items, searchItems, q, lang, theme, sidebarState))
+			}
 
-		if IsHTMX(r) {
-			render(w, r, ObservationsPartial(items, nextCursor, params, projects, lang))
-		} else {
-			render(w, r, ObservationsPage(items, nextCursor, params, projects, lang, theme))
+		default:
+			advanced := d.AdvancedView != nil && d.AdvancedView()
+			params := observationListParamsFromQuery(r)
+			items, nextCursor, err := loadObservations(d, params)
+			if err != nil {
+				render(w, r, ErrorPartial("Failed to load observations: "+err.Error()))
+				return
+			}
+			projects := loadProjectNames(d)
+			if IsHTMX(r) {
+				render(w, r, ObservationsPartial(items, nextCursor, params, projects, lang, advanced))
+			} else {
+				renderDeps(w, r, d, ObservationsPage(items, nextCursor, params, projects, lang, theme, sidebarState, advanced))
+			}
 		}
 	}
 }
@@ -110,6 +142,13 @@ func handleObservationsPage(d Deps) http.HandlerFunc {
 func handleObservationsListPartial(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lang := langForRequest(r)
+		// The load-more URL carries the column mode that was in effect when the
+		// page rendered; honour it so appended rows match the existing header.
+		// Filter-change requests omit it and fall back to the live preference.
+		advanced := d.AdvancedView != nil && d.AdvancedView()
+		if r.URL.Query().Has("advanced") {
+			advanced = r.URL.Query().Get("advanced") == "true"
+		}
 		params := observationListParamsFromQuery(r)
 
 		items, nextCursor, err := loadObservations(d, params)
@@ -120,9 +159,9 @@ func handleObservationsListPartial(d Deps) http.HandlerFunc {
 
 		// append=true signals load-more: only emit new rows (no wrapper or filter controls).
 		if r.URL.Query().Get("append") == "true" {
-			render(w, r, ObservationsRowsPartial(items, nextCursor, params, lang))
+			render(w, r, ObservationsRowsPartial(items, nextCursor, params, lang, advanced))
 		} else {
-			render(w, r, ObservationsTablePartial(items, nextCursor, params, lang))
+			render(w, r, ObservationsTablePartial(items, nextCursor, params, lang, advanced))
 		}
 	}
 }

@@ -10,6 +10,7 @@ func handleBrainPage(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
-		render(w, r, BrainPage(lang, theme))
+		sidebarState := sidebarStateForRequest(r)
+		renderDeps(w, r, d, BrainPage(lang, theme, sidebarState))
 	}
 }

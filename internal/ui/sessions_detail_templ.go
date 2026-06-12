@@ -14,7 +14,7 @@ import (
 )
 
 // SessionDetailPage renders the full page shell for a session detail view.
-func SessionDetailPage(sess *services.SessionDetailResponse, lang, theme string) templ.Component {
+func SessionDetailPage(sess *services.SessionDetailResponse, lang, theme, sidebarState string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -35,7 +35,7 @@ func SessionDetailPage(sess *services.SessionDetailResponse, lang, theme string)
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = Layout(T(lang, "sessions.session")+" — "+sess.Session.ID, "sessions", lang, theme, sessionDetailContent(sess, lang)).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(T(lang, "sessions.session")+" — "+sess.Session.ID, "sessions", lang, theme, sidebarState, sessionDetailContent(sess, lang)).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

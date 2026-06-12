@@ -48,20 +48,6 @@ func renderSyncProjects(w http.ResponseWriter, r *http.Request, d Deps, cloud Cl
 	render(w, r, SyncProjectsPartial(resp, caps))
 }
 
-// handleSyncPage serves GET /doctor/sync.
-// Returns a full Layout-wrapped shell on direct GET; bare shell fragment when
-// HX-Request: true.  The shell itself contains two deferred-load divs that
-// HTMX will populate via hx-trigger="load, every 15s".
-func handleSyncPage(d Deps) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if IsHTMX(r) {
-			render(w, r, SyncShell())
-		} else {
-			render(w, r, SyncPage(ui.LangForRequest(r), ui.ThemeForRequest(r)))
-		}
-	}
-}
-
 // handleSyncProjectsList serves GET /doctor/sync/projects.
 func handleSyncProjectsList(d Deps, cloud CloudController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -138,7 +124,9 @@ func handleSyncProjectDetail(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, SyncProjectDetailPartial(detail))
 		} else {
-			render(w, r, Layout("Sync: "+project, "syncHealth", ui.LangForRequest(r), ui.ThemeForRequest(r), SyncProjectDetailPartial(detail)))
+			// Use the shared ui.Layout with activeNav="settings" so the Settings
+			// gear is highlighted (doctor layout is no longer used).
+			render(w, r, ui.Layout("Sync: "+project, "settings", ui.LangForRequest(r), ui.ThemeForRequest(r), ui.SidebarStateForRequest(r), SyncProjectDetailPartial(detail)))
 		}
 	}
 }

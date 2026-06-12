@@ -8,18 +8,18 @@ import (
 )
 
 // ProjectDetailPage renders the full project-detail page shell.
-templ ProjectDetailPage(data services.ProjectOverview, sync *services.SyncProjectRow, lang, theme string) {
-	@Layout(data.Project, "projects", lang, theme, projectDetailContent(data, sync, lang))
+templ ProjectDetailPage(data services.ProjectOverview, sync *services.SyncProjectRow, lang, theme, sidebarState string, otherProjects []string) {
+	@Layout(data.Project, "projects", lang, theme, sidebarState, projectDetailContent(data, sync, lang, otherProjects))
 }
 
 // ProjectDetailPartial renders only the project-detail content (no HTML shell).
 // Used when HTMX requests a partial update.
-templ ProjectDetailPartial(data services.ProjectOverview, sync *services.SyncProjectRow, lang string) {
-	@projectDetailContent(data, sync, lang)
+templ ProjectDetailPartial(data services.ProjectOverview, sync *services.SyncProjectRow, lang string, otherProjects []string) {
+	@projectDetailContent(data, sync, lang, otherProjects)
 }
 
 // projectDetailContent is the shared project-detail body.
-templ projectDetailContent(data services.ProjectOverview, sync *services.SyncProjectRow, lang string) {
+templ projectDetailContent(data services.ProjectOverview, sync *services.SyncProjectRow, lang string, otherProjects []string) {
 	<div class="flex flex-col gap-5">
 		<!-- Page header -->
 		<div class="page-header">
@@ -38,7 +38,7 @@ templ projectDetailContent(data services.ProjectOverview, sync *services.SyncPro
 					{ T(lang, "projectDetail.allObservations") }
 				</a>
 				<a
-					href="/sessions"
+					href={ templ.SafeURL("/sessions?project=" + url.QueryEscape(data.Project)) }
 					class="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-xs text-fg-muted hover:text-fg"
 				>
 					{ T(lang, "projectDetail.allSessions") }
@@ -148,12 +148,14 @@ templ projectDetailContent(data services.ProjectOverview, sync *services.SyncPro
 				</div>
 			</div>
 		}
+		<!-- Combine with another project -->
+		@projectDetailCombineCard(data.Project, otherProjects, lang)
 	</div>
 }
 
 // projectDetailKPIs renders the 5-card KPI grid (obs, sessions, topics, prompts, sync).
 templ projectDetailKPIs(data services.ProjectOverview, sync *services.SyncProjectRow, lang string) {
-	<div class="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-5">
+	<div class="kpi-grid grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-5">
 		@projectDetailKPICard(T(lang, "projectDetail.kpi.observations"), fmt.Sprintf("%d", data.KPIs.Observations))
 		@projectDetailKPICard(T(lang, "projectDetail.kpi.sessions"), fmt.Sprintf("%d", data.KPIs.Sessions))
 		@projectDetailKPICard(T(lang, "projectDetail.kpi.topics"), fmt.Sprintf("%d", data.KPIs.Topics))
@@ -161,8 +163,8 @@ templ projectDetailKPIs(data services.ProjectOverview, sync *services.SyncProjec
 		<!-- Sync KPI card -->
 		<div class="card">
 			<div class="card-body">
-				<p class="text-xs uppercase tracking-wide text-fg-muted">{ T(lang, "projectDetail.kpi.sync") }</p>
-				<div class="mt-1">
+				<p class="kpi-label">{ T(lang, "projectDetail.kpi.sync") }</p>
+				<div>
 					if sync == nil {
 						<span class="badge badge-neutral">{ T(lang, "projectDetail.kpi.unknown") }</span>
 					} else if !sync.Enrolled {
@@ -176,7 +178,7 @@ templ projectDetailKPIs(data services.ProjectOverview, sync *services.SyncProjec
 					}
 				</div>
 				if sync != nil {
-					<p class="mt-2 font-mono text-xs text-fg-muted">
+					<p class="kpi-sync-caption font-mono">
 						{ T(lang, "projectDetail.kpi.ackedEnq",
 							"acked", fmt.Sprintf("%d", derefInt64(sync.LastAckedSeq)),
 							"enq", fmt.Sprintf("%d", derefInt64(sync.LastEnqueuedSeq))) }
@@ -190,22 +192,24 @@ templ projectDetailKPIs(data services.ProjectOverview, sync *services.SyncProjec
 // projectDetailKPICard renders a single numeric KPI tile.
 templ projectDetailKPICard(label, value string) {
 	<div class="card">
-		<div class="card-body flex items-center justify-between gap-3">
-			<div>
-				<p class="text-xs uppercase tracking-wide text-fg-muted">{ label }</p>
-				<p class="mt-1 text-2xl font-semibold text-fg">{ value }</p>
-			</div>
+		<div class="card-body">
+			<p class="kpi-label">{ label }</p>
+			<p class="kpi-value">{ value }</p>
 		</div>
 	</div>
 }
 
 // projectDetailToolList renders the by-tool list.
+// The "(none)" bucket (observations with no tool_name, e.g. manual mem saves) is
+// not a real tool, so it's filtered out; if nothing real remains the empty
+// state is shown instead of a meaningless "(none)" row.
 templ projectDetailToolList(tools []services.ToolCount, lang string) {
-	if len(tools) == 0 {
+	{{ realTools := filterRealTools(tools) }}
+	if len(realTools) == 0 {
 		<p class="text-sm text-fg-muted">{ T(lang, "projectDetail.tools.empty") }</p>
 	} else {
 		<ul class="space-y-1.5">
-			for _, t := range tools {
+			for _, t := range realTools {
 				<li class="flex items-center justify-between gap-2">
 					<span class="truncate font-mono text-xs text-fg">{ t.ToolName }</span>
 					<span class="badge badge-neutral">{ fmt.Sprintf("%d", t.Count) }</span>
@@ -294,6 +298,72 @@ templ projectDetailRecentObservations(obs []services.RecentObs, project string, 
 	}
 }
 
+// projectDetailCombineCard renders the "Combine with another project" action card.
+// otherProjects is the list of all project names except the current one.
+// When empty it shows a disabled hint instead of a form.
+templ projectDetailCombineCard(current string, otherProjects []string, lang string) {
+	<div class="card">
+		<div class="card-header">
+			<div>
+				<h2>{ T(lang, "projectDetail.combine.title") }</h2>
+				<p>{ T(lang, "projectDetail.combine.description") }</p>
+			</div>
+		</div>
+		<div class="card-body">
+			if len(otherProjects) == 0 {
+				<p class="text-sm text-fg-muted">{ T(lang, "projectDetail.combine.noTargets") }</p>
+			} else {
+				<form
+					id="project-merge-form"
+					hx-post={ "/projects/" + url.PathEscape(current) + "/merge" }
+					hx-target="#project-merge-result"
+					hx-swap="innerHTML"
+					hx-confirm={ T(lang, "projectDetail.combine.confirm", "source", current, "target", "") }
+					class="flex flex-col gap-3 sm:flex-row sm:items-end"
+					onsubmit={ updateMergeConfirm(current) }
+				>
+					<div class="flex flex-col gap-1">
+						<label for="merge-target" class="text-xs text-fg-muted">{ T(lang, "projectDetail.combine.targetLabel") }</label>
+						<select
+							id="merge-target"
+							name="target"
+							class="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-fg focus:border-accent focus:outline-none"
+							required
+						>
+							for _, p := range otherProjects {
+								<option value={ p }>{ p }</option>
+							}
+						</select>
+					</div>
+					<button
+						type="submit"
+						class="inline-flex items-center rounded-md border border-border bg-surface-2 px-3 py-1.5 text-sm text-fg-muted hover:border-fail hover:text-fail"
+					>
+						{ T(lang, "projectDetail.combine.submit") }
+					</button>
+				</form>
+				<div id="project-merge-result" class="mt-3"></div>
+			}
+		</div>
+	</div>
+}
+
+// updateMergeConfirm is a small script that patches the hx-confirm attribute
+// with the selected target name right before the form submits, so the
+// confirmation dialog shows the real project name rather than an empty string.
+script updateMergeConfirm(source string) {
+	const sel = document.getElementById("merge-target");
+	if (sel) {
+		const target = sel.value;
+		const form = document.getElementById("project-merge-form");
+		if (form) {
+			form.setAttribute("hx-confirm",
+				"Combine \"" + source + "\" into \"" + target + "\"? This moves all its memories and cannot be undone."
+			);
+		}
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Helper functions
 // ---------------------------------------------------------------------------
@@ -304,4 +374,18 @@ func derefInt64(n *int64) int64 {
 		return 0
 	}
 	return *n
+}
+
+// filterRealTools drops the synthetic "(none)" bucket (observations with a NULL
+// tool_name, produced by the COALESCE in services.ProjectOverview's by-tool
+// query) so the Tools card only lists actual tools.
+func filterRealTools(tools []services.ToolCount) []services.ToolCount {
+	out := make([]services.ToolCount, 0, len(tools))
+	for _, t := range tools {
+		if t.ToolName == "" || t.ToolName == "(none)" {
+			continue
+		}
+		out = append(out, t)
+	}
+	return out
 }

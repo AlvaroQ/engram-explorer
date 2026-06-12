@@ -43,16 +43,9 @@ func TestStaticServed(t *testing.T) {
 	}
 }
 
-// TestIsHTMXHelper verifies the isHTMX detection indirectly via the render
-// helper: without HX-Request header the response should contain <html>;
-// with HX-Request: true it should NOT.
-//
-// We test this through GET /doctor/ (which redirects to /doctor/orphans is
-// slice 1 work, but the root route returns 302 — that also proves Mount ran).
-// For a more direct test we rely on the full-page vs partial behaviour that
-// slice 1 handler tests will exercise.  Here we just assert the route exists
-// and returns something (redirect counts as "no 404").
-func TestDoctorRootExists(t *testing.T) {
+// TestDoctorRootRedirectsMaintenance verifies GET /doctor/ returns a 303
+// redirect to /settings/maintenance (PR4 consolidation).
+func TestDoctorRootRedirectsMaintenance(t *testing.T) {
 	mux := http.NewServeMux()
 	doctor.Mount(mux, doctor.Deps{})
 
@@ -60,10 +53,12 @@ func TestDoctorRootExists(t *testing.T) {
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
-	// Root redirects (302) or returns content (200) — either is fine for Slice 0.
-	// It must NOT be 404.
-	if w.Code == http.StatusNotFound {
-		t.Fatalf("GET /doctor/ returned 404; expected redirect or 200")
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("GET /doctor/ expected 303, got %d", w.Code)
+	}
+	loc := w.Header().Get("Location")
+	if loc != "/settings/maintenance" {
+		t.Errorf("redirect Location = %q; want /settings/maintenance", loc)
 	}
 }
 

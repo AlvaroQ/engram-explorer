@@ -74,7 +74,8 @@ var writeTestSchema = []string{
 		created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
 		updated_at      TEXT    NOT NULL DEFAULT (datetime('now')),
 		deleted_at      TEXT,
-		sync_id         TEXT
+		sync_id         TEXT,
+		review_after    TEXT
 	)`,
 	`CREATE VIRTUAL TABLE observations_fts USING fts5(
 		title, content, tool_name, type, project, topic_key,

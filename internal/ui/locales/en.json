@@ -1,4 +1,19 @@
 {
+  "nav": {
+    "engram": "Engram",
+    "overview": "Overview",
+    "observations": "Memory",
+    "sessions": "Sessions",
+    "prompts": "Prompts",
+    "topics": "Topics",
+    "projects": "Projects",
+    "brain": "Knowledge Graph",
+    "syncHealth": "Sync Health",
+    "orphans": "Orphans",
+    "ccsessions": "Claude Code",
+    "ccsessionsList": "Claude Code Sessions",
+    "ccsessionsOverview": "Overview"
+  },
   "common": {
     "loading": "Loading…",
     "loadMore": "Load more",
@@ -25,12 +40,12 @@
     "subtitle": "Local Dashboard",
     "groupEngram": "Engram",
     "groupClaudeCode": "Claude Code",
-    "overview": "Engram Overview",
-    "knowledge": "Knowledge",
+    "overview": "Overview",
+    "knowledge": "Knowledge Graph",
     "projects": "Projects",
-    "observations": "Observations",
+    "observations": "Memory",
     "sessions": "Sessions",
-    "ccOverview": "Claude Code Overview",
+    "ccOverview": "Claude Code",
     "ccSessions": "Claude Code Sessions",
     "syncHealth": "Sync Health",
     "prompts": "Prompts",
@@ -59,14 +74,18 @@
   },
   "overview": {
     "kpi": {
-      "observations": "Observations",
+      "observations": "Memories saved",
       "browseAll": "Browse all",
-      "sessions": "Sessions",
+      "sessions": "AI conversations",
       "seeTimeline": "See timeline",
       "projects": "Projects",
       "drillProject": "Drill into a project",
       "prompts": "Prompts",
       "searchPrompts": "Search prompts"
+    },
+    "alert": {
+      "syncIssues": "{{count}} sync issue(s) need attention",
+      "review": "Review"
     },
     "activity": {
       "title": "Activity by project",
@@ -341,6 +360,7 @@
     "promptsCount": "{{count}} prompts",
     "notFound": "Session not found.",
     "session": "Session",
+    "untitled": "(untitled session)",
     "counts": "Counts",
     "summaryCard": "Summary",
     "summaryEmpty": "No summary saved for this session.",
@@ -348,6 +368,13 @@
     "timelineDesc": "{{count}} events ordered chronologically",
     "noEvents": "No events captured.",
     "noTimestamps": "Events have no timestamps; nothing to plot. See the list below.",
+    "col": {
+      "session": "Session",
+      "project": "Project",
+      "started": "Started",
+      "observations": "Observations",
+      "prompts": "Prompts"
+    },
     "fields": {
       "project": "Project",
       "directory": "Directory",
@@ -360,8 +387,8 @@
   },
   "prompts": {
     "title": "User prompts",
-    "description": "User prompts captured by Engram. Use the search box for FTS5 with snippet highlighting.",
-    "searchPlaceholder": "Search prompts (FTS5)…",
+    "description": "Your questions captured by Engram. Search to highlight matching snippets.",
+    "searchPlaceholder": "Search conversations…",
     "resultsFor": "Results for \"{{q}}\"",
     "recent": "Recent prompts",
     "matches": "{{count}} matches",
@@ -379,20 +406,33 @@
     "obsCount": "{{count}} obs",
     "revisions": "{{count}} rev"
   },
+  "memory": {
+    "tabs": {
+      "memories": "Memories",
+      "threads": "Threads",
+      "conversations": "Conversations"
+    },
+    "advancedView": {
+      "label": "Advanced view"
+    }
+  },
   "observations": {
     "title": "Observations",
     "description": "Filter, search and inspect every observation in the local database.",
     "loaded": "{{count}} loaded",
     "loadError": "Failed to load observations: {{message}}",
-    "searchPlaceholder": "Full-text search title + content (FTS5)…",
-    "filters": "Filters",
+    "searchPlaceholder": "Search by title or content…",
+    "filters": {
+      "toggle": "Filters",
+      "active": "{{count}} active"
+    },
     "clear": "Clear",
     "labels": {
       "project": "Project",
       "type": "Type",
       "toolName": "Tool name",
-      "scope": "Scope",
-      "topicKey": "Topic key",
+      "scope": "Visibility",
+      "topicKey": "Thread",
       "deletedRows": "Deleted rows"
     },
     "placeholders": {
@@ -409,13 +449,16 @@
       "all": "include deleted",
       "only": "only deleted"
     },
+    "badge": {
+      "reviewDue": "Review due"
+    },
     "table": {
       "created": "Created",
       "project": "Project",
       "type": "Type",
       "title": "Title",
       "tool": "Tool",
-      "topic": "Topic",
+      "topic": "Thread",
       "rev": "Rev",
       "dup": "Dup",
       "empty": "empty",
@@ -429,7 +472,7 @@
       "deleted": "deleted",
       "fields": {
         "project": "Project",
-        "topicKey": "Topic key",
+        "topicKey": "Thread",
         "created": "Created",
         "updated": "Updated",
         "revisions": "Revisions",
@@ -633,6 +676,38 @@
     },
     "recentPrompts": {
       "title": "Recent prompts"
+    },
+    "combine": {
+      "title": "Combine with another project",
+      "description": "Move all memories, sessions, and prompts from this project into another existing project. This project will disappear once combined.",
+      "targetLabel": "Combine into",
+      "submit": "Combine projects",
+      "confirm": "Combine \"{{source}}\" into \"{{target}}\"? This moves all its memories and cannot be undone.",
+      "noTargets": "No other projects available to combine into.",
+      "error": {
+        "sameName": "Pick a different project.",
+        "sourceNotFound": "This project no longer exists.",
+        "targetNotFound": "The selected project no longer exists.",
+        "enrolledSource": "This project is enrolled for cloud sync. Combining cloud-enrolled projects will be supported in a future update.",
+        "enrolledTarget": "The selected project is enrolled for cloud sync. Combining into cloud-enrolled projects will be supported in a future update.",
+        "generic": "Could not combine projects: {{message}}"
+      }
+    }
+  },
+  "maintenance": {
+    "title": "Maintenance",
+    "description": "Diagnostic and data-cleanup tools. Use these to tidy up unassigned items and manage cloud backup.",
+    "unassigned": {
+      "title": "Unassigned items"
+    },
+    "cloud": {
+      "title": "Cloud backup",
+      "syncAll": {
+        "label": "Sync all",
+        "tooltip": "Sync all enrolled projects to engram cloud",
+        "ariaLabel": "Sync all enrolled projects to engram cloud",
+        "description": "Triggers a cloud sync for every enrolled project."
+      }
     }
   },
   "settings": {
@@ -642,12 +717,61 @@
       "system": "System",
       "cloud": "Cloud"
     },
+    "maintenance": {
+      "title": "Maintenance",
+      "description": "Tools for cleaning up unassigned items and managing cloud backup.",
+      "open": "Open maintenance tools"
+    },
+    "modules": {
+      "title": "Data sources",
+      "description": "Manage data source providers. Enable or disable providers and configure their paths.",
+      "enable": "Enable",
+      "disable": "Disable",
+      "validateAndActivate": "Validate & Activate",
+      "pathLabel": "Provider path",
+      "pathPlaceholder": "Enter the path to activate this provider",
+      "state": {
+        "enabled": "enabled",
+        "disabled": "disabled",
+        "detected": "not configured",
+        "errored": "error",
+        "registered": "not detected"
+      }
+    },
+    "accounts": {
+      "title": "Accounts",
+      "profilesTitle": "Profiles",
+      "profilesDesc": "Each profile holds a separate set of provider paths and settings. Switch profiles to work with different data sources.",
+      "active": "active",
+      "switch": "Switch",
+      "delete": "Delete",
+      "createTitle": "Create profile",
+      "create": "Create",
+      "namePlaceholder": "Profile name",
+      "nameEmpty": "Profile name cannot be empty.",
+      "noProfiles": "No profiles found.",
+      "manage": "Manage profiles"
+    },
+    "ccAccounts": {
+      "title": "Claude Code accounts",
+      "description": "Add multiple Claude Code directories (e.g. personal and work) to view all sessions in one place.",
+      "addTitle": "Add account",
+      "labelPlaceholder": "Account name (e.g. Work)",
+      "pathPlaceholder": "Path to ~/.claude directory",
+      "add": "Add",
+      "enabled": "enabled",
+      "disabled": "disabled",
+      "remove": "Remove",
+      "cannotRemoveLast": "Cannot remove the last account",
+      "labelEmpty": "Account name cannot be empty.",
+      "notFound": "Account not found."
+    },
     "theme": "Theme",
     "themeDark": "dark",
     "themeLight": "light",
     "language": "Language",
     "languageDescription": "Choose the interface language",
-    "daemon": "Engram daemon",
+    "daemon": "Background service",
     "cloudCli": "Cloud CLI capabilities",
     "cloudCliDesc": "Detected from `engram cloud --help`",
     "cloudCliError": "Could not detect CLI capabilities.",
@@ -715,7 +839,9 @@
       "compact": "Compact",
       "thinking": "Thinking",
       "tools": "Tools",
-      "attachments": "Attachments"
+      "attachments": "Attachments",
+      "account": "Account",
+      "allAccounts": "All accounts"
     },
     "listTitle": "Sessions",
     "listLoaded": "{{count}} loaded",
@@ -735,7 +861,8 @@
       "version": "CC version",
       "size": "Size",
       "tokens": "Tokens",
-      "cost": "Cost"
+      "cost": "Cost",
+      "account": "Account"
     },
     "fields": {
       "project": "Project",
@@ -776,8 +903,16 @@
     }
   },
   "ccOverview": {
-    "title": "Claude Code Overview",
-    "description": "Token usage and cost across all your Claude Code sessions."
+    "title": "Claude Code",
+    "description": "Token usage and cost across all your Claude Code sessions.",
+    "byAccount": {
+      "title": "Per-account breakdown",
+      "total": "All accounts"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "sessions": "Sessions"
+    }
   },
   "placeholder": {
     "comingSoon": "Coming soon.",
@@ -853,5 +988,25 @@
       "next": "New",
       "empty": "(empty)"
     }
+  },
+  "demo": {
+    "banner": {
+      "text": "Demo data — this is a sample database for previewing Engram Explorer.",
+      "dismiss": "Dismiss"
+    }
+  },
+  "onboarding": {
+    "title": "Welcome to Engram Explorer",
+    "description": "Connect your data sources to get started. Engram Explorer works with Engram memory and Claude Code sessions to give you a unified view of your AI-assisted work.",
+    "providers": {
+      "title": "Data sources",
+      "description": "The following providers were checked at startup. Activate at least one to begin.",
+      "none": "No data sources are available. Enter a path below to activate a provider manually.",
+      "detected": "detected",
+      "notDetected": "not detected",
+      "activate": "Activate"
+    },
+    "settingsHint": "Need more options? Visit ",
+    "settingsLink": "Settings → Data sources"
   }
 }

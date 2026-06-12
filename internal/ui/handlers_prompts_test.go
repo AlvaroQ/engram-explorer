@@ -10,7 +10,7 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Handler tests (prompts)
+// Handler tests — /observations?view=conversations (was /prompts)
 // ---------------------------------------------------------------------------
 
 func TestPromptsFullPage(t *testing.T) {
@@ -28,7 +28,7 @@ func TestPromptsFullPage(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{RoDB: db})
 
-	req := httptest.NewRequest(http.MethodGet, "/prompts", nil)
+	req := httptest.NewRequest(http.MethodGet, "/observations?view=conversations", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
@@ -57,7 +57,7 @@ func TestPromptsHTMXPartial(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{RoDB: db})
 
-	req := httptest.NewRequest(http.MethodGet, "/prompts", nil)
+	req := httptest.NewRequest(http.MethodGet, "/observations?view=conversations", nil)
 	req.Header.Set("HX-Request", "true")
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
@@ -104,7 +104,7 @@ func TestPromptsRoDBNil(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{RoDB: nil})
 
-	req := httptest.NewRequest(http.MethodGet, "/prompts", nil)
+	req := httptest.NewRequest(http.MethodGet, "/observations?view=conversations", nil)
 	w := httptest.NewRecorder()
 
 	defer func() {
@@ -136,7 +136,7 @@ func TestPromptsEmptyState(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{RoDB: db})
 
-	req := httptest.NewRequest(http.MethodGet, "/prompts", nil)
+	req := httptest.NewRequest(http.MethodGet, "/observations?view=conversations", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
@@ -164,7 +164,7 @@ func TestPromptsSearch(t *testing.T) {
 	ui.Mount(mux, ui.Deps{RoDB: db})
 
 	// With search query but no FTS table — service returns empty slice gracefully.
-	req := httptest.NewRequest(http.MethodGet, "/prompts?q=needle", nil)
+	req := httptest.NewRequest(http.MethodGet, "/observations?view=conversations&q=needle", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 

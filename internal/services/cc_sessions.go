@@ -48,6 +48,12 @@ type CCSessionListItem struct {
 	// For the list it is populated only for the rows actually returned (the
 	// current page), via a full-file scan — the list scan itself reads only HEAD.
 	Usage CCSessionUsage `json:"usage"`
+	// Account is the human-readable label of the CCAccount this session belongs to.
+	// Empty for single-account queries.
+	Account string `json:"account,omitempty"`
+	// AccountID is the ID of the CCAccount this session belongs to.
+	// Empty for single-account queries.
+	AccountID string `json:"account_id,omitempty"`
 }
 
 // CCSessionUsage holds the aggregated token usage and computed cost for a
@@ -79,12 +85,22 @@ type CCSessionListParams struct {
 	Cursor string
 	// Limit is rows per page (default 50, max 500).
 	Limit int
+	// Account filters by AccountID. Empty = all accounts.
+	Account string
+}
+
+// CCAccountInfo is a minimal account descriptor used in the list result for
+// building filter chips in the UI without importing config types into templates.
+type CCAccountInfo struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
 }
 
 // CCSessionListResult is the paginated list response.
 type CCSessionListResult struct {
 	Items      []CCSessionListItem `json:"items"`
 	Projects   []string            `json:"projects"`   // unique project display names for the filter selector
+	Accounts   []CCAccountInfo     `json:"accounts"`   // participating accounts for the account filter chips
 	NextCursor *string             `json:"nextCursor"` // nil when no more pages
 }
 
@@ -191,6 +207,7 @@ var ccModelPricing = []struct {
 	Match   string
 	Pricing ccPricing
 }{
+	{Match: "fable", Pricing: ccPricing{InputPerMTok: 10.00, OutputPerMTok: 50.00}},
 	{Match: "opus", Pricing: ccPricing{InputPerMTok: 5.00, OutputPerMTok: 25.00}},
 	{Match: "sonnet", Pricing: ccPricing{InputPerMTok: 3.00, OutputPerMTok: 15.00}},
 	{Match: "haiku", Pricing: ccPricing{InputPerMTok: 1.00, OutputPerMTok: 5.00}},
@@ -229,7 +246,13 @@ func addMessageUsage(u *CCSessionUsage, model string, usage ccRawUsage) {
 			float64(cw5)/m*(p.InputPerMTok*1.25) +
 			float64(cw1)/m*(p.InputPerMTok*2.0) +
 			float64(usage.CacheReadInputTokens)/m*(p.InputPerMTok*0.1)
-	} else if model != "" {
+	} else if model != "" &&
+		(usage.InputTokens > 0 || usage.OutputTokens > 0 ||
+			cw5 > 0 || cw1 > 0 || usage.CacheReadInputTokens > 0) {
+		// Only an unpriced model that actually carried billable tokens means we
+		// undercounted cost. Zero-token turns — notably Claude Code's
+		// "<synthetic>" local markers — price to $0 either way, so they must not
+		// trip the unknown-model warning.
 		u.UnknownModel = true
 	}
 }
@@ -363,9 +386,11 @@ func parseSessionHead(r io.Reader) (ccSessionHead, error) {
 			}
 		}
 
-		// Extract the first user prompt text.
+		// Extract the first user prompt text. Skip harness-injected, marker-only
+		// turns (e.g. a lone <local-command-caveat> or <ide_opened_file>) so the
+		// first *human* prompt becomes the session title instead of a paperclip.
 		if h.firstPrompt == "" && raw.Type == "user" && len(raw.Message) > 0 {
-			if text := extractFirstUserText(raw.Message); text != "" {
+			if text := extractFirstUserText(raw.Message); text != "" && !IsMarkerOnly(text) {
 				h.firstPrompt = text
 			}
 		}

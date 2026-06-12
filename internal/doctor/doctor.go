@@ -53,11 +53,16 @@ func render(w http.ResponseWriter, r *http.Request, c templ.Component) {
 	_ = c.Render(ui.NavContext(r), w)
 }
 
-// requireRW wraps a write handler with a read-only guard. When RWDB is nil
-// (read-only mode) it renders an inline error instead of invoking h, so every
-// write route shares a single source of truth for the read-only check.
+// requireRW wraps a write handler with a read-only guard. It blocks the write
+// in demo mode (the bundled sample DB must stay pristine) and when RWDB is nil
+// (read-only mode), so every write route shares a single source of truth for
+// the writability check.
 func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if d.Config.DemoMode {
+			render(w, r, ErrorPartial("Write operations are disabled in demo mode."))
+			return
+		}
 		if d.RWDB == nil {
 			render(w, r, ErrorPartial("Write operations are not available in read-only mode."))
 			return
@@ -86,25 +91,38 @@ func Mount(mux *http.ServeMux, d Deps) {
 		http.StripPrefix("/doctor/static/", fileServer),
 	)
 
-	// Root: redirect to orphans page.
+	// Consolidated maintenance page — reachable from Settings.
+	// Registered before /doctor/* redirects so Go's ServeMux matches the literal
+	// path first (exact wins over prefix).
+	mux.HandleFunc("GET /settings/maintenance", handleMaintenancePage(d))
+
+	// Root: redirect to consolidated maintenance page.
 	mux.HandleFunc("GET /doctor/", func(w http.ResponseWriter, r *http.Request) {
 		// Only match the exact root; sub-paths are handled by their own entries.
 		if r.URL.Path != "/doctor/" {
 			http.NotFound(w, r)
 			return
 		}
-		http.Redirect(w, r, "/doctor/orphans", http.StatusFound)
+		http.Redirect(w, r, "/settings/maintenance", http.StatusSeeOther)
 	})
 
 	// -----------------------------------------------------------------------
 	// Orphans routes (Slice 1)
 	// -----------------------------------------------------------------------
 
-	// GET /doctor/orphans — full page or HTMX partial based on HX-Request header.
-	mux.HandleFunc("GET /doctor/orphans", handleOrphansPage(d))
+	// GET /doctor/orphans — 303 redirect to the consolidated maintenance page.
+	// HTMX partials (/doctor/orphans/list, etc.) are NOT redirected.
+	mux.HandleFunc("GET /doctor/orphans", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/settings/maintenance#unassigned", http.StatusSeeOther)
+	})
 
 	// GET /doctor/orphans/list — bare list partial; hx-get deferred load target.
 	mux.HandleFunc("GET /doctor/orphans/list", handleOrphansListPartial(d))
+
+	// GET /doctor/orphans/observations/{id}/detail — observation detail dialog.
+	// Renders a modal with metadata, session working directory, full content,
+	// and the assign/delete actions, so the user can assign from inside it.
+	mux.HandleFunc("GET /doctor/orphans/observations/{id}/detail", handleOrphanObservationDetail(d))
 
 	// POST /doctor/orphans/{entity}/{id}/project — assign entity to a project.
 	mux.HandleFunc("POST /doctor/orphans/{entity}/{id}/project", requireRW(d, handleOrphansAssign(d)))
@@ -131,8 +149,11 @@ func Mount(mux *http.ServeMux, d Deps) {
 		})
 	}
 
-	// GET /doctor/sync — full sync shell page (deferred-load regions).
-	mux.HandleFunc("GET /doctor/sync", handleSyncPage(d))
+	// GET /doctor/sync — 303 redirect to the consolidated maintenance page.
+	// HTMX partials (/doctor/sync/projects, etc.) are NOT redirected.
+	mux.HandleFunc("GET /doctor/sync", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/settings/maintenance#cloud", http.StatusSeeOther)
+	})
 
 	// GET /doctor/sync/projects — projects table partial (polled every 15s).
 	// Must be registered before /doctor/sync/{project} so the literal path wins.

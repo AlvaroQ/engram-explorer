@@ -1,8 +1,35 @@
 package ui
 
+import (
+	"context"
+
+	"github.com/AlvaroQ/engram-explorer/internal/providers"
+)
+
+// DemoBanner renders a thin dismissible bar at the top of the page when the
+// server is running in demo mode. Dismissal is client-side only via a hidden
+// checkbox toggle — no JS framework, no round-trip.
+templ DemoBanner(lang string) {
+	<div class="demo-banner" id="demo-banner" role="alert">
+		<span class="demo-banner-text">{ T(lang, "demo.banner.text") }</span>
+		<button
+			type="button"
+			class="demo-banner-dismiss"
+			aria-label={ T(lang, "demo.banner.dismiss") }
+			onclick="document.getElementById('demo-banner').style.display='none'"
+		>
+			<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<line x1="18" y1="6" x2="6" y2="18"></line>
+				<line x1="6" y1="6" x2="18" y2="18"></line>
+			</svg>
+		</button>
+	</div>
+}
+
 // Layout renders the full HTML shell with sidebar navigation and a padded main content area.
 // activeNav should match one of the nav item keys (e.g. "topics", "observations").
-templ Layout(title, activeNav, lang, theme string, content templ.Component) {
+// sidebarState is "expanded" or "collapsed" (server-side initial state, read from cookie).
+templ Layout(title, activeNav, lang, theme, sidebarState string, content templ.Component) {
 	<!DOCTYPE html>
 	<html class={ theme } data-theme={ theme } lang={ lang }>
 		<head>
@@ -15,14 +42,36 @@ templ Layout(title, activeNav, lang, theme string, content templ.Component) {
 			<!-- Island loader: mounts React components declared with data-island.
 			     Only fetches island bundles when [data-island] elements are present. -->
 			<script type="module" src="/islands/loader.js"></script>
+			<!-- View Transitions API: smooth cross-page transitions via HTMX swap.
+			     Falls back gracefully when the API is unsupported. -->
+			<style>
+				@view-transition { navigation: auto; }
+				::view-transition-old(main-content),
+				::view-transition-new(main-content) {
+					animation-duration: 0.18s;
+					animation-timing-function: ease-out;
+				}
+				@media (prefers-reduced-motion: reduce) {
+					::view-transition-old(main-content),
+					::view-transition-new(main-content) {
+						animation: none;
+					}
+				}
+			</style>
 		</head>
 		<body>
-			<div class="app-shell">
-				@Sidebar(activeNav, lang)
-				<main class="main-content">
+			<!-- Scrim for modal drawer on compact viewports -->
+			<div class="sidebar-scrim" id="sidebar-scrim" aria-hidden="true"></div>
+			<div class={ "app-shell", templ.KV("sidebar-collapsed", sidebarState == "collapsed") }>
+				@Sidebar(activeNav, lang, sidebarState)
+				<main class="main-content" id="main-content" style="view-transition-name: main-content;">
+					if demoModeFromContext(ctx) {
+						@DemoBanner(lang)
+					}
 					@content
 				</main>
 			</div>
+			<script src="/static/sidebar.js" defer></script>
 		</body>
 	</html>
 }
@@ -30,7 +79,8 @@ templ Layout(title, activeNav, lang, theme string, content templ.Component) {
 // LayoutFullBleed renders the full HTML shell with sidebar navigation but WITHOUT
 // padding on the main content area. Used for pages that need edge-to-edge content
 // (e.g. the brain 3D canvas).
-templ LayoutFullBleed(title, activeNav, lang, theme string, content templ.Component) {
+// sidebarState is "expanded" or "collapsed" (server-side initial state, read from cookie).
+templ LayoutFullBleed(title, activeNav, lang, theme, sidebarState string, content templ.Component) {
 	<!DOCTYPE html>
 	<html class={ theme } data-theme={ theme } lang={ lang }>
 		<head>
@@ -43,63 +93,354 @@ templ LayoutFullBleed(title, activeNav, lang, theme string, content templ.Compon
 			<script type="module" src="/islands/loader.js"></script>
 		</head>
 		<body>
-			<div class="app-shell">
-				@Sidebar(activeNav, lang)
+			<!-- Scrim for modal drawer on compact viewports -->
+			<div class="sidebar-scrim" id="sidebar-scrim" aria-hidden="true"></div>
+			<div class={ "app-shell", templ.KV("sidebar-collapsed", sidebarState == "collapsed") }>
+				@Sidebar(activeNav, lang, sidebarState)
 				<main class="main-content-full">
+					if demoModeFromContext(ctx) {
+						@DemoBanner(lang)
+					}
 					@content
 				</main>
 			</div>
+			<script src="/static/sidebar.js" defer></script>
 		</body>
 	</html>
 }
 
 // Sidebar renders the primary navigation sidebar.
 // activeNav is compared against each item's key to mark the active link.
-templ Sidebar(activeNav, lang string) {
-	<aside class="sidebar">
+// sidebarState is "expanded" or "collapsed" (initial state from cookie, may be
+// overridden client-side by sidebar.js).
+// When NavGroups are present in ctx (injected by renderDeps via NavContextWithGroups),
+// the sidebar is data-driven from the registry NavGroups; otherwise it falls back
+// to the legacy hardcoded two-section layout (engram + cc-sessions).
+templ Sidebar(activeNav, lang, sidebarState string) {
+	<aside
+		class={ "sidebar", templ.KV("sidebar--collapsed", sidebarState == "collapsed") }
+		id="sidebar"
+		aria-label={ T(lang, "sidebar.primaryNav") }
+	>
 		<div class="sidebar-brand">
 			<div class="sidebar-brand-text">
 				<h1 class="sidebar-brand-title">{ T(lang, "sidebar.brand") }</h1>
-				<p class="sidebar-brand-label">{ T(lang, "sidebar.subtitle") }</p>
+				if profiles := profilesFromContext(ctx); len(profiles) > 1 {
+					@accountSwitcher(lang, profiles)
+				} else {
+					<p class="sidebar-brand-label">{ T(lang, "sidebar.subtitle") }</p>
+				}
 			</div>
-			@sidebarSettingsIcon(activeNav, T(lang, "sidebar.settings"))
+			<div class="sidebar-brand-actions">
+				<!-- Collapse/expand toggle -->
+				<button
+					type="button"
+					class="sidebar-toggle"
+					id="sidebar-toggle"
+					aria-label={ T(lang, "sidebar.collapse") }
+					aria-expanded={ sidebarExpandedAttr(sidebarState) }
+					aria-controls="sidebar"
+					title={ T(lang, "sidebar.collapse") }
+				>
+					@menuIcon()
+				</button>
+				@sidebarSettingsIcon(activeNav, T(lang, "sidebar.settings"))
+			</div>
 		</div>
-		<nav class="sidebar-nav-wrap" aria-label={ T(lang, "sidebar.primaryNav") }>
-			if navShowEngram(ctx) {
-				@sidebarGroup(T(lang, "sidebar.groupEngram"), "engram")
-				<ul class="sidebar-nav">
-					@sidebarLink("/", "overview", activeNav, T(lang, "sidebar.overview"))
-					@sidebarLink("/brain", "brain", activeNav, T(lang, "sidebar.knowledge"))
-					@sidebarLink("/observations", "observations", activeNav, T(lang, "sidebar.observations"))
-					@sidebarLink("/sessions", "sessions", activeNav, T(lang, "sidebar.sessions"))
-					@sidebarLink("/projects", "projects", activeNav, T(lang, "sidebar.projects"))
-					@sidebarLink("/prompts", "prompts", activeNav, T(lang, "sidebar.prompts"))
-					@sidebarLink("/topics", "topics", activeNav, T(lang, "sidebar.topics"))
-					@sidebarExternalLink("/doctor/sync", "syncHealth", activeNav, T(lang, "sidebar.syncHealth"))
-					@sidebarExternalLink("/doctor/orphans", "orphans", activeNav, "Orphans")
-				</ul>
-			}
-			if navShowEngram(ctx) && navShowClaude(ctx) {
-				<div class="sidebar-divider"></div>
-			}
-			if navShowClaude(ctx) {
-				@sidebarGroup(T(lang, "sidebar.groupClaudeCode"), "claude")
-				<ul class="sidebar-nav">
-					@sidebarLink("/cc-overview", "cc-overview", activeNav, T(lang, "sidebar.ccOverview"))
-					@sidebarLink("/cc-sessions", "cc-sessions", activeNav, T(lang, "sidebar.ccSessions"))
-				</ul>
+		<nav class="sidebar-nav-wrap" id="sidebar-nav" hx-preserve="true">
+			if groups := navGroupsFromContext(ctx); len(groups) > 0 {
+				// Data-driven path: registry provided NavGroups (WU-7+).
+				for i, group := range groups {
+					if navShowGroup(ctx, group.ID) {
+						@sidebarGroup(T(lang, group.LabelKey), group.ID)
+						<ul class="sidebar-nav">
+							for _, link := range group.Links {
+								if link.External {
+									@sidebarExternalLink(link.Href, link.Key, activeNav, T(lang, link.LabelKey), link.Icon)
+								} else {
+									@sidebarLink(link.Href, link.Key, activeNav, T(lang, link.LabelKey), link.Icon)
+								}
+							}
+						</ul>
+					}
+					if i < len(groups)-1 {
+						@sidebarDividerIfBothVisible(ctx, groups, i, lang)
+					}
+				}
+			} else {
+				// Legacy fallback: hardcoded two-section layout when no NavGroups
+				// are provided (e.g. existing tests, legacy container path).
+				// sessions, topics, and prompts are intentionally omitted (PR1
+				// UX simplification); they remain accessible via direct URL.
+				if navShowEngram(ctx) {
+					@sidebarGroup(T(lang, "sidebar.groupEngram"), "engram")
+					<ul class="sidebar-nav">
+						@sidebarLink("/", "overview", activeNav, T(lang, "sidebar.overview"), "overview")
+						@sidebarLink("/brain", "brain", activeNav, T(lang, "sidebar.knowledge"), "brain")
+						@sidebarLink("/observations", "observations", activeNav, T(lang, "sidebar.observations"), "observations")
+						@sidebarLink("/projects", "projects", activeNav, T(lang, "sidebar.projects"), "projects")
+					</ul>
+				}
+				if navShowEngram(ctx) && navShowClaude(ctx) {
+					<div class="sidebar-divider"></div>
+				}
+				if navShowClaude(ctx) {
+					@sidebarGroup(T(lang, "sidebar.groupClaudeCode"), "claude")
+					<ul class="sidebar-nav">
+						@sidebarLink("/cc-overview", "cc-overview", activeNav, T(lang, "sidebar.ccOverview"), "cc-overview")
+					</ul>
+				}
 			}
 		</nav>
+		@sidebarFooter(lang)
 	</aside>
 }
 
+// menuIcon renders the panel-left (lucide) icon for the sidebar toggle button —
+// the de-facto signifier for collapsing/expanding a side panel. Works in all
+// three responsive modes without state-dependent swapping.
+templ menuIcon() {
+	<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+		<rect width="18" height="18" x="3" y="3" rx="2"></rect>
+		<path d="M9 3v18"></path>
+	</svg>
+}
+
+// navIcon renders an inline SVG icon for a nav item by name.
+// All icons use the lucide-style stroke convention:
+// viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+// stroke-linecap="round" stroke-linejoin="round"
+templ navIcon(name string) {
+	switch name {
+		case "overview":
+			<svg class="nav-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<rect x="3" y="3" width="7" height="7" rx="1"></rect>
+				<rect x="14" y="3" width="7" height="7" rx="1"></rect>
+				<rect x="3" y="14" width="7" height="7" rx="1"></rect>
+				<rect x="14" y="14" width="7" height="7" rx="1"></rect>
+			</svg>
+		case "brain":
+			<svg class="nav-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-1.14Z"></path>
+				<path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-1.14Z"></path>
+			</svg>
+		case "observations":
+			<svg class="nav-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+				<circle cx="12" cy="12" r="3"></circle>
+			</svg>
+		case "sessions":
+			<svg class="nav-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+			</svg>
+		case "projects":
+			<svg class="nav-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+			</svg>
+		case "prompts":
+			<svg class="nav-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<polyline points="4 17 10 11 4 5"></polyline>
+				<line x1="12" y1="19" x2="20" y2="19"></line>
+			</svg>
+		case "topics":
+			<svg class="nav-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+				<line x1="7" y1="7" x2="7.01" y2="7"></line>
+			</svg>
+		case "syncHealth":
+			<svg class="nav-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+			</svg>
+		case "orphans":
+			<svg class="nav-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+				<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+				<line x1="2" y1="2" x2="22" y2="22"></line>
+			</svg>
+		case "cc-sessions":
+			<svg class="nav-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+				<line x1="9" y1="10" x2="15" y2="10"></line>
+			</svg>
+		case "cc-overview":
+			<svg class="nav-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+				<line x1="3" y1="9" x2="21" y2="9"></line>
+				<line x1="9" y1="21" x2="9" y2="9"></line>
+			</svg>
+		default:
+	}
+}
+
+// sidebarFooter renders the pinned bottom region of the sidebar: a live backend
+// status pill (polled via HTMX) and, when the Engram provider is active, a
+// "Sync cloud" button that triggers POST /api/cloud/sync-all.
+templ sidebarFooter(lang string) {
+	<div class="sidebar-footer">
+		<div
+			id="sidebar-status-pill"
+			hx-get="/partials/status-pill"
+			hx-trigger="load, every 30s"
+			hx-swap="outerHTML"
+		>
+			@statusPill(statusPillData{Lang: lang, State: statusChecking})
+		</div>
+	</div>
+}
+
+// syncCloudButtonWithResult renders the sync container after a sync-all run:
+// the button (so the user can re-trigger) plus a small result line describing
+// the outcome. Replaces #cloud-sync-all via outerHTML swap.
+// Used by POST /partials/sync-cloud (powers the Maintenance > Cloud section).
+templ syncCloudButtonWithResult(res syncCloudResult) {
+	<div id="cloud-sync-all" class="cloud-sync-all">
+		<button
+			type="button"
+			class="btn-action"
+			hx-post="/partials/sync-cloud"
+			hx-target="#cloud-sync-all"
+			hx-swap="outerHTML"
+			hx-disabled-elt="this"
+			title={ T(res.Lang, "maintenance.cloud.syncAll.tooltip") }
+			aria-label={ T(res.Lang, "maintenance.cloud.syncAll.ariaLabel") }
+		>
+			<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px">
+				<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+				<path d="M3 3v5h5"></path>
+				<path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+				<path d="M21 21v-5h-5"></path>
+			</svg>
+			{ T(res.Lang, "maintenance.cloud.syncAll.label") }
+		</button>
+		<p
+			class={ "cloud-sync-result", "cloud-sync-result--" + res.State }
+			role="status"
+			aria-live="polite"
+		>
+			{ res.Message }
+		</p>
+	</div>
+}
+
+// CloudSyncAllControl renders the idle-state "Sync all" control for the
+// Maintenance > Cloud section. Exported so internal/doctor can embed it
+// without creating an import cycle (doctor imports ui, not the reverse).
+// The container id #cloud-sync-all is shared with syncCloudButtonWithResult
+// so the outerHTML swap cycle works: button → POST → result-with-button → POST.
+templ CloudSyncAllControl(lang string) {
+	<div id="cloud-sync-all" class="cloud-sync-all">
+		<button
+			type="button"
+			class="btn-action"
+			hx-post="/partials/sync-cloud"
+			hx-target="#cloud-sync-all"
+			hx-swap="outerHTML"
+			hx-disabled-elt="this"
+			title={ T(lang, "maintenance.cloud.syncAll.tooltip") }
+			aria-label={ T(lang, "maintenance.cloud.syncAll.ariaLabel") }
+		>
+			<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px">
+				<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+				<path d="M3 3v5h5"></path>
+				<path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+				<path d="M21 21v-5h-5"></path>
+			</svg>
+			{ T(lang, "maintenance.cloud.syncAll.label") }
+		</button>
+		<p class="cloud-sync-result" role="status" aria-live="polite"></p>
+	</div>
+}
+
+// statusPill renders the backend health pill. The fragment carries no polling
+// attributes itself — the polling wrapper (#sidebar-status-pill) owns the
+// hx-trigger so the same component can be used for the initial server render
+// and for each HTMX swap.
+templ statusPill(d statusPillData) {
+	<span
+		class={ "status-pill", "status-pill--" + string(d.State) }
+		title={ T(d.Lang, statusLabelKey(d.State)) }
+		role="status"
+		aria-live="polite"
+	>
+		<span class="status-pill-dot" aria-hidden="true"></span>
+		<span class="status-pill-label">{ T(d.Lang, statusLabelKey(d.State)) }</span>
+	</span>
+}
+
+// sidebarDividerIfBothVisible renders a divider between two sidebar groups
+// only when both the current and next group are visible (cookie-check).
+templ sidebarDividerIfBothVisible(ctx context.Context, groups []providers.NavGroup, idx int, lang string) {
+	if navShowGroup(ctx, groups[idx].ID) && navShowGroup(ctx, groups[idx+1].ID) {
+		<div class="sidebar-divider"></div>
+	}
+}
+
 // sidebarGroup renders a section heading that introduces a group of nav links.
-// variant ("engram" or "claude") selects the accent color of the leading dot.
+// variant ("engram", "claude", or provider ID) selects the accent color CSS class.
+// When the variant has a brand image it is shown in place of the accent dot.
 templ sidebarGroup(label, variant string) {
 	<p class={ "sidebar-group-label sidebar-group-" + variant }>
-		<span class="sidebar-group-dot" aria-hidden="true"></span>
-		<span>{ label }</span>
+		if src := sidebarGroupIconSrc(variant); src != "" {
+			<img src={ src } class="sidebar-group-icon" alt="" aria-hidden="true"/>
+		} else {
+			<span class="sidebar-group-dot" aria-hidden="true"></span>
+		}
+		<span class="sidebar-group-text">{ label }</span>
 	</p>
+}
+
+// sidebarGroupIconSrc maps a group variant/ID to its brand image, or "" when
+// the group should fall back to the plain accent dot.
+func sidebarGroupIconSrc(variant string) string {
+	switch variant {
+	case "engram":
+		return "/static/engram.png"
+	case "cc-sessions", "claude":
+		return "/static/claude.png"
+	default:
+		return ""
+	}
+}
+
+// accountSwitcher renders the profile switcher dropdown in the sidebar brand area.
+// It is shown only when 2+ profiles exist (injected via context by renderDeps).
+templ accountSwitcher(lang string, profiles []ProfileInfo) {
+	<div class="account-switcher">
+		if active := activeProfileFromProfiles(profiles); active != "" {
+			<span class="sidebar-brand-label">{ active }</span>
+		}
+		<div class="account-switcher-menu">
+			for _, p := range profiles {
+				if !p.Active {
+					// Use hx-post without explicit hx-target/hx-swap:
+					// handleProfileSwitchPost returns HX-Redirect on success so HTMX
+					// performs a full client-side navigation without a jarring full-body
+					// outerHTML swap.
+					<form method="post" action="/settings/profile/switch"
+						hx-post="/settings/profile/switch"
+						hx-push-url="true">
+						<input type="hidden" name="name" value={ p.Name }/>
+						<button type="submit" class="account-switcher-item">
+							{ p.Name }
+						</button>
+					</form>
+				}
+			}
+			<a href="/settings/accounts" class="account-switcher-item account-switcher-manage">
+				{ T(lang, "settings.accounts.manage") }
+			</a>
+		</div>
+	</div>
+}
+
+// activeProfileFromProfiles returns the name of the active profile in the list.
+func activeProfileFromProfiles(profiles []ProfileInfo) string {
+	for _, p := range profiles {
+		if p.Active {
+			return p.Name
+		}
+	}
+	return ""
 }
 
 // sidebarSettingsIcon renders the settings gear in the brand header.
@@ -118,24 +459,44 @@ templ sidebarSettingsIcon(activeNav, label string) {
 	</a>
 }
 
-// sidebarLink renders an internal navigation link.
-templ sidebarLink(href, key, activeNav, label string) {
+// sidebarLink renders an internal navigation link with an optional icon.
+templ sidebarLink(href, key, activeNav, label, icon string) {
 	<li>
 		if key == activeNav {
-			<a href={ templ.SafeURL(href) } class="active">{ label }</a>
+			<a href={ templ.SafeURL(href) } class="active" aria-label={ label } title={ label }>
+				if icon != "" {
+					@navIcon(icon)
+				}
+				<span class="nav-label">{ label }</span>
+			</a>
 		} else {
-			<a href={ templ.SafeURL(href) }>{ label }</a>
+			<a href={ templ.SafeURL(href) } aria-label={ label } title={ label }>
+				if icon != "" {
+					@navIcon(icon)
+				}
+				<span class="nav-label">{ label }</span>
+			</a>
 		}
 	</li>
 }
 
-// sidebarExternalLink renders an external navigation link (full-page nav).
-templ sidebarExternalLink(href, key, activeNav, label string) {
+// sidebarExternalLink renders an external navigation link (full-page nav) with an optional icon.
+templ sidebarExternalLink(href, key, activeNav, label, icon string) {
 	<li>
 		if key == activeNav {
-			<a href={ templ.SafeURL(href) } class="active">{ label }</a>
+			<a href={ templ.SafeURL(href) } class="active" aria-label={ label } title={ label }>
+				if icon != "" {
+					@navIcon(icon)
+				}
+				<span class="nav-label">{ label }</span>
+			</a>
 		} else {
-			<a href={ templ.SafeURL(href) }>{ label }</a>
+			<a href={ templ.SafeURL(href) } aria-label={ label } title={ label }>
+				if icon != "" {
+					@navIcon(icon)
+				}
+				<span class="nav-label">{ label }</span>
+			</a>
 		}
 	</li>
 }

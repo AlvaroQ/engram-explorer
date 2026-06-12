@@ -12,6 +12,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
+	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/doctor"
 )
 
@@ -118,56 +119,29 @@ func seedOrphanSession(t *testing.T, db *sql.DB) string {
 // Phase 1.1: Template render tests (RED until handlers exist)
 // ---------------------------------------------------------------------------
 
-// TestOrphansFullPage verifies GET /doctor/orphans with no HX-Request returns
-// a full HTML page containing <html> and <head>.
-func TestOrphansFullPage(t *testing.T) {
-	db := openTestDB(t)
-	seedOrphanObservation(t, db)
-
+// TestOrphansRedirect verifies GET /doctor/orphans returns a 303 redirect to
+// /settings/maintenance#unassigned (PR4 consolidation).
+func TestOrphansRedirect(t *testing.T) {
 	mux := http.NewServeMux()
-	doctor.Mount(mux, doctor.Deps{RoDB: db})
+	doctor.Mount(mux, doctor.Deps{})
 
 	req := httptest.NewRequest(http.MethodGet, "/doctor/orphans", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d; body: %s", w.Code, w.Body.String())
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 redirect, got %d; body: %s", w.Code, w.Body.String())
 	}
-	body := w.Body.String()
-	if !strings.Contains(body, "<html") {
-		t.Error("full page must contain <html>")
-	}
-	if !strings.Contains(body, "<head") {
-		t.Error("full page must contain <head>")
-	}
-}
-
-// TestOrphansHTMXPartial verifies GET /doctor/orphans with HX-Request: true
-// returns a fragment — no <html>, no <head>.
-func TestOrphansHTMXPartial(t *testing.T) {
-	db := openTestDB(t)
-	seedOrphanObservation(t, db)
-
-	mux := http.NewServeMux()
-	doctor.Mount(mux, doctor.Deps{RoDB: db})
-
-	req := httptest.NewRequest(http.MethodGet, "/doctor/orphans", nil)
-	req.Header.Set("HX-Request", "true")
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
-	}
-	body := w.Body.String()
-	if strings.Contains(body, "<html") {
-		t.Error("partial must NOT contain <html>")
+	loc := w.Header().Get("Location")
+	if loc != "/settings/maintenance#unassigned" {
+		t.Errorf("redirect Location = %q; want /settings/maintenance#unassigned", loc)
 	}
 }
 
 // TestOrphansEmptyState verifies that when OrphansList returns zero counts for
 // all types, the EmptyState component is rendered and no table is shown.
+// Uses /doctor/orphans/list (the partial endpoint) since /doctor/orphans now
+// redirects to /settings/maintenance#unassigned (PR4 consolidation).
 func TestOrphansEmptyState(t *testing.T) {
 	db := openTestDB(t)
 	// Do NOT seed orphans — all totals will be zero.
@@ -175,7 +149,7 @@ func TestOrphansEmptyState(t *testing.T) {
 	mux := http.NewServeMux()
 	doctor.Mount(mux, doctor.Deps{RoDB: db})
 
-	req := httptest.NewRequest(http.MethodGet, "/doctor/orphans", nil)
+	req := httptest.NewRequest(http.MethodGet, "/doctor/orphans/list", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
@@ -296,6 +270,31 @@ func TestAssignRWDBNil(t *testing.T) {
 	// Inline error partial uses class "inline-error"
 	if !strings.Contains(body, "inline-error") {
 		t.Errorf("expected inline-error in response body, got: %s", body)
+	}
+}
+
+// TestAssignDemoMode verifies that a write route is blocked with an inline
+// error when the server runs in demo mode, even though RWDB is available.
+func TestAssignDemoMode(t *testing.T) {
+	db := openTestDB(t)
+
+	mux := http.NewServeMux()
+	// RWDB present, but demo mode must still block the write.
+	doctor.Mount(mux, doctor.Deps{RoDB: db, RWDB: db, Config: config.Config{DemoMode: true}})
+
+	form := url.Values{"project": {"myproject"}}
+	req := httptest.NewRequest(http.MethodPost, "/doctor/orphans/observations/1/project",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	if !strings.Contains(body, "inline-error") {
+		t.Errorf("expected inline-error in response body, got: %s", body)
+	}
+	if !strings.Contains(body, "demo mode") {
+		t.Errorf("expected demo-mode message, got: %s", body)
 	}
 }
 

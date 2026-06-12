@@ -11,13 +11,14 @@ import templruntime "github.com/a-h/templ/runtime"
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
 // CCSDetailPage renders the full page for a single Claude Code session.
-func CCSDetailPage(detail *services.CCSessionDetail, lang, theme string) templ.Component {
+func CCSDetailPage(detail *services.CCSessionDetail, lang, theme, sidebarState string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -38,7 +39,7 @@ func CCSDetailPage(detail *services.CCSessionDetail, lang, theme string) templ.C
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = Layout(T(lang, "ccSessions.session")+" — "+detail.ID, "cc-sessions", lang, theme, ccsDetailContent(detail, lang)).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(T(lang, "ccSessions.session")+" — "+detail.ID, "cc-sessions", lang, theme, sidebarState, ccsDetailContent(detail, lang)).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -105,7 +106,7 @@ func ccsDetailContent(detail *services.CCSessionDetail, lang string) templ.Compo
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "common.back"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 26, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 27, Col: 55}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -123,7 +124,7 @@ func ccsDetailContent(detail *services.CCSessionDetail, lang string) templ.Compo
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 29, Col: 39}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 30, Col: 39}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -141,7 +142,7 @@ func ccsDetailContent(detail *services.CCSessionDetail, lang string) templ.Compo
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "common.untitled"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 31, Col: 36}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 32, Col: 36}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -159,7 +160,7 @@ func ccsDetailContent(detail *services.CCSessionDetail, lang string) templ.Compo
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(detail.ID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 33, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 34, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -232,7 +233,7 @@ func ccsDetailContent(detail *services.CCSessionDetail, lang string) templ.Compo
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "ccSessions.conversation"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 63, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 64, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -245,7 +246,7 @@ func ccsDetailContent(detail *services.CCSessionDetail, lang string) templ.Compo
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "ccSessions.conversationDesc", "count", fmt.Sprintf("%d", len(detail.Turns))))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 63, Col: 164}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 64, Col: 164}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -320,7 +321,7 @@ func ccsConvToolbar(lang string) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "ccSessions.filter.compact"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 86, Col: 132}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 87, Col: 132}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -333,7 +334,7 @@ func ccsConvToolbar(lang string) templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "ccSessions.filter.thinking"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 90, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 91, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -346,7 +347,7 @@ func ccsConvToolbar(lang string) templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "ccSessions.filter.tools"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 94, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 95, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -359,7 +360,7 @@ func ccsConvToolbar(lang string) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "ccSessions.filter.attachments"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 98, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 99, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -405,7 +406,7 @@ func ccsDetailField(label, value string) templ.Component {
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 109, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 110, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
@@ -423,7 +424,7 @@ func ccsDetailField(label, value string) templ.Component {
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 111, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 112, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {
@@ -436,7 +437,7 @@ func ccsDetailField(label, value string) templ.Component {
 			var templ_7745c5c3_Var18 string
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 111, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 112, Col: 54}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
@@ -490,7 +491,7 @@ func ccsTurns(turns []services.CCTurn, lang string) templ.Component {
 			var templ_7745c5c3_Var20 string
 			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "ccSessions.noTurns"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 121, Col: 50}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 122, Col: 50}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 			if templ_7745c5c3_Err != nil {
@@ -553,7 +554,7 @@ func ccsTurns(turns []services.CCTurn, lang string) templ.Component {
 				var templ_7745c5c3_Var25 string
 				templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(turn.Role)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 127, Col: 71}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 128, Col: 71}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 				if templ_7745c5c3_Err != nil {
@@ -566,7 +567,7 @@ func ccsTurns(turns []services.CCTurn, lang string) templ.Component {
 				var templ_7745c5c3_Var26 string
 				templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(ccsShortTimestamp(turn.Timestamp))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 128, Col: 84}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 129, Col: 84}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 				if templ_7745c5c3_Err != nil {
@@ -579,7 +580,7 @@ func ccsTurns(turns []services.CCTurn, lang string) templ.Component {
 				var templ_7745c5c3_Var27 string
 				templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(ccsTurnPreview(turn))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 129, Col: 63}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 130, Col: 63}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 				if templ_7745c5c3_Err != nil {
@@ -592,7 +593,7 @@ func ccsTurns(turns []services.CCTurn, lang string) templ.Component {
 				var templ_7745c5c3_Var28 string
 				templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("#%d", i+1))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 130, Col: 72}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 131, Col: 72}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 				if templ_7745c5c3_Err != nil {
@@ -603,29 +604,9 @@ func ccsTurns(turns []services.CCTurn, lang string) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				if turn.Text != "" {
-					if tag, ok := ccsAttachment(turn.Text); ok {
-						templ_7745c5c3_Err = ccsAttachChip(tag, turn.Text).Render(ctx, templ_7745c5c3_Buffer)
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-					} else {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "<pre class=\"event-content\" data-cc-block=\"text\">")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						var templ_7745c5c3_Var29 string
-						templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(turn.Text)
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 137, Col: 67}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "</pre>")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
+					templ_7745c5c3_Err = ccsRenderTextSegments(turn.Text).Render(ctx, templ_7745c5c3_Buffer)
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
 					}
 				} else {
 					templ_7745c5c3_Err = ccsTurnBlocks(turn.Blocks).Render(ctx, templ_7745c5c3_Buffer)
@@ -633,14 +614,67 @@ func ccsTurns(turns []services.CCTurn, lang string) templ.Component {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</div></details>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</div></details>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
+			}
+		}
+		return nil
+	})
+}
+
+// ccsRenderTextSegments splits text into marker/plain segments and renders each
+// appropriately: markers become compact chips, plain text is shown as a <pre>.
+func ccsRenderTextSegments(text string) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var29 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var29 == nil {
+			templ_7745c5c3_Var29 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		for _, seg := range ccsSplitMarkers(text) {
+			if seg.IsMarker {
+				templ_7745c5c3_Err = ccsAttachChip(seg.Tag, seg.Text).Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			} else {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "<pre class=\"event-content\" data-cc-block=\"text\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var30 string
+				templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(seg.Text)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 153, Col: 61}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</pre>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
 			}
 		}
 		return nil
@@ -664,9 +698,9 @@ func ccsTurnBlocks(blocks []services.CCMessageBlock) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var30 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var30 == nil {
-			templ_7745c5c3_Var30 = templ.NopComponent
+		templ_7745c5c3_Var31 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var31 == nil {
+			templ_7745c5c3_Var31 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<div class=\"cc-blocks\">")
@@ -676,118 +710,116 @@ func ccsTurnBlocks(blocks []services.CCMessageBlock) templ.Component {
 		for _, b := range blocks {
 			switch b.Type {
 			case "text":
-				if tag, ok := ccsAttachment(b.Text); ok {
-					templ_7745c5c3_Err = ccsAttachChip(tag, b.Text).Render(ctx, templ_7745c5c3_Buffer)
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-				} else {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "<pre class=\"event-content\" data-cc-block=\"text\">")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var31 string
-					templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(b.Text)
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 158, Col: 62}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "</pre>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
+				templ_7745c5c3_Err = ccsRenderTextSegments(b.Text).Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
 				}
 			case "tool_use":
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "<details class=\"cc-tool-block\" data-cc-block=\"tool\"><summary class=\"cc-tool-summary\"><span class=\"badge badge-neutral\">tool_use</span> <span class=\"mono text-xs\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "<details class=\"cc-tool-block\" data-cc-block=\"tool\"><summary class=\"cc-tool-summary\"><span class=\"badge badge-neutral\">tool_use</span> <span class=\"mono text-xs\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var32 string
 				templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(b.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 164, Col: 42}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 169, Col: 42}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "</span> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "</span> ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				if b.ID != "" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "<span class=\"muted mono text-xs\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "<span class=\"muted mono text-xs\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var33 string
 					templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(b.ID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 166, Col: 47}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 171, Col: 47}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "</span>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "</span>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "</summary><pre class=\"event-content cc-tool-input\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "</summary><pre class=\"event-content cc-tool-input\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var34 string
 				templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(ccsTruncateRaw(b.RawInput, 500))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 169, Col: 80}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 174, Col: 80}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "</pre></details>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "</pre></details>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			case "tool_result":
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "<details class=\"cc-tool-block\" data-cc-block=\"tool\"><summary class=\"cc-tool-summary\"><span class=\"badge badge-neutral\">tool_result</span> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "<details class=\"cc-tool-block\" data-cc-block=\"tool\"><summary class=\"cc-tool-summary\"><span class=\"badge badge-neutral\">tool_result</span> ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				if b.ToolUseID != "" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "<span class=\"muted mono text-xs\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "<span class=\"muted mono text-xs\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var35 string
 					templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(b.ToolUseID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 176, Col: 54}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 181, Col: 54}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "</span>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "</span>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "</summary><pre class=\"event-content cc-tool-input\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "</summary><pre class=\"event-content cc-tool-input\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var36 string
 				templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(ccsTruncateRaw(b.Content, 500))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 179, Col: 79}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 184, Col: 79}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "</pre></details>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			case "thinking":
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "<details class=\"cc-tool-block cc-thinking\" data-cc-block=\"thinking\"><summary class=\"cc-tool-summary\"><span class=\"badge badge-neutral\">thinking</span></summary><pre class=\"event-content cc-tool-input\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var37 string
+				templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(b.Text)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 191, Col: 55}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -795,45 +827,27 @@ func ccsTurnBlocks(blocks []services.CCMessageBlock) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-			case "thinking":
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "<details class=\"cc-tool-block cc-thinking\" data-cc-block=\"thinking\"><summary class=\"cc-tool-summary\"><span class=\"badge badge-neutral\">thinking</span></summary><pre class=\"event-content cc-tool-input\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var37 string
-				templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(b.Text)
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 186, Col: 55}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "</pre></details>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
 			default:
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<div class=\"muted mono text-xs\" data-cc-block=\"other\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "<div class=\"muted mono text-xs\" data-cc-block=\"other\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var38 string
 				templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(b.Type)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 189, Col: 67}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 194, Col: 67}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "</div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -842,7 +856,10 @@ func ccsTurnBlocks(blocks []services.CCMessageBlock) templ.Component {
 }
 
 // ccsAttachChip renders a marker/attachment block (e.g. <ide_opened_file>) as a
-// compact paperclip chip. The full marker text is exposed via the title tooltip.
+// compact paperclip chip whose label is the readable text *inside* the marker
+// (truncated), so the transcript shows the actual context (e.g. which file was
+// opened) rather than the raw "ide_opened_file" tag name. The full marker text
+// stays available via the title tooltip.
 func ccsAttachChip(tag, full string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -864,20 +881,20 @@ func ccsAttachChip(tag, full string) templ.Component {
 			templ_7745c5c3_Var39 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 64, "<span class=\"cc-attach\" data-cc-block=\"attachment\" title=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "<span class=\"cc-attach\" data-cc-block=\"attachment\" title=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var40 string
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(full)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 198, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 206, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, "\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -885,25 +902,45 @@ func ccsAttachChip(tag, full string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "<span class=\"cc-attach-label\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 64, "<span class=\"cc-attach-label\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var41 string
-		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(tag)
+		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(ccsMarkerLabel(tag, full))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 200, Col: 37}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/cc_sessions_detail.templ`, Line: 208, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "</span></span>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, "</span></span>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		return nil
 	})
+}
+
+// ccsMarkerInner returns the whitespace-normalised text between a marker's open
+// and close tags, or "" when the marker has no inner text.
+func ccsMarkerInner(full string) string {
+	open := strings.IndexByte(full, '>')
+	closeAt := strings.LastIndex(full, "</")
+	if open < 0 || closeAt <= open {
+		return ""
+	}
+	return strings.Join(strings.Fields(full[open+1:closeAt]), " ")
+}
+
+// ccsMarkerLabel is the chip label: the inner marker text (truncated) when
+// present, otherwise the bare tag name.
+func ccsMarkerLabel(tag, full string) string {
+	if inner := ccsMarkerInner(full); inner != "" {
+		return ccsPromptPreview(inner)
+	}
+	return tag
 }
 
 // ccsPaperclip is the inline clip icon used by ccsAttachChip.
@@ -928,7 +965,7 @@ func ccsPaperclip() templ.Component {
 			templ_7745c5c3_Var42 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 68, "<svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48\"></path></svg>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "<svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48\"></path></svg>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -940,23 +977,93 @@ func ccsPaperclip() templ.Component {
 // Helper functions for detail
 // ---------------------------------------------------------------------------
 
-// ccsMarkerTags are wrapper tags injected by the harness/IDE that arrive as
-// their own text block in the transcript and are better shown as a compact
-// attachment chip than as a raw block.
-var ccsMarkerTags = []string{
-	"ide_opened_file",
-	"ide_selection",
-	"ide_diagnostics",
-	"system-reminder",
-	"command-name",
-	"command-message",
-	"command-args",
-	"local-command-stdout",
+// ccsMarkerTags is the list of IDE/harness wrapper tags injected into Claude
+// Code session transcripts. The canonical list lives in the services layer
+// (services.CCMarkerTags) so prompt-preview stripping and chip rendering share a
+// single source of truth.
+var ccsMarkerTags = services.CCMarkerTags
+
+// ccsMarkerReList holds one compiled regexp per marker tag, index-aligned with
+// ccsMarkerTags. The patterns are compiled once in the services layer
+// (services.CCMarkerReList) and reused here for positional marker splitting, so
+// the identical RE2 patterns are not compiled twice across packages.
+var ccsMarkerReList = services.CCMarkerReList()
+
+// ccsSegment is one piece of a split transcript string.
+type ccsSegment struct {
+	IsMarker bool   // true → marker chip; false → plain text
+	Tag      string // tag name when IsMarker
+	Text     string // full marker text (IsMarker) or plain text (!IsMarker)
+}
+
+// markerSpan records the position and tag of one matched marker in a string.
+type markerSpan struct {
+	start, end int
+	tag        string
+}
+
+// ccsSplitMarkers splits s into an ordered sequence of plain-text and marker
+// segments. Marker spans are found by running each tag's regexp and collecting
+// [start,end,tag] tuples; overlapping spans are dropped (first/leftmost wins).
+// Plain-text segments that are whitespace-only are omitted.
+func ccsSplitMarkers(s string) []ccsSegment {
+	// Collect all marker spans across all tags.
+	var spans []markerSpan
+	for i, re := range ccsMarkerReList {
+		for _, loc := range re.FindAllStringIndex(s, -1) {
+			spans = append(spans, markerSpan{start: loc[0], end: loc[1], tag: ccsMarkerTags[i]})
+		}
+	}
+	if len(spans) == 0 {
+		// No markers: single plain-text segment.
+		return []ccsSegment{{IsMarker: false, Text: s}}
+	}
+
+	// Sort by start position; on tie keep the longer span (greedy).
+	sort.Slice(spans, func(i, j int) bool {
+		if spans[i].start != spans[j].start {
+			return spans[i].start < spans[j].start
+		}
+		return spans[i].end > spans[j].end
+	})
+
+	// Remove overlapping spans: keep a span only if its start is >= the end
+	// of the last kept span.
+	kept := spans[:0]
+	cursor := 0
+	for _, sp := range spans {
+		if sp.start >= cursor {
+			kept = append(kept, sp)
+			cursor = sp.end
+		}
+	}
+	spans = kept
+
+	// Walk the string emitting segments.
+	var out []ccsSegment
+	pos := 0
+	for _, sp := range spans {
+		if pos < sp.start {
+			plain := s[pos:sp.start]
+			if strings.TrimSpace(plain) != "" {
+				out = append(out, ccsSegment{IsMarker: false, Text: plain})
+			}
+		}
+		out = append(out, ccsSegment{IsMarker: true, Tag: sp.tag, Text: s[sp.start:sp.end]})
+		pos = sp.end
+	}
+	if pos < len(s) {
+		plain := s[pos:]
+		if strings.TrimSpace(plain) != "" {
+			out = append(out, ccsSegment{IsMarker: false, Text: plain})
+		}
+	}
+	return out
 }
 
 // ccsAttachment reports whether text is a single wrapped marker block and, if so,
-// returns the tag name for the chip label. Detection = the trimmed text opens
-// with "<tag>" or "<tag ..." (markers wrap their whole content from the start).
+// returns the tag name for the chip label. Used for the all-or-nothing fast path
+// (e.g. list view first-prompt detection).
 func ccsAttachment(text string) (string, bool) {
 	t := strings.TrimSpace(text)
 	for _, tag := range ccsMarkerTags {
@@ -993,10 +1100,7 @@ func ccsFirstUserPrompt(turns []services.CCTurn) string {
 		if text == "" {
 			continue
 		}
-		if _, isMarker := ccsAttachment(text); isMarker {
-			continue
-		}
-		if clean, _ := ccsStripAttachments(text); strings.TrimSpace(clean) != "" {
+		if clean := ccsPlainFromSegments(ccsSplitMarkers(text)); clean != "" {
 			return clean
 		}
 	}
@@ -1012,22 +1116,26 @@ func ccsTurnBadgeClass(role string) string {
 }
 
 // ccsTurnPreview returns a short preview of a turn for the summary line.
+// Marker segments are stripped; only plain-text segments are shown. If the
+// entire text consists of markers, the attachment label is returned instead.
 func ccsTurnPreview(turn services.CCTurn) string {
 	if turn.Text != "" {
-		if tag, ok := ccsAttachment(turn.Text); ok {
-			return "📎 " + tag
+		plain := ccsPlainFromSegments(ccsSplitMarkers(turn.Text))
+		if plain == "" {
+			return "📎 attachment"
 		}
-		return ccsPromptPreview(turn.Text)
+		return ccsPromptPreview(plain)
 	}
 	// Summarise blocks.
 	var parts []string
 	for _, b := range turn.Blocks {
 		switch b.Type {
 		case "text":
-			if tag, ok := ccsAttachment(b.Text); ok {
-				parts = append(parts, "📎 "+tag)
+			plain := ccsPlainFromSegments(ccsSplitMarkers(b.Text))
+			if plain != "" {
+				parts = append(parts, ccsPromptPreview(plain))
 			} else if b.Text != "" {
-				parts = append(parts, ccsPromptPreview(b.Text))
+				parts = append(parts, "📎 attachment")
 			}
 		case "tool_use":
 			parts = append(parts, "⚙ "+b.Name)
@@ -1046,6 +1154,17 @@ func ccsTurnPreview(turn services.CCTurn) string {
 		return string(runes[:100]) + "…"
 	}
 	return s
+}
+
+// ccsPlainFromSegments joins plain-text segments into a single normalised string.
+func ccsPlainFromSegments(segs []ccsSegment) string {
+	var parts []string
+	for _, seg := range segs {
+		if !seg.IsMarker {
+			parts = append(parts, seg.Text)
+		}
+	}
+	return strings.Join(strings.Fields(strings.Join(parts, " ")), " ")
 }
 
 // ccsShortTimestamp returns just the time portion of an ISO 8601 timestamp.

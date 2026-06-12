@@ -490,7 +490,7 @@ function LegacyScene({
     <>
       <ambientLight intensity={0.55} />
       <directionalLight position={[2, 3, 2]} intensity={1.7} />
-      <directionalLight position={[-2, -1, -1]} intensity={0.45} color="#a78bfa" />
+      <directionalLight position={[-2, -1, -1]} intensity={0.45} color="#c4a7e7" />
       <GraphNodes
         nodes={nodes}
         positions={positions}
@@ -588,7 +588,7 @@ function BrainScene({
     <>
       <ambientLight intensity={0.55} />
       <directionalLight position={[2, 3, 2]} intensity={1.7} />
-      <directionalLight position={[-2, -1, -1]} intensity={0.45} color="#a78bfa" />
+      <directionalLight position={[-2, -1, -1]} intensity={0.45} color="#c4a7e7" />
 
       {/* Level-aware instanced nodes with cross-fade + drill-in burst (C4.1 / C4.2).
           The committed level is always a complete (level, positions) pair, so the
@@ -674,7 +674,7 @@ function LoadingScene() {
       <ambientLight intensity={0.3} />
       <instancedMesh ref={ref} args={[undefined, undefined, count]}>
         <sphereGeometry args={[1.5, 8, 8]} />
-        <meshStandardMaterial color="#334155" roughness={0.8} transparent opacity={0.4} />
+        <meshStandardMaterial color="#26233a" roughness={0.8} transparent opacity={0.4} />
       </instancedMesh>
     </>
   );

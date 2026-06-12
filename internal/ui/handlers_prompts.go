@@ -25,7 +25,7 @@ func handlePromptsPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, PromptsPartial(items, searchItems, q, lang))
 		} else {
-			render(w, r, PromptsPage(items, searchItems, q, lang, theme))
+			renderDeps(w, r, d, PromptsPage(items, searchItems, q, lang, theme, sidebarStateForRequest(r)))
 		}
 	}
 }

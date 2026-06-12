@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/AlvaroQ/engram-explorer/internal/services"
-	"github.com/AlvaroQ/engram-explorer/internal/ui"
 )
 
 // entitySegmentMap maps URL path segments to the canonical EntityKind values
@@ -56,23 +55,6 @@ func parseEntityAndID(r *http.Request) (services.EntityKind, any, error) {
 	return kind, n, nil
 }
 
-// handleOrphansPage serves GET /doctor/orphans.
-// Full page on direct GET; bare OrphansList partial when HX-Request: true.
-func handleOrphansPage(d Deps) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		data, projects, err := loadOrphansData(r.Context(), d)
-		if err != nil {
-			render(w, r, ErrorPartial("Failed to load orphans: "+err.Error()))
-			return
-		}
-		if IsHTMX(r) {
-			render(w, r, OrphansList(data, projects))
-		} else {
-			render(w, r, OrphansPage(data, projects, ui.LangForRequest(r), ui.ThemeForRequest(r)))
-		}
-	}
-}
-
 // handleOrphansListPartial serves GET /doctor/orphans/list.
 // Always returns the bare OrphansList partial (used by hx-get load trigger).
 func handleOrphansListPartial(d Deps) http.HandlerFunc {
@@ -83,6 +65,40 @@ func handleOrphansListPartial(d Deps) http.HandlerFunc {
 			return
 		}
 		render(w, r, OrphansList(data, projects))
+	}
+}
+
+// handleOrphanObservationDetail serves GET /doctor/orphans/observations/{id}/detail.
+// It renders the observation-detail dialog partial so the user can inspect the
+// content and session working directory before assigning it to a project.
+func handleOrphanObservationDetail(d Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := r.PathValue("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			render(w, r, ErrorPartial(fmt.Sprintf("invalid observation id %q", idStr)))
+			return
+		}
+		if d.RoDB == nil {
+			render(w, r, ErrorPartial("Database is not available."))
+			return
+		}
+
+		detail, err := services.LoadOrphanObservationDetail(d.RoDB, id)
+		if err != nil {
+			render(w, r, ErrorPartial("Failed to load observation: "+err.Error()))
+			return
+		}
+		if detail == nil {
+			render(w, r, ErrorPartial(fmt.Sprintf("Observation %d not found.", id)))
+			return
+		}
+
+		projects, err := services.ProjectsList(d.RoDB)
+		if err != nil {
+			projects = []services.ProjectStats{}
+		}
+		render(w, r, OrphanObservationDetailDialog(detail, projects))
 	}
 }
 

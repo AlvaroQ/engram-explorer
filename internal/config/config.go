@@ -43,6 +43,11 @@ type Config struct {
 	// unenroll) returns 503. Set ENGRAM_DASH_READONLY=true to enable.
 	ReadOnly bool
 
+	// DemoMode, when true, means the server is running against the bundled
+	// demo database. A dismissible banner is shown in the UI and all write
+	// endpoints return 403. Set via --demo CLI flag or ENGRAM_DEMO=1.
+	DemoMode bool
+
 	// ClaudeProjectsDir is the directory where Claude Code stores transcript
 	// files (~/.claude/projects by default). Each subdirectory is a project,
 	// and each *.jsonl file within is a session transcript.

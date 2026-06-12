@@ -7,18 +7,74 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
+// ccsAccountSources returns the enabled CC account sources from d.CCAccountSources,
+// falling back to a single DiskProjectsReader for the configured ClaudeDir when the
+// callback is nil (legacy/test paths that build Deps without a ProfileStore).
+func ccsAccountSources(d Deps) []services.CCAccountSource {
+	if d.CCAccountSources != nil {
+		return d.CCAccountSources()
+	}
+	return []services.CCAccountSource{
+		{
+			ID:     "default",
+			Label:  "Personal",
+			Reader: services.DiskProjectsReader{BaseDir: d.Paths.ClaudeDir()},
+		},
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Overview handler
 // ---------------------------------------------------------------------------
 
-// handleCCOverviewPage serves GET /cc-overview — the usage charts only (no
-// project filter, no sessions list). The cc-usage-charts island fetches its own
-// data from /api/cc-sessions/stats, so this handler needs no service call.
+// ccOverviewData holds the data passed to the overview page and partial.
+type ccOverviewData struct {
+	Multi *services.CCStatsMultiResult
+}
+
+// handleCCOverviewPage serves GET /cc-overview.
+// Dispatches on ?tab= to render the Overview (charts) or Sessions tab.
+// The cc-usage-charts island fetches its own data from /api/cc-sessions/stats;
+// the server-rendered breakdown below the charts is computed via CCSessionsStatsMulti.
 func handleCCOverviewPage(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
-		render(w, r, CCOverviewPage(lang, theme))
+		sidebarState := sidebarStateForRequest(r)
+		tab := r.URL.Query().Get("tab")
+
+		switch tab {
+		case "sessions":
+			params := ccsListParamsFromQuery(r)
+			sources := ccsAccountSources(d)
+			result, err := services.CCSessionsListMulti(sources, params)
+			if err != nil {
+				render(w, r, ErrorPartial("Failed to load Claude Code sessions: "+err.Error()))
+				return
+			}
+			if IsHTMX(r) {
+				render(w, r, CCSessionsTabPartial(result, params, lang))
+			} else {
+				renderDeps(w, r, d, CCSessionsTabPage(result, params, lang, theme, sidebarState))
+			}
+
+		default:
+			sources := ccsAccountSources(d)
+			// The per-account breakdown only renders with >1 account, and
+			// CCSessionsStatsMulti is expensive (it scans every session .jsonl).
+			// Skip it for single-account installs so the page paints immediately
+			// instead of feeling like the click did nothing.
+			var multi *services.CCStatsMultiResult
+			if len(sources) > 1 {
+				m, err := services.CCSessionsStatsMulti(sources)
+				if err != nil {
+					render(w, r, ErrorPartial("Failed to load Claude Code stats: "+err.Error()))
+					return
+				}
+				multi = m
+			}
+			renderDeps(w, r, d, CCOverviewPage(multi, lang, theme, sidebarState))
+		}
 	}
 }
 
@@ -32,10 +88,11 @@ func handleCCSessionsListPage(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
+		sidebarState := sidebarStateForRequest(r)
 		params := ccsListParamsFromQuery(r)
 
-		reader := services.DiskProjectsReader{BaseDir: d.Paths.ClaudeDir()}
-		result, err := services.CCSessionsList(reader, params)
+		sources := ccsAccountSources(d)
+		result, err := services.CCSessionsListMulti(sources, params)
 		if err != nil {
 			render(w, r, ErrorPartial("Failed to load Claude Code sessions: "+err.Error()))
 			return
@@ -44,7 +101,7 @@ func handleCCSessionsListPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, CCSListPartial(result, params, lang))
 		} else {
-			render(w, r, CCSListPage(result, params, lang, theme))
+			renderDeps(w, r, d, CCSListPage(result, params, lang, theme, sidebarState))
 		}
 	}
 }
@@ -56,8 +113,8 @@ func handleCCSessionsListPartial(d Deps) http.HandlerFunc {
 		lang := langForRequest(r)
 		params := ccsListParamsFromQuery(r)
 
-		reader := services.DiskProjectsReader{BaseDir: d.Paths.ClaudeDir()}
-		result, err := services.CCSessionsList(reader, params)
+		sources := ccsAccountSources(d)
+		result, err := services.CCSessionsListMulti(sources, params)
 		if err != nil {
 			render(w, r, ErrorPartial("Failed to load Claude Code sessions: "+err.Error()))
 			return
@@ -76,6 +133,7 @@ func ccsListParamsFromQuery(r *http.Request) services.CCSessionListParams {
 	q := r.URL.Query()
 	return services.CCSessionListParams{
 		Project: q.Get("project"),
+		Account: q.Get("account"),
 		Cursor:  q.Get("cursor"),
 		Limit:   50,
 	}
@@ -86,6 +144,8 @@ func ccsListParamsFromQuery(r *http.Request) services.CCSessionListParams {
 // ---------------------------------------------------------------------------
 
 // handleCCSessionDetailPage serves GET /cc-sessions/{project}/{id}.
+// The optional ?account=<id> query parameter selects which account's reader to
+// use. When absent (or unresolvable), the first enabled source is used.
 func handleCCSessionDetailPage(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rawProject := r.PathValue("project")
@@ -106,8 +166,13 @@ func handleCCSessionDetailPage(d Deps) http.HandlerFunc {
 
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
+		sidebarState := sidebarStateForRequest(r)
 
-		reader := services.DiskProjectsReader{BaseDir: d.Paths.ClaudeDir()}
+		// Resolve the correct reader: prefer the account matching ?account=<id>;
+		// fall back to the first available source when the param is absent or
+		// the account is not found among enabled sources.
+		reader := ccsResolveReader(d, r.URL.Query().Get("account"))
+
 		detail, err := services.CCSessionGetDetail(reader, projectFolder, id)
 		if err != nil {
 			render(w, r, ErrorPartial("Failed to load session: "+err.Error()))
@@ -121,7 +186,27 @@ func handleCCSessionDetailPage(d Deps) http.HandlerFunc {
 		if IsHTMX(r) {
 			render(w, r, CCSDetailPartial(detail, lang))
 		} else {
-			render(w, r, CCSDetailPage(detail, lang, theme))
+			renderDeps(w, r, d, CCSDetailPage(detail, lang, theme, sidebarState))
 		}
 	}
+}
+
+// ccsResolveReader finds the CCProjectsReader for the given accountID among
+// enabled sources. When accountID is empty or not found, it returns the reader
+// of the first available source. The Deps fallback (nil CCAccountSources) is
+// handled by ccsAccountSources, so this function is always safe to call.
+func ccsResolveReader(d Deps, accountID string) services.CCProjectsReader {
+	sources := ccsAccountSources(d)
+	if len(sources) == 0 {
+		// Should not happen — ccsAccountSources always returns ≥1 source.
+		return services.DiskProjectsReader{BaseDir: d.Paths.ClaudeDir()}
+	}
+	if accountID != "" {
+		for _, s := range sources {
+			if s.ID == accountID {
+				return s.Reader
+			}
+		}
+	}
+	return sources[0].Reader
 }

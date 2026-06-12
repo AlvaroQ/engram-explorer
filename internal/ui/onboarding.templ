@@ -1,0 +1,103 @@
+package ui
+
+// OnboardingPage renders the full onboarding zero-state page (layout shell + content).
+// Shown when no provider is active (ActiveCount == 0).
+templ OnboardingPage(d onboardingData) {
+	@Layout(T(d.Lang, "onboarding.title"), "overview", d.Lang, d.Theme, d.SidebarState, onboardingContent(d))
+}
+
+// OnboardingPartial renders only the onboarding content (no HTML shell).
+// Used when HTMX requests a partial update.
+templ OnboardingPartial(d onboardingData) {
+	@onboardingContent(d)
+}
+
+// onboardingContent renders the onboarding body: welcome message, provider list
+// with detection status and path-entry affordances for undetected Tier-1 providers.
+templ onboardingContent(d onboardingData) {
+	<div class="settings-page" id="onboarding-page">
+		<div class="page-header">
+			<h1>{ T(d.Lang, "onboarding.title") }</h1>
+			<p class="page-description">{ T(d.Lang, "onboarding.description") }</p>
+		</div>
+		<section class="settings-group">
+			<h2 class="settings-group-title">{ T(d.Lang, "onboarding.providers.title") }</h2>
+			<p class="settings-group-desc">{ T(d.Lang, "onboarding.providers.description") }</p>
+			if len(d.Providers) > 0 {
+				<div class="modules-list" id="onboarding-modules">
+					for _, p := range d.Providers {
+						@onboardingProviderRow(d.Lang, p)
+					}
+				</div>
+			} else {
+				<p class="preference-desc">{ T(d.Lang, "onboarding.providers.none") }</p>
+			}
+		</section>
+		<section class="settings-group">
+			<p class="preference-desc">
+				{ T(d.Lang, "onboarding.settingsHint") }
+				<a href="/settings/modules">{ T(d.Lang, "onboarding.settingsLink") }</a>
+			</p>
+		</section>
+	</div>
+}
+
+// onboardingProviderRow renders one provider row on the onboarding page.
+// Detected providers show an "Add" / "Activate" button.
+// Undetected Tier-1 providers show a manual path-entry form.
+templ onboardingProviderRow(lang string, p OnboardingProviderInfo) {
+	<div class="module-row" id={ "onboarding-row-" + p.ID }>
+		<div class="module-row-header">
+			<div class="module-row-identity">
+				<span class="module-name">{ p.DisplayName }</span>
+				if p.Detected {
+					<span class="badge badge-ok">{ T(lang, "onboarding.providers.detected") }</span>
+				} else {
+					<span class="badge badge-neutral">{ T(lang, "onboarding.providers.notDetected") }</span>
+				}
+			</div>
+			if p.Detected {
+				<div class="module-row-toggle">
+					// Activate button: swap the main content region with the overview
+					// using a View Transitions-compatible innerHTML swap.
+					<form method="post" action={ templ.SafeURL("/settings/modules/" + p.ID + "/path") }
+						hx-post={ "/settings/modules/" + p.ID + "/path" }
+						hx-target="#main-content"
+						hx-swap="innerHTML transition:true">
+						<input type="hidden" name="path" value={ p.Path }/>
+						<button type="submit" class="btn btn-sm btn-primary">
+							{ T(lang, "onboarding.providers.activate") }
+						</button>
+					</form>
+				</div>
+			}
+		</div>
+		if !p.Detected {
+			<div class="path-edit-form-wrap" id={ "onboarding-path-" + p.ID }>
+				if p.PathError != "" {
+					<p class="error-hint">{ p.PathError }</p>
+				}
+				// Manual path form: on success the server returns a partial for
+				// #main-content; on error the module row is re-rendered inline.
+				<form class="path-edit-form" method="post" action={ templ.SafeURL("/settings/modules/" + p.ID + "/path") }
+					hx-post={ "/settings/modules/" + p.ID + "/path" }
+					hx-target="#main-content"
+					hx-swap="innerHTML transition:true">
+					<input
+						type="text"
+						name="path"
+						class="path-input"
+						autocomplete="off"
+						autocapitalize="off"
+						spellcheck="false"
+						aria-label={ T(lang, "settings.modules.pathLabel") }
+						placeholder={ T(lang, "settings.modules.pathPlaceholder") }
+					/>
+					<button type="submit" class="btn btn-sm btn-primary">
+						{ T(lang, "settings.modules.validateAndActivate") }
+					</button>
+				</form>
+			</div>
+		}
+	</div>
+}
