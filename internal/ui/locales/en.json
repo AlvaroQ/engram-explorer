@@ -665,6 +665,22 @@
     },
     "recentPrompts": {
       "title": "Recent prompts"
+    },
+    "combine": {
+      "title": "Combine with another project",
+      "description": "Move all memories, sessions, and prompts from this project into another existing project. This project will disappear once combined.",
+      "targetLabel": "Combine into",
+      "submit": "Combine projects",
+      "confirm": "Combine \"{{source}}\" into \"{{target}}\"? This moves all its memories and cannot be undone.",
+      "noTargets": "No other projects available to combine into.",
+      "error": {
+        "sameName": "Pick a different project.",
+        "sourceNotFound": "This project no longer exists.",
+        "targetNotFound": "The selected project no longer exists.",
+        "enrolledSource": "This project is enrolled for cloud sync. Combining cloud-enrolled projects will be supported in a future update.",
+        "enrolledTarget": "The selected project is enrolled for cloud sync. Combining into cloud-enrolled projects will be supported in a future update.",
+        "generic": "Could not combine projects: {{message}}"
+      }
     }
   },
   "maintenance": {

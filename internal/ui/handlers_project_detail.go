@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 
@@ -19,6 +20,25 @@ func toProjectActivityChartProps(days []services.ActivityDay) ProjectActivityCha
 		days = []services.ActivityDay{}
 	}
 	return ProjectActivityChartIslandProps{Activity30d: days}
+}
+
+// otherProjectNames returns all project names from the sync list excluding current.
+// Returns an empty slice when the list cannot be loaded (best-effort).
+func otherProjectNames(d Deps, current string) []string {
+	if d.RoDB == nil {
+		return nil
+	}
+	stats, err := services.ProjectsList(d.RoDB)
+	if err != nil {
+		return nil
+	}
+	names := make([]string, 0, len(stats))
+	for _, s := range stats {
+		if s.Project != current && s.Project != "" {
+			names = append(names, s.Project)
+		}
+	}
+	return names
 }
 
 // handleProjectDetailPage serves GET /projects/{project}.
@@ -50,10 +70,78 @@ func handleProjectDetailPage(d Deps) http.HandlerFunc {
 		syncResp, _ := services.SyncListProjects(d.RoDB)
 		syncRow := syncByProject(syncResp, project)
 
+		// Load other project names for the combine form (best-effort).
+		others := otherProjectNames(d, project)
+
 		if IsHTMX(r) {
-			render(w, r, ProjectDetailPartial(*overview, syncRow, lang))
+			render(w, r, ProjectDetailPartial(*overview, syncRow, lang, others))
 		} else {
-			renderDeps(w, r, d, ProjectDetailPage(*overview, syncRow, lang, theme, sidebarState))
+			renderDeps(w, r, d, ProjectDetailPage(*overview, syncRow, lang, theme, sidebarState, others))
 		}
 	}
+}
+
+// mergeErrorMessage maps WriteError codes returned by services.RenameProject
+// (mode="merge") to plain-language i18n keys in the projectDetail.combine.error
+// namespace. Falls back to projectDetail.combine.error.generic for unknown codes.
+func mergeErrorMessage(lang string, we *services.WriteError) string {
+	switch we.Code {
+	case "SAME_NAME":
+		return T(lang, "projectDetail.combine.error.sameName")
+	case "SOURCE_NOT_FOUND":
+		return T(lang, "projectDetail.combine.error.sourceNotFound")
+	case "TARGET_NOT_FOUND":
+		return T(lang, "projectDetail.combine.error.targetNotFound")
+	case "ENROLLED_SOURCE_UNSUPPORTED":
+		return T(lang, "projectDetail.combine.error.enrolledSource")
+	case "ENROLLED_TARGET_UNSUPPORTED":
+		return T(lang, "projectDetail.combine.error.enrolledTarget")
+	default:
+		return T(lang, "projectDetail.combine.error.generic", "message", we.Message)
+	}
+}
+
+// handleProjectMergePost serves POST /projects/{project}/merge.
+// It merges the current project into the selected target using
+// services.RenameProject with Mode="merge". On success it redirects the
+// browser (or HTMX) to the surviving target project detail page.
+func handleProjectMergePost(d Deps) http.HandlerFunc {
+	return requireRW(d, func(w http.ResponseWriter, r *http.Request) {
+		source, _ := url.PathUnescape(r.PathValue("project"))
+		lang := langForRequest(r)
+
+		if err := r.ParseForm(); err != nil {
+			render(w, r, ErrorPartial("Bad request: "+err.Error()))
+			return
+		}
+		target := r.FormValue("target")
+		if target == "" {
+			render(w, r, ErrorPartial(T(lang, "projectDetail.combine.error.targetNotFound")))
+			return
+		}
+
+		_, err := services.RenameProject(r.Context(), d.RWDB, services.RenameProjectParams{
+			Source: source,
+			Target: target,
+			Mode:   "merge",
+		})
+		if err != nil {
+			var we *services.WriteError
+			if errors.As(err, &we) {
+				render(w, r, ErrorPartial(mergeErrorMessage(lang, we)))
+				return
+			}
+			render(w, r, ErrorPartial(T(lang, "projectDetail.combine.error.generic", "message", err.Error())))
+			return
+		}
+
+		// Success: redirect to the surviving project.
+		redirectURL := "/projects/" + url.PathEscape(target)
+		if IsHTMX(r) {
+			w.Header().Set("HX-Redirect", redirectURL)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+	})
 }

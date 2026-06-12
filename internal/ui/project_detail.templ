@@ -8,18 +8,18 @@ import (
 )
 
 // ProjectDetailPage renders the full project-detail page shell.
-templ ProjectDetailPage(data services.ProjectOverview, sync *services.SyncProjectRow, lang, theme, sidebarState string) {
-	@Layout(data.Project, "projects", lang, theme, sidebarState, projectDetailContent(data, sync, lang))
+templ ProjectDetailPage(data services.ProjectOverview, sync *services.SyncProjectRow, lang, theme, sidebarState string, otherProjects []string) {
+	@Layout(data.Project, "projects", lang, theme, sidebarState, projectDetailContent(data, sync, lang, otherProjects))
 }
 
 // ProjectDetailPartial renders only the project-detail content (no HTML shell).
 // Used when HTMX requests a partial update.
-templ ProjectDetailPartial(data services.ProjectOverview, sync *services.SyncProjectRow, lang string) {
-	@projectDetailContent(data, sync, lang)
+templ ProjectDetailPartial(data services.ProjectOverview, sync *services.SyncProjectRow, lang string, otherProjects []string) {
+	@projectDetailContent(data, sync, lang, otherProjects)
 }
 
 // projectDetailContent is the shared project-detail body.
-templ projectDetailContent(data services.ProjectOverview, sync *services.SyncProjectRow, lang string) {
+templ projectDetailContent(data services.ProjectOverview, sync *services.SyncProjectRow, lang string, otherProjects []string) {
 	<div class="flex flex-col gap-5">
 		<!-- Page header -->
 		<div class="page-header">
@@ -148,6 +148,8 @@ templ projectDetailContent(data services.ProjectOverview, sync *services.SyncPro
 				</div>
 			</div>
 		}
+		<!-- Combine with another project -->
+		@projectDetailCombineCard(data.Project, otherProjects, lang)
 	</div>
 }
 
@@ -291,6 +293,72 @@ templ projectDetailRecentObservations(obs []services.RecentObs, project string, 
 				{ T(lang, "projectDetail.recentObservations.openInObservations") }
 			</a>
 		</div>
+	}
+}
+
+// projectDetailCombineCard renders the "Combine with another project" action card.
+// otherProjects is the list of all project names except the current one.
+// When empty it shows a disabled hint instead of a form.
+templ projectDetailCombineCard(current string, otherProjects []string, lang string) {
+	<div class="card">
+		<div class="card-header">
+			<div>
+				<h2>{ T(lang, "projectDetail.combine.title") }</h2>
+				<p>{ T(lang, "projectDetail.combine.description") }</p>
+			</div>
+		</div>
+		<div class="card-body">
+			if len(otherProjects) == 0 {
+				<p class="text-sm text-fg-muted">{ T(lang, "projectDetail.combine.noTargets") }</p>
+			} else {
+				<form
+					id="project-merge-form"
+					hx-post={ "/projects/" + url.PathEscape(current) + "/merge" }
+					hx-target="#project-merge-result"
+					hx-swap="innerHTML"
+					hx-confirm={ T(lang, "projectDetail.combine.confirm", "source", current, "target", "") }
+					class="flex flex-col gap-3 sm:flex-row sm:items-end"
+					onsubmit={ updateMergeConfirm(current) }
+				>
+					<div class="flex flex-col gap-1">
+						<label for="merge-target" class="text-xs text-fg-muted">{ T(lang, "projectDetail.combine.targetLabel") }</label>
+						<select
+							id="merge-target"
+							name="target"
+							class="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-fg focus:border-accent focus:outline-none"
+							required
+						>
+							for _, p := range otherProjects {
+								<option value={ p }>{ p }</option>
+							}
+						</select>
+					</div>
+					<button
+						type="submit"
+						class="inline-flex items-center rounded-md border border-border bg-surface-2 px-3 py-1.5 text-sm text-fg-muted hover:border-fail hover:text-fail"
+					>
+						{ T(lang, "projectDetail.combine.submit") }
+					</button>
+				</form>
+				<div id="project-merge-result" class="mt-3"></div>
+			}
+		</div>
+	</div>
+}
+
+// updateMergeConfirm is a small script that patches the hx-confirm attribute
+// with the selected target name right before the form submits, so the
+// confirmation dialog shows the real project name rather than an empty string.
+script updateMergeConfirm(source string) {
+	const sel = document.getElementById("merge-target");
+	if (sel) {
+		const target = sel.value;
+		const form = document.getElementById("project-merge-form");
+		if (form) {
+			form.setAttribute("hx-confirm",
+				"Combine \"" + source + "\" into \"" + target + "\"? This moves all its memories and cannot be undone."
+			);
+		}
 	}
 }
 

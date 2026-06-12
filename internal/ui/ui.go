@@ -292,6 +292,7 @@ func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 	mux.HandleFunc("GET /projects", handleProjectsPage(d, cloud))
 	mux.HandleFunc("GET /projects/list", handleProjectsListPartial(d, cloud))
 	mux.HandleFunc("GET /projects/{project}", handleProjectDetailPage(d))
+	mux.HandleFunc("POST /projects/{project}/merge", handleProjectMergePost(d))
 	mux.HandleFunc("POST /projects/{project}/enroll", requireRW(d, handleProjectsEnroll(d, cloud)))
 	mux.HandleFunc("POST /projects/{project}/unenroll", requireRW(d, handleProjectsUnenroll(d, cloud)))
 
