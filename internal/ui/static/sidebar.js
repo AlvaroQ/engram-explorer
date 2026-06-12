@@ -10,14 +10,13 @@
 // No framework. Vanilla, dependency-free. Listeners attach to persistent
 // shell elements (outside the HTMX swap target), so they survive partial swaps.
 (function () {
-  "use strict";
+  'use strict';
 
-  var COOKIE = "sidebar";
-  var COMPACT = "(max-width: 639px)";
+  var COOKIE = 'sidebar';
+  var COMPACT = '(max-width: 639px)';
 
   function setCookie(value) {
-    document.cookie =
-      COOKIE + "=" + value + ";path=/;max-age=31536000;samesite=lax";
+    document.cookie = COOKIE + '=' + value + ';path=/;max-age=31536000;samesite=lax';
   }
 
   function isCompact() {
@@ -25,10 +24,10 @@
   }
 
   function init() {
-    var shell = document.querySelector(".app-shell");
-    var sidebar = document.getElementById("sidebar");
-    var toggle = document.getElementById("sidebar-toggle");
-    var scrim = document.getElementById("sidebar-scrim");
+    var shell = document.querySelector('.app-shell');
+    var sidebar = document.getElementById('sidebar');
+    var toggle = document.getElementById('sidebar-toggle');
+    var scrim = document.getElementById('sidebar-scrim');
     if (!shell || !sidebar || !toggle) {
       return;
     }
@@ -36,47 +35,47 @@
     var lastFocus = null;
 
     function onKeydown(e) {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         closeModal();
       }
     }
 
     function openModal() {
-      shell.classList.add("sidebar-open");
+      shell.classList.add('sidebar-open');
       if (scrim) {
-        scrim.classList.add("is-visible");
+        scrim.classList.add('is-visible');
       }
-      toggle.setAttribute("aria-expanded", "true");
+      toggle.setAttribute('aria-expanded', 'true');
       lastFocus = document.activeElement;
-      var first = sidebar.querySelector(".sidebar-nav a");
+      var first = sidebar.querySelector('.sidebar-nav a');
       if (first) {
         first.focus();
       }
-      document.addEventListener("keydown", onKeydown);
+      document.addEventListener('keydown', onKeydown);
     }
 
     function closeModal() {
-      shell.classList.remove("sidebar-open");
+      shell.classList.remove('sidebar-open');
       if (scrim) {
-        scrim.classList.remove("is-visible");
+        scrim.classList.remove('is-visible');
       }
-      toggle.setAttribute("aria-expanded", "false");
-      document.removeEventListener("keydown", onKeydown);
-      if (lastFocus && typeof lastFocus.focus === "function") {
+      toggle.setAttribute('aria-expanded', 'false');
+      document.removeEventListener('keydown', onKeydown);
+      if (lastFocus && typeof lastFocus.focus === 'function') {
         lastFocus.focus();
       }
     }
 
     function toggleRail() {
-      var collapsed = shell.classList.toggle("sidebar-collapsed");
-      sidebar.classList.toggle("sidebar--collapsed", collapsed);
-      setCookie(collapsed ? "collapsed" : "expanded");
-      toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      var collapsed = shell.classList.toggle('sidebar-collapsed');
+      sidebar.classList.toggle('sidebar--collapsed', collapsed);
+      setCookie(collapsed ? 'collapsed' : 'expanded');
+      toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     }
 
-    toggle.addEventListener("click", function () {
+    toggle.addEventListener('click', function () {
       if (isCompact()) {
-        if (shell.classList.contains("sidebar-open")) {
+        if (shell.classList.contains('sidebar-open')) {
           closeModal();
         } else {
           openModal();
@@ -87,19 +86,19 @@
     });
 
     if (scrim) {
-      scrim.addEventListener("click", closeModal);
+      scrim.addEventListener('click', closeModal);
     }
 
     // Leaving compact width with the modal open: clean up the overlay state.
-    window.addEventListener("resize", function () {
-      if (!isCompact() && shell.classList.contains("sidebar-open")) {
+    window.addEventListener('resize', function () {
+      if (!isCompact() && shell.classList.contains('sidebar-open')) {
         closeModal();
       }
     });
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
