@@ -221,8 +221,10 @@ function RangeToggle({
             onClick={() => onChange(opt)}
             aria-pressed={active}
             className={cn(
-              'rounded px-2.5 py-1 text-xs font-medium tabular-nums transition-colors',
-              active ? 'bg-accent text-white' : 'text-fg-muted hover:text-fg',
+              'rounded border px-2.5 py-1 text-xs font-medium tabular-nums transition-colors',
+              active
+                ? 'border-accent text-accent'
+                : 'border-transparent text-fg-muted hover:text-fg',
             )}
           >
             {t(`overview.activity.range.${opt}` as const)}
