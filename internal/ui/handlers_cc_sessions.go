@@ -32,24 +32,41 @@ type ccOverviewData struct {
 	Multi *services.CCStatsMultiResult
 }
 
-// handleCCOverviewPage serves GET /cc-overview — the usage charts + per-account
-// breakdown. The cc-usage-charts island fetches its own data from
-// /api/cc-sessions/stats; the server-rendered breakdown below the charts is
-// computed here via CCSessionsStatsMulti.
+// handleCCOverviewPage serves GET /cc-overview.
+// Dispatches on ?tab= to render the Overview (charts) or Sessions tab.
+// The cc-usage-charts island fetches its own data from /api/cc-sessions/stats;
+// the server-rendered breakdown below the charts is computed via CCSessionsStatsMulti.
 func handleCCOverviewPage(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
 		sidebarState := sidebarStateForRequest(r)
+		tab := r.URL.Query().Get("tab")
 
-		sources := ccsAccountSources(d)
-		multi, err := services.CCSessionsStatsMulti(sources)
-		if err != nil {
-			render(w, r, ErrorPartial("Failed to load Claude Code stats: "+err.Error()))
-			return
+		switch tab {
+		case "sessions":
+			params := ccsListParamsFromQuery(r)
+			sources := ccsAccountSources(d)
+			result, err := services.CCSessionsListMulti(sources, params)
+			if err != nil {
+				render(w, r, ErrorPartial("Failed to load Claude Code sessions: "+err.Error()))
+				return
+			}
+			if IsHTMX(r) {
+				render(w, r, CCSessionsTabPartial(result, params, lang))
+			} else {
+				renderDeps(w, r, d, CCSessionsTabPage(result, params, lang, theme, sidebarState))
+			}
+
+		default:
+			sources := ccsAccountSources(d)
+			multi, err := services.CCSessionsStatsMulti(sources)
+			if err != nil {
+				render(w, r, ErrorPartial("Failed to load Claude Code stats: "+err.Error()))
+				return
+			}
+			renderDeps(w, r, d, CCOverviewPage(multi, lang, theme, sidebarState))
 		}
-
-		renderDeps(w, r, d, CCOverviewPage(multi, lang, theme, sidebarState))
 	}
 }
 

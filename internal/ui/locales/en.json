@@ -891,6 +891,10 @@
     "byAccount": {
       "title": "Per-account breakdown",
       "total": "All accounts"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "sessions": "Sessions"
     }
   },
   "placeholder": {
