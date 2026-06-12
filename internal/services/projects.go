@@ -326,7 +326,7 @@ func TopicsList(db sqlite.Querier, p TopicsListParams) ([]TopicRow, error) {
 		FROM observations
 		` + where + `
 		GROUP BY topic_key, project
-		ORDER BY revisions DESC, obs_count DESC
+		ORDER BY last_updated DESC, obs_count DESC
 		LIMIT 500`
 	return queryRows(db, query, args, func(s scanner) (TopicRow, error) {
 		var t TopicRow

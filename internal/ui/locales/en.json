@@ -379,8 +379,8 @@
   },
   "prompts": {
     "title": "User prompts",
-    "description": "User prompts captured by Engram. Use the search box for FTS5 with snippet highlighting.",
-    "searchPlaceholder": "Search prompts (FTS5)…",
+    "description": "Your questions captured by Engram. Search to highlight matching snippets.",
+    "searchPlaceholder": "Search conversations…",
     "resultsFor": "Results for \"{{q}}\"",
     "recent": "Recent prompts",
     "matches": "{{count}} matches",
@@ -413,7 +413,7 @@
     "description": "Filter, search and inspect every observation in the local database.",
     "loaded": "{{count}} loaded",
     "loadError": "Failed to load observations: {{message}}",
-    "searchPlaceholder": "Full-text search title + content (FTS5)…",
+    "searchPlaceholder": "Search by title or content…",
     "filters": "Filters",
     "clear": "Clear",
     "labels": {

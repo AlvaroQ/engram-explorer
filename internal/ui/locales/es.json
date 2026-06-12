@@ -379,8 +379,8 @@
   },
   "prompts": {
     "title": "Prompts del usuario",
-    "description": "Prompts del usuario capturados por Engram. Usa la búsqueda para FTS5 con resaltado de fragmentos.",
-    "searchPlaceholder": "Buscar prompts (FTS5)…",
+    "description": "Tus preguntas capturadas por Engram. Busca para resaltar fragmentos coincidentes.",
+    "searchPlaceholder": "Buscar conversaciones…",
     "resultsFor": "Resultados de \"{{q}}\"",
     "recent": "Prompts recientes",
     "matches": "{{count}} coincidencias",
@@ -413,7 +413,7 @@
     "description": "Filtra, busca e inspecciona cada observación de la base de datos local.",
     "loaded": "{{count}} cargadas",
     "loadError": "Falló la carga de observaciones: {{message}}",
-    "searchPlaceholder": "Búsqueda de texto completo en título + contenido (FTS5)…",
+    "searchPlaceholder": "Buscar por título o contenido…",
     "filters": "Filtros",
     "clear": "Limpiar",
     "labels": {
