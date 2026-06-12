@@ -36,14 +36,14 @@ templ memoryTabBar(activeView string, lang string) {
 }
 
 // ObservationsPage renders the full page shell for the observations view.
-templ ObservationsPage(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang, theme, sidebarState string) {
-	@Layout(T(lang, "observations.title"), "observations", lang, theme, sidebarState, observationsContent(items, nextCursor, params, projects, lang))
+templ ObservationsPage(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang, theme, sidebarState string, advanced bool) {
+	@Layout(T(lang, "observations.title"), "observations", lang, theme, sidebarState, observationsContent(items, nextCursor, params, projects, lang, advanced))
 }
 
 // ObservationsPartial renders only the observations content (no HTML shell).
 // Used when HTMX requests a partial update.
-templ ObservationsPartial(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang string) {
-	@observationsContent(items, nextCursor, params, projects, lang)
+templ ObservationsPartial(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang string, advanced bool) {
+	@observationsContent(items, nextCursor, params, projects, lang, advanced)
 }
 
 // MemoryThreadsPage renders the full Memory page shell with the Threads tab active.
@@ -82,13 +82,45 @@ templ memoryConversationsContent(items []services.PromptRow, searchItems []servi
 	</div>
 }
 
+// advancedViewToggle renders the Advanced view toggle button for the Memories tab.
+// POSTs to /settings/advanced-view; HTMX triggers a full-page redirect to /observations.
+templ advancedViewToggle(advanced bool, lang string) {
+	<form
+		method="POST"
+		action="/settings/advanced-view"
+		class="flex items-center gap-2"
+		hx-post="/settings/advanced-view"
+		hx-swap="none"
+	>
+		<label class="flex items-center gap-1.5 cursor-pointer select-none text-xs text-fg-muted">
+			<input
+				type="hidden"
+				name="enabled"
+				value={ obsAdvancedNextVal(advanced) }
+			/>
+			<span
+				class={ "relative inline-block w-8 h-4 rounded-full transition-colors duration-200", templ.KV("bg-accent", advanced), templ.KV("bg-border", !advanced) }
+				aria-hidden="true"
+			>
+				<span
+					class={ "absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-surface transition-transform duration-200", templ.KV("translate-x-4", advanced) }
+				></span>
+			</span>
+			{ T(lang, "memory.advancedView.label") }
+		</label>
+	</form>
+}
+
 // observationsContent is the shared observations body.
-templ observationsContent(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang string) {
+templ observationsContent(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang string, advanced bool) {
 	<div class="flex flex-col gap-4">
 		@memoryTabBar("", lang)
-		<div class="page-header">
-			<h1>{ T(lang, "observations.title") }</h1>
-			<p>{ T(lang, "observations.description") }</p>
+		<div class="page-header flex items-start justify-between gap-4">
+			<div>
+				<h1>{ T(lang, "observations.title") }</h1>
+				<p>{ T(lang, "observations.description") }</p>
+			</div>
+			@advancedViewToggle(advanced, lang)
 		</div>
 		<!-- Filter bar -->
 		<div class="card filter-bar" id="obs-filter-bar">
@@ -195,7 +227,7 @@ templ observationsContent(items []services.ObservationRow, nextCursor *string, p
 					<p>{ T(lang, "observations.loaded", "count", fmt.Sprintf("%d", len(items))) }</p>
 				</div>
 				<div class="card-body p-0 overflow-auto" id="obs-table-container">
-					@ObservationsTablePartial(items, nextCursor, params, lang)
+					@ObservationsTablePartial(items, nextCursor, params, lang, advanced)
 				</div>
 			</div>
 			<!-- Detail aside (empty until a row is clicked) -->
@@ -221,7 +253,8 @@ templ observationsContent(items []services.ObservationRow, nextCursor *string, p
 
 // ObservationsTablePartial renders the full table with load-more.
 // This is the HTMX swap target for filter changes (replaces whole table content).
-templ ObservationsTablePartial(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, lang string) {
+// advanced gates the technical columns (Rev, Dup, Sync id).
+templ ObservationsTablePartial(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, lang string, advanced bool) {
 	if len(items) == 0 {
 		@EmptyState(T(lang, "observations.table.noMatch"))
 	} else {
@@ -234,12 +267,14 @@ templ ObservationsTablePartial(items []services.ObservationRow, nextCursor *stri
 					<th>{ T(lang, "observations.table.title") }</th>
 					<th>{ T(lang, "observations.table.tool") }</th>
 					<th>{ T(lang, "observations.table.topic") }</th>
-					<th>{ T(lang, "observations.table.rev") }</th>
-					<th>{ T(lang, "observations.table.dup") }</th>
+					if advanced {
+						<th>{ T(lang, "observations.table.rev") }</th>
+						<th>{ T(lang, "observations.table.dup") }</th>
+					}
 				</tr>
 			</thead>
 			<tbody id="obs-tbody">
-				@ObservationsRowsPartial(items, nextCursor, params, lang)
+				@ObservationsRowsPartial(items, nextCursor, params, lang, advanced)
 			</tbody>
 		</table>
 	}
@@ -247,17 +282,19 @@ templ ObservationsTablePartial(items []services.ObservationRow, nextCursor *stri
 
 // ObservationsRowsPartial renders only <tr> rows + optional load-more sentinel.
 // Used by hx-swap="beforeend" on load-more.
-templ ObservationsRowsPartial(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, lang string) {
+// advanced gates the technical columns (Rev, Dup, Sync id) in each row.
+templ ObservationsRowsPartial(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, lang string, advanced bool) {
 	for _, obs := range items {
-		@obsRow(obs, lang)
+		@obsRow(obs, lang, advanced)
 	}
 	if nextCursor != nil {
-		@obsLoadMoreRow(*nextCursor, params, lang)
+		@obsLoadMoreRow(*nextCursor, params, lang, advanced)
 	}
 }
 
 // obsRow renders a single observation table row.
-templ obsRow(obs services.ObservationRow, lang string) {
+// advanced gates the technical columns: Rev, Dup (sync_id is detail-only).
+templ obsRow(obs services.ObservationRow, lang string, advanced bool) {
 	<tr
 		data-obs-id={ fmt.Sprintf("%d", obs.ID) }
 		class="hover:bg-surface-2 cursor-pointer"
@@ -299,18 +336,21 @@ templ obsRow(obs services.ObservationRow, lang string) {
 				{ "—" }
 			}
 		</td>
-		<td class="text-xs text-fg-muted">{ fmt.Sprintf("%d", obsRevCount(obs)) }</td>
-		<td class="text-xs text-fg-muted">{ fmt.Sprintf("%d", obsDupCount(obs)) }</td>
+		if advanced {
+			<td class="text-xs text-fg-muted">{ fmt.Sprintf("%d", obsRevCount(obs)) }</td>
+			<td class="text-xs text-fg-muted">{ fmt.Sprintf("%d", obsDupCount(obs)) }</td>
+		}
 	</tr>
 }
 
 // obsLoadMoreRow renders the load-more sentinel row for cursor pagination.
-templ obsLoadMoreRow(cursor string, params services.ObservationListParams, lang string) {
+// colspan matches the visible column count: 6 base columns + 2 when advanced.
+templ obsLoadMoreRow(cursor string, params services.ObservationListParams, lang string, advanced bool) {
 	<tr id="obs-load-more-row">
-		<td colspan="8" class="px-4 py-3">
+		<td colspan={ obsColspan(advanced) } class="px-4 py-3">
 			<button
 				class="btn btn-secondary btn-sm"
-				hx-get={ obsNextURL(cursor, params) }
+				hx-get={ obsNextURL(cursor, params, advanced) }
 				hx-target="#obs-tbody"
 				hx-swap="beforeend"
 				hx-on::after-request="document.getElementById('obs-load-more-row')?.remove()"
@@ -489,11 +529,34 @@ func obsDupCount(obs services.ObservationRow) int64 {
 	return 0
 }
 
+// obsColspan returns the colspan value for the load-more sentinel row.
+// 6 base columns (date, project, type, title, tool, topic) + 2 when advanced (rev, dup).
+func obsColspan(advanced bool) string {
+	if advanced {
+		return "8"
+	}
+	return "6"
+}
+
+// obsAdvancedNextVal returns the value for the hidden "enabled" input in the toggle form.
+// The toggle sends the NEXT (flipped) value so a single submit flips the preference.
+func obsAdvancedNextVal(advanced bool) string {
+	if advanced {
+		return "false"
+	}
+	return "true"
+}
+
 // obsNextURL builds the load-more URL preserving all active filters + new cursor.
-func obsNextURL(cursor string, params services.ObservationListParams) string {
+// The advanced flag is encoded so appended rows render the SAME column set as the
+// already-rendered header, even if the per-profile preference changes mid-page.
+func obsNextURL(cursor string, params services.ObservationListParams, advanced bool) string {
 	v := url.Values{}
 	v.Set("cursor", cursor)
 	v.Set("append", "true")
+	if advanced {
+		v.Set("advanced", "true")
+	}
 	if params.Q != "" {
 		v.Set("q", params.Q)
 	}

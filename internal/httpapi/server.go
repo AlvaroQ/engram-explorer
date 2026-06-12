@@ -194,6 +194,9 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 				deps.AddCCAccount = buildAddCCAccountFn(reg, c.ProfileStore, c.Config.ConfigHome)
 				deps.UpdateCCAccount = buildUpdateCCAccountFn(c.ProfileStore, c.Config.ConfigHome)
 				deps.RemoveCCAccount = buildRemoveCCAccountFn(c.ProfileStore, c.Config.ConfigHome)
+				// Wire PR6b advanced-view per-profile preference.
+				deps.AdvancedView = buildAdvancedViewFn(c.ProfileStore, activeProfileName)
+				deps.SetAdvancedView = buildSetAdvancedViewFn(c.ProfileStore, activeProfileName, c.Config.ConfigHome)
 				// Thread demo mode into the UI layer.
 				deps.DemoMode = c.Config.DemoMode
 				ui.Mount(mux, deps)
@@ -242,6 +245,9 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 			AddCCAccount:    buildAddCCAccountFn(reg, c.ProfileStore, c.Config.ConfigHome),
 			UpdateCCAccount: buildUpdateCCAccountFn(c.ProfileStore, c.Config.ConfigHome),
 			RemoveCCAccount: buildRemoveCCAccountFn(c.ProfileStore, c.Config.ConfigHome),
+			// PR6b: advanced-view per-profile preference.
+			AdvancedView:    buildAdvancedViewFn(c.ProfileStore, activeProfileName),
+			SetAdvancedView: buildSetAdvancedViewFn(c.ProfileStore, activeProfileName, c.Config.ConfigHome),
 		})
 	}
 }
@@ -737,6 +743,46 @@ func buildRemoveCCAccountFn(store *config.ProfileStore, configHome string) func(
 			return fmt.Errorf("profile store not available")
 		}
 		return config.RemoveCCAccount(configHome, store, id)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// PR6b: Advanced view toggle — per-profile preference
+// ---------------------------------------------------------------------------
+
+// buildAdvancedViewFn returns a closure that reads the AdvancedView preference
+// from the active profile. Returns false when the store is nil or the profile
+// does not exist.
+func buildAdvancedViewFn(store *config.ProfileStore, activeProfileName *string) func() bool {
+	return func() bool {
+		if store == nil || activeProfileName == nil {
+			return false
+		}
+		p, ok := store.Profiles[*activeProfileName]
+		if !ok {
+			return false
+		}
+		return p.IsAdvancedView()
+	}
+}
+
+// buildSetAdvancedViewFn returns a closure that sets the AdvancedView preference
+// on the active profile and persists the change to config.json via SaveProfileStore.
+func buildSetAdvancedViewFn(store *config.ProfileStore, activeProfileName *string, configHome string) func(enabled bool) error {
+	return func(enabled bool) error {
+		if store == nil {
+			return fmt.Errorf("profile store not available")
+		}
+		if activeProfileName == nil {
+			return fmt.Errorf("active profile name pointer is nil")
+		}
+		profile, ok := store.Profiles[*activeProfileName]
+		if !ok {
+			return fmt.Errorf("active profile %q not found", *activeProfileName)
+		}
+		profile.Preferences.AdvancedView = enabled
+		store.Profiles[*activeProfileName] = profile
+		return config.SaveProfileStore(configHome, store)
 	}
 }
 

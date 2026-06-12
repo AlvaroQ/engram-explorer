@@ -9,6 +9,33 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/daemon"
 )
 
+// handleAdvancedViewPost serves POST /settings/advanced-view.
+// It sets the advanced-view preference on the active profile and redirects back
+// to /observations so the table re-renders with/without the technical columns.
+func handleAdvancedViewPost(d Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if d.SetAdvancedView == nil {
+			http.Error(w, "advanced view toggle not available", http.StatusServiceUnavailable)
+			return
+		}
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "bad form", http.StatusBadRequest)
+			return
+		}
+		enabled := r.FormValue("enabled") == "true"
+		if err := d.SetAdvancedView(enabled); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if IsHTMX(r) {
+			w.Header().Set("HX-Redirect", "/observations")
+			w.WriteHeader(http.StatusOK)
+		} else {
+			http.Redirect(w, r, "/observations", http.StatusSeeOther)
+		}
+	}
+}
+
 // handleModulesTogglePost serves POST /settings/modules/{id}/toggle.
 // It enables or disables the named provider via the ToggleModule callback
 // and redirects back to /settings.

@@ -288,3 +288,80 @@ func TestProfileStore_ProviderCfg(t *testing.T) {
 		t.Error("unknown provider: Enabled should be false")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// PR6b: ProfilePreferences.AdvancedView round-trip
+// ---------------------------------------------------------------------------
+
+// TestProfilePreferences_AdvancedView_RoundTrip verifies that Preferences.AdvancedView
+// survives a SaveProfileStore / LoadProfileStore cycle (JSON field "advancedView").
+func TestProfilePreferences_AdvancedView_RoundTrip(t *testing.T) {
+	dir := t.TempDir()
+
+	store := &config.ProfileStore{
+		Version:       1,
+		ActiveProfile: "default",
+		Profiles: map[string]config.Profile{
+			"default": {
+				Providers: map[string]config.ProviderConfig{
+					"engram": {Enabled: true, Path: "/a/engram.db"},
+				},
+				Preferences: config.ProfilePreferences{AdvancedView: true},
+			},
+		},
+	}
+
+	if err := config.SaveProfileStore(dir, store); err != nil {
+		t.Fatalf("SaveProfileStore: %v", err)
+	}
+
+	got, err := config.LoadProfileStore(dir)
+	if err != nil {
+		t.Fatalf("LoadProfileStore: %v", err)
+	}
+
+	def := got.Profiles["default"]
+	if !def.Preferences.AdvancedView {
+		t.Error("AdvancedView should be true after round-trip")
+	}
+	if !def.IsAdvancedView() {
+		t.Error("IsAdvancedView() should return true after round-trip")
+	}
+}
+
+// TestProfilePreferences_AdvancedView_DefaultsFalse verifies that a profile
+// without a "preferences" key in config.json (old files) unmarshal with AdvancedView=false.
+func TestProfilePreferences_AdvancedView_DefaultsFalse(t *testing.T) {
+	dir := t.TempDir()
+
+	// A store WITHOUT the preferences field (zero value).
+	store := &config.ProfileStore{
+		Version:       1,
+		ActiveProfile: "default",
+		Profiles: map[string]config.Profile{
+			"default": {
+				Providers: map[string]config.ProviderConfig{
+					"engram": {Enabled: true, Path: "/b/engram.db"},
+				},
+				// Preferences intentionally omitted — defaults to false.
+			},
+		},
+	}
+
+	if err := config.SaveProfileStore(dir, store); err != nil {
+		t.Fatalf("SaveProfileStore: %v", err)
+	}
+
+	got, err := config.LoadProfileStore(dir)
+	if err != nil {
+		t.Fatalf("LoadProfileStore: %v", err)
+	}
+
+	def := got.Profiles["default"]
+	if def.Preferences.AdvancedView {
+		t.Error("AdvancedView should default to false when not set")
+	}
+	if def.IsAdvancedView() {
+		t.Error("IsAdvancedView() should return false when not set")
+	}
+}

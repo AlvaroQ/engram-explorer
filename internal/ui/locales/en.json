@@ -403,6 +403,9 @@
       "memories": "Memories",
       "threads": "Threads",
       "conversations": "Conversations"
+    },
+    "advancedView": {
+      "label": "Advanced view"
     }
   },
   "observations": {
