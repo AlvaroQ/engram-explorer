@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"github.com/AlvaroQ/engram-explorer/internal/services"
@@ -219,29 +218,13 @@ func ccsPromptOneLine(s string) string {
 	return strings.Join(strings.Fields(s), " ")
 }
 
-// ccsAttachTags are IDE wrapper tags that mean the user attached file or editor
-// context to the prompt. In the list these segments are dropped from the preview
-// and replaced by a paperclip, so the row shows the user's actual message.
-var ccsAttachTags = []string{"ide_opened_file", "ide_selection", "ide_diagnostics"}
-
-// ccsAttachRe holds one compiled matcher per attach tag. RE2 has no
-// backreferences, so each tag gets its own paired <tag ...>...</tag> pattern,
-// non-greedy and dot-matches-newline (?s) so multi-line blocks are removed whole.
-var ccsAttachRe = buildCCSAttachRe()
-
-func buildCCSAttachRe() []*regexp.Regexp {
-	res := make([]*regexp.Regexp, 0, len(ccsAttachTags))
-	for _, tag := range ccsAttachTags {
-		res = append(res, regexp.MustCompile(`(?s)<`+tag+`\b[^>]*>.*?</`+tag+`>`))
-	}
-	return res
-}
-
-// ccsStripAttachments removes IDE attachment segments from a prompt and reports
-// whether any were present. Whitespace in the result is collapsed to one line.
+// ccsStripAttachments removes all marker segments from a prompt and reports
+// whether any were present. It delegates to the canonical ccsMarkerReList (defined
+// in cc_sessions_detail.templ) so the list and detail views share the same tag set.
+// Whitespace in the result is collapsed to one line.
 func ccsStripAttachments(s string) (string, bool) {
 	found := false
-	for _, re := range ccsAttachRe {
+	for _, re := range ccsMarkerReList {
 		if re.MatchString(s) {
 			found = true
 			s = re.ReplaceAllString(s, " ")

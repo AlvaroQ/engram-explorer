@@ -1,7 +1,7 @@
 {
   "nav": {
     "engram": "Engram",
-    "overview": "Inicio",
+    "overview": "Resumen",
     "observations": "Memoria",
     "sessions": "Sesiones",
     "prompts": "Prompts",
@@ -40,7 +40,7 @@
     "subtitle": "Panel local",
     "groupEngram": "Engram",
     "groupClaudeCode": "Claude Code",
-    "overview": "Inicio",
+    "overview": "Resumen",
     "knowledge": "Grafo de conocimiento",
     "projects": "Proyectos",
     "observations": "Memoria",
