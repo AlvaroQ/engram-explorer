@@ -61,17 +61,17 @@ templ SyncProjectsPartial(resp services.SyncProjectsResponse, caps services.Clou
 			<div class="global-target-card">
 				<h3>Global Target</h3>
 				<dl>
-					<dt>Target Key</dt><dd>{ resp.GlobalTarget.TargetKey }</dd>
+					<div class="gt-stat"><dt>Target Key</dt><dd>{ resp.GlobalTarget.TargetKey }</dd></div>
 					if resp.GlobalTarget.Lifecycle != nil {
-						<dt>Lifecycle</dt><dd>{ *resp.GlobalTarget.Lifecycle }</dd>
+						<div class="gt-stat"><dt>Lifecycle</dt><dd>{ *resp.GlobalTarget.Lifecycle }</dd></div>
 					}
 					if resp.GlobalTarget.LastEnqueuedSeq != nil {
-						<dt>Last Enqueued Seq</dt><dd>{ fmt.Sprintf("%d", *resp.GlobalTarget.LastEnqueuedSeq) }</dd>
+						<div class="gt-stat"><dt>Last Enqueued Seq</dt><dd>{ fmt.Sprintf("%d", *resp.GlobalTarget.LastEnqueuedSeq) }</dd></div>
 					}
 					if resp.GlobalTarget.LastAckedSeq != nil {
-						<dt>Last Acked Seq</dt><dd>{ fmt.Sprintf("%d", *resp.GlobalTarget.LastAckedSeq) }</dd>
+						<div class="gt-stat"><dt>Last Acked Seq</dt><dd>{ fmt.Sprintf("%d", *resp.GlobalTarget.LastAckedSeq) }</dd></div>
 					}
-					<dt>Pending Mutations</dt><dd>{ fmt.Sprintf("%d", resp.GlobalTarget.PendingMutations) }</dd>
+					<div class="gt-stat"><dt>Pending Mutations</dt><dd>{ fmt.Sprintf("%d", resp.GlobalTarget.PendingMutations) }</dd></div>
 				</dl>
 			</div>
 		}

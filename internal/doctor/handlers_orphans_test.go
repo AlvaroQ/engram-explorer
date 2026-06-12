@@ -119,7 +119,7 @@ func seedOrphanSession(t *testing.T, db *sql.DB) string {
 // Phase 1.1: Template render tests (RED until handlers exist)
 // ---------------------------------------------------------------------------
 
-// TestOrphansRedirect verifies GET /doctor/orphans returns a 301 redirect to
+// TestOrphansRedirect verifies GET /doctor/orphans returns a 303 redirect to
 // /settings/maintenance#unassigned (PR4 consolidation).
 func TestOrphansRedirect(t *testing.T) {
 	mux := http.NewServeMux()
@@ -129,8 +129,8 @@ func TestOrphansRedirect(t *testing.T) {
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
-	if w.Code != http.StatusMovedPermanently {
-		t.Fatalf("expected 301 redirect, got %d; body: %s", w.Code, w.Body.String())
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 redirect, got %d; body: %s", w.Code, w.Body.String())
 	}
 	loc := w.Header().Get("Location")
 	if loc != "/settings/maintenance#unassigned" {
