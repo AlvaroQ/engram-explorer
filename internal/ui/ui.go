@@ -101,6 +101,14 @@ type Deps struct {
 	// RemoveCCAccount removes the CC account with the given id from the store.
 	// Returns an error if it is the last remaining account.
 	RemoveCCAccount func(id string) error
+
+	// AdvancedView, when non-nil, returns whether the active profile has the
+	// advanced-view preference enabled. When nil, advanced view defaults to false.
+	AdvancedView func() bool
+
+	// SetAdvancedView persists the advanced-view preference to the active
+	// profile in config.json. When nil, the toggle endpoint returns 503.
+	SetAdvancedView func(enabled bool) error
 }
 
 // ---------------------------------------------------------------------------
@@ -294,6 +302,9 @@ func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 	mux.HandleFunc("POST /settings/nav-visibility", handleNavVisibilityPost())
 	mux.HandleFunc("POST /theme", handleThemePost())
 	mux.HandleFunc("POST /lang", handleLangPost())
+
+	// Settings → Advanced view toggle (PR6b).
+	mux.HandleFunc("POST /settings/advanced-view", handleAdvancedViewPost(d))
 
 	// Settings → Modules routes (WU-8).
 	mux.HandleFunc("POST /settings/modules/{id}/toggle", handleModulesTogglePost(d))

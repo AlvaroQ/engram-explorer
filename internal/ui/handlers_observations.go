@@ -120,6 +120,7 @@ func handleObservationsPage(d Deps) http.HandlerFunc {
 			}
 
 		default:
+			advanced := d.AdvancedView != nil && d.AdvancedView()
 			params := observationListParamsFromQuery(r)
 			items, nextCursor, err := loadObservations(d, params)
 			if err != nil {
@@ -128,9 +129,9 @@ func handleObservationsPage(d Deps) http.HandlerFunc {
 			}
 			projects := loadProjectNames(d)
 			if IsHTMX(r) {
-				render(w, r, ObservationsPartial(items, nextCursor, params, projects, lang))
+				render(w, r, ObservationsPartial(items, nextCursor, params, projects, lang, advanced))
 			} else {
-				renderDeps(w, r, d, ObservationsPage(items, nextCursor, params, projects, lang, theme, sidebarState))
+				renderDeps(w, r, d, ObservationsPage(items, nextCursor, params, projects, lang, theme, sidebarState, advanced))
 			}
 		}
 	}
@@ -141,6 +142,13 @@ func handleObservationsPage(d Deps) http.HandlerFunc {
 func handleObservationsListPartial(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lang := langForRequest(r)
+		// The load-more URL carries the column mode that was in effect when the
+		// page rendered; honour it so appended rows match the existing header.
+		// Filter-change requests omit it and fall back to the live preference.
+		advanced := d.AdvancedView != nil && d.AdvancedView()
+		if r.URL.Query().Has("advanced") {
+			advanced = r.URL.Query().Get("advanced") == "true"
+		}
 		params := observationListParamsFromQuery(r)
 
 		items, nextCursor, err := loadObservations(d, params)
@@ -151,9 +159,9 @@ func handleObservationsListPartial(d Deps) http.HandlerFunc {
 
 		// append=true signals load-more: only emit new rows (no wrapper or filter controls).
 		if r.URL.Query().Get("append") == "true" {
-			render(w, r, ObservationsRowsPartial(items, nextCursor, params, lang))
+			render(w, r, ObservationsRowsPartial(items, nextCursor, params, lang, advanced))
 		} else {
-			render(w, r, ObservationsTablePartial(items, nextCursor, params, lang))
+			render(w, r, ObservationsTablePartial(items, nextCursor, params, lang, advanced))
 		}
 	}
 }

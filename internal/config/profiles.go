@@ -27,11 +27,29 @@ type ProviderConfig struct {
 	DaemonURL string `json:"daemonUrl,omitempty"`
 }
 
+// ProfilePreferences holds per-profile UI preference flags. It is an
+// extensible struct: new fields use omitempty so old config.json files that
+// lack the "preferences" key unmarshal to the zero value (all booleans false).
+type ProfilePreferences struct {
+	// AdvancedView, when true, shows technical columns (Rev, Dup, Sync id) in
+	// the observations table. Defaults to false so casual users see a clean table.
+	AdvancedView bool `json:"advancedView,omitempty"`
+}
+
 // Profile holds the provider settings for one named profile. It satisfies the
 // providers.Profile interface via the ProviderCfg method.
 type Profile struct {
 	// Providers maps a provider ID (e.g. "engram", "cc-sessions") to its config.
 	Providers map[string]ProviderConfig `json:"providers,omitempty"`
+
+	// Preferences holds per-profile UI flags. The zero value is valid (all off).
+	Preferences ProfilePreferences `json:"preferences,omitempty"`
+}
+
+// IsAdvancedView is a convenience helper that reads the AdvancedView preference
+// from the profile, returning false when Preferences is zero-valued.
+func (p Profile) IsAdvancedView() bool {
+	return p.Preferences.AdvancedView
 }
 
 // ProviderCfg returns the ProviderConfig for the named provider. Unknown
