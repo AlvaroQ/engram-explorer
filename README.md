@@ -390,10 +390,3 @@ engram-explorer/
 ## 📄 License
 
 MIT — see [LICENSE](./LICENSE).
-
-<div align="center">
-<br />
-Built with care on top of <a href="https://github.com/Gentleman-Programming/engram">Engram</a> by Gentleman Programming.
-<br /><br />
-<sub>If Engram Explorer helps you understand your agent's memory, consider giving it a ⭐</sub>
-</div>
