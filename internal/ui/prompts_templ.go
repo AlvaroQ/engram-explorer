@@ -148,7 +148,7 @@ func promptsContent(items []services.PromptRow, searchItems []services.PromptWit
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" hx-get=\"/prompts/list\" hx-trigger=\"keyup changed delay:300ms\" hx-target=\"#prompts-list-container\" hx-include=\"[name='q']\"></div></div></div><div class=\"card\"><div class=\"card-header\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" hx-get=\"/prompts/list\" hx-trigger=\"keyup changed delay:300ms\" hx-target=\"#prompts-list-container\" hx-include=\"[name='q']\"></div></div></div><div class=\"card\"><div class=\"card-header card-header-flex\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -189,20 +189,20 @@ func promptsContent(items []services.PromptRow, searchItems []services.PromptWit
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<span class=\"count-pill\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(T(lang, "prompts.matches", "count", fmt.Sprintf("%d", promptsCount(items, searchItems, query))))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/prompts.templ`, Line: 50, Col: 104}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/prompts.templ`, Line: 50, Col: 126}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</p></div><div class=\"card-body\" id=\"prompts-list-container\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</span></div><div class=\"card-body\" id=\"prompts-list-container\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

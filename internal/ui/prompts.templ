@@ -41,13 +41,13 @@ templ promptsContent(items []services.PromptRow, searchItems []services.PromptWi
 			</div>
 		</div>
 		<div class="card">
-			<div class="card-header">
+			<div class="card-header card-header-flex">
 				if query != "" {
 					<h2>{ T(lang, "prompts.resultsFor", "q", query) }</h2>
 				} else {
 					<h2>{ T(lang, "prompts.recent") }</h2>
 				}
-				<p>{ T(lang, "prompts.matches", "count", fmt.Sprintf("%d", promptsCount(items, searchItems, query))) }</p>
+				<span class="count-pill">{ T(lang, "prompts.matches", "count", fmt.Sprintf("%d", promptsCount(items, searchItems, query))) }</span>
 			</div>
 			<div class="card-body" id="prompts-list-container">
 				@PromptsListPartialContent(items, searchItems, query, lang)
