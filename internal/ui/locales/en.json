@@ -1,7 +1,7 @@
 {
   "nav": {
     "engram": "Engram",
-    "overview": "Home",
+    "overview": "Overview",
     "observations": "Memory",
     "sessions": "Sessions",
     "prompts": "Prompts",
@@ -40,7 +40,7 @@
     "subtitle": "Local Dashboard",
     "groupEngram": "Engram",
     "groupClaudeCode": "Claude Code",
-    "overview": "Home",
+    "overview": "Overview",
     "knowledge": "Knowledge Graph",
     "projects": "Projects",
     "observations": "Memory",

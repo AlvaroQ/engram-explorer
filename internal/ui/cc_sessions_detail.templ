@@ -3,6 +3,8 @@ package ui
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/AlvaroQ/engram-explorer/internal/services"
@@ -131,11 +133,7 @@ templ ccsTurns(turns []services.CCTurn, lang string) {
 					</summary>
 					<div class="timeline-event-body">
 						if turn.Text != "" {
-							if tag, ok := ccsAttachment(turn.Text); ok {
-								@ccsAttachChip(tag, turn.Text)
-							} else {
-								<pre class="event-content" data-cc-block="text">{ turn.Text }</pre>
-							}
+							@ccsRenderTextSegments(turn.Text)
 						} else {
 							@ccsTurnBlocks(turn.Blocks)
 						}
@@ -146,17 +144,25 @@ templ ccsTurns(turns []services.CCTurn, lang string) {
 	}
 }
 
+// ccsRenderTextSegments splits text into marker/plain segments and renders each
+// appropriately: markers become compact chips, plain text is shown as a <pre>.
+templ ccsRenderTextSegments(text string) {
+	for _, seg := range ccsSplitMarkers(text) {
+		if seg.IsMarker {
+			@ccsAttachChip(seg.Tag, seg.Text)
+		} else {
+			<pre class="event-content" data-cc-block="text">{ seg.Text }</pre>
+		}
+	}
+}
+
 // ccsTurnBlocks renders the structured blocks of a turn.
 templ ccsTurnBlocks(blocks []services.CCMessageBlock) {
 	<div class="cc-blocks">
 		for _, b := range blocks {
 			switch b.Type {
 				case "text":
-					if tag, ok := ccsAttachment(b.Text); ok {
-						@ccsAttachChip(tag, b.Text)
-					} else {
-						<pre class="event-content" data-cc-block="text">{ b.Text }</pre>
-					}
+					@ccsRenderTextSegments(b.Text)
 				case "tool_use":
 					<details class="cc-tool-block" data-cc-block="tool">
 						<summary class="cc-tool-summary">
@@ -212,23 +218,110 @@ templ ccsPaperclip() {
 // Helper functions for detail
 // ---------------------------------------------------------------------------
 
-// ccsMarkerTags are wrapper tags injected by the harness/IDE that arrive as
-// their own text block in the transcript and are better shown as a compact
-// attachment chip than as a raw block.
+// ccsMarkerTags is the canonical list of IDE/harness wrapper tags injected into
+// Claude Code session transcripts. Both the detail view and the list view use
+// this single source of truth for stripping and chip rendering.
 var ccsMarkerTags = []string{
 	"ide_opened_file",
 	"ide_selection",
 	"ide_diagnostics",
 	"system-reminder",
+	"local-command-caveat",
 	"command-name",
 	"command-message",
 	"command-args",
 	"local-command-stdout",
 }
 
+// ccsMarkerReList holds one compiled regexp per marker tag. RE2 (Go's regexp
+// engine) has no backreferences, so we cannot write a single pattern like
+// <(tag1|tag2)>.*?</\1>. Instead we compile one (?s)<tag\b[^>]*>.*?</tag>
+// per tag, then merge and sort the match spans at runtime to handle overlaps.
+var ccsMarkerReList = buildCCSMarkerReList()
+
+func buildCCSMarkerReList() []*regexp.Regexp {
+	res := make([]*regexp.Regexp, 0, len(ccsMarkerTags))
+	for _, tag := range ccsMarkerTags {
+		res = append(res, regexp.MustCompile(`(?s)<`+tag+`\b[^>]*>.*?</`+tag+`>`))
+	}
+	return res
+}
+
+// ccsSegment is one piece of a split transcript string.
+type ccsSegment struct {
+	IsMarker bool   // true → marker chip; false → plain text
+	Tag      string // tag name when IsMarker
+	Text     string // full marker text (IsMarker) or plain text (!IsMarker)
+}
+
+// markerSpan records the position and tag of one matched marker in a string.
+type markerSpan struct {
+	start, end int
+	tag        string
+}
+
+// ccsSplitMarkers splits s into an ordered sequence of plain-text and marker
+// segments. Marker spans are found by running each tag's regexp and collecting
+// [start,end,tag] tuples; overlapping spans are dropped (first/leftmost wins).
+// Plain-text segments that are whitespace-only are omitted.
+func ccsSplitMarkers(s string) []ccsSegment {
+	// Collect all marker spans across all tags.
+	var spans []markerSpan
+	for i, re := range ccsMarkerReList {
+		for _, loc := range re.FindAllStringIndex(s, -1) {
+			spans = append(spans, markerSpan{start: loc[0], end: loc[1], tag: ccsMarkerTags[i]})
+		}
+	}
+	if len(spans) == 0 {
+		// No markers: single plain-text segment.
+		return []ccsSegment{{IsMarker: false, Text: s}}
+	}
+
+	// Sort by start position; on tie keep the longer span (greedy).
+	sort.Slice(spans, func(i, j int) bool {
+		if spans[i].start != spans[j].start {
+			return spans[i].start < spans[j].start
+		}
+		return spans[i].end > spans[j].end
+	})
+
+	// Remove overlapping spans: keep a span only if its start is >= the end
+	// of the last kept span.
+	kept := spans[:0]
+	cursor := 0
+	for _, sp := range spans {
+		if sp.start >= cursor {
+			kept = append(kept, sp)
+			cursor = sp.end
+		}
+	}
+	spans = kept
+
+	// Walk the string emitting segments.
+	var out []ccsSegment
+	pos := 0
+	for _, sp := range spans {
+		if pos < sp.start {
+			plain := s[pos:sp.start]
+			if strings.TrimSpace(plain) != "" {
+				out = append(out, ccsSegment{IsMarker: false, Text: plain})
+			}
+		}
+		out = append(out, ccsSegment{IsMarker: true, Tag: sp.tag, Text: s[sp.start:sp.end]})
+		pos = sp.end
+	}
+	if pos < len(s) {
+		plain := s[pos:]
+		if strings.TrimSpace(plain) != "" {
+			out = append(out, ccsSegment{IsMarker: false, Text: plain})
+		}
+	}
+	return out
+}
+
 // ccsAttachment reports whether text is a single wrapped marker block and, if so,
-// returns the tag name for the chip label. Detection = the trimmed text opens
-// with "<tag>" or "<tag ..." (markers wrap their whole content from the start).
+// returns the tag name for the chip label. Used for the all-or-nothing fast path
+// (e.g. list view first-prompt detection).
 func ccsAttachment(text string) (string, bool) {
 	t := strings.TrimSpace(text)
 	for _, tag := range ccsMarkerTags {
@@ -265,10 +358,7 @@ func ccsFirstUserPrompt(turns []services.CCTurn) string {
 		if text == "" {
 			continue
 		}
-		if _, isMarker := ccsAttachment(text); isMarker {
-			continue
-		}
-		if clean, _ := ccsStripAttachments(text); strings.TrimSpace(clean) != "" {
+		if clean := ccsPlainFromSegments(ccsSplitMarkers(text)); clean != "" {
 			return clean
 		}
 	}
@@ -284,22 +374,26 @@ func ccsTurnBadgeClass(role string) string {
 }
 
 // ccsTurnPreview returns a short preview of a turn for the summary line.
+// Marker segments are stripped; only plain-text segments are shown. If the
+// entire text consists of markers, the attachment label is returned instead.
 func ccsTurnPreview(turn services.CCTurn) string {
 	if turn.Text != "" {
-		if tag, ok := ccsAttachment(turn.Text); ok {
-			return "📎 " + tag
+		plain := ccsPlainFromSegments(ccsSplitMarkers(turn.Text))
+		if plain == "" {
+			return "📎 attachment"
 		}
-		return ccsPromptPreview(turn.Text)
+		return ccsPromptPreview(plain)
 	}
 	// Summarise blocks.
 	var parts []string
 	for _, b := range turn.Blocks {
 		switch b.Type {
 		case "text":
-			if tag, ok := ccsAttachment(b.Text); ok {
-				parts = append(parts, "📎 "+tag)
+			plain := ccsPlainFromSegments(ccsSplitMarkers(b.Text))
+			if plain != "" {
+				parts = append(parts, ccsPromptPreview(plain))
 			} else if b.Text != "" {
-				parts = append(parts, ccsPromptPreview(b.Text))
+				parts = append(parts, "📎 attachment")
 			}
 		case "tool_use":
 			parts = append(parts, "⚙ "+b.Name)
@@ -318,6 +412,17 @@ func ccsTurnPreview(turn services.CCTurn) string {
 		return string(runes[:100]) + "…"
 	}
 	return s
+}
+
+// ccsPlainFromSegments joins plain-text segments into a single normalised string.
+func ccsPlainFromSegments(segs []ccsSegment) string {
+	var parts []string
+	for _, seg := range segs {
+		if !seg.IsMarker {
+			parts = append(parts, seg.Text)
+		}
+	}
+	return strings.Join(strings.Fields(strings.Join(parts, " ")), " ")
 }
 
 // ccsShortTimestamp returns just the time portion of an ISO 8601 timestamp.
