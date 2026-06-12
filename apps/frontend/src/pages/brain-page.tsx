@@ -26,6 +26,7 @@ import { useTranslation } from 'react-i18next';
 import { X, Search } from 'lucide-react';
 import { api, type GraphNode } from '../lib/api.ts';
 import { computeNodeKeywords } from '../lib/tfidf.ts';
+import { isWebGLAvailable } from '../lib/webgl.ts';
 import { Card, CardBody } from '../components/ui/card.tsx';
 import { ErrorBoundary } from '../components/ui/error-boundary.tsx';
 import { Skeleton } from '../components/ui/skeleton.tsx';
@@ -35,6 +36,7 @@ import { AccessibleNodeList } from '../components/brain/accessible-node-list.tsx
 import { NodeDetailPanel } from '../components/brain/node-detail-panel.tsx';
 import { ProjectRail, type ProjectRailItem } from '../components/brain/project-rail.tsx';
 import { KnowledgeSpotlight } from '../components/brain/knowledge-spotlight.tsx';
+import { WebGLUnavailableDialog } from '../components/brain/webgl-unavailable-dialog.tsx';
 import {
   buildHexPalette,
   nodeColor,
@@ -194,6 +196,27 @@ export function BrainPage(): JSX.Element {
   // tab click and the graph appearing (query → lazy chunk → worker layout).
   const [graphReady, setGraphReady] = useState(false);
   const handleGraphReady = useCallback(() => setGraphReady(true), []);
+
+  // WebGL availability — probed once on mount. When Chrome's "Use graphics
+  // acceleration when available" is disabled, the browser may refuse to create a
+  // WebGL context, so the R3F <Canvas> can never render. We detect that up-front
+  // to show an actionable message (and skip lazy-loading the heavy three.js chunk)
+  // instead of a blank canvas behind a perpetual loading overlay.
+  const [webglAvailable] = useState(() => isWebGLAvailable());
+
+  // When WebGL is unavailable the canvas is never mounted, so the layout worker
+  // never posts positions and onReady never fires. Mark the graph "ready" right
+  // away so the loading overlay dismisses immediately instead of spinning until
+  // the 12s safety timeout below.
+  useEffect(() => {
+    if (!webglAvailable) setGraphReady(true);
+  }, [webglAvailable]);
+
+  // Auto-open the "enable hardware acceleration" dialog when WebGL can't start.
+  // Dismissible — closing it leaves the inline placeholder + ⌘K spotlight usable.
+  const [webglDialogDismissed, setWebglDialogDismissed] = useState(false);
+  const webglDialogOpen = !webglAvailable && !webglDialogDismissed;
+  const handleCloseWebglDialog = useCallback(() => setWebglDialogDismissed(true), []);
 
   // Fetch the full graph.
   const { data, isLoading, error, refetch } = useQuery({
@@ -511,31 +534,45 @@ export function BrainPage(): JSX.Element {
                     edges: data.edges.length,
                   })}
                 >
-                  <ErrorBoundary
-                    fallback={
-                      <div className="flex h-full w-full items-center justify-center text-sm text-fg-muted">
-                        {t('brain.graphError')}
-                      </div>
-                    }
-                  >
-                    <Suspense fallback={<Skeleton className="h-full w-full" />}>
-                      <GraphScene
-                        nodes={data.nodes}
-                        edges={data.edges}
-                        colorBy={colorBy}
-                        animate
-                        onNodeClick={handleNodeSelect}
-                        onNodeHover={handleNodeHover}
-                        selected={focusNode}
-                        hovered={hoverNode}
-                        detailOpen={detailNode !== null}
-                        matchedIds={matchedIds}
-                        focusNodeId={focusNode?.id ?? null}
-                        onUserCameraStart={handleCloseDetail}
-                        onReady={handleGraphReady}
-                      />
-                    </Suspense>
-                  </ErrorBoundary>
+                  {webglAvailable ? (
+                    <ErrorBoundary
+                      fallback={
+                        <div className="flex h-full w-full items-center justify-center text-sm text-fg-muted">
+                          {t('brain.graphError')}
+                        </div>
+                      }
+                    >
+                      <Suspense fallback={<Skeleton className="h-full w-full" />}>
+                        <GraphScene
+                          nodes={data.nodes}
+                          edges={data.edges}
+                          colorBy={colorBy}
+                          animate
+                          onNodeClick={handleNodeSelect}
+                          onNodeHover={handleNodeHover}
+                          selected={focusNode}
+                          hovered={hoverNode}
+                          detailOpen={detailNode !== null}
+                          matchedIds={matchedIds}
+                          focusNodeId={focusNode?.id ?? null}
+                          onUserCameraStart={handleCloseDetail}
+                          onReady={handleGraphReady}
+                        />
+                      </Suspense>
+                    </ErrorBoundary>
+                  ) : (
+                    // WebGL unavailable (e.g. Chrome hardware acceleration off).
+                    // The 3D canvas can't render; show how to fix it. The spotlight
+                    // (⌘K), project rails and the accessible node list below still work.
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-6 text-center">
+                      <p className="text-base font-medium text-fg">
+                        {t('brain.webglUnavailableTitle')}
+                      </p>
+                      <p className="max-w-md text-sm text-fg-muted">
+                        {t('brain.webglUnavailableHint')}
+                      </p>
+                    </div>
+                  )}
 
                   {/* Screen-reader / keyboard fallback for the WebGL canvas */}
                   <AccessibleNodeList
@@ -617,6 +654,11 @@ export function BrainPage(): JSX.Element {
               onSelectNode={handleNodeSelect}
               onNavigate={handleNavigate}
             />
+
+            {/* WebGL unavailable — modal telling the user to enable hardware
+                acceleration. Mounted unconditionally so it shows even on an empty
+                graph; self-gates on its `open` prop. */}
+            <WebGLUnavailableDialog open={webglDialogOpen} onClose={handleCloseWebglDialog} />
 
             {/* Unified loading animation — covers the whole "tab clicked → nodes
                 visible" gap: the graph query loading AND the force-layout worker
