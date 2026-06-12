@@ -80,7 +80,7 @@ templ TopicsTable(topics []services.TopicRow, lang string) {
 						</td>
 						<td class="muted">
 							if t.Project != nil && *t.Project != "" {
-								{ *t.Project }
+								<span class="badge badge-neutral">{ *t.Project }</span>
 							} else {
 								{ T(lang, "common.noProject") }
 							}
