@@ -60,10 +60,18 @@ func handleCCOverviewPage(d Deps) http.HandlerFunc {
 
 		default:
 			sources := ccsAccountSources(d)
-			multi, err := services.CCSessionsStatsMulti(sources)
-			if err != nil {
-				render(w, r, ErrorPartial("Failed to load Claude Code stats: "+err.Error()))
-				return
+			// The per-account breakdown only renders with >1 account, and
+			// CCSessionsStatsMulti is expensive (it scans every session .jsonl).
+			// Skip it for single-account installs so the page paints immediately
+			// instead of feeling like the click did nothing.
+			var multi *services.CCStatsMultiResult
+			if len(sources) > 1 {
+				m, err := services.CCSessionsStatsMulti(sources)
+				if err != nil {
+					render(w, r, ErrorPartial("Failed to load Claude Code stats: "+err.Error()))
+					return
+				}
+				multi = m
 			}
 			renderDeps(w, r, d, CCOverviewPage(multi, lang, theme, sidebarState))
 		}
