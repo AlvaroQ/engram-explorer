@@ -163,7 +163,7 @@ func seedObservationForProject(t *testing.T, db *sql.DB, project string) {
 // Phase 2.1: Template render tests (RED until sync templates + handlers exist)
 // ---------------------------------------------------------------------------
 
-// TestSyncRedirect verifies GET /doctor/sync returns a 301 redirect to
+// TestSyncRedirect verifies GET /doctor/sync returns a 303 redirect to
 // /settings/maintenance#cloud (PR4 consolidation).
 func TestSyncRedirect(t *testing.T) {
 	mux := http.NewServeMux()
@@ -173,8 +173,8 @@ func TestSyncRedirect(t *testing.T) {
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
-	if w.Code != http.StatusMovedPermanently {
-		t.Fatalf("expected 301 redirect, got %d; body: %s", w.Code, w.Body.String())
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 redirect, got %d; body: %s", w.Code, w.Body.String())
 	}
 	loc := w.Header().Get("Location")
 	if loc != "/settings/maintenance#cloud" {

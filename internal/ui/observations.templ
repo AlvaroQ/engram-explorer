@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
@@ -92,12 +93,11 @@ templ advancedViewToggle(advanced bool, lang string) {
 		hx-post="/settings/advanced-view"
 		hx-swap="none"
 	>
-		<label class="flex items-center gap-1.5 cursor-pointer select-none text-xs text-fg-muted">
-			<input
-				type="hidden"
-				name="enabled"
-				value={ obsAdvancedNextVal(advanced) }
-			/>
+		<input type="hidden" name="enabled" value={ obsAdvancedNextVal(advanced) }/>
+		<button
+			type="submit"
+			class="flex items-center gap-1.5 cursor-pointer select-none text-xs text-fg-muted bg-transparent border-none p-0 font-inherit"
+		>
 			<span
 				class={ "relative inline-block w-8 h-4 rounded-full transition-colors duration-200", templ.KV("bg-accent", advanced), templ.KV("bg-border", !advanced) }
 				aria-hidden="true"
@@ -107,7 +107,7 @@ templ advancedViewToggle(advanced bool, lang string) {
 				></span>
 			</span>
 			{ T(lang, "memory.advancedView.label") }
-		</label>
+		</button>
 	</form>
 }
 
@@ -141,81 +141,86 @@ templ observationsContent(items []services.ObservationRow, nextCursor *string, p
 						hx-push-url="true"
 					/>
 				</div>
-				<!-- Additional filters (always shown) -->
-				<form
-					id="obs-filters"
-					hx-get="/observations/list"
-					hx-trigger="change"
-					hx-target="#obs-table-container"
-					hx-include="#obs-q"
-					hx-push-url="true"
-					class="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2 lg:grid-cols-3"
-				>
-					<!-- Project multi-select (checkboxes in a scrollable box) -->
-					<div class="flex flex-col gap-1">
-						<label class="filter-label">{ T(lang, "observations.labels.project") }</label>
-						<div class="input overflow-y-auto" style="max-height:120px">
-							for _, p := range projects {
-								<label class="flex items-center gap-2 py-0.5 text-xs">
-									<input
-										type="checkbox"
-										name="project"
-										value={ p }
-										checked?={ obsContains(params.Projects, p) }
-									/>
-									{ p }
-								</label>
-							}
+				<!-- Additional filters (collapsed by default) -->
+				<details class="obs-filters-disclosure">
+					<summary class="obs-filters-summary">
+						{ T(lang, "observations.filters.toggle") }
+						if obsActiveFilterCount(params) > 0 {
+							<span class="obs-filters-badge">{ fmt.Sprintf("%d", obsActiveFilterCount(params)) }</span>
+						}
+					</summary>
+					<form
+						id="obs-filters"
+						hx-get="/observations/list"
+						hx-trigger="change"
+						hx-target="#obs-table-container"
+						hx-include="#obs-q"
+						hx-push-url="true"
+						class="obs-filters-body"
+					>
+						<!-- Project multi-select (disclosure dropdown) -->
+						<div class="flex flex-col gap-1">
+							<label class="filter-label">{ T(lang, "observations.labels.project") }</label>
+							<details class="obs-filter-dropdown">
+								<summary class="obs-filter-dropdown-summary">
+									if len(params.Projects) > 0 {
+										{ fmt.Sprintf("(%d)", len(params.Projects)) }
+									}
+								</summary>
+								<div class="obs-filter-dropdown-body input overflow-y-auto" style="max-height:120px">
+									for _, p := range projects {
+										<label class="flex items-center gap-2 py-0.5 text-xs">
+											<input type="checkbox" name="project" value={ p } checked?={ obsContains(params.Projects, p) }/>
+											{ p }
+										</label>
+									}
+								</div>
+							</details>
 						</div>
-					</div>
-					<!-- Type multi-select -->
-					<div class="flex flex-col gap-1">
-						<label class="filter-label">{ T(lang, "observations.labels.type") }</label>
-						<div class="input overflow-y-auto" style="max-height:120px">
-							for _, typ := range obsTypeOptions() {
-								<label class="flex items-center gap-2 py-0.5 text-xs">
-									<input
-										type="checkbox"
-										name="type"
-										value={ typ }
-										checked?={ obsContains(params.Types, typ) }
-									/>
-									{ typ }
-								</label>
-							}
+						<!-- Type multi-select (disclosure dropdown) -->
+						<div class="flex flex-col gap-1">
+							<label class="filter-label">{ T(lang, "observations.labels.type") }</label>
+							<details class="obs-filter-dropdown">
+								<summary class="obs-filter-dropdown-summary">
+									if len(params.Types) > 0 {
+										{ fmt.Sprintf("(%d)", len(params.Types)) }
+									}
+								</summary>
+								<div class="obs-filter-dropdown-body input overflow-y-auto" style="max-height:120px">
+									for _, typ := range obsTypeOptions() {
+										<label class="flex items-center gap-2 py-0.5 text-xs">
+											<input type="checkbox" name="type" value={ typ } checked?={ obsContains(params.Types, typ) }/>
+											{ typ }
+										</label>
+									}
+								</div>
+							</details>
 						</div>
-					</div>
-					<!-- Scope select -->
-					<div class="flex flex-col gap-1">
-						<label class="filter-label" for="obs-scope">{ T(lang, "observations.labels.scope") }</label>
-						<select id="obs-scope" name="scope" class="input input-sm">
-							<option value="" selected?={ params.Scope == "" || params.Scope == "all" }>{ T(lang, "observations.scope.all") }</option>
-							<option value="project" selected?={ params.Scope == "project" }>{ T(lang, "observations.scope.project") }</option>
-							<option value="personal" selected?={ params.Scope == "personal" }>{ T(lang, "observations.scope.personal") }</option>
-						</select>
-					</div>
-					<!-- Topic key input -->
-					<div class="flex flex-col gap-1">
-						<label class="filter-label" for="obs-topic">{ T(lang, "observations.labels.topicKey") }</label>
-						<input
-							id="obs-topic"
-							class="input input-sm"
-							type="text"
-							name="topic_key"
-							value={ params.TopicKey }
-							placeholder={ T(lang, "observations.placeholders.topicKey") }
-						/>
-					</div>
-					<!-- Deleted rows select -->
-					<div class="flex flex-col gap-1">
-						<label class="filter-label" for="obs-deleted">{ T(lang, "observations.labels.deletedRows") }</label>
-						<select id="obs-deleted" name="deleted" class="input input-sm">
-							<option value="active" selected?={ !params.IncludeDeleted && !params.OnlyDeleted }>{ T(lang, "observations.deleted.active") }</option>
-							<option value="all" selected?={ params.IncludeDeleted }>{ T(lang, "observations.deleted.all") }</option>
-							<option value="only" selected?={ params.OnlyDeleted }>{ T(lang, "observations.deleted.only") }</option>
-						</select>
-					</div>
-				</form>
+						<!-- Scope select -->
+						<div class="flex flex-col gap-1">
+							<label class="filter-label" for="obs-scope">{ T(lang, "observations.labels.scope") }</label>
+							<select id="obs-scope" name="scope" class="input input-sm">
+								<option value="" selected?={ params.Scope == "" || params.Scope == "all" }>{ T(lang, "observations.scope.all") }</option>
+								<option value="project" selected?={ params.Scope == "project" }>{ T(lang, "observations.scope.project") }</option>
+								<option value="personal" selected?={ params.Scope == "personal" }>{ T(lang, "observations.scope.personal") }</option>
+							</select>
+						</div>
+						<!-- Topic key input -->
+						<div class="flex flex-col gap-1">
+							<label class="filter-label" for="obs-topic">{ T(lang, "observations.labels.topicKey") }</label>
+							<input id="obs-topic" class="input input-sm" type="text" name="topic_key" value={ params.TopicKey } placeholder={ T(lang, "observations.placeholders.topicKey") }/>
+						</div>
+						<!-- Deleted rows select -->
+						<div class="flex flex-col gap-1">
+							<label class="filter-label" for="obs-deleted">{ T(lang, "observations.labels.deletedRows") }</label>
+							<select id="obs-deleted" name="deleted" class="input input-sm">
+								<option value="active" selected?={ !params.IncludeDeleted && !params.OnlyDeleted }>{ T(lang, "observations.deleted.active") }</option>
+								<option value="all" selected?={ params.IncludeDeleted }>{ T(lang, "observations.deleted.all") }</option>
+								<option value="only" selected?={ params.OnlyDeleted }>{ T(lang, "observations.deleted.only") }</option>
+							</select>
+						</div>
+					</form>
+				</details>
 			</div>
 		</div>
 		<!-- Table + detail layout -->
@@ -236,18 +241,13 @@ templ observationsContent(items []services.ObservationRow, nextCursor *string, p
 			</aside>
 		</div>
 	</div>
-	<!-- Close detail when clicking outside of it -->
+	<!-- Show the detail aside when HTMX swaps content into it. -->
 	<script>
-	(function() {
-		document.addEventListener('click', function(e) {
-			var detail = document.getElementById('obs-detail');
-			if (!detail) return;
-			// Show if HTMX just swapped content into it; otherwise close on outside click.
-			if (!detail.contains(e.target) && !e.target.closest('tr[data-obs-id]')) {
-				// Do not auto-close — user must click the close button or another row.
-			}
-		});
-	})();
+	document.body.addEventListener('htmx:afterSwap', function(e) {
+		if (e.target && e.target.id === 'obs-detail') {
+			e.target.style.display = '';
+		}
+	});
 	</script>
 }
 
@@ -262,11 +262,10 @@ templ ObservationsTablePartial(items []services.ObservationRow, nextCursor *stri
 			<thead>
 				<tr>
 					<th>{ T(lang, "observations.table.created") }</th>
+					<th>{ T(lang, "observations.table.title") }</th>
+					<th>{ T(lang, "observations.table.topic") }</th>
 					<th>{ T(lang, "observations.table.project") }</th>
 					<th>{ T(lang, "observations.table.type") }</th>
-					<th>{ T(lang, "observations.table.title") }</th>
-					<th>{ T(lang, "observations.table.tool") }</th>
-					<th>{ T(lang, "observations.table.topic") }</th>
 					if advanced {
 						<th>{ T(lang, "observations.table.rev") }</th>
 						<th>{ T(lang, "observations.table.dup") }</th>
@@ -292,6 +291,18 @@ templ ObservationsRowsPartial(items []services.ObservationRow, nextCursor *strin
 	}
 }
 
+// dateClockCell renders a timestamp as two stacked lines: dd-mm-yyyy on top,
+// hh:mm below. Shared by the Memory table and the Overview recent list.
+templ dateClockCell(raw string) {
+	{{ d, c := splitDateClock(raw) }}
+	<div class="inline-block">
+		<div>{ d }</div>
+		if c != "" {
+			<div class="muted text-center">{ c }</div>
+		}
+	</div>
+}
+
 // obsRow renders a single observation table row.
 // advanced gates the technical columns: Rev, Dup (sync_id is detail-only).
 templ obsRow(obs services.ObservationRow, lang string, advanced bool) {
@@ -301,17 +312,10 @@ templ obsRow(obs services.ObservationRow, lang string, advanced bool) {
 		hx-get={ fmt.Sprintf("/observations/%d", obs.ID) }
 		hx-target="#obs-detail"
 		hx-swap="innerHTML"
-		hx-on::after-request="document.getElementById('obs-detail').style.display=''"
 	>
-		<td class="mono text-xs text-fg-muted">{ obsDateStr(obs) }</td>
-		<td>
-			if obs.Project != nil && *obs.Project != "" {
-				<span class="badge badge-accent">{ *obs.Project }</span>
-			} else {
-				<span class="badge badge-fail">{ T(lang, "observations.table.empty") }</span>
-			}
+		<td class="mono text-xs text-fg-muted whitespace-nowrap">
+			@dateClockCell(obsDateRaw(obs))
 		</td>
-		<td><span class="badge badge-accent">{ obs.Type }</span></td>
 		<td class="text-sm text-fg truncate" style="max-width:320px">
 			if obs.ReviewDue() {
 				<span class="badge badge-warn mr-1">{ T(lang, "observations.badge.reviewDue") }</span>
@@ -322,13 +326,6 @@ templ obsRow(obs services.ObservationRow, lang string, advanced bool) {
 				<span class="muted">{ T(lang, "common.untitled") }</span>
 			}
 		</td>
-		<td class="text-xs text-fg-muted">
-			if obs.ToolName != nil && *obs.ToolName != "" {
-				{ *obs.ToolName }
-			} else {
-				{ "—" }
-			}
-		</td>
 		<td class="mono text-xs text-fg-muted truncate" style="max-width:160px">
 			if obs.TopicKey != nil && *obs.TopicKey != "" {
 				{ *obs.TopicKey }
@@ -336,6 +333,14 @@ templ obsRow(obs services.ObservationRow, lang string, advanced bool) {
 				{ "—" }
 			}
 		</td>
+		<td>
+			if obs.Project != nil && *obs.Project != "" {
+				<span class="badge badge-neutral">{ *obs.Project }</span>
+			} else {
+				<span class="badge badge-fail">{ T(lang, "observations.table.empty") }</span>
+			}
+		</td>
+		<td><span class="badge badge-neutral">{ obs.Type }</span></td>
 		if advanced {
 			<td class="text-xs text-fg-muted">{ fmt.Sprintf("%d", obsRevCount(obs)) }</td>
 			<td class="text-xs text-fg-muted">{ fmt.Sprintf("%d", obsDupCount(obs)) }</td>
@@ -344,16 +349,22 @@ templ obsRow(obs services.ObservationRow, lang string, advanced bool) {
 }
 
 // obsLoadMoreRow renders the load-more sentinel row for cursor pagination.
-// colspan matches the visible column count: 6 base columns + 2 when advanced.
+// colspan matches the visible column count: 5 base columns + 2 when advanced.
+//
+// The button replaces its OWN row (outerHTML on the closest <tr>) with the next
+// page — which is itself "new rows + a fresh sentinel". This keeps exactly one
+// sentinel at the end of the list. The earlier approach appended (beforeend) and
+// then tried to delete the old sentinel by id, but the appended page carried a
+// new row with the same id, so getElementById could leave a stale sentinel
+// stranded in the middle of the table.
 templ obsLoadMoreRow(cursor string, params services.ObservationListParams, lang string, advanced bool) {
 	<tr id="obs-load-more-row">
 		<td colspan={ obsColspan(advanced) } class="px-4 py-3">
 			<button
 				class="btn btn-secondary btn-sm"
 				hx-get={ obsNextURL(cursor, params, advanced) }
-				hx-target="#obs-tbody"
-				hx-swap="beforeend"
-				hx-on::after-request="document.getElementById('obs-load-more-row')?.remove()"
+				hx-target="closest tr"
+				hx-swap="outerHTML"
 			>
 				{ T(lang, "common.loadMore") }
 			</button>
@@ -502,15 +513,47 @@ func obsContains(slice []string, target string) bool {
 	return false
 }
 
-// obsDateStr returns the display date for an observation row (updated_at preferred).
+const sqliteTimeLayout = "2006-01-02 15:04:05"
+
+// obsDateStr returns the date portion of an observation's timestamp as dd-mm-yyyy.
+// Falls back to first 10 chars or raw value if parsing fails.
 func obsDateStr(obs services.ObservationRow) string {
+	d, _ := splitDateClock(obsDateRaw(obs))
+	return d
+}
+
+// obsDateRaw returns the raw timestamp used for the Created column: the
+// updated_at value when present, otherwise created_at.
+func obsDateRaw(obs services.ObservationRow) string {
 	if obs.UpdatedAt != nil && *obs.UpdatedAt != "" {
 		return *obs.UpdatedAt
 	}
-	if obs.CreatedAt != nil {
+	if obs.CreatedAt != nil && *obs.CreatedAt != "" {
 		return *obs.CreatedAt
 	}
-	return "—"
+	return ""
+}
+
+// splitDateClock parses a SQLite timestamp into a dd-mm-yyyy date and an hh:mm
+// clock. On parse failure it returns best-effort fallbacks (clock may be empty).
+func splitDateClock(raw string) (date, clock string) {
+	if raw == "" {
+		return "—", ""
+	}
+	t, err := time.Parse(sqliteTimeLayout, raw)
+	if err != nil {
+		if len(raw) >= 10 {
+			date = raw[:10]
+		} else {
+			date = raw
+		}
+		if len(raw) >= 16 {
+			clock = raw[11:16]
+		}
+		return date, clock
+	}
+	return fmt.Sprintf("%02d-%02d-%04d", t.Day(), t.Month(), t.Year()),
+		fmt.Sprintf("%02d:%02d", t.Hour(), t.Minute())
 }
 
 // obsRevCount returns the revision count (0 when nil).
@@ -530,12 +573,33 @@ func obsDupCount(obs services.ObservationRow) int64 {
 }
 
 // obsColspan returns the colspan value for the load-more sentinel row.
-// 6 base columns (date, project, type, title, tool, topic) + 2 when advanced (rev, dup).
+// 5 base columns (date, project, type, title, topic) + 2 when advanced (rev, dup).
 func obsColspan(advanced bool) string {
 	if advanced {
-		return "8"
+		return "7"
 	}
-	return "6"
+	return "5"
+}
+
+// obsActiveFilterCount returns how many filter groups have at least one value set.
+func obsActiveFilterCount(params services.ObservationListParams) int {
+	count := 0
+	if len(params.Projects) > 0 {
+		count++
+	}
+	if len(params.Types) > 0 {
+		count++
+	}
+	if params.Scope != "" && params.Scope != "all" {
+		count++
+	}
+	if params.TopicKey != "" {
+		count++
+	}
+	if params.IncludeDeleted || params.OnlyDeleted {
+		count++
+	}
+	return count
 }
 
 // obsAdvancedNextVal returns the value for the hidden "enabled" input in the toggle form.

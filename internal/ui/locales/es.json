@@ -360,6 +360,7 @@
     "promptsCount": "{{count}} prompts",
     "notFound": "Sesión no encontrada.",
     "session": "Sesión",
+    "untitled": "(sesión sin título)",
     "counts": "Conteos",
     "summaryCard": "Resumen",
     "summaryEmpty": "No hay resumen guardado para esta sesión.",
@@ -367,6 +368,13 @@
     "timelineDesc": "{{count}} eventos ordenados cronológicamente",
     "noEvents": "Sin eventos capturados.",
     "noTimestamps": "Los eventos no tienen timestamps; no hay nada que graficar. Mira la lista debajo.",
+    "col": {
+      "session": "Sesión",
+      "project": "Proyecto",
+      "started": "Inicio",
+      "observations": "Observaciones",
+      "prompts": "Prompts"
+    },
     "fields": {
       "project": "Proyecto",
       "directory": "Directorio",
@@ -414,7 +422,10 @@
     "loaded": "{{count}} cargadas",
     "loadError": "Falló la carga de observaciones: {{message}}",
     "searchPlaceholder": "Buscar por título o contenido…",
-    "filters": "Filtros",
+    "filters": {
+      "toggle": "Filtros",
+      "active": "{{count}} activos"
+    },
     "clear": "Limpiar",
     "labels": {
       "project": "Proyecto",

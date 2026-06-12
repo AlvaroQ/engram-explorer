@@ -23,9 +23,9 @@ const PIE_COLORS = [
   'hsl(343 76% 68%)', // love (pink)
   'hsl(189 43% 73%)', // foam
   'hsl(267 57% 78%)', // iris
-  'hsl(35 88% 72%)',  // gold
+  'hsl(35 88% 72%)', // gold
   'hsl(197 49% 38%)', // pine
-  'hsl(2 55% 83%)',   // rose
+  'hsl(2 55% 83%)', // rose
   'hsl(268 21% 57%)', // dawn iris
   'hsl(189 30% 48%)', // dawn foam
 ];

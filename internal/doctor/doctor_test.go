@@ -43,7 +43,7 @@ func TestStaticServed(t *testing.T) {
 	}
 }
 
-// TestDoctorRootRedirectsMaintenance verifies GET /doctor/ returns a 301
+// TestDoctorRootRedirectsMaintenance verifies GET /doctor/ returns a 303
 // redirect to /settings/maintenance (PR4 consolidation).
 func TestDoctorRootRedirectsMaintenance(t *testing.T) {
 	mux := http.NewServeMux()
@@ -53,8 +53,8 @@ func TestDoctorRootRedirectsMaintenance(t *testing.T) {
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
-	if w.Code != http.StatusMovedPermanently {
-		t.Fatalf("GET /doctor/ expected 301, got %d", w.Code)
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("GET /doctor/ expected 303, got %d", w.Code)
 	}
 	loc := w.Header().Get("Location")
 	if loc != "/settings/maintenance" {

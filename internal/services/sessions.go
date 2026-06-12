@@ -26,6 +26,9 @@ type SessionListItem struct {
 	ObsCount     int64   `json:"obs_count"`
 	PromptsCount int64   `json:"prompts_count"`
 	LastActivity *string `json:"last_activity"`
+	// FirstPrompt is the content of the earliest user prompt for the session.
+	// Used as the human-readable session title in list views.
+	FirstPrompt *string `json:"first_prompt"`
 	// Enrichment fields — only present when enrich=true.
 	Tags        []string `json:"tags,omitempty"`
 	RecentTitle *string  `json:"recent_title,omitempty"`
@@ -175,7 +178,8 @@ func SessionsList(db sqlite.Querier, p SessionListParams) (SessionListResult, er
 		SELECT s.id, s.project, s.directory, s.started_at, s.ended_at, s.summary,
 		       (SELECT COUNT(*) FROM observations o WHERE o.session_id = s.id AND o.deleted_at IS NULL) AS obs_count,
 		       (SELECT COUNT(*) FROM user_prompts p WHERE p.session_id = s.id) AS prompts_count,
-		       (SELECT MAX(o.created_at) FROM observations o WHERE o.session_id = s.id AND o.deleted_at IS NULL) AS last_activity
+		       (SELECT MAX(o.created_at) FROM observations o WHERE o.session_id = s.id AND o.deleted_at IS NULL) AS last_activity,
+		       (SELECT p.content FROM user_prompts p WHERE p.session_id = s.id ORDER BY COALESCE(p.created_at, '') ASC, p.id ASC LIMIT 1) AS first_prompt
 		FROM sessions s
 		` + where + `
 		ORDER BY ` + orderExpr + ` DESC, s.id DESC
@@ -189,6 +193,7 @@ func SessionsList(db sqlite.Querier, p SessionListParams) (SessionListResult, er
 			&item.ID, &item.Project, &item.Directory,
 			&item.StartedAt, &item.EndedAt, &item.Summary,
 			&item.ObsCount, &item.PromptsCount, &item.LastActivity,
+			&item.FirstPrompt,
 		)
 		return item, err
 	})

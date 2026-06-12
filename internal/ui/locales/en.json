@@ -360,6 +360,7 @@
     "promptsCount": "{{count}} prompts",
     "notFound": "Session not found.",
     "session": "Session",
+    "untitled": "(untitled session)",
     "counts": "Counts",
     "summaryCard": "Summary",
     "summaryEmpty": "No summary saved for this session.",
@@ -367,6 +368,13 @@
     "timelineDesc": "{{count}} events ordered chronologically",
     "noEvents": "No events captured.",
     "noTimestamps": "Events have no timestamps; nothing to plot. See the list below.",
+    "col": {
+      "session": "Session",
+      "project": "Project",
+      "started": "Started",
+      "observations": "Observations",
+      "prompts": "Prompts"
+    },
     "fields": {
       "project": "Project",
       "directory": "Directory",
@@ -414,7 +422,10 @@
     "loaded": "{{count}} loaded",
     "loadError": "Failed to load observations: {{message}}",
     "searchPlaceholder": "Search by title or content…",
-    "filters": "Filters",
+    "filters": {
+      "toggle": "Filters",
+      "active": "{{count}} active"
+    },
     "clear": "Clear",
     "labels": {
       "project": "Project",

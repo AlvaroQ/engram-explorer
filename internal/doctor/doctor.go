@@ -103,17 +103,17 @@ func Mount(mux *http.ServeMux, d Deps) {
 			http.NotFound(w, r)
 			return
 		}
-		http.Redirect(w, r, "/settings/maintenance", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/settings/maintenance", http.StatusSeeOther)
 	})
 
 	// -----------------------------------------------------------------------
 	// Orphans routes (Slice 1)
 	// -----------------------------------------------------------------------
 
-	// GET /doctor/orphans — 301 redirect to the consolidated maintenance page.
+	// GET /doctor/orphans — 303 redirect to the consolidated maintenance page.
 	// HTMX partials (/doctor/orphans/list, etc.) are NOT redirected.
 	mux.HandleFunc("GET /doctor/orphans", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/settings/maintenance#unassigned", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/settings/maintenance#unassigned", http.StatusSeeOther)
 	})
 
 	// GET /doctor/orphans/list — bare list partial; hx-get deferred load target.
@@ -149,10 +149,10 @@ func Mount(mux *http.ServeMux, d Deps) {
 		})
 	}
 
-	// GET /doctor/sync — 301 redirect to the consolidated maintenance page.
+	// GET /doctor/sync — 303 redirect to the consolidated maintenance page.
 	// HTMX partials (/doctor/sync/projects, etc.) are NOT redirected.
 	mux.HandleFunc("GET /doctor/sync", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/settings/maintenance#cloud", http.StatusMovedPermanently)
+		http.Redirect(w, r, "/settings/maintenance#cloud", http.StatusSeeOther)
 	})
 
 	// GET /doctor/sync/projects — projects table partial (polled every 15s).

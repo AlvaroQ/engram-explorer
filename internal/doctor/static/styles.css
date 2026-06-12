@@ -205,6 +205,31 @@
 .btn-danger:hover  { filter: brightness(1.2); }
 .btn-link:hover    { text-decoration: underline; }
 
+/* Icon-only variant (compact square) — used for the Assign / Delete actions in
+   the orphan rows so the action cell stays narrow. Combined with .btn-action /
+   .btn-danger for colour; this rule follows them so its padding wins. */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  line-height: 0;
+  /* Icon-only orphan actions read as compact chips; the border is redundant
+     against the tinted background and only adds visual noise next to its twin. */
+  border: none;
+}
+.btn-icon svg { display: block; }
+
+/* Assign is a confirm action, not a destructive one. The shared .btn-action
+   colour is the accent (pink), which is nearly identical to the danger red on
+   the Delete icon beside it — so the two icons read as the same "dangerous"
+   button. Recolour the icon-only Assign with the success token so it clearly
+   signals a safe, non-destructive action. */
+.btn-action.btn-icon {
+  background: color-mix(in srgb, var(--doc-green) 14%, transparent);
+  color: var(--doc-green);
+}
+
 /* ── Maintenance > Cloud: sync-all control ───────────────────────── */
 .cloud-sync-all-wrapper {
   display: flex;
@@ -229,6 +254,13 @@
 .cloud-sync-result--failed  { color: var(--doc-red,    #f87171); }
 .cloud-sync-result--noEnrolled { color: var(--doc-muted, #9ca3af); }
 
+/* The shared .settings-page shell caps content at 860px, which suits the
+   form-based settings pages but starves Maintenance's wide data tables (orphans
+   + cloud sync) of horizontal room. Let this page use the full content width so
+   those tables breathe instead of overflowing a narrow column. Scoped by id so
+   the other settings pages keep their comfortable reading width. */
+#maintenance-page { max-width: none; }
+
 /* ── Orphans sections ─────────────────────────────────────────────── */
 .orphans-section { margin-bottom: 2rem; }
 .orphans-section h2 {
@@ -236,6 +268,58 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 1.1rem;
+}
+/* Orphan tables are inherently wide (session UUIDs, long titles, the
+   assign-project dropdown). Give each table its own horizontal scroll so a wide
+   table never pushes the whole page out or clips its Actions column. Turning the
+   table into a block box makes overflow-x scroll it in place; the row groups
+   still form an anonymous table so columns stay aligned. */
+.orphans-section table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+  /* border-collapse:separate is required for the sticky Actions column below:
+     with collapsed borders Chrome paints the sticky cell's background under the
+     neighbouring cells. */
+  border-collapse: separate;
+  border-spacing: 0;
+}
+/* Keep every body cell to a single line (ellipsis for long titles / topic keys /
+   session ids). This keeps rows uniform height so the sticky Actions cell — which
+   is a flex box and only grows to its own content height — always covers the full
+   row instead of leaving tall rows' text peeking out beside it. Full text remains
+   available in the per-row detail dialog. */
+.orphans-section tbody td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+.orphans-section tbody td.actions {
+  overflow: visible;
+  max-width: none;
+}
+/* Cap the assign-project dropdown so long project names don't blow out the
+   Actions column width. */
+.orphans-section .actions select { max-width: 12rem; }
+/* Keep the Assign / Delete controls on one line; the cell can scroll with the
+   table rather than wrapping into tall, ragged rows. */
+.orphans-section .actions { flex-wrap: nowrap; white-space: nowrap; }
+/* Pin the Actions column (assign-project / Assign / Delete) to the right edge so
+   it stays visible while the rest of the wide table scrolls horizontally — the
+   primary action on an unassigned item should never be hidden off-screen. The
+   opaque background + z-index hide the columns scrolling underneath; the left
+   shadow hints that more columns sit behind it. */
+.orphans-section table th:last-child,
+.orphans-section table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: hsl(var(--surface));
+  box-shadow: -8px 0 8px -8px hsl(222 47% 4% / 0.55);
+}
+.orphans-section tbody tr:hover td:last-child {
+  background: hsl(var(--surface-2));
 }
 
 /* ── Sync: global target + project table ──────────────────────────── */
@@ -275,9 +359,75 @@
 .detail-card dd,
 .global-target-card dd { margin: 0; font-variant-numeric: tabular-nums; }
 
+/* Global Target lays its stats out as a responsive row of label/value blocks
+   (each wrapped in .gt-stat) so the card fills the available horizontal space
+   instead of rendering as a tall, narrow list with a huge empty value column. */
+.global-target-card dl {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem 1.5rem;
+}
+.global-target-card .gt-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.global-target-card .gt-stat dd { overflow-wrap: anywhere; }
+
 .sync-projects-table,
 .mutations-table { width: 100%; font-size: 0.85rem; }
 .sync-projects-table td { font-variant-numeric: tabular-nums; }
+
+/* Right-align the numeric columns (Observations, Pending, Last Acked, Last
+   Enqueued) so digits line up; keep the header aligned with its cells. */
+.sync-projects-table th:nth-child(2),
+.sync-projects-table td:nth-child(2),
+.sync-projects-table th:nth-child(6),
+.sync-projects-table td:nth-child(6),
+.sync-projects-table th:nth-child(7),
+.sync-projects-table td:nth-child(7),
+.sync-projects-table th:nth-child(8),
+.sync-projects-table td:nth-child(8) { text-align: right; }
+
+/* Keep the Enroll/Unenroll button and the Detail link on a single line so rows
+   stay one line tall instead of doubling in height when the cell is narrow. */
+.sync-projects-table .actions { flex-wrap: nowrap; white-space: nowrap; }
+
+/* This 9-column table is dense: trim the per-cell horizontal padding so the
+   whole row (including the trailing Detail link) fits without clipping. The
+   selectors match `.main-content thead th` / `tbody td` specificity so they win
+   over the base table padding. */
+.sync-projects-table thead th,
+.sync-projects-table tbody td { padding-left: 8px; padding-right: 8px; }
+.sync-projects-table .btn-link { padding-left: 0.4rem; padding-right: 0.4rem; }
+
+/* Give the (9-column) projects table its own horizontal scroll so a wide table
+   scrolls in place instead of overflowing the maintenance panel and clipping.
+   Turning the table into a block box makes overflow-x scroll it; the row groups
+   still form an anonymous table so columns stay aligned. border-collapse must be
+   separate or Chrome paints the sticky Actions cell's background under its
+   neighbours. Mirrors the orphans tables on the same page. */
+.sync-projects-table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+/* One line per cell so the sticky Actions cell (a flex box sized to its own
+   content) always covers the full row height. */
+.sync-projects-table tbody td { white-space: nowrap; }
+/* Pin the Actions column to the right edge so the Enroll/Unenroll/Detail
+   controls stay visible while the rest of the table scrolls horizontally. */
+.sync-projects-table th:last-child,
+.sync-projects-table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: hsl(var(--surface));
+  box-shadow: -8px 0 8px -8px hsl(222 47% 4% / 0.55);
+}
+.sync-projects-table tbody tr:hover td:last-child { background: hsl(var(--surface-2)); }
 
 /* ── Sync: issues banner ──────────────────────────────────────────── */
 /* Collapsible sync-issues panel (collapsed by default). */

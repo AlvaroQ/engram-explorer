@@ -207,6 +207,7 @@ var ccModelPricing = []struct {
 	Match   string
 	Pricing ccPricing
 }{
+	{Match: "fable", Pricing: ccPricing{InputPerMTok: 10.00, OutputPerMTok: 50.00}},
 	{Match: "opus", Pricing: ccPricing{InputPerMTok: 5.00, OutputPerMTok: 25.00}},
 	{Match: "sonnet", Pricing: ccPricing{InputPerMTok: 3.00, OutputPerMTok: 15.00}},
 	{Match: "haiku", Pricing: ccPricing{InputPerMTok: 1.00, OutputPerMTok: 5.00}},
@@ -245,7 +246,13 @@ func addMessageUsage(u *CCSessionUsage, model string, usage ccRawUsage) {
 			float64(cw5)/m*(p.InputPerMTok*1.25) +
 			float64(cw1)/m*(p.InputPerMTok*2.0) +
 			float64(usage.CacheReadInputTokens)/m*(p.InputPerMTok*0.1)
-	} else if model != "" {
+	} else if model != "" &&
+		(usage.InputTokens > 0 || usage.OutputTokens > 0 ||
+			cw5 > 0 || cw1 > 0 || usage.CacheReadInputTokens > 0) {
+		// Only an unpriced model that actually carried billable tokens means we
+		// undercounted cost. Zero-token turns — notably Claude Code's
+		// "<synthetic>" local markers — price to $0 either way, so they must not
+		// trip the unknown-model warning.
 		u.UnknownModel = true
 	}
 }
@@ -379,9 +386,11 @@ func parseSessionHead(r io.Reader) (ccSessionHead, error) {
 			}
 		}
 
-		// Extract the first user prompt text.
+		// Extract the first user prompt text. Skip harness-injected, marker-only
+		// turns (e.g. a lone <local-command-caveat> or <ide_opened_file>) so the
+		// first *human* prompt becomes the session title instead of a paperclip.
 		if h.firstPrompt == "" && raw.Type == "user" && len(raw.Message) > 0 {
-			if text := extractFirstUserText(raw.Message); text != "" {
+			if text := extractFirstUserText(raw.Message); text != "" && !IsMarkerOnly(text) {
 				h.firstPrompt = text
 			}
 		}

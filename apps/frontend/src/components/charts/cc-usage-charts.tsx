@@ -16,7 +16,7 @@ import {
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api.ts';
-import { Skeleton } from '../ui/skeleton.tsx';
+import { BrainLoadingOverlay } from '../brain/brain-loading-overlay.tsx';
 
 /**
  * Localized labels passed in from the Go templ side (via @Island props) so the
@@ -43,18 +43,19 @@ const COLORS = [
   'hsl(343 76% 68%)', // love (pink)
   'hsl(189 43% 73%)', // foam
   'hsl(267 57% 78%)', // iris
-  'hsl(35 88% 72%)',  // gold
+  'hsl(35 88% 72%)', // gold
   'hsl(197 49% 38%)', // pine
-  'hsl(2 55% 83%)',   // rose
+  'hsl(2 55% 83%)', // rose
   'hsl(268 21% 57%)', // dawn iris
   'hsl(189 30% 48%)', // dawn foam
 ];
-const FALLBACK_COLOR = 'hsl(248 15% 61%)';  // muted
+const FALLBACK_COLOR = 'hsl(248 15% 61%)'; // muted
 const MODEL_COLORS: Record<string, string> = {
-  opus: 'hsl(343 76% 68%)',   // love (pink)
+  fable: 'hsl(268 60% 74%)', // iris (purple)
+  opus: 'hsl(343 76% 68%)', // love (pink)
   sonnet: 'hsl(189 43% 73%)', // foam
-  haiku: 'hsl(35 88% 72%)',   // gold
-  unknown: 'hsl(248 15% 61%)',// muted
+  haiku: 'hsl(35 88% 72%)', // gold
+  unknown: 'hsl(248 15% 61%)', // muted
 };
 const TOP_N = 8;
 
@@ -128,7 +129,16 @@ export function CCUsageCharts({ labels }: { labels: CCUsageLabels }): JSX.Elemen
     }));
   }, [data]);
 
-  if (query.isLoading) return <Skeleton className="h-60" />;
+  // While the heavy CC stats scan runs, show the Engram elephant loading
+  // animation (relative wrapper bounds the overlay's absolute inset-0 to this
+  // card region instead of the whole page).
+  if (query.isLoading) {
+    return (
+      <div className="relative h-60 overflow-hidden rounded-md">
+        <BrainLoadingOverlay label={labels.loading} logoSrc="/static/claude.png" />
+      </div>
+    );
+  }
   if (query.isError) return <p className="text-sm text-fail">{labels.error}</p>;
   if (!data || data.sessions === 0) return <p className="text-sm text-fg-muted">{labels.empty}</p>;
 

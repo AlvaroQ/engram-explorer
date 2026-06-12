@@ -320,6 +320,56 @@ func TestSessionsGetDetail_EventMergeAndSort(t *testing.T) {
 	}
 }
 
+// TestSessionsList_FirstPrompt verifies that the earliest user prompt content
+// is surfaced as FirstPrompt on each SessionListItem. Sessions without prompts
+// must have nil FirstPrompt, and when two prompts exist the earlier one wins.
+func TestSessionsList_FirstPrompt(t *testing.T) {
+	db := openSessionTestDB(t)
+
+	for _, stmt := range []string{
+		`INSERT INTO sessions (id, project, started_at) VALUES ('fp-s1', 'p', '2026-03-01 10:00:00')`,
+		`INSERT INTO sessions (id, project, started_at) VALUES ('fp-s2', 'p', '2026-03-02 10:00:00')`,
+		// fp-s1: two prompts; the earlier one (09:00) should win over the later (11:00).
+		`INSERT INTO user_prompts (session_id, content, created_at) VALUES ('fp-s1', 'second prompt', '2026-03-01 11:00:00')`,
+		`INSERT INTO user_prompts (session_id, content, created_at) VALUES ('fp-s1', 'first prompt', '2026-03-01 09:00:00')`,
+		// fp-s2: no prompts — FirstPrompt must be nil.
+	} {
+		if _, err := db.Exec(stmt); err != nil {
+			t.Fatalf("seed: %v", err)
+		}
+	}
+
+	result, err := services.SessionsList(db, services.SessionListParams{Limit: 10})
+	if err != nil {
+		t.Fatalf("SessionsList: %v", err)
+	}
+
+	// Build a map for easy lookup.
+	byID := make(map[string]*services.SessionListItem, len(result.Items))
+	for i := range result.Items {
+		byID[result.Items[i].ID] = &result.Items[i]
+	}
+
+	s1, ok := byID["fp-s1"]
+	if !ok {
+		t.Fatal("fp-s1 not found in result")
+	}
+	if s1.FirstPrompt == nil {
+		t.Fatal("fp-s1.FirstPrompt is nil, want 'first prompt'")
+	}
+	if *s1.FirstPrompt != "first prompt" {
+		t.Errorf("fp-s1.FirstPrompt: got %q, want 'first prompt'", *s1.FirstPrompt)
+	}
+
+	s2, ok := byID["fp-s2"]
+	if !ok {
+		t.Fatal("fp-s2 not found in result")
+	}
+	if s2.FirstPrompt != nil {
+		t.Errorf("fp-s2.FirstPrompt: expected nil (no prompts), got %q", *s2.FirstPrompt)
+	}
+}
+
 func TestSessionsGetDetail_NotFound(t *testing.T) {
 	db := openSessionTestDB(t)
 	detail, err := services.SessionsGetDetail(db, "non-existent")

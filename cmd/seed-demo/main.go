@@ -419,6 +419,10 @@ func generatedObservations() []genObs {
 	resSessions := []string{"s-res-01", "s-res-02", "s-res-03", "s-res-04", "s-res-05", "s-res-06"}
 	infSessions := []string{"s-inf-01", "s-inf-02", "s-inf-03", "s-inf-04", "s-inf-05", "s-inf-06"}
 	orpSessions := []string{"s-orp-01", "s-orp-02", "s-orp-03"}
+	mobSessions := []string{"s-mob-01", "s-mob-02", "s-mob-03", "s-mob-04", "s-mob-05", "s-mob-06"}
+	mlSessions := []string{"s-ml-01", "s-ml-02", "s-ml-03", "s-ml-04", "s-ml-05", "s-ml-06"}
+	dsSessions := []string{"s-ds-01", "s-ds-02", "s-ds-03", "s-ds-04", "s-ds-05"}
+	deSessions := []string{"s-de-01", "s-de-02", "s-de-03", "s-de-04", "s-de-05"}
 
 	types := []string{
 		"architecture", "decision", "bugfix", "feature", "discovery",
@@ -491,6 +495,50 @@ func generatedObservations() []genObs {
 		{"Reference note: %s concept (rev %d)", "Captured a useful concept for future reference. Not tied to a specific project yet.", "scratch/reference-%d", 8},
 	}
 
+	mobTopics := []tpl{
+		{"Offline-first sync engine for %s (rev %d)", "WatermelonDB queues local mutations and replays them on reconnect. Conflict resolution is last-write-wins per field, with a server-authoritative tiebreak on the updated_at timestamp.", "architecture/offline-sync-%d", 0},
+		{"Biometric auth flow for %s (v%d)", "expo-local-authentication gates the app behind Face ID / fingerprint. The hardware-backed token unlocks a keychain entry holding the refresh token; nothing sensitive lives in JS memory.", "feature/biometric-auth-%d", 3},
+		{"Gesture navigation for %s screens (pass %d)", "react-native-gesture-handler + reanimated drive swipe-to-dismiss and shared element transitions at 60fps on the UI thread, off the JS bridge entirely.", "pattern/gesture-nav-%d", 5},
+		{"Push notification routing in %s (iteration %d)", "Notifee handles channels and deep-link payloads. Tapping a notification routes through Expo Router to the exact screen, restoring scroll position from the persisted nav state.", "feature/push-notifications-%d", 3},
+		{"Hermes bytecode precompilation for %s (rev %d)", "Enabling Hermes with bytecode precompilation cut cold-start time from 1.9s to 0.7s on mid-tier Android. Startup CPU samples now show zero JS parse cost.", "discovery/hermes-startup-%d", 4},
+		{"Image caching strategy for %s feeds (v%d)", "expo-image with a disk + memory cache and blurhash placeholders. Feed scroll no longer drops frames; cache is capped at 200MB with LRU eviction.", "pattern/image-cache-%d", 5},
+		{"Deep linking config for %s (pass %d)", "Universal links on iOS and App Links on Android map https paths to in-app routes. The association files are served from the API and verified in CI.", "config/deep-linking-%d", 6},
+		{"Crash reporting setup for %s (revision %d)", "Sentry with source-map upload on every release. Native crashes and JS errors share a single issue stream, grouped by release and device class.", "config/crash-reporting-%d", 6},
+	}
+
+	mlTopics := []tpl{
+		{"Feature store design for %s (rev %d)", "Feast serves features online from Redis (p99 < 5ms) and offline from the warehouse for training. Point-in-time joins prevent label leakage across the train/serve boundary.", "architecture/feature-store-%d", 0},
+		{"Training pipeline DAG for %s (v%d)", "Airflow orchestrates extract → validate → train → evaluate → register. Each task is idempotent and checkpointed so a mid-pipeline failure resumes without recomputing upstream stages.", "architecture/training-dag-%d", 0},
+		{"Model registry promotion for %s (pass %d)", "MLflow stages are staging → production → archived. Promotion requires the candidate to beat the incumbent on a holdout set by a configured margin, enforced by a CI gate.", "feature/model-registry-%d", 3},
+		{"Drift detection for %s inputs (iteration %d)", "Population Stability Index on each feature, computed hourly. PSI > 0.2 fires an alert and flags the model for retraining; > 0.3 auto-triggers the pipeline.", "discovery/drift-detection-%d", 4},
+		{"Inference serving for %s (rev %d)", "Triton on KServe with dynamic batching. Request batching at 8ms windows lifted GPU utilization from 30% to 78% with no measurable latency regression at p95.", "config/inference-serving-%d", 6},
+		{"Embedding cache for %s retrieval (v%d)", "Hot embeddings live in Redis keyed by content hash; cold ones recompute on a GPU worker pool. Cache hit rate stabilized at 84%, cutting GPU cost by ~40%.", "pattern/embedding-cache-%d", 5},
+		{"A/B rollout framework for %s models (pass %d)", "Traffic splitting at the gateway with sticky sessions by user hash. Guardrail metrics auto-roll-back a variant if error rate or latency crosses a threshold.", "feature/ab-rollout-%d", 3},
+		{"Reproducible training runs for %s (revision %d)", "Every run pins data snapshot hash, code commit, and seed. Re-running a registered model from its manifest reproduces metrics within floating-point tolerance.", "research/reproducibility-%d", 9},
+	}
+
+	dsTopics := []tpl{
+		{"Design token pipeline for %s (rev %d)", "Style Dictionary transforms a single source of truth into CSS variables, Tailwind config, iOS asset catalogs, and Android resources. One token change propagates to every platform in CI.", "architecture/token-pipeline-%d", 0},
+		{"Primitive component API for %s (v%d)", "Radix UI primitives wrapped with CVA give unstyled-but-accessible building blocks. Variants are typed; consumers compose rather than override, keeping the API surface small.", "pattern/primitive-components-%d", 5},
+		{"Theming contract for %s (pass %d)", "Themes are pure data: a flat map of semantic tokens (bg, fg, accent, danger). Dark mode is just a second map; components never reference raw color values.", "architecture/theming-contract-%d", 0},
+		{"Accessibility test gate for %s (iteration %d)", "axe-core runs against every Storybook story in CI. A new component cannot merge with any serious or critical violation; warnings are tracked but non-blocking.", "feature/a11y-gate-%d", 3},
+		{"Motion token system for %s (rev %d)", "Duration and easing are tokens, not magic numbers. Reduced-motion preference swaps the whole motion map at the theme layer, so every animation respects it for free.", "config/motion-tokens-%d", 6},
+		{"Icon delivery strategy for %s (v%d)", "Icons ship as a tree-shakeable React component set generated from SVGs at build time. Only imported icons land in the bundle; the full set never ships.", "pattern/icon-delivery-%d", 5},
+		{"Versioning policy for %s releases (pass %d)", "Semantic versioning with Changesets. Breaking token renames are codemods shipped alongside the major bump so consumers upgrade with a single command.", "config/versioning-%d", 6},
+		{"Visual regression for %s components (revision %d)", "Chromatic snapshots every story across viewports and themes. A diff blocks the PR until a reviewer accepts the visual change, catching unintended layout shifts.", "feature/visual-regression-%d", 3},
+	}
+
+	deTopics := []tpl{
+		{"Lakehouse table layout for %s (rev %d)", "Delta Lake on S3 with Z-ordering on the high-cardinality filter columns. Compaction runs nightly; small-file count dropped 20× and query scan time fell proportionally.", "architecture/lakehouse-%d", 0},
+		{"CDC pipeline from Postgres for %s (v%d)", "Debezium streams the WAL into Kafka; a Spark job upserts into Delta. End-to-end lag is under 30s, and the source database sees no query load from the pipeline.", "architecture/cdc-pipeline-%d", 0},
+		{"Data quality contracts for %s (pass %d)", "Great Expectations suites run on every load. A failed expectation quarantines the batch instead of polluting downstream tables; owners are paged with the failing rows attached.", "feature/data-quality-%d", 3},
+		{"Incremental dbt models for %s (iteration %d)", "Incremental materialization with a merge strategy keyed on the natural key. Full refreshes are reserved for schema changes, cutting daily warehouse spend by half.", "pattern/incremental-dbt-%d", 5},
+		{"Partition strategy for %s events (rev %d)", "Event tables partition by ingestion date, not event date, to keep late-arriving data from rewriting old partitions. A view reconciles the two for analysts.", "discovery/partition-strategy-%d", 4},
+		{"Warehouse cost controls for %s (v%d)", "Query tagging attributes spend to teams. Auto-suspend on idle warehouses and a result cache cut monthly cost 35% with no impact on dashboard freshness.", "config/cost-controls-%d", 6},
+		{"Schema evolution policy for %s (pass %d)", "Additive-only schema changes in the lakehouse; column drops go through a deprecation window. Readers tolerate missing columns via schema-on-read defaults.", "research/schema-evolution-%d", 9},
+		{"Orchestration retries for %s jobs (revision %d)", "Airflow tasks retry with exponential backoff and a circuit breaker. Transient warehouse errors self-heal; persistent ones page on-call after the breaker opens.", "config/orchestration-retries-%d", 6},
+	}
+
 	// Duplicate hash groups — ~15% of generated obs share a hash.
 	// We assign a hash to every 7th observation starting from index 0.
 	dupHashes := []string{
@@ -551,11 +599,15 @@ func generatedObservations() []genObs {
 		}
 	}
 
-	add(apiSessions, "demo-api", apiTopics, 55, "project")
-	add(webSessions, "demo-web", webTopics, 55, "project")
-	add(resSessions, "research-notes", resTopics, 45, "project")
-	add(infSessions, "infra", infTopics, 45, "project")
-	add(orpSessions, "", orphanTopics, 13, "project")
+	add(apiSessions, "demo-api", apiTopics, 60, "project")
+	add(webSessions, "demo-web", webTopics, 60, "project")
+	add(resSessions, "research-notes", resTopics, 48, "project")
+	add(infSessions, "infra", infTopics, 48, "project")
+	add(mobSessions, "mobile-app", mobTopics, 52, "project")
+	add(mlSessions, "ml-platform", mlTopics, 52, "project")
+	add(dsSessions, "design-system", dsTopics, 44, "project")
+	add(deSessions, "data-eng", deTopics, 44, "project")
+	add(orpSessions, "", orphanTopics, 15, "project")
 
 	return out
 }
@@ -607,7 +659,7 @@ func generatedRelations(obsSyncIDs []string) []genRelation {
 	n := len(obsSyncIDs)
 	var out []genRelation
 	count := 0
-	target := 120
+	target := 260
 
 	for count < target {
 		i := count
@@ -721,6 +773,36 @@ func insertAll(tx *sql.Tx) (rowCounts, error) {
 		{"s-inf-04", "infra", "/home/user/infra", ts(32, 0), ts(32, -1), "Hardened secrets management with Vault integration."},
 		{"s-inf-05", "infra", "/home/user/infra", ts(18, 0), ts(18, -2), "Prometheus metrics and Grafana dashboards."},
 		{"s-inf-06", "infra", "/home/user/infra", ts(5, 0), ts(5, -1), "Reviewed deployment strategy for zero-downtime releases."},
+
+		// mobile-app
+		{"s-mob-01", "mobile-app", "/home/user/mobile-app", ts(86, 0), ts(86, -2), "Bootstrapped the React Native app with Expo Router."},
+		{"s-mob-02", "mobile-app", "/home/user/mobile-app", ts(68, 0), ts(68, -3), "Implemented offline-first sync with WatermelonDB."},
+		{"s-mob-03", "mobile-app", "/home/user/mobile-app", ts(52, 0), ts(52, -2), "Added biometric authentication with expo-local-authentication."},
+		{"s-mob-04", "mobile-app", "/home/user/mobile-app", ts(38, 0), ts(38, -2), "Push notifications and deep linking setup."},
+		{"s-mob-05", "mobile-app", "/home/user/mobile-app", ts(22, 0), ts(22, -3), "Gesture-driven navigation and shared element transitions."},
+		{"s-mob-06", "mobile-app", "/home/user/mobile-app", ts(7, 0), ts(7, -1), "Performance profiling with Flipper and Hermes."},
+
+		// ml-platform
+		{"s-ml-01", "ml-platform", "/home/user/ml-platform", ts(84, 0), ts(84, -2), "Set up the feature store with Feast and Redis."},
+		{"s-ml-02", "ml-platform", "/home/user/ml-platform", ts(66, 0), ts(66, -3), "Built the training pipeline orchestration with Airflow."},
+		{"s-ml-03", "ml-platform", "/home/user/ml-platform", ts(49, 0), ts(49, -2), "Model registry and versioning with MLflow."},
+		{"s-ml-04", "ml-platform", "/home/user/ml-platform", ts(33, 0), ts(33, -2), "Online inference serving with Triton and KServe."},
+		{"s-ml-05", "ml-platform", "/home/user/ml-platform", ts(19, 0), ts(19, -3), "Drift detection and automated retraining triggers."},
+		{"s-ml-06", "ml-platform", "/home/user/ml-platform", ts(6, 0), ts(6, -1), "A/B testing framework for model rollouts."},
+
+		// design-system
+		{"s-ds-01", "design-system", "/home/user/design-system", ts(82, 0), ts(82, -2), "Established the design token pipeline with Style Dictionary."},
+		{"s-ds-02", "design-system", "/home/user/design-system", ts(64, 0), ts(64, -3), "Built primitive components with Radix UI and CVA."},
+		{"s-ds-03", "design-system", "/home/user/design-system", ts(47, 0), ts(47, -2), "Documented usage with a Storybook + MDX setup."},
+		{"s-ds-04", "design-system", "/home/user/design-system", ts(31, 0), ts(31, -2), "Theming and dark mode via CSS custom properties."},
+		{"s-ds-05", "design-system", "/home/user/design-system", ts(16, 0), ts(16, -1), "Accessibility testing with axe-core in CI."},
+
+		// data-eng
+		{"s-de-01", "data-eng", "/home/user/data-eng", ts(81, 0), ts(81, -2), "Set up the lakehouse with Delta Lake on S3."},
+		{"s-de-02", "data-eng", "/home/user/data-eng", ts(63, 0), ts(63, -3), "Built ingestion pipelines with dbt and Airbyte."},
+		{"s-de-03", "data-eng", "/home/user/data-eng", ts(46, 0), ts(46, -2), "Implemented CDC from Postgres with Debezium."},
+		{"s-de-04", "data-eng", "/home/user/data-eng", ts(29, 0), ts(29, -2), "Data quality checks with Great Expectations."},
+		{"s-de-05", "data-eng", "/home/user/data-eng", ts(12, 0), ts(12, -1), "Cost optimization on the warehouse query layer."},
 
 		// orphan sessions (project = "")
 		{"s-orp-01", "", "/tmp/scratch", ts(80, 0), ts(80, -1), "Quick experiment without project context."},
@@ -1220,6 +1302,25 @@ func insertAll(tx *sql.Tx) (rowCounts, error) {
 		{"s-inf-05", "Set up Prometheus metrics with a latency histogram in Go", "infra", ts(18, 0)},
 		{"s-inf-06", "Configure a Kubernetes deployment for zero-downtime rolling updates", "infra", ts(5, 0)},
 
+		{"s-mob-01", "Set up Expo Router with typed routes for a React Native app", "mobile-app", ts(86, 0)},
+		{"s-mob-02", "Implement offline-first sync with WatermelonDB and conflict resolution", "mobile-app", ts(68, 0)},
+		{"s-mob-03", "Add Face ID authentication that protects the refresh token", "mobile-app", ts(52, 0)},
+		{"s-mob-05", "Build swipe-to-dismiss gestures running on the UI thread with Reanimated", "mobile-app", ts(22, 0)},
+		{"s-mob-06", "Why is my React Native cold start slow and how does Hermes help?", "mobile-app", ts(7, 0)},
+
+		{"s-ml-01", "Design a feature store that prevents label leakage in training", "ml-platform", ts(84, 0)},
+		{"s-ml-02", "Orchestrate an idempotent, checkpointed training pipeline in Airflow", "ml-platform", ts(66, 0)},
+		{"s-ml-04", "Configure Triton dynamic batching to improve GPU utilization", "ml-platform", ts(33, 0)},
+		{"s-ml-05", "Implement input drift detection with PSI and auto-retraining triggers", "ml-platform", ts(19, 0)},
+
+		{"s-ds-01", "Set up a design token pipeline that targets web, iOS, and Android", "design-system", ts(82, 0)},
+		{"s-ds-02", "Wrap Radix primitives with CVA for typed, accessible components", "design-system", ts(64, 0)},
+		{"s-ds-05", "Add an axe-core accessibility gate to the component CI", "design-system", ts(16, 0)},
+
+		{"s-de-01", "Lay out Delta Lake tables with Z-ordering for fast filtered scans", "data-eng", ts(81, 0)},
+		{"s-de-03", "Stream CDC from Postgres into the lakehouse without loading the source DB", "data-eng", ts(46, 0)},
+		{"s-de-05", "How do I cut warehouse cost without hurting dashboard freshness?", "data-eng", ts(12, 0)},
+
 		{"s-orp-01", "Quick question about mmap in Go without CGO", "", ts(80, 0)},
 		{"s-orp-03", "How can I embed a SQL schema file into a Go binary at compile time?", "", ts(40, 0)},
 	}
@@ -1340,6 +1441,8 @@ func insertAll(tx *sql.Tx) (rowCounts, error) {
 		{"demo-api", ts(89, 0)},
 		{"demo-web", ts(88, 0)},
 		{"infra", ts(83, 0)},
+		{"mobile-app", ts(86, 0)},
+		{"ml-platform", ts(84, 0)},
 	}
 
 	enrollStmt, err := tx.Prepare(`INSERT INTO sync_enrolled_projects (project, enrolled_at) VALUES (?, ?)`)
@@ -1355,8 +1458,10 @@ func insertAll(tx *sql.Tx) (rowCounts, error) {
 		c.syncEnrolled++
 	}
 
-	// Sync state: demo-api is healthy, demo-web is healthy, infra is broken
-	// (lifecycle=pending, 5 mutations enqueued, 0 acked, stale updated_at).
+	// Sync state: demo-api/demo-web/mobile-app are healthy, infra is broken
+	// (pending, 0 acked, stale), ml-platform has a partial backlog with recent failures.
+	syncErrMsg := "cloud rejected batch: token expired (401)"
+	syncErr := &syncErrMsg
 	syncStates := []struct {
 		targetKey           string
 		lifecycle           string
@@ -1369,6 +1474,8 @@ func insertAll(tx *sql.Tx) (rowCounts, error) {
 		{"cloud:demo-api", "idle", 45, 45, 0, nil, ts(3, 0)},
 		{"cloud:demo-web", "idle", 32, 32, 0, nil, ts(2, 0)},
 		{"cloud:infra", "pending", 12, 0, 0, nil, ts(60, 0)}, // stale + 0 acked → broken
+		{"cloud:mobile-app", "idle", 58, 58, 0, nil, ts(2, 0)},
+		{"cloud:ml-platform", "pending", 27, 19, 2, syncErr, ts(6, 0)}, // partial backlog + recent failures
 	}
 
 	stateStmt, err := tx.Prepare(`
@@ -1419,6 +1526,15 @@ func insertAll(tx *sql.Tx) (rowCounts, error) {
 		{"cloud:infra", "observation", sid(41), "upsert", `{"content":"ci note","title":"GitHub Actions CI"}`, "infra", ts(65, 0), nil},
 		{"cloud:infra", "observation", sid(43), "upsert", `{"content":"migration note","title":"goose migrations"}`, "infra", ts(48, 0), nil},
 		{"cloud:infra", "observation", sid(46), "upsert", `{"content":"metrics note","title":"Prometheus metrics"}`, "infra", ts(18, 0), nil},
+		// mobile-app: all acked (healthy)
+		{"cloud:mobile-app", "observation", sid(1100), "upsert", `{"content":"sync note","title":"Offline-first sync engine"}`, "mobile-app", ts(86, 0), &acked},
+		{"cloud:mobile-app", "observation", sid(1101), "upsert", `{"content":"auth note","title":"Biometric auth flow"}`, "mobile-app", ts(68, 0), &acked},
+		{"cloud:mobile-app", "observation", sid(1102), "upsert", `{"content":"gesture note","title":"Gesture navigation"}`, "mobile-app", ts(52, 0), &acked},
+		// ml-platform: partial backlog — first two acked, rest pending (SYNC issue)
+		{"cloud:ml-platform", "observation", sid(1200), "upsert", `{"content":"feature note","title":"Feature store design"}`, "ml-platform", ts(84, 0), &acked},
+		{"cloud:ml-platform", "observation", sid(1201), "upsert", `{"content":"dag note","title":"Training pipeline DAG"}`, "ml-platform", ts(66, 0), &acked},
+		{"cloud:ml-platform", "observation", sid(1202), "upsert", `{"content":"drift note","title":"Drift detection"}`, "ml-platform", ts(19, 0), nil},
+		{"cloud:ml-platform", "observation", sid(1203), "upsert", `{"content":"serving note","title":"Inference serving"}`, "ml-platform", ts(33, 0), nil},
 	}
 
 	mutStmt, err := tx.Prepare(`

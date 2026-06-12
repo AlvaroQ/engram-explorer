@@ -21,13 +21,13 @@ templ OverviewPartial(data services.OverviewResponse, issues services.SyncIssues
 templ overviewContent(data services.OverviewResponse, issues services.SyncIssuesResponse, lang string) {
 	<div class="flex flex-col gap-6">
 		<!-- Sync issues alert bar — rendered only when issues are present.
-		     Links to /doctor/sync for now; PR4 will add a redirect from
-		     /doctor/sync → /settings/maintenance so this link keeps working. -->
+		     Links straight to /settings/maintenance (no #cloud fragment) so the
+		     page opens at the top instead of jumping down to the cloud section. -->
 		if len(issues.Issues) > 0 {
 			<div class="flex items-center gap-3 rounded-lg border border-warn/40 bg-warn/10 px-4 py-2.5 text-sm" id="overview-sync-alert">
 				<span class="text-warn">⚠</span>
 				<span class="flex-1 text-fg">{ T(lang, "overview.alert.syncIssues", "count", fmt.Sprintf("%d", len(issues.Issues))) }</span>
-				<a href="/doctor/sync" class="font-medium text-warn hover:underline">{ T(lang, "overview.alert.review") }</a>
+				<a href="/settings/maintenance" class="font-medium text-warn hover:underline">{ T(lang, "overview.alert.review") }</a>
 			</div>
 		}
 		<!-- KPI row — 3 cards: Projects, AI conversations, Memories saved -->
@@ -143,7 +143,9 @@ templ overviewRecentTable(items []services.OverviewRecentObs, lang string) {
 				<tbody class="divide-y divide-border">
 					for _, o := range items {
 						<tr class="align-top hover:bg-surface-2/50">
-							<td class="whitespace-nowrap px-5 py-3 text-xs text-fg-muted">{ derefStr(o.CreatedAt, "—") }</td>
+							<td class="whitespace-nowrap px-5 py-3 text-xs text-fg-muted">
+								@dateClockCell(derefStr(o.CreatedAt, ""))
+							</td>
 							<td class="px-3 py-3">
 								<span class="badge badge-neutral">{ o.Type }</span>
 							</td>
@@ -152,7 +154,7 @@ templ overviewRecentTable(items []services.OverviewRecentObs, lang string) {
 							</td>
 							<td class="px-5 py-3 text-fg">
 								if o.Project != nil && *o.Project != "" {
-									<span class="font-medium">{ *o.Project }</span>
+									<span class="badge badge-neutral">{ *o.Project }</span>
 								} else {
 									<span class="italic text-fg-muted">—</span>
 								}
