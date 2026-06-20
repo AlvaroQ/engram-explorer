@@ -1,6 +1,7 @@
 package httpapi_test
 
 import (
+	"context"
 	"database/sql"
 	"io"
 	"log/slog"
@@ -11,7 +12,81 @@ import (
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/httpapi"
+	"github.com/AlvaroQ/engram-explorer/internal/providers"
+	engramprovider "github.com/AlvaroQ/engram-explorer/internal/providers/engram"
 )
+
+// makeEngramDB seeds a sqlite file with the minimal Engram schema the engram
+// provider validates (observations + sessions tables) plus a marker table the
+// test reads to confirm which database is live.
+func makeEngramDB(t *testing.T, v string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "engram.db")
+	db, err := sql.Open("sqlite", "file:"+path)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	for _, stmt := range []string{
+		"CREATE TABLE observations (id INTEGER)",
+		"CREATE TABLE sessions (id INTEGER)",
+		"CREATE TABLE marker (v TEXT)",
+	} {
+		if _, err := db.Exec(stmt); err != nil {
+			t.Fatalf("exec %q: %v", stmt, err)
+		}
+	}
+	if _, err := db.Exec("INSERT INTO marker VALUES (?)", v); err != nil {
+		t.Fatalf("insert: %v", err)
+	}
+	db.Close()
+	return path
+}
+
+// TestReloadEngramDB_RegistryPath reproduces the registry-backed boot path (the
+// one the real binary uses) and asserts that ReloadEngramDB hot-swaps the live
+// pool without panicking. Before the fix, c.roSwap was nil on this path so the
+// swap dereferenced a nil pointer — the "DB-path switcher does nothing/crashes".
+func TestReloadEngramDB_RegistryPath(t *testing.T) {
+	pathA := makeEngramDB(t, "a")
+	pathB := makeEngramDB(t, "b")
+
+	cfg := config.Config{
+		EngramDbPath:  pathA,
+		EngramDataDir: filepath.Dir(pathA),
+		ConfigHome:    t.TempDir(),
+	}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	reg := providers.NewRegistry(logger)
+	reg.Register(engramprovider.NewProvider(cfg))
+	prof := config.Profile{Providers: map[string]config.ProviderConfig{
+		"engram": {Enabled: true, Path: pathA},
+	}}
+	reg.Boot(context.Background(), httpapi.AdaptProfile(prof))
+
+	c := httpapi.NewContainerWithRegistry(reg, cfg, logger)
+	c.CloseGrace = 0
+	t.Cleanup(c.Close)
+
+	read := func() string {
+		var v string
+		if err := c.RoDB.QueryRow("SELECT v FROM marker").Scan(&v); err != nil {
+			t.Fatalf("read: %v", err)
+		}
+		return v
+	}
+
+	if got := read(); got != "a" {
+		t.Fatalf("initial read: got %q, want a", got)
+	}
+	// This must not panic (regression guard for the nil c.roSwap bug).
+	if err := c.ReloadEngramDB(pathB); err != nil {
+		t.Fatalf("ReloadEngramDB on registry path: %v", err)
+	}
+	if got := read(); got != "b" {
+		t.Fatalf("after reload: got %q, want b", got)
+	}
+}
 
 // makeReloadDB seeds a sqlite file whose marker table holds v.
 func makeReloadDB(t *testing.T, v string) string {
