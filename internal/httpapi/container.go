@@ -138,6 +138,27 @@ func (c *Container) ReloadEngramDB(newPath string) error {
 		c.Logger.Warn("failed to persist path override", "err", err)
 	}
 
+	// On the registry path the active profile (config.json) is the source of
+	// truth used to open the Engram provider at boot, so the override file alone
+	// would not survive a restart. Persist the new path into the active profile
+	// too, keeping the live swap and the next boot in agreement.
+	if c.ProfileStore != nil {
+		name := c.ProfileStore.ActiveProfile
+		if prof, ok := c.ProfileStore.Profiles[name]; ok {
+			if prof.Providers == nil {
+				prof.Providers = make(map[string]config.ProviderConfig)
+			}
+			ec := prof.Providers["engram"]
+			ec.Enabled = true
+			ec.Path = newPath
+			prof.Providers["engram"] = ec
+			c.ProfileStore.Profiles[name] = prof
+			if err := config.SaveProfileStore(c.Config.ConfigHome, c.ProfileStore); err != nil {
+				c.Logger.Warn("failed to persist engram path to active profile", "err", err)
+			}
+		}
+	}
+
 	// Close the old pools after a grace period so in-flight queries drain.
 	closeOld := func() {
 		if oldRo != nil {
@@ -264,6 +285,18 @@ func populateFromRegistry(c *Container, reg *providers.Registry) {
 			c.RWDB = rwDB
 			if paths != nil {
 				c.Paths = paths
+			}
+			// Recover the concrete SwapDB handles so ReloadEngramDB can hot-swap
+			// the very pools the handlers read through. The Engram provider wraps
+			// both pools in *sqlite.SwapDB and hands them to the container as the
+			// sqlite.Querier interface; without these assignments c.roSwap/c.rwSwap
+			// stay nil on the registry path and ReloadEngramDB panics on swap
+			// (the in-app DB-path switcher "does nothing"/crashes bug).
+			if sw, ok := roDB.(*sqlite.SwapDB); ok {
+				c.roSwap = sw
+			}
+			if sw, ok := rwDB.(*sqlite.SwapDB); ok {
+				c.rwSwap = sw
 			}
 		}
 	}
