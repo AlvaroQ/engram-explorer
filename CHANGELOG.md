@@ -28,6 +28,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Stored XSS in prompt search** — FTS snippets are no longer rendered as raw HTML. Snippets are built with
   private-use sentinel delimiters, rendered as escaped text, and only the match is wrapped in `<mark>`. The
   JSON `snippet` field keeps its `<mark>` delimiters and must be rendered as text by API consumers.
+- **Import identifiers** — column names read from an uploaded database are quoted in the merge statements
+  (defense in depth: validation already requires them to match the local schema).
 
 ### Changed
 
