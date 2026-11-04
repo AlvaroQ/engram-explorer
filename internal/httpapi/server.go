@@ -374,17 +374,13 @@ func buildModulesFn(reg *providers.Registry, store *config.ProfileStore, activeP
 					path = p.ProviderCfg(m.ID).Path
 				}
 			}
-			var errMsg string
-			if m.Err != nil {
-				errMsg = m.Err.Error()
-			}
 			out = append(out, ui.ModuleInfo{
 				ID:          m.ID,
 				DisplayName: m.DisplayName,
 				Tier:        registryTierToUITier(m.Tier),
 				State:       registryStateToUIState(m.State),
 				Path:        path,
-				Err:         errMsg,
+				Cause:       m.Err,
 			})
 		}
 		return out

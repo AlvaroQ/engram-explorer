@@ -42,8 +42,9 @@ type Config struct {
 
 	// ReadOnly, when true, prevents the backend from opening the read-write
 	// pool at all, so the dashboard becomes a pure read-only viewer: every
-	// mutating route (edits, deletes, project rename, db import, cloud
-	// unenroll) returns 503. Set ENGRAM_DASH_READONLY=true to enable.
+	// mutating route (edits, deletes, project rename/merge, db import) returns
+	// 503. Cloud sync is read-only in every mode. Set ENGRAM_DASH_READONLY=true
+	// to enable.
 	ReadOnly bool
 
 	// DemoMode, when true, means the server is running against the bundled

@@ -45,7 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `engram` CLI to enroll or sync. This also closes the gap where cloud actions ignored `ENGRAM_DASH_READONLY`.
 - **JSON body limit** — JSON request bodies are capped at 1 MiB (`http.MaxBytesReader`); larger bodies get
   `413` with `PAYLOAD_TOO_LARGE`.
-- **Write route rate limits** — every write route is rate limited per client IP and route pattern (no longer
+- **Write route rate limits** — every JSON API write route is rate limited per client IP and route pattern (no longer
   by raw path alone, and `X-Forwarded-For` is ignored): database import 5/min, export 10/min, other write
   routes 120/min. Expired buckets are pruned.
 - **Settings path validation** — changing the Engram database path or the Claude projects directory in
@@ -53,8 +53,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   tables; a directory with project folders, the same checks the providers apply). On rejection the active
   database/directory and saved settings stay unchanged, and the message only echoes the typed path.
 - **No internal errors in HTML** — UI and doctor pages no longer show raw error text (SQLite errors,
-  filesystem paths). Messages written for the user are still shown; any other error shows a generic
-  localized message and the detail goes to the server log.
+  filesystem paths), including the Settings daemon and module hints. Messages written for the user are still
+  shown; any other error shows a generic localized message and the detail goes to the server log.
 - **Stricter Content Security Policy** — `script-src` no longer allows `'unsafe-inline'`: inline scripts,
   event-handler attributes and `hx-on` moved to a static `ui-actions.js`, and htmx attribute evaluation is
   disabled (`allowEval: false`). `style-src` still allows `'unsafe-inline'` (inline style attributes and htmx

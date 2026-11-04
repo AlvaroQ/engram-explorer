@@ -747,6 +747,7 @@
     "language": "Idioma",
     "languageDescription": "Elige el idioma de la interfaz",
     "daemon": "Servicio en segundo plano",
+    "daemonErrorHint": "El daemon de Engram no respondió. Revisa el registro del servidor para más detalles.",
     "cloudCli": "Capacidades del CLI cloud",
     "cloudCliDesc": "Detectado a partir de `engram cloud --help`",
     "cloudCliError": "No se pudieron detectar las capacidades del CLI.",

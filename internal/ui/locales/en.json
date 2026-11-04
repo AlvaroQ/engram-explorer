@@ -747,6 +747,7 @@
     "language": "Language",
     "languageDescription": "Choose the interface language",
     "daemon": "Background service",
+    "daemonErrorHint": "The Engram daemon did not respond. Check the server log for details.",
     "cloudCli": "Cloud CLI capabilities",
     "cloudCliDesc": "Detected from `engram cloud --help`",
     "cloudCliError": "Could not detect CLI capabilities.",
