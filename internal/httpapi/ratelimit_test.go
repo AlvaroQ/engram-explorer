@@ -2,6 +2,7 @@ package httpapi_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -35,6 +36,21 @@ func assertRateLimited(t *testing.T, rec *httptest.ResponseRecorder) {
 	}
 	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
 		t.Errorf("Content-Type: got %q, want application/json", ct)
+	}
+	var env struct {
+		Error struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
+		t.Fatalf("decode error envelope: %v (body: %s)", err, rec.Body.String())
+	}
+	if env.Error.Code != "RATE_LIMITED" {
+		t.Errorf("error.code: got %q, want RATE_LIMITED", env.Error.Code)
+	}
+	if env.Error.Message != "Rate limit exceeded" {
+		t.Errorf("error.message: got %q, want %q", env.Error.Message, "Rate limit exceeded")
 	}
 }
 

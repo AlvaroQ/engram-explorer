@@ -62,7 +62,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   rejected with `400 BAD_INPUT`; trailing whitespace is still accepted.
 - **Write route rate limits** — every JSON API write route is rate limited per client IP and route pattern (no longer
   by raw path alone, and `X-Forwarded-For` is ignored): database import 5/min, export 10/min, other write
-  routes 120/min. Expired buckets are pruned.
+  routes 120/min. Expired buckets are pruned. Rate-limited requests answer `429` with error code `RATE_LIMITED`
+  (was `BAD_INPUT`) and a `Retry-After` header.
 - **Settings path validation** — changing the Engram database path or the Claude projects directory in
   Settings now validates the target first (an SQLite file with the Engram `observations` and `sessions`
   tables; a directory with project folders, the same checks the providers apply). On rejection the active

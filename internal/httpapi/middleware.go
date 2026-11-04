@@ -161,15 +161,20 @@ func (rl *rateLimiter) allow(key string) (ok bool, retryAfterSec int) {
 // ServeMux). Proxy headers such as X-Forwarded-For are deliberately ignored:
 // the dashboard binds to loopback and those headers are client-controlled.
 func rateLimitKey(r *http.Request) string {
-	client := r.RemoteAddr
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		client = host
-	}
 	route := r.Pattern
 	if route == "" {
 		route = r.URL.Path
 	}
-	return client + " " + r.Method + " " + route
+	return rateLimitClient(r) + " " + r.Method + " " + route
+}
+
+// rateLimitClient returns the host part of r.RemoteAddr, or the raw value when
+// it is not host:port. X-Forwarded-For and similar headers are never read.
+func rateLimitClient(r *http.Request) string {
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
 }
 
 // withRateLimit wraps a handler with a fixed-window rate limiter keyed by
@@ -179,12 +184,17 @@ func withRateLimit(rl *rateLimiter, exposeDetails bool, next http.Handler) http.
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ok, retryAfter := rl.allow(rateLimitKey(r))
 		if !ok {
-			// Retry-After must be delay-seconds (RFC 7231 §7.1.3), not status text.
-			w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
-			writeError(w, http.StatusTooManyRequests, "BAD_INPUT",
-				"Rate limit exceeded", nil, exposeDetails)
+			writeRateLimited(w, retryAfter, exposeDetails)
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// writeRateLimited writes the 429 answer shared by every limiter: the
+// Retry-After header and the RATE_LIMITED error envelope.
+func writeRateLimited(w http.ResponseWriter, retryAfterSec int, exposeDetails bool) {
+	// Retry-After must be delay-seconds (RFC 7231 §7.1.3), not status text.
+	w.Header().Set("Retry-After", strconv.Itoa(retryAfterSec))
+	writeError(w, http.StatusTooManyRequests, codeRateLimited, "Rate limit exceeded", nil, exposeDetails)
 }
