@@ -56,7 +56,7 @@ func TestLoad_AllowRemoteOverride(t *testing.T) {
 func TestIsLoopbackHost(t *testing.T) {
 	cases := map[string]bool{
 		"127.0.0.1": true, "::1": true, "localhost": true, "Localhost": true,
-		"0.0.0.0": false, "::": false, "": false, "10.0.0.1": false, "localhost.evil.com": false,
+		"0.0.0.0": false, "::": false, "": false, "10.0.0.1": false, "localhost.evil.com": false, "myhost.lan": false, "::ffff:127.0.0.1": true,
 	}
 	for host, want := range cases {
 		if got := config.IsLoopbackHost(host); got != want {

@@ -164,3 +164,30 @@ func TestGuard_SecurityHeadersOnBundles(t *testing.T) {
 		}
 	}
 }
+
+// TestGuard_EdgeCases pins bypass attempts probed during the phase
+// verification: trailing-dot and non-canonical hosts, and export path variants
+// and HEAD requests from another site.
+func TestGuard_EdgeCases(t *testing.T) {
+	h := httpapi.NewHandler(newEngramContainer(t))
+	for _, host := range []string{"localhost.", "localhost.:8787", "0x7f.1", "127.0.0.1.nip.io:8787"} {
+		rec := serveGuard(t, h, guardReq{method: http.MethodGet, path: "/api/health", host: host})
+		if rec.Code != http.StatusForbidden || guardCode(t, rec) != "HOST_NOT_ALLOWED" {
+			t.Errorf("Host %q: got %d %q, want 403 HOST_NOT_ALLOWED", host, rec.Code, guardCode(t, rec))
+		}
+	}
+	cross := map[string]string{"Sec-Fetch-Site": "cross-site"}
+	for _, r := range []guardReq{
+		{method: http.MethodGet, path: "//api/db/export"},
+		{method: http.MethodGet, path: "/api/db/export/"},
+		{method: http.MethodGet, path: "/api/db/./export"},
+		{method: http.MethodGet, path: "/api/db/%65xport"},
+		{method: http.MethodHead, path: "/api/db/export"},
+	} {
+		r.host, r.headers = "127.0.0.1:8787", cross
+		rec := serveGuard(t, h, r)
+		if rec.Code != http.StatusForbidden || guardCode(t, rec) != "CROSS_ORIGIN_REQUEST" {
+			t.Errorf("%s %s cross-site: got %d %q, want 403 CROSS_ORIGIN_REQUEST", r.method, r.path, rec.Code, guardCode(t, rec))
+		}
+	}
+}
