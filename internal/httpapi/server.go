@@ -120,7 +120,8 @@ func mountLegacyRoutes(mux *http.ServeMux, c *Container) {
 // mountRegistryRoutes mounts every route once, for every registered provider
 // whatever its state. Nothing here switches on a provider ID:
 //
-//   - the doctor module is gated on the SQLite store like the memory API;
+//   - each provider's own routes come from Provider.Routes, on a router that
+//     serves them only while that provider is Enabled;
 //   - the host route families (the Engram JSON API and the Claude Code stats)
 //     are gated on an Enabled instance with the matching capability, and read
 //     through c.RoDB/c.RWDB, which follow the live store (liveDB);
@@ -149,7 +150,9 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 	// Daemon routes are independent of provider state.
 	daemonRoutes(mux, c)
 
-	doctor.Mount(memory, doctor.Deps{Config: c.Config, Live: c.storeHandles})
+	for _, p := range reg.Providers() {
+		p.Routes(newModuleRouter(mux, reg, p.ID(), c.Config.ExposeDetails))
+	}
 
 	// The UI shell renders with zero providers (onboarding zero-state); module
 	// pages are gated per request through Live.

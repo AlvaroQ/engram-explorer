@@ -36,7 +36,13 @@ func handleActivity(c *Container) http.HandlerFunc {
 
 func handleOverview(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		resp, err := services.OverviewBuild(c.RoDB)
+		// Served by the live providers.StatsSource capability.
+		stats := c.statsSource()
+		if stats == nil {
+			writeModuleDisabled(w, r, c.Config.ExposeDetails)
+			return
+		}
+		resp, err := stats.Stats(r.Context())
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return

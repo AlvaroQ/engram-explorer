@@ -100,14 +100,20 @@ func handleObservationsSearch(c *Container) http.HandlerFunc {
 			return
 		}
 		limit := parseLimit(r.URL.Query(), 50, 1, 200)
-		items, err := services.ObservationsSearch(c.RoDB, rawQ, limit)
+		// Served by the live providers.Searcher capability.
+		searcher := c.searcher()
+		if searcher == nil {
+			writeModuleDisabled(w, r, c.Config.ExposeDetails)
+			return
+		}
+		items, err := searcher.Search(r.Context(), rawQ, limit)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
 		}
 
 		type resp struct {
-			Items []services.ObservationWithSnippet `json:"items"`
+			Items any `json:"items"`
 		}
 		writeJSON(w, http.StatusOK, resp{Items: items})
 	}

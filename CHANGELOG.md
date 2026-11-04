@@ -108,6 +108,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Provider capabilities** — provider wiring goes through capability interfaces (`Provider.Routes` with a host
+  `Router`, `Writable`, `Searcher`, `StatsSource`) instead of a switch on provider IDs: search
+  (`GET /api/observations/search`) and overview stats (`GET /api/overview`) are served through `Searcher` and
+  `StatsSource`, and write routes and read-write handles are gated by `Writable`.
 - **Unreadable `config.json`** — a `config.json` that cannot be parsed is left untouched; the explorer runs on
   defaults and saves nothing.
 - **Single saved configuration** — `config.json` is the only file the explorer writes: Settings database and
