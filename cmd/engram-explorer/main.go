@@ -172,7 +172,7 @@ func run() error {
 	// handles from the registry's Engram instance (if any). This is the
 	// non-fatal-boot path: the server starts whether Engram is present or not.
 	container := httpapi.NewContainerWithRegistry(reg, cfg, logger)
-	container.ProfileStore = profileStore
+	container.ProfileStore = config.NewStore(cfg.ConfigHome, *profileStore)
 	defer container.Close()
 
 	// NewHandler composes the request guard (Host allow-list, cross-origin

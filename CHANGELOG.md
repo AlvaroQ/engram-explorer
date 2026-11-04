@@ -18,6 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Profile store races** — concurrent Settings requests no longer race on the profile store (`config.Store`
+  guards it with a lock), and module toggles after a profile switch are saved into the new active profile
+  instead of the previous one.
 - **Profile switch lifecycle** — switching profiles closes the providers the new profile disables and opens the
   ones it enables (it used to leave disabled providers open and never open newly enabled ones); a failed open
   rolls the switch back without leaking instances.

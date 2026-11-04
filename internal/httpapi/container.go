@@ -33,10 +33,11 @@ type Container struct {
 	// and callers that construct via NewContainer).
 	Registry *providers.Registry
 
-	// ProfileStore, when non-nil, is the persistent config used by the Settings
-	// Modules page to read and write per-provider enablement and paths. It is
-	// set from main.go via NewContainerWithRegistry when a registry is used.
-	ProfileStore *config.ProfileStore
+	// ProfileStore, when non-nil, is the lock-guarded owner of config.json and
+	// the active profile, used by the Settings pages to read and write
+	// per-provider enablement and paths. It is set from main.go when a registry
+	// is used. Never access the underlying ProfileStore data directly.
+	ProfileStore *config.Store
 
 	// CloseGrace is how long ReloadEngramDB waits before closing the superseded
 	// pools, letting in-flight queries drain. Tests set it to 0 to close
@@ -156,19 +157,15 @@ func (c *Container) ReloadEngramDB(newPath string) error {
 	// would not survive a restart. Persist the new path into the active profile
 	// too, keeping the live swap and the next boot in agreement.
 	if c.ProfileStore != nil {
-		name := c.ProfileStore.ActiveProfile
-		if prof, ok := c.ProfileStore.Profiles[name]; ok {
-			if prof.Providers == nil {
-				prof.Providers = make(map[string]config.ProviderConfig)
-			}
-			ec := prof.Providers["engram"]
+		err := c.ProfileStore.UpdateActive(func(_ string, p *config.Profile) error {
+			ec := p.ProviderCfg("engram")
 			ec.Enabled = true
 			ec.Path = newPath
-			prof.Providers["engram"] = ec
-			c.ProfileStore.Profiles[name] = prof
-			if err := config.SaveProfileStore(c.Config.ConfigHome, c.ProfileStore); err != nil {
-				c.Logger.Warn("failed to persist engram path to active profile", "err", err)
-			}
+			p.SetProviderCfg("engram", ec)
+			return nil
+		})
+		if err != nil {
+			c.Logger.Warn("failed to persist engram path to active profile", "err", err)
 		}
 	}
 
