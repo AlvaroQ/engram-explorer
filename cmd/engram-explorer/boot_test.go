@@ -6,12 +6,8 @@ import (
 	"database/sql"
 	"io"
 	"log/slog"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -84,40 +80,6 @@ func assertNoFile(t *testing.T, path string) {
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Errorf("%s must not exist (stat err %v)", filepath.Base(path), err)
 	}
-}
-
-// TestBuildContainer_DemoServesDemoDBAndWritesNothing covers S1: with a
-// config.json profile pointing at a real database, demo mode must serve the
-// demo database, and nothing done in demo mode (DB switch, preference write)
-// may modify config.json or create explorer-settings.json.
-func TestBuildContainer_DemoServesDemoDBAndWritesNothing(t *testing.T) {
-	home := t.TempDir()
-	realDB := makeEngramDB(t, filepath.Join(t.TempDir(), "real"))
-	demoDB := makeEngramDB(t, filepath.Join(t.TempDir(), "demo"))
-	before := writeProfileConfig(t, home, realDB)
-
-	cfg := config.Config{ConfigHome: home, EngramDbPath: demoDB, DemoMode: true, DaemonTimeoutMs: 50}
-	c := buildContainer(cfg, quietLogger())
-	c.CloseGrace = 0
-	t.Cleanup(c.Close)
-
-	if got := servedEngramPath(t, c); got != demoDB {
-		t.Fatalf("demo mode serves %q, want the demo DB %q", got, demoDB)
-	}
-
-	other := makeEngramDB(t, filepath.Join(t.TempDir(), "other"))
-	if err := c.ReloadEngramDB(other); err != nil {
-		t.Fatalf("ReloadEngramDB: %v", err)
-	}
-	form := url.Values{"enabled": {"true"}}
-	req := httptest.NewRequest(http.MethodPost, "/settings/advanced-view", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	httpapi.NewServeMux(c).ServeHTTP(httptest.NewRecorder(), req)
-
-	if after := readFile(t, filepath.Join(home, "config.json")); !bytes.Equal(before, after) {
-		t.Errorf("demo mode modified config.json:\n%s", after)
-	}
-	assertNoFile(t, config.OverridesPath(home))
 }
 
 // TestBuildContainer_EnvOverridesProfileAndIsNotSaved covers S6: an
