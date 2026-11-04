@@ -3,6 +3,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,6 +15,9 @@ type Config struct {
 	// HTTP server
 	Host string
 	Port int
+	// AllowRemote, when true (DASHBOARD_ALLOW_REMOTE), permits a non-loopback
+	// Host. The dashboard has no authentication, so this is off by default.
+	AllowRemote bool
 
 	// Data paths
 	EngramDataDir string
@@ -169,6 +173,23 @@ func Load() (Config, error) {
 		ExposeDetails:     env == "development",
 		ReadOnly:          envBool("ENGRAM_DASH_READONLY", false),
 		ClaudeProjectsDir: claudeProjectsDir,
+		AllowRemote:       envBool("DASHBOARD_ALLOW_REMOTE", false),
+	}
+	if !cfg.AllowRemote && !IsLoopbackHost(cfg.Host) {
+		return Config{}, fmt.Errorf(
+			"refusing to start: DASHBOARD_HOST=%q is not a loopback address. "+
+				"engram-explorer has no authentication and only listens on 127.0.0.1, ::1 or localhost by default; "+
+				"set DASHBOARD_ALLOW_REMOTE=true to bind it anyway at your own risk", cfg.Host)
 	}
 	return cfg, nil
+}
+
+// IsLoopbackHost reports whether host is "localhost" (case-insensitive) or a
+// loopback IP literal. The unspecified addresses (0.0.0.0, ::) are not loopback.
+func IsLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

@@ -263,7 +263,8 @@ The demo database is not shipped with release binaries — generate it with `go 
 | -------------------------- | ----------------------- | ---------------------------------------------------------------------------------- |
 | `ENGRAM_DATA_DIR`          | `~/.engram`             | Directory containing `engram.db`; also the location of `config.json`               |
 | `CLAUDE_PROJECTS_DIR`      | `~/.claude/projects`    | Directory where Claude Code stores session transcripts                             |
-| `DASHBOARD_HOST`           | `127.0.0.1`             | HTTP bind address                                                                  |
+| `DASHBOARD_HOST`           | `127.0.0.1`             | HTTP bind address; must be loopback unless `DASHBOARD_ALLOW_REMOTE=true`           |
+| `DASHBOARD_ALLOW_REMOTE`   | `false`                 | Set to `true` to allow a non-loopback `DASHBOARD_HOST` (no authentication!)        |
 | `DASHBOARD_PORT`           | `8787`                  | HTTP listen port                                                                   |
 | `ENGRAM_PORT`              | `7437`                  | Port of the local `engram serve` daemon (used when `ENGRAM_DAEMON_URL` is not set) |
 | `ENGRAM_DAEMON_URL`        | `http://127.0.0.1:7437` | Full base URL of the Engram daemon (overrides `ENGRAM_PORT`)                       |

@@ -30,6 +30,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   JSON `snippet` field keeps its `<mark>` delimiters and must be rendered as text by API consumers.
 - **Import identifiers** — column names read from an uploaded database are quoted in the merge statements
   (defense in depth: validation already requires them to match the local schema).
+- **Loopback-only bind** — the server refuses to start when `DASHBOARD_HOST` is not a loopback address
+  (`127.0.0.1`, `::1`, `localhost`), because the dashboard has no authentication. Set
+  `DASHBOARD_ALLOW_REMOTE=true` to bind another address at your own risk.
 
 ### Changed
 

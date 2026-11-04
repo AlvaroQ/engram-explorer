@@ -81,6 +81,7 @@ func TestLoad_ExposeDetailsInDevelopment(t *testing.T) {
 
 func TestLoad_EnvOverrides(t *testing.T) {
 	t.Setenv("DASHBOARD_HOST", "0.0.0.0")
+	t.Setenv("DASHBOARD_ALLOW_REMOTE", "true")
 	t.Setenv("DASHBOARD_PORT", "9000")
 	t.Setenv("ENGRAM_DATA_DIR", "/tmp/test-engram")
 	t.Setenv("LOG_LEVEL", "warn")

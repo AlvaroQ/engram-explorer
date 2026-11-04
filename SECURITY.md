@@ -42,7 +42,9 @@ safety backup next to the DB before merging.
 
 ## Scope notes
 
-- The local backend binds to `127.0.0.1` only — it is not meant to be reachable over a network.
+- The local backend binds to `127.0.0.1` only — it is not meant to be reachable over a network. It refuses to
+  start when `DASHBOARD_HOST` is not a loopback address (`127.0.0.1`, `::1`, `localhost`); the
+  `DASHBOARD_ALLOW_REMOTE=true` override exists for isolated setups only, since there is no authentication.
 - Cloud `enroll` / `sync` are delegated to the official `engram` CLI as a subprocess (args passed as a slice, project names whitelisted) — the dashboard never writes to cloud storage directly. The one local SQL exception is `unenroll`, which removes the local enrollment/state rows for that project.
 - Cloud mutation endpoints are rate-limited and require explicit user confirmation.
 - In production (`ENGRAM_DASH_ENV` unset) internal error details are never returned to the client.
