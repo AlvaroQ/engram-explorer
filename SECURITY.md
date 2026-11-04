@@ -74,8 +74,9 @@ safety backup next to the DB before merging.
   (default `~/.codex/sessions`) — never Codex's configuration, credentials or history files. They never write,
   move or delete anything there and never execute a program (no `codex` or `claude` CLI). Session keys taken
   from the URL are validated (clean relative paths only, no `..`, no absolute paths, no backslashes or NUL; a
-  Codex key must also be a rollout the listing found) and an invalid key answers `404`. Symlinks are not
-  followed when walking the Codex sessions directory, and a detail page only opens regular files.
+  Codex key must also be a rollout the listing found) and an invalid key answers `404`. Symlinked entries
+  inside the Codex sessions directory are skipped (the configured home and its `sessions` directory themselves
+  are used as given), and a detail page only opens regular files.
   `CODEX_HOME` is an in-memory override and is never written to disk.
 - In production (`ENGRAM_DASH_ENV` unset) internal error details are never returned to the client. HTML views
   never show raw provider or daemon error text: Settings module errors go through the same safe error mapper,

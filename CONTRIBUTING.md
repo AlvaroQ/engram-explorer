@@ -16,7 +16,7 @@ By participating in this project you agree to abide by its [Code of Conduct](./C
 | Path                   | What                                                                                                               |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `cmd/engram-explorer/` | Single-binary entrypoint — serves the templ+HTMX UI **and** the JSON API on one port                               |
-| `cmd/seed-demo/`       | Generates the demo dataset (Engram database + sample Claude Code sessions) used by `make demo`                     |
+| `cmd/seed-demo/`       | Generates the demo dataset (Engram database + sample Claude Code and Codex sessions) used by `make demo`           |
 | `internal/ui/`         | Primary UI: templ+HTMX server-rendered pages, i18n (en/es), layout, static assets (Tailwind CSS)                   |
 | `internal/doctor/`     | Diagnostic module: `/doctor/sync`, `/doctor/orphans` (templ+HTMX, reuses services layer)                           |
 | `internal/`            | Go backend — `config`, `sqlite` (read-only + read-write pools), `services`, `httpapi`, `web` (embedding), `daemon` |

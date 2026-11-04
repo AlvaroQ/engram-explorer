@@ -2,7 +2,8 @@
 // sessions: the rollout files under <home>/sessions (home = CODEX_HOME or
 // ~/.codex). It serves them through the vendor-neutral agentsessions model
 // (providers.AgentSessionSource) and is READ-ONLY: it never writes to the
-// Codex home, never follows symlinks out of it and never executes anything.
+// Codex home, skips symlinked entries inside its sessions directory and never
+// executes anything.
 package codexsessions
 
 import (
