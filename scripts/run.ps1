@@ -5,7 +5,9 @@
 # Usage:
 #   ./scripts/run.ps1                      # run against ~/.engram
 #   $env:ENGRAM_DASH_READONLY="true"; ./scripts/run.ps1   # pure read-only viewer
-#   $env:ENGRAM_DATA_DIR="./demo";    ./scripts/run.ps1   # use the demo database
+#   go run ./cmd/seed-demo --out ./demo --force
+#   $env:ENGRAM_DATA_DIR="./demo"; $env:CLAUDE_PROJECTS_DIR="./demo/claude"
+#   $env:ENGRAM_DASH_READONLY="true"; ./scripts/run.ps1   # the demo dataset (as `make demo`)
 #
 # After this runs once, ./engram-explorer.exe is left on disk — re-launch it
 # directly (instant, no rebuild) until you change the code again.

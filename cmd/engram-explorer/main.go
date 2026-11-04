@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -29,69 +28,43 @@ import (
 // version is set at build time via -ldflags "-X main.version=<tag>".
 var version = "dev"
 
-// cliFlags holds the parsed subset of CLI flags that main() needs before
-// config.Load() runs. We do a manual scan instead of flag.Parse so that the
-// existing os.Args[1] switch for --version keeps working unchanged.
-type cliFlags struct {
-	demo           bool   // --demo flag or ENGRAM_DEMO=1
-	demoDBOverride string // --demo-db=<path> or ENGRAM_DEMO_DB
-}
+// removedDemoOptions lists the command-line flags and environment variables of
+// the retired demo mode. They are rejected instead of ignored: a user who still
+// passes one asked for the sample dataset and must not be served their real data.
+var (
+	removedDemoFlags = []string{"--demo", "--demo-db"}
+	removedDemoEnv   = []string{"ENGRAM_DEMO", "ENGRAM_DEMO_DB"}
+)
 
-// parseFlags scans os.Args[1:] for the flags we care about without consuming
-// them via the standard flag package. This keeps --version handling intact.
-func parseFlags(args []string) cliFlags {
-	var f cliFlags
+// checkRemovedDemoOptions returns an error naming the replacement when args
+// contain a removed demo flag (bare or with =value) or getenv reports a
+// removed demo variable with a non-empty value.
+func checkRemovedDemoOptions(args []string, getenv func(string) string) error {
+	var found []string
 	for _, a := range args {
-		switch {
-		case a == "--demo":
-			f.demo = true
-		case strings.HasPrefix(a, "--demo-db="):
-			f.demoDBOverride = strings.TrimSpace(strings.TrimPrefix(a, "--demo-db="))
+		for _, f := range removedDemoFlags {
+			if a == f || strings.HasPrefix(a, f+"=") {
+				found = append(found, f)
+			}
 		}
 	}
-	// Also honour environment variables as fallback.
-	if !f.demo {
-		v := strings.ToLower(strings.TrimSpace(os.Getenv("ENGRAM_DEMO")))
-		f.demo = v == "1" || v == "true" || v == "yes" || v == "on"
-	}
-	if f.demoDBOverride == "" {
-		f.demoDBOverride = strings.TrimSpace(os.Getenv("ENGRAM_DEMO_DB"))
-	}
-	return f
-}
-
-// resolveDemoDBPath returns the path to the demo database, given an optional
-// explicit override. It looks for demo/engram.db relative to the executable
-// and then relative to the working directory. Returns an error with an
-// actionable message if neither exists.
-func resolveDemoDBPath(override string) (string, error) {
-	if override != "" {
-		if _, err := os.Stat(override); err == nil {
-			return override, nil
-		}
-		return "", fmt.Errorf("demo database not found at %s (from --demo-db / ENGRAM_DEMO_DB)", override)
-	}
-
-	// Candidates: next to the executable, then next to cwd.
-	var candidates []string
-	if exe, err := os.Executable(); err == nil {
-		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "demo", "engram.db"))
-	}
-	if wd, err := os.Getwd(); err == nil {
-		candidates = append(candidates, filepath.Join(wd, "demo", "engram.db"))
-	}
-	for _, p := range candidates {
-		if _, err := os.Stat(p); err == nil {
-			return p, nil
+	for _, k := range removedDemoEnv {
+		if strings.TrimSpace(getenv(k)) != "" {
+			found = append(found, k)
 		}
 	}
-	tried := strings.Join(candidates, ", ")
-	return "", fmt.Errorf("demo database not found (tried: %s); run: go run ./cmd/seed-demo", tried)
+	if len(found) == 0 {
+		return nil
+	}
+	return fmt.Errorf("demo mode was removed; %s is no longer supported. "+
+		"Run `make demo` to browse the sample dataset, or point a normal run at any dataset with "+
+		"ENGRAM_DATA_DIR=<dir> CLAUDE_PROJECTS_DIR=<dir> ENGRAM_DASH_READONLY=true",
+		strings.Join(found, ", "))
 }
 
 func main() {
 	// Scan every arg (not just os.Args[1]) so the version flag still works when
-	// combined with other flags, e.g. `engram-explorer --demo --version`.
+	// combined with other flags, e.g. `engram-explorer --foo --version`.
 	for _, a := range os.Args[1:] {
 		switch a {
 		case "--version", "-v", "version":
@@ -99,37 +72,27 @@ func main() {
 			return
 		}
 	}
-	if err := run(); err != nil {
+	if err := run(os.Args[1:]); err != nil {
 		fmt.Fprintf(os.Stderr, "fatal: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	flags := parseFlags(os.Args[1:])
+func run(args []string) error {
+	// Fail before loading configuration: nothing may be read, created or served.
+	if err := checkRemovedDemoOptions(args, os.Getenv); err != nil {
+		return err
+	}
 
 	cfg, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	if flags.demo {
-		demoPath, err := resolveDemoDBPath(flags.demoDBOverride)
-		if err != nil {
-			return err
-		}
-		cfg.EngramDbPath = demoPath
-		cfg.DemoMode = true
-	}
-
 	logger := logging.New(cfg.Env, cfg.LogLevel)
 	// UI and doctor handlers log internal error details through slog.Default()
 	// (the user only sees a generic message), so route it to the configured logger.
 	slog.SetDefault(logger)
-
-	if cfg.DemoMode {
-		logger.Info("demo mode active", "db", cfg.EngramDbPath)
-	}
 
 	container := buildContainer(cfg, logger)
 	defer container.Close()

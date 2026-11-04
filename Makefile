@@ -56,14 +56,19 @@ dev:
 test:
 	go test ./...
 
-## seed-demo: generate the demo database in ./demo (use DEMO_OUT=<dir> to override)
+## seed-demo: generate the demo dataset in ./demo — engram.db plus sample Claude
+##            Code transcripts in ./demo/claude (use DEMO_OUT=<dir> to override)
 seed-demo:
 	go run ./cmd/seed-demo --out $(or $(DEMO_OUT),./demo) --force
 
-## demo: seed the demo database and launch the binary against it in demo mode
-##       (read-only demo banner, writes rejected)
+## demo: seed the demo dataset and run the normal binary read-only against it.
+##       Engram writes answer 503; settings persist in ./demo/config.json and
+##       nothing is read from ~/.engram or ~/.claude/projects.
 demo: seed-demo
-	ENGRAM_DATA_DIR=$(or $(DEMO_OUT),./demo) go run ./cmd/engram-explorer --demo --demo-db=$(or $(DEMO_OUT),./demo)/engram.db
+	ENGRAM_DATA_DIR=$(or $(DEMO_OUT),./demo) \
+	CLAUDE_PROJECTS_DIR=$(or $(DEMO_OUT),./demo)/claude \
+	ENGRAM_DASH_READONLY=true \
+	go run ./cmd/engram-explorer
 
 ## clean: remove the compiled binary and the embedded dist copy.
 ##        The placeholder index.html is re-created so `go build` keeps working.
