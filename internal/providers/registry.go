@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 )
 
 // State is the lifecycle state of a provider entry in the registry.
@@ -43,7 +44,7 @@ func (s State) String() string {
 // activeEntry holds one provider's runtime state.
 type activeEntry struct {
 	p     Provider
-	inst  Instance // nil unless state == Enabled
+	h     *handle // the open instance; nil unless state == Enabled (or a failed re-open kept it)
 	state State
 	err   error
 }
@@ -51,11 +52,17 @@ type activeEntry struct {
 // Registry holds an ordered list of providers and their per-profile runtime
 // state. Engram (featured=true) is always iterated first. All mutations are
 // guarded by a read-write mutex so the registry is safe for concurrent access.
+//
+// Requests pin the instances they use with Acquire (see Lease). An instance
+// superseded by Enable, Disable, SwitchProfile or Shutdown is closed outside
+// the lock once its leases are released, bounded by the drain timeout.
 type Registry struct {
 	mu      sync.RWMutex
 	order   []string // stable render order; featured providers sorted first
 	entries map[string]*activeEntry
 	log     *slog.Logger
+	drain   time.Duration  // drain timeout; DefaultDrainTimeout when not positive
+	pending sync.WaitGroup // background closes waiting for leases to drain
 }
 
 // NewRegistry creates an empty registry. Providers are added via Register.
@@ -124,7 +131,7 @@ func (r *Registry) Boot(ctx context.Context, profile Profile) {
 			}
 			continue
 		}
-		e.inst, e.state = inst, Enabled
+		e.h, e.state = newHandle(inst), Enabled
 	}
 }
 
@@ -139,11 +146,15 @@ func (r *Registry) Boot(ctx context.Context, profile Profile) {
 // (no downtime window). If any open fails, the instances opened during the
 // attempt are closed, every entry keeps its previous instance, state and
 // error, and the error is returned — no half-switched state. Only after all
-// opens succeed are the old instances closed (replaced or disabled) and the
-// new states committed.
+// opens succeed are the new states committed and the old instances retired;
+// each is closed once the requests holding it finish (see Lease).
 func (r *Registry) SwitchProfile(ctx context.Context, next Profile) error {
 	r.mu.Lock()
-	defer r.mu.Unlock()
+	var retired []retiredHandle
+	defer func() {
+		r.mu.Unlock()
+		r.closeRetired(ctx, retired, "close old provider instance")
+	}()
 
 	type target struct {
 		e     *activeEntry
@@ -177,16 +188,13 @@ func (r *Registry) SwitchProfile(ctx context.Context, next Profile) error {
 		targets = append(targets, t)
 	}
 
-	// Phase 2: every open succeeded — commit and close the superseded instances.
+	// Phase 2: every open succeeded — commit and retire the superseded instances.
 	for _, t := range targets {
-		old := t.e.inst
-		t.e.inst, t.e.state, t.e.err = t.inst, t.state, nil
-		if old != nil {
-			// Best-effort close of the old instance; errors are logged, not fatal.
-			if err := old.Close(ctx); err != nil && r.log != nil {
-				r.log.Warn("close old provider instance", "id", t.e.p.ID(), "err", err)
-			}
+		retired = t.e.retire(retired)
+		if t.inst != nil {
+			t.e.h = newHandle(t.inst)
 		}
+		t.e.state, t.e.err = t.state, nil
 	}
 	return nil
 }
@@ -203,7 +211,7 @@ func (r *Registry) NavGroups() []NavGroup {
 		if e.state != Enabled {
 			continue
 		}
-		groups = append(groups, e.p.Nav(e.inst))
+		groups = append(groups, e.p.Nav(e.h.inst))
 	}
 	return groups
 }
@@ -220,7 +228,7 @@ func (r *Registry) AggregateHealth(ctx context.Context) (ok bool, healths []Prov
 		e := r.entries[id]
 		switch e.state {
 		case Enabled:
-			h := e.inst.Health(ctx)
+			h := e.h.inst.Health(ctx)
 			h.Active = true
 			healths = append(healths, h)
 			if !h.OK {
@@ -261,10 +269,10 @@ func (r *Registry) Instance(providerID string) Instance {
 	defer r.mu.RUnlock()
 
 	e, ok := r.entries[providerID]
-	if !ok || e.state != Enabled || e.inst == nil {
+	if !ok || e.state != Enabled || e.h == nil {
 		return nil
 	}
-	return e.inst
+	return e.h.inst
 }
 
 // Find returns the first Enabled instance, in registry order, for which match
@@ -278,8 +286,8 @@ func (r *Registry) Find(match func(Instance) bool) Instance {
 
 	for _, id := range r.order {
 		e := r.entries[id]
-		if e.state == Enabled && e.inst != nil && match(e.inst) {
-			return e.inst
+		if e.state == Enabled && e.h != nil && match(e.h.inst) {
+			return e.h.inst
 		}
 	}
 	return nil
@@ -298,23 +306,28 @@ func (r *Registry) Providers() []Provider {
 	return out
 }
 
-// Shutdown closes all active (Enabled) provider instances. It is called on
-// server shutdown or test cleanup to release DB handles, file locks, etc.
-// Errors are logged but do not prevent other providers from being closed.
+// Shutdown closes every open provider instance. It is called on server
+// shutdown or test cleanup to release DB handles, file locks, etc. An instance
+// still leased by a request is closed when that request finishes; Shutdown
+// waits for it, and for closes queued earlier by toggles or switches, at most
+// the drain timeout, then closes what is left. Errors are logged but do not
+// prevent other providers from being closed.
 func (r *Registry) Shutdown(ctx context.Context) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
-
+	var retired []retiredHandle
 	for _, id := range r.order {
 		e := r.entries[id]
-		if e.state == Enabled && e.inst != nil {
-			if err := e.inst.Close(ctx); err != nil && r.log != nil {
-				r.log.Warn("provider close on shutdown", "id", id, "err", err)
-			}
-			e.inst = nil
+		if e.h != nil {
+			retired = e.retire(retired)
 			e.state = Registered
 		}
 	}
+	r.mu.Unlock()
+
+	r.closeRetired(ctx, retired, "provider close on shutdown")
+	// Each background close is bounded by the drain timeout; the extra second
+	// only covers the Close calls themselves.
+	r.waitPending(r.drainTimeout() + time.Second)
 }
 
 // Entries returns a snapshot of all provider IDs and their states, in order.
@@ -412,9 +425,16 @@ func (r *Registry) Validate(ctx context.Context, id string, cfg ProviderConfig) 
 // If the provider is already Enabled it is re-opened with the new config (useful
 // when the user changes the path for a Tier-1 provider). Returns an error if the
 // provider is not registered or if Open fails.
+//
+// A replaced instance is retired and closed once the requests holding it
+// finish (see Lease); new requests get the re-opened instance.
 func (r *Registry) Enable(ctx context.Context, id string, cfg ProviderConfig) error {
 	r.mu.Lock()
-	defer r.mu.Unlock()
+	var retired []retiredHandle
+	defer func() {
+		r.mu.Unlock()
+		r.closeRetired(ctx, retired, "close old instance on re-enable")
+	}()
 
 	e, ok := r.entries[id]
 	if !ok {
@@ -431,25 +451,27 @@ func (r *Registry) Enable(ctx context.Context, id string, cfg ProviderConfig) er
 		return err
 	}
 
-	// Close the old instance if one exists (idempotent re-enable with new path).
-	if e.inst != nil {
-		if cerr := e.inst.Close(ctx); cerr != nil && r.log != nil {
-			r.log.Warn("close old instance on re-enable", "id", id, "err", cerr)
-		}
-	}
+	// Retire the old instance if one exists (idempotent re-enable with new path).
+	retired = e.retire(retired)
 
-	e.inst = inst
+	e.h = newHandle(inst)
 	e.state = Enabled
 	e.err = nil
 	return nil
 }
 
-// Disable closes the named provider's active instance and transitions it to
-// Disabled state. Returns an error if the provider is not registered. If the
-// provider is not currently Enabled, Disable is a no-op (returns nil).
+// Disable transitions the named provider to Disabled state and retires its
+// active instance: new requests no longer get it, and it is closed once the
+// requests holding it finish (see Lease). Returns an error if the provider is
+// not registered. If the provider is not currently Enabled, Disable is a
+// no-op (returns nil).
 func (r *Registry) Disable(ctx context.Context, id string) error {
 	r.mu.Lock()
-	defer r.mu.Unlock()
+	var retired []retiredHandle
+	defer func() {
+		r.mu.Unlock()
+		r.closeRetired(ctx, retired, "close instance on disable")
+	}()
 
 	e, ok := r.entries[id]
 	if !ok {
@@ -460,12 +482,7 @@ func (r *Registry) Disable(ctx context.Context, id string) error {
 		return nil
 	}
 
-	if e.inst != nil {
-		if err := e.inst.Close(ctx); err != nil && r.log != nil {
-			r.log.Warn("close instance on disable", "id", id, "err", err)
-		}
-		e.inst = nil
-	}
+	retired = e.retire(retired)
 	e.state = Disabled
 	return nil
 }
