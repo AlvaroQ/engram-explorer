@@ -13,3 +13,10 @@ trim_trailing_whitespace = false
 
 [Makefile]
 indent_style = tab
+
+[*.{go,templ}]
+indent_style = tab
+indent_size = 4
+
+[go.{mod,sum}]
+indent_style = tab

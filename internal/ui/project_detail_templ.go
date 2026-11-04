@@ -1077,7 +1077,7 @@ func projectDetailRecentSessions(sessions []services.RecentSession, lang string)
 }
 
 // projectDetailRecentObservations renders the recent-observations list.
-// "Open in Observations" links to the React SPA observations page (external href).
+// "Open in Observations" links to the Observations page (full-page href).
 func projectDetailRecentObservations(obs []services.RecentObs, project string, lang string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context

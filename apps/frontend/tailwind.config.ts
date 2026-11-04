@@ -4,7 +4,7 @@ export default {
   content: [
     './index.html',
     './src/**/*.{ts,tsx}',
-    // Server-rendered templ pages live outside the SPA but share the same
+    // Server-rendered templ pages live outside the islands but share the same
     // Tailwind utility classes — scan them so their classes are emitted.
     '../../internal/ui/**/*.templ',
   ],

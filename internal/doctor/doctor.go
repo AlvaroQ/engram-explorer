@@ -1,6 +1,6 @@
 // Package doctor provides the templ+HTMX diagnostics module for engram-explorer.
-// It mounts at /doctor/* on the shared API ServeMux, completely independent of
-// the React SPA.  Deps uses only concrete types to avoid import cycles with
+// It mounts at /doctor/* on the shared API ServeMux, independent of the
+// main templ UI.  Deps uses only concrete types to avoid import cycles with
 // internal/httpapi.
 package doctor
 

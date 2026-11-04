@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overview · Engram Explorer — Command center</title>
+<style>
+/* ------------------------------------------------------------------
+   Tokens: copied verbatim from design/system.md (bare HSL triplets).
+   Dark is the default; :root.light switches the palette.
+   ------------------------------------------------------------------ */
+:root {
+  --bg: 249 22% 12%;
+  --surface: 247 23% 15%;
+  --surface-2: 248 25% 18%;
+  --border: 249 15% 28%;
+  --fg: 245 50% 91%;
+  --fg-muted: 248 15% 61%;
+  --accent: 343 76% 68%;
+  --ok: 189 43% 73%;
+  --warn: 35 88% 72%;
+  --fail: 343 35% 55%;
+  --brand-engram: 343 76% 68%;
+  --brand-cc: 18 72% 62%;
+
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px;
+  --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px;
+
+  --elevation-1: 0 1px 2px hsl(222 47% 4% / .35), 0 1px 1px hsl(222 47% 4% / .25);
+  --elevation-2: 0 2px 6px hsl(222 47% 4% / .40), 0 1px 2px hsl(222 47% 4% / .30);
+  --elevation-3: 0 6px 16px hsl(222 47% 4% / .45), 0 2px 6px hsl(222 47% 4% / .35);
+  --state-hover: 0.08;
+  --state-active: 0.14;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Secondary text. Dark: --fg-muted (5.3:1 on --surface).
+     Light: --fg-muted measures ~4.2:1 on --surface, below AA for small text,
+     so light uses a state layer derived from --fg instead (~5:1). */
+  --muted-color: hsl(var(--fg-muted));
+
+  /* PROPOSED SERIES PALETTE — not a project token.
+     Chart series colors are hard-coded today (cc-usage-charts.tsx,
+     type-breakdown.tsx, node-colors.ts). Hues avoid the reserved
+     accent (343), warn (35), brand-cc (18) and ok (189). */
+  --series-1: 225 70% 74%;
+  --series-2: 152 42% 62%;
+  --series-3: 50 72% 68%;
+  --series-4: 275 55% 76%;
+  --series-5: 205 62% 64%;
+  --series-6: 315 40% 70%;
+  --series-7: 95 35% 62%;
+  --series-8: 250 12% 58%;
+}
+:root.light {
+  --bg: 32 57% 95%;
+  --surface: 35 100% 98%;
+  --surface-2: 28 40% 92%;
+  --border: 10 9% 86%;
+  --fg: 248 19% 40%;
+  --fg-muted: 248 12% 52%;
+  --accent: 343 35% 55%;
+  --ok: 189 30% 48%;
+  --warn: 35 81% 56%;
+  --fail: 343 35% 55%;
+  --brand-engram: 343 35% 55%;
+  --brand-cc: 16 60% 50%;
+
+  --elevation-1: 0 1px 2px hsl(222 47% 30% / .08), 0 1px 1px hsl(222 47% 30% / .06);
+  --elevation-2: 0 2px 6px hsl(222 47% 30% / .10), 0 1px 2px hsl(222 47% 30% / .08);
+  --elevation-3: 0 8px 24px hsl(222 47% 30% / .12), 0 2px 8px hsl(222 47% 30% / .08);
+  --state-hover: 0.06;
+  --state-active: 0.10;
+
+  --muted-color: hsl(var(--fg) / .88);
+
+  /* Proposed series palette, light variant (3:1+ against --surface). */
+  --series-1: 225 55% 52%;
+  --series-2: 152 40% 36%;
+  --series-3: 42 75% 40%;
+  --series-4: 275 40% 55%;
+  --series-5: 205 60% 42%;
+  --series-6: 315 35% 48%;
+  --series-7: 95 35% 36%;
+  --series-8: 250 10% 55%;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: hsl(var(--fg));
+  background: hsl(var(--bg));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted-color); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+:focus { outline: none; }
+:focus-visible { outline: 2px solid hsl(var(--accent)); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+.skip-link {
+  position: absolute; left: var(--space-4); top: -48px; z-index: 50;
+  padding: 8px 14px; border-radius: var(--radius-sm);
+  background: hsl(var(--surface-2)); color: hsl(var(--fg));
+  border: 1px solid hsl(var(--accent) / .35);
+  font-size: 13px; font-weight: 600; text-decoration: none;
+}
+.skip-link:focus-visible { top: var(--space-4); box-shadow: var(--elevation-3); }
+
+/* ---------------- App shell ---------------- */
+.shell { display: flex; height: 100vh; }
+
+.sidebar {
+  width: 236px; flex: none;
+  display: flex; flex-direction: column;
+  background: hsl(var(--surface));
+  border-right: 1px solid hsl(var(--border));
+}
+.brand {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 16px 16px 20px;
+  border-bottom: 1px solid hsl(var(--border));
+}
+.brand-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; margin: 0; }
+.brand-label { font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-color); }
+.icon-btn {
+  width: 32px; height: 32px; display: inline-grid; place-items: center;
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  background: transparent; color: var(--muted-color); cursor: pointer;
+}
+.icon-btn:hover { background: hsl(var(--fg) / var(--state-hover)); color: hsl(var(--fg)); }
+.icon-btn:active { background: hsl(var(--fg) / var(--state-active)); }
+.icon-btn svg { width: 16px; height: 16px; }
+
+.side-nav { flex: 1; overflow-y: auto; padding: 8px 12px; }
+.nav-group + .nav-group { margin-top: 8px; padding-top: 8px; border-top: 1px solid hsl(var(--border)); }
+.nav-group-label {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px 4px;
+  font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--muted-color); margin: 0;
+}
+.group-dot { width: 8px; height: 8px; border-radius: 999px; flex: none; }
+.side-nav ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.side-nav a {
+  position: relative;
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; border-radius: var(--radius-sm);
+  color: var(--muted-color); text-decoration: none;
+  font-size: 13px; font-weight: 500;
+}
+.side-nav a svg { width: 16px; height: 16px; flex: none; }
+.side-nav a:hover { background: hsl(var(--fg) / var(--state-hover)); color: hsl(var(--fg)); }
+.side-nav a[aria-current="page"] {
+  background: hsl(var(--accent) / .14);
+  color: hsl(var(--fg)); font-weight: 600;
+}
+.side-nav a[aria-current="page"]::before {
+  content: ""; position: absolute; left: 0; top: 7px; bottom: 7px;
+  width: 3px; border-radius: 999px; background: hsl(var(--accent));
+}
+.side-nav a[aria-current="page"] svg { color: hsl(var(--accent)); }
+.count-pill {
+  margin-left: auto; padding: 0 7px; border-radius: 999px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600; line-height: 18px;
+  background: hsl(var(--surface-2)); border: 1px solid hsl(var(--border)); color: var(--muted-color);
+}
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 7px; border-radius: 4px;
+  font-size: 11px; font-weight: 500; line-height: 1.3;
+  background: hsl(var(--surface-2)); border: 1px solid hsl(var(--border)); color: hsl(var(--fg));
+  white-space: nowrap;
+}
+.badge-accent { background: hsl(var(--accent) / .14); border-color: hsl(var(--accent) / .35); }
+.side-nav .badge { margin-left: auto; font-weight: 600; letter-spacing: .02em; }
+
+.side-foot {
+  padding: 12px; border-top: 1px solid hsl(var(--border));
+  display: grid; gap: 8px;
+}
+.status-pill {
+  display: inline-flex; align-items: center; gap: 8px; justify-self: start;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 600;
+  background: hsl(var(--surface-2)); border: 1px solid hsl(var(--border));
+  color: hsl(var(--fg)); text-decoration: none;
+}
+.status-pill:hover { background: hsl(var(--fg) / var(--state-hover)); }
+.status-dot { width: 8px; height: 8px; border-radius: 999px; background: hsl(var(--ok)); box-shadow: 0 0 0 3px hsl(var(--ok) / .18); }
+.account {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px; border-radius: var(--radius-md);
+  background: transparent; border: 1px solid hsl(var(--border));
+  color: hsl(var(--fg)); font: inherit; text-align: left; cursor: pointer;
+}
+.account:hover { background: hsl(var(--fg) / var(--state-hover)); }
+.avatar {
+  width: 28px; height: 28px; border-radius: var(--radius-sm); flex: none;
+  display: grid; place-items: center;
+  background: hsl(var(--accent) / .14); border: 1px solid hsl(var(--accent) / .35);
+  font-size: 12px; font-weight: 700; color: hsl(var(--fg));
+}
+.account-text { display: grid; line-height: 1.25; flex: 1; }
+.account-text small { font-size: 11px; color: var(--muted-color); }
+.account-text span { font-size: 13px; font-weight: 600; }
+.account svg { width: 16px; height: 16px; color: var(--muted-color); }
+
+/* ---------------- Main ---------------- */
+.main { flex: 1; min-width: 0; overflow-y: auto; padding: 16px 24px; }
+
+.page-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 8px; min-height: 44px; }
+.page-header h1 { font-size: 20px; font-weight: 600; line-height: 1.2; margin: 0; letter-spacing: -0.01em; }
+.page-header p { font-size: 13px; margin: 2px 0 0; color: var(--muted-color); }
+.page-header p .mono { font-size: 12px; }
+.header-tools { display: flex; align-items: center; gap: 8px; }
+.search {
+  display: flex; align-items: center; gap: 8px; width: 264px;
+  padding: 0 8px 0 11px; height: 32px; border-radius: var(--radius-sm);
+  background: hsl(var(--surface-2)); border: 1px solid hsl(var(--border));
+  color: var(--muted-color);
+}
+.search:focus-within { border-color: hsl(var(--accent)); }
+.search svg { width: 14px; height: 14px; flex: none; }
+.search input {
+  flex: 1; min-width: 0; border: 0; background: transparent; outline: none;
+  font: inherit; font-size: 13px; color: hsl(var(--fg));
+}
+.search input::placeholder { color: var(--muted-color); }
+kbd {
+  font-family: var(--font-mono); font-size: 11px; line-height: 18px;
+  padding: 0 6px; border-radius: 4px;
+  background: hsl(var(--surface)); border: 1px solid hsl(var(--border)); color: var(--muted-color);
+}
+.theme-toggle { border-color: hsl(var(--border)); background: hsl(var(--surface-2)); }
+.theme-toggle .i-sun { display: none; }
+:root.light .theme-toggle .i-sun { display: block; }
+:root.light .theme-toggle .i-moon { display: none; }
+
+.issue-bar {
+  display: flex; align-items: center; gap: 10px;
+  height: 36px; padding: 0 8px 0 14px; margin-bottom: 8px;
+  border-radius: var(--radius-md);
+  background: hsl(var(--warn) / .12); border: 1px solid hsl(var(--warn) / .35);
+  font-size: 13px;
+}
+.issue-bar svg { width: 16px; height: 16px; color: hsl(var(--warn)); flex: none; }
+.issue-bar strong { font-weight: 600; }
+.issue-bar .muted { font-size: 12px; }
+.text-link {
+  color: hsl(var(--fg)); font-weight: 600; font-size: 12px; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 8px; border-radius: var(--radius-sm);
+}
+.text-link span { text-decoration: underline; text-decoration-color: hsl(var(--accent)); text-underline-offset: 3px; text-decoration-thickness: 1.5px; }
+.text-link:hover { background: hsl(var(--fg) / var(--state-hover)); }
+.text-link svg { width: 14px; height: 14px; color: currentColor; }
+.issue-bar .text-link { margin-left: auto; }
+
+/* ---------------- Bento ---------------- */
+.bento {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: 102px 304px 300px;
+  gap: var(--space-2);
+}
+.span-3 { grid-column: span 3; }
+.span-4 { grid-column: span 4; }
+.span-6 { grid-column: span 6; }
+.span-8 { grid-column: span 8; }
+
+.card {
+  min-width: 0; min-height: 0;
+  display: flex; flex-direction: column;
+  background: hsl(var(--surface));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-1);
+  overflow: hidden;
+}
+.card-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 20px; border-bottom: 1px solid hsl(var(--border));
+  flex: none;
+}
+.card-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.card-title h2 { font-size: 14px; font-weight: 600; margin: 0; line-height: 20px; white-space: nowrap; }
+.card-title p { font-size: 12px; margin: 0; color: var(--muted-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-body { padding: 16px 20px; flex: 1; min-height: 0; }
+
+/* KPI tiles */
+.kpi { padding: 14px 16px; display: grid; grid-template-rows: auto 1fr auto; gap: 2px; position: relative; }
+.kpi:hover { box-shadow: var(--elevation-2); }
+.kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted-color); margin: 0; font-weight: 500; }
+.kpi-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.kpi-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 24px; font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; margin: 0; }
+.kpi-value .cents { color: var(--muted-color); font-weight: 500; }
+.kpi-caption { font-size: 12px; color: var(--muted-color); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.kpi-caption .num { color: hsl(var(--fg)); font-size: 11px; }
+.kpi-caption a { color: hsl(var(--fg)); text-decoration: underline; text-decoration-color: hsl(var(--accent)); text-underline-offset: 3px; margin-left: auto; font-weight: 500; }
+.kpi-caption a:hover { text-decoration-thickness: 2px; }
+.spark { width: 112px; height: 30px; flex: none; overflow: visible; }
+.swatches { display: flex; gap: 4px; }
+.swatches i { width: 10px; height: 10px; border-radius: 2px; display: block; }
+.split { display: flex; height: 6px; border-radius: 999px; overflow: hidden; gap: 2px; width: 112px; }
+.split i { display: block; height: 100%; }
+.vendor-dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; flex: none; }
+.bg-cc { background: hsl(var(--brand-cc)); }
+.bg-codex { background: hsl(var(--fg)); }
+
+/* Segmented range control */
+.seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--radius-sm); background: hsl(var(--surface-2)); border: 1px solid hsl(var(--border)); }
+.seg button {
+  font: inherit; font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+  padding: 2px 10px; border-radius: 4px; border: 1px solid transparent;
+  background: transparent; color: var(--muted-color); cursor: pointer;
+}
+.seg button:hover { background: hsl(var(--fg) / var(--state-hover)); color: hsl(var(--fg)); }
+.seg button[aria-pressed="true"] { background: hsl(var(--accent) / .14); border-color: hsl(var(--accent) / .35); color: hsl(var(--fg)); font-weight: 600; }
+
+/* Activity chart */
+.chart-body { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; padding-bottom: 12px; }
+.chart-svg { width: 100%; height: 178px; display: block; overflow: visible; }
+.chart-svg .grid line { stroke: hsl(var(--border)); stroke-dasharray: 2 3; }
+.chart-svg .grid line.base { stroke-dasharray: none; }
+.chart-svg text { font-family: var(--font-mono); font-size: 10px; fill: var(--muted-color); }
+.chart-svg .col .hit { fill: transparent; }
+.chart-svg .col:hover .hit { fill: hsl(var(--fg) / var(--state-hover)); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; list-style: none; margin: 0; padding: 0; font-size: 12px; }
+.legend li { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.legend .num { font-size: 11px; color: var(--muted-color); }
+.sq { width: 9px; height: 9px; border-radius: 2px; flex: none; display: inline-block; }
+.dot { width: 8px; height: 8px; border-radius: 999px; flex: none; display: inline-block; }
+
+/* Donut */
+.donut-body { display: grid; justify-items: center; align-content: start; gap: 12px; }
+.donut { width: 116px; height: 116px; }
+.donut circle.seg-arc { fill: none; stroke-width: 14; }
+.donut circle.track { fill: none; stroke: hsl(var(--surface-2)); stroke-width: 14; }
+.donut .total { font-family: var(--font-mono); font-size: 20px; font-weight: 600; fill: hsl(var(--fg)); }
+.donut .total-label { font-size: 9px; letter-spacing: .08em; text-transform: uppercase; fill: var(--muted-color); }
+.type-legend { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; list-style: none; margin: 0; padding: 0; font-size: 12px; }
+.type-legend li { display: flex; align-items: center; gap: 6px; }
+.type-legend .num { margin-left: auto; font-size: 11px; color: var(--muted-color); }
+
+/* Brain tile */
+.brain-body { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
+.brain-stage {
+  flex: 1; min-height: 0; position: relative;
+  background:
+    radial-gradient(60% 70% at 50% 45%, hsl(var(--accent) / .10), transparent 70%),
+    hsl(var(--surface));
+}
+.brain-svg { position: absolute; inset: 4px 8px 0; width: calc(100% - 16px); height: calc(100% - 4px); }
+.brain-svg .edge { stroke: hsl(var(--fg-muted) / .35); stroke-width: .8; }
+.brain-svg .pulse { stroke: hsl(var(--accent)); stroke-width: 1.6; stroke-linecap: round; fill: none; opacity: .55; }
+.brain-svg .halo { opacity: .22; }
+.brain-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 16px 14px; flex: none;
+}
+.brain-foot .muted { font-size: 11px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex: none;
+  padding: 6px 14px; border-radius: var(--radius-sm);
+  font: inherit; font-size: 13px; font-weight: 500; text-decoration: none; cursor: pointer;
+  background: hsl(var(--surface-2)); border: 1px solid hsl(var(--border)); color: hsl(var(--fg));
+}
+.btn svg { width: 14px; height: 14px; }
+/* Accent CTA: fg text on an accent 14% layer — never white on the 68% accent. */
+.btn-accent { background: hsl(var(--accent) / .14); border-color: hsl(var(--accent) / .35); font-weight: 600; }
+.btn-accent:hover { background: hsl(var(--accent) / .22); }
+.btn-accent:active { background: hsl(var(--accent) / .28); }
+.btn-accent svg { color: hsl(var(--accent)); }
+
+/* Tables */
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+.data-table thead th {
+  text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted-color); padding: 9px 14px; background: hsl(var(--surface-2) / .5);
+  border-bottom: 1px solid hsl(var(--border));
+}
+.data-table td { padding: 9px 14px; border-bottom: 1px solid hsl(var(--border)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.data-table tbody tr:last-child td { border-bottom: 0; }
+.data-table tbody tr:hover td { background: hsl(var(--surface-2)); }
+.data-table td.mono { font-size: 12px; color: var(--muted-color); }
+.data-table th:first-child, .data-table td:first-child { padding-left: 20px; }
+.data-table th:last-child, .data-table td:last-child { padding-right: 20px; }
+.data-table a { color: hsl(var(--fg)); text-decoration: none; }
+.data-table a:hover { text-decoration: underline; text-decoration-color: hsl(var(--accent)); text-underline-offset: 3px; }
+.proj { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 12px; }
+
+/* Agents panel */
+.agents-body { display: grid; gap: 12px; align-content: start; }
+.sessions-head { display: flex; align-items: baseline; justify-content: space-between; font-size: 12px; color: var(--muted-color); margin-bottom: 6px; }
+.sessions-head .num { font-size: 16px; font-weight: 600; color: hsl(var(--fg)); }
+.sessions-bar { display: flex; height: 8px; gap: 2px; border-radius: 999px; overflow: hidden; }
+.sessions-bar i { display: block; height: 100%; }
+.sessions-legend { display: flex; gap: 16px; margin-top: 6px; font-size: 12px; }
+.sessions-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sessions-legend .num { color: hsl(var(--fg)); font-weight: 600; font-size: 12px; }
+.sessions-legend .pct { color: var(--muted-color); font-size: 11px; }
+.vendor-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+.vendor-table th, .vendor-table td { padding: 5px 6px; text-align: left; border-bottom: 1px solid hsl(var(--border)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vendor-table thead th { font-size: 11px; font-weight: 600; color: hsl(var(--fg)); }
+.vendor-table thead th span { display: inline-flex; align-items: center; gap: 6px; }
+.vendor-table tbody th { font-weight: 500; color: var(--muted-color); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+.vendor-table tbody tr:last-child th, .vendor-table tbody tr:last-child td { border-bottom: 0; }
+.vendor-table td { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.vendor-table th:first-child { padding-left: 0; width: 88px; }
+
+/* Footnote */
+.footnote {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 8px; font-size: 11px; color: var(--muted-color);
+}
+.footnote .swatches i { width: 8px; height: 8px; }
+.footnote strong { font-weight: 600; color: hsl(var(--fg)); }
+
+/* ---------------- Motion (only when the user allows it) ---------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .card { animation: enter .45s var(--ease-out-expo) both; animation-delay: calc(var(--i, 0) * 40ms); }
+  .side-nav a, .icon-btn, .btn, .seg button, .account, .status-pill, .text-link,
+  .data-table td, .kpi, .chart-svg .hit { transition: background-color .12s ease, color .12s ease, box-shadow .15s ease; }
+  .donut circle.seg-arc { transition: stroke-width .15s ease; }
+  .brain-float { animation: float 5s ease-in-out infinite alternate; }
+  .brain-svg .pulse { stroke-dasharray: 10 100; opacity: 1; animation: synapse var(--d, 2.6s) linear infinite; animation-delay: var(--delay, 0s); }
+  .brain-svg .tw { animation: twinkle 3.2s ease-in-out infinite alternate; animation-delay: var(--delay, 0s); }
+  .brain-svg .halo { transform-box: fill-box; transform-origin: center; animation: breathe 3.6s ease-in-out infinite alternate; animation-delay: var(--delay, 0s); }
+}
+.donut circle.seg-arc:hover { stroke-width: 17; }
+@keyframes enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes float { from { transform: translateY(-2px); } to { transform: translateY(3px); } }
+@keyframes synapse { from { stroke-dashoffset: 10; } to { stroke-dashoffset: -100; } }
+@keyframes twinkle { from { opacity: .45; } to { opacity: 1; } }
+@keyframes breathe { from { transform: scale(.85); opacity: .14; } to { transform: scale(1.15); opacity: .3; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- Icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-graph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="8" r="2.5"/><circle cx="9" cy="18" r="2.5"/><path d="M8.4 6.6l7.2 1M7 8.3l1.3 7.4M16.4 10l-5.6 6.2"/></symbol>
+    <symbol id="i-memory" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v6.2c0 1.6 3.4 2.8 7.5 2.8s7.5-1.2 7.5-2.8V5.5"/><path d="M4.5 11.7v6.2c0 1.6 3.4 2.8 7.5 2.8s7.5-1.2 7.5-2.8v-6.2"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7a2 2 0 0 1 2-2h3.8l2 2.2h7.2a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12" cy="12" r="8" stroke-width="3" stroke-dasharray="3.1 3.18" stroke-linecap="butt"/><circle cx="12" cy="12" r="5.6" stroke-width="2"/><circle cx="12" cy="12" r="2" stroke-width="2"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.2L2.8 17.5A2 2 0 0 0 4.5 20.5h15a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4M12 17h.01"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-updown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"/></symbol>
+    <symbol id="i-terminal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7.5 9.5l3 2.5-3 2.5M13 15h4"/></symbol>
+  </defs>
+</svg>
+
+<div class="shell">
+  <aside class="sidebar" aria-label="Primary">
+    <div class="brand">
+      <div>
+        <p class="brand-title">Explorer</p>
+        <span class="brand-label">Local dashboard</span>
+      </div>
+      <button class="icon-btn" type="button" aria-label="Settings"><svg aria-hidden="true"><use href="#i-gear"/></svg></button>
+    </div>
+
+    <nav class="side-nav" aria-label="Main navigation">
+      <section class="nav-group" aria-labelledby="grp-engram">
+        <h2 class="nav-group-label" id="grp-engram"><span class="group-dot" style="background:hsl(var(--brand-engram))" aria-hidden="true"></span>Engram</h2>
+        <ul>
+          <li><a href="#" aria-current="page"><svg aria-hidden="true"><use href="#i-grid"/></svg>Overview</a></li>
+          <li><a href="#"><svg aria-hidden="true"><use href="#i-graph"/></svg>Knowledge Graph</a></li>
+          <li><a href="#"><svg aria-hidden="true"><use href="#i-memory"/></svg>Memory<span class="count-pill" aria-label="490 memories">490</span></a></li>
+          <li><a href="#"><svg aria-hidden="true"><use href="#i-folder"/></svg>Projects<span class="count-pill" aria-label="8 projects">8</span></a></li>
+        </ul>
+      </section>
+      <section class="nav-group" aria-labelledby="grp-agents">
+        <h2 class="nav-group-label" id="grp-agents"><span class="group-dot" style="background:hsl(var(--fg-muted))" aria-hidden="true"></span>Agents</h2>
+        <ul>
+          <li><a href="#"><svg aria-hidden="true" style="color:hsl(var(--brand-cc))"><use href="#i-spark"/></svg>Claude Code</a></li>
+          <li><a href="#"><svg aria-hidden="true"><use href="#i-terminal"/></svg>Codex<span class="badge badge-accent">New</span></a></li>
+        </ul>
+      </section>
+    </nav>
+
+    <div class="side-foot">
+      <a class="status-pill" href="#"><span class="status-dot" aria-hidden="true"></span>Status ok</a>
+      <button class="account" type="button" aria-haspopup="menu" aria-expanded="false">
+        <span class="avatar" aria-hidden="true">D</span>
+        <span class="account-text"><small>Account</small><span>Default</span></span>
+        <svg aria-hidden="true"><use href="#i-updown"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <main class="main" id="main" tabindex="-1">
+    <header class="page-header">
+      <div>
+        <h1>Overview</h1>
+        <p>Engram memory and agent activity · <span class="mono">~/.engram/engram.db</span> · synced 2 min ago</p>
+      </div>
+      <div class="header-tools">
+        <label class="search">
+          <svg aria-hidden="true"><use href="#i-search"/></svg>
+          <span class="sr-only">Search memories</span>
+          <input type="search" placeholder="Search memories">
+          <kbd>⌘K</kbd>
+        </label>
+        <button class="icon-btn theme-toggle" id="theme-toggle" type="button" aria-label="Light theme" aria-pressed="false">
+          <svg class="i-moon" aria-hidden="true"><use href="#i-moon"/></svg>
+          <svg class="i-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="issue-bar" role="region" aria-label="Sync issues">
+      <svg aria-hidden="true"><use href="#i-alert"/></svg>
+      <strong>6 sync issues need attention</strong>
+      <span class="muted">Cloud sync for 3 projects · last checked 2 min ago</span>
+      <a class="text-link" href="#"><span>Review</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+    </div>
+
+    <div class="bento">
+      <!-- KPI row -->
+      <section class="card kpi span-3" style="--i:0" aria-labelledby="kpi-mem">
+        <h2 class="kpi-label" id="kpi-mem">Memories saved</h2>
+        <div class="kpi-row">
+          <p class="kpi-value">490</p>
+          <svg class="spark" id="spark-mem" viewBox="0 0 112 30" preserveAspectRatio="none" role="img" aria-label="Daily memories, last 30 days"></svg>
+        </div>
+        <p class="kpi-caption" style="margin:0"><span><span class="num" id="mem-week">+27</span> last 7 days</span><a href="#">Browse all</a></p>
+      </section>
+
+      <section class="card kpi span-3" style="--i:1" aria-labelledby="kpi-proj">
+        <h2 class="kpi-label" id="kpi-proj">Projects</h2>
+        <div class="kpi-row">
+          <p class="kpi-value">8</p>
+          <span class="swatches" aria-hidden="true">
+            <i style="background:hsl(var(--series-1))"></i><i style="background:hsl(var(--series-2))"></i><i style="background:hsl(var(--series-3))"></i><i style="background:hsl(var(--series-4))"></i><i style="background:hsl(var(--series-5))"></i><i style="background:hsl(var(--series-6))"></i><i style="background:hsl(var(--series-7))"></i><i style="background:hsl(var(--series-8))"></i>
+          </span>
+        </div>
+        <p class="kpi-caption" style="margin:0"><span><span class="num" id="proj-active">6</span> active this week</span><a href="#">Drill in</a></p>
+      </section>
+
+      <section class="card kpi span-3" style="--i:2" aria-labelledby="kpi-conv">
+        <h2 class="kpi-label" id="kpi-conv">AI conversations</h2>
+        <div class="kpi-row">
+          <p class="kpi-value">51</p>
+          <svg class="spark" viewBox="0 0 112 30" role="img" aria-label="Conversations per day, Oct 29 to Nov 4: 6, 9, 4, 2, 8, 11, 11">
+            <g id="conv-bars"></g>
+          </svg>
+        </div>
+        <p class="kpi-caption" style="margin:0"><span>Last 7 days · peak <span class="num">11</span></span><a href="#">Timeline</a></p>
+      </section>
+
+      <section class="card kpi span-3" style="--i:3" aria-labelledby="kpi-spend">
+        <h2 class="kpi-label" id="kpi-spend">Agent spend · this month</h2>
+        <div class="kpi-row">
+          <p class="kpi-value">$38<span class="cents">.42</span></p>
+          <span class="split" role="img" aria-label="Claude Code 81 percent, Codex 19 percent">
+            <i class="bg-cc" style="width:81%"></i><i class="bg-codex" style="width:19%"></i>
+          </span>
+        </div>
+        <p class="kpi-caption" style="margin:0">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span class="vendor-dot bg-cc" aria-hidden="true"></span>Claude <span class="num">$31.10</span></span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span class="vendor-dot bg-codex" aria-hidden="true"></span>Codex <span class="num">$7.32</span></span>
+        </p>
+      </section>
+
+      <!-- Row B -->
+      <section class="card span-6" style="--i:4" aria-labelledby="act-title">
+        <div class="card-header">
+          <div class="card-title">
+            <h2 id="act-title">Activity by project</h2>
+            <p id="act-sub">Observations per day</p>
+          </div>
+          <div class="seg" role="group" aria-label="Date range">
+            <button type="button" data-range="7" aria-pressed="false">7d</button>
+            <button type="button" data-range="30" aria-pressed="true">30d</button>
+            <button type="button" data-range="90" aria-pressed="false">90d</button>
+          </div>
+        </div>
+        <div class="card-body chart-body">
+          <svg class="chart-svg" id="activity" role="img" aria-label="Stacked bar chart of observations per day by project"></svg>
+          <ul class="legend" id="act-legend" aria-label="Projects in range"></ul>
+        </div>
+      </section>
+
+      <section class="card span-3" style="--i:5" aria-labelledby="type-title">
+        <div class="card-header">
+          <div class="card-title">
+            <h2 id="type-title">By type</h2>
+            <p>All memories</p>
+          </div>
+        </div>
+        <div class="card-body donut-body">
+          <svg class="donut" id="donut" viewBox="0 0 120 120" role="img" aria-label="Memories by type: feature 95, pattern 88, config 88, architecture 84, discovery 49, learning 48, others 38"></svg>
+          <ul class="type-legend" id="type-legend"></ul>
+        </div>
+      </section>
+
+      <section class="card span-3" style="--i:6" aria-labelledby="brain-title">
+        <div class="card-header">
+          <div class="card-title">
+            <h2 id="brain-title">Knowledge graph</h2>
+            <p class="mono">490 nodes</p>
+          </div>
+        </div>
+        <div class="brain-body">
+          <div class="brain-stage">
+            <svg class="brain-svg" id="brain" viewBox="0 0 280 180" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Preview of the memory graph: 40 sampled memories linked by relations, colored by type"></svg>
+          </div>
+          <div class="brain-foot">
+            <span class="muted mono" style="white-space:nowrap">1,126 links</span>
+            <a class="btn btn-accent" href="#">Open the brain<svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Row C -->
+      <section class="card span-8" style="--i:7" aria-labelledby="recent-title">
+        <div class="card-header">
+          <div class="card-title">
+            <h2 id="recent-title">Recent memories</h2>
+            <p>Newest 5 across all projects</p>
+          </div>
+          <a class="text-link" href="#"><span>View all 490</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+        <table class="data-table">
+          <colgroup><col style="width:138px"><col style="width:128px"><col><col style="width:146px"></colgroup>
+          <thead><tr><th scope="col">Created</th><th scope="col">Type</th><th scope="col">Title</th><th scope="col">Project</th></tr></thead>
+          <tbody>
+            <tr><td class="mono"><time datetime="2026-11-04T09:42">Nov 04 · 09:42</time></td><td><span class="badge"><span class="dot" style="background:hsl(var(--series-8))"></span>bugfix</span></td><td><a href="#" title="Fixed double .card padding inflating project-detail KPI tiles">Fixed double .card padding inflating project-detail KPI tiles</a></td><td><span class="proj"><span class="sq" style="background:hsl(var(--series-3))"></span>design-system</span></td></tr>
+            <tr><td class="mono"><time datetime="2026-11-04T08:15">Nov 04 · 08:15</time></td><td><span class="badge"><span class="dot" style="background:hsl(var(--series-2))"></span>pattern</span></td><td><a href="#" title="Shared CC transcript marker stripping across services + ui">Shared CC transcript marker stripping across services + ui</a></td><td><span class="proj"><span class="sq" style="background:hsl(var(--series-6))"></span>demo-api</span></td></tr>
+            <tr><td class="mono"><time datetime="2026-11-03T18:27">Nov 03 · 18:27</time></td><td><span class="badge"><span class="dot" style="background:hsl(var(--series-4))"></span>architecture</span></td><td><a href="#" title="Split sync worker into fetch and apply stages behind a bounded queue">Split sync worker into fetch and apply stages behind a bounded queue</a></td><td><span class="proj"><span class="sq" style="background:hsl(var(--series-5))"></span>infra</span></td></tr>
+            <tr><td class="mono"><time datetime="2026-11-03T15:03">Nov 03 · 15:03</time></td><td><span class="badge"><span class="dot" style="background:hsl(var(--series-3))"></span>config</span></td><td><a href="#" title="Pinned Vite 5 and disabled the HMR overlay for R3F island builds">Pinned Vite 5 and disabled the HMR overlay for R3F island builds</a></td><td><span class="proj"><span class="sq" style="background:hsl(var(--series-8))"></span>demo-web</span></td></tr>
+            <tr><td class="mono"><time datetime="2026-11-03T11:48">Nov 03 · 11:48</time></td><td><span class="badge"><span class="dot" style="background:hsl(var(--series-5))"></span>discovery</span></td><td><a href="#" title="Feature store backfill skips rows when the partition key is null">Feature store backfill skips rows when the partition key is null</a></td><td><span class="proj"><span class="sq" style="background:hsl(var(--series-2))"></span>ml-platform</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card span-4" style="--i:8" aria-labelledby="agents-title">
+        <div class="card-header">
+          <div class="card-title">
+            <h2 id="agents-title">Agents</h2>
+            <p>This week · Oct 29 – Nov 4</p>
+          </div>
+          <a class="text-link" href="#"><span>Sessions</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+        <div class="card-body agents-body">
+          <div>
+            <div class="sessions-head"><span>Sessions by vendor</span><span class="num">51</span></div>
+            <div class="sessions-bar" role="img" aria-label="Claude Code 34 sessions, Codex 17 sessions">
+              <i class="bg-cc" style="width:66.7%"></i><i class="bg-codex" style="width:33.3%"></i>
+            </div>
+            <div class="sessions-legend">
+              <span><span class="vendor-dot bg-cc" aria-hidden="true"></span>Claude Code <span class="num">34</span><span class="pct num">67%</span></span>
+              <span><span class="vendor-dot bg-codex" aria-hidden="true"></span>Codex <span class="num">17</span><span class="pct num">33%</span></span>
+            </div>
+          </div>
+          <table class="vendor-table">
+            <caption class="sr-only">Token usage, top model and spend per vendor</caption>
+            <thead><tr><th scope="col"><span class="sr-only">Metric</span></th><th scope="col"><span><span class="vendor-dot bg-cc" aria-hidden="true"></span>Claude Code</span></th><th scope="col"><span><span class="vendor-dot bg-codex" aria-hidden="true"></span>Codex</span></th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Tokens in</th><td>4.82M</td><td>1.94M</td></tr>
+              <tr><th scope="row">Tokens out</th><td>612K</td><td>288K</td></tr>
+              <tr><th scope="row">Top model</th><td title="claude-opus-5-5">claude-opus-5-5</td><td title="gpt-5.3-codex">gpt-5.3-codex</td></tr>
+              <tr><th scope="row">Spend MTD</th><td>$31.10</td><td>$7.32</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <p class="footnote">
+      <span class="swatches" aria-hidden="true"><i style="background:hsl(var(--series-1))"></i><i style="background:hsl(var(--series-2))"></i><i style="background:hsl(var(--series-3))"></i><i style="background:hsl(var(--series-4))"></i><i style="background:hsl(var(--series-5))"></i><i style="background:hsl(var(--series-6))"></i><i style="background:hsl(var(--series-7))"></i><i style="background:hsl(var(--series-8))"></i></span>
+      <span><strong>Proposed series palette</strong> (<span class="mono">--series-1…8</span>, not yet a project token). Squares mark projects, circles mark memory types.</span>
+    </p>
+  </main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function fmt(d) { return MONTHS[d.getMonth()] + ' ' + pad(d.getDate()); }
+  function rng(seed) {
+    return function () {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function series(i) { return 'hsl(var(--series-' + (i + 1) + '))'; }
+
+  /* Theme toggle */
+  var tbtn = document.getElementById('theme-toggle');
+  tbtn.addEventListener('click', function () {
+    var light = document.documentElement.classList.toggle('light');
+    tbtn.setAttribute('aria-pressed', String(light));
+  });
+
+  /* ---------- Deterministic 90-day activity data ---------- */
+  var PROJECTS = ['mobile-app','ml-platform','design-system','data-eng','infra','demo-api','research-notes','demo-web'];
+  var r = rng(490);
+  var TODAY = new Date(2026, 10, 4);
+  var days = [];
+  for (var i = 89; i >= 0; i--) {
+    var d = new Date(TODAY); d.setDate(d.getDate() - i);
+    var dow = d.getDay(), weekend = dow === 0 || dow === 6;
+    var base = weekend ? 1.1 : 4.4;
+    var total = Math.max(0, Math.round(base + (r() - 0.4) * base * 1.3));
+    if (!weekend && r() < 0.07) total += 5;
+    var t = (89 - i) / 89;
+    var w = [1.6 - 1.2 * t, 0.4 + 1.4 * Math.sin(Math.PI * t), 0.2 + 1.8 * t, 0.9, 0.7 + 0.3 * Math.cos(6 * t), 0.55, 0.25, 0.15 + 0.6 * t];
+    var ws = w.reduce(function (a, b) { return a + b; }, 0);
+    var counts = [0,0,0,0,0,0,0,0];
+    for (var k = 0; k < total; k++) {
+      var x = r() * ws, j = 0;
+      while (j < 7 && x > w[j]) { x -= w[j]; j++; }
+      counts[j]++;
+    }
+    days.push({ date: d, counts: counts, total: total });
+  }
+
+  /* KPI derived captions */
+  var last7 = days.slice(-7);
+  document.getElementById('mem-week').textContent = '+' + last7.reduce(function (a, x) { return a + x.total; }, 0);
+  var active = PROJECTS.filter(function (_, p) { return last7.some(function (x) { return x.counts[p] > 0; }); }).length;
+  document.getElementById('proj-active').textContent = active;
+
+  /* Memories sparkline (30d) */
+  (function () {
+    var s = document.getElementById('spark-mem');
+    var data = days.slice(-30).map(function (x) { return x.total; });
+    var max = Math.max.apply(null, data) || 1;
+    var pts = data.map(function (v, i) { return [i * (112 / 29), 28 - (v / max) * 24]; });
+    var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join('');
+    s.innerHTML =
+      '<path d="' + line + 'L112 30L0 30Z" style="fill:hsl(var(--accent) / .14)"/>' +
+      '<path d="' + line + '" style="fill:none;stroke:hsl(var(--accent));stroke-width:1.5;stroke-linejoin:round;vector-effect:non-scaling-stroke"/>';
+  })();
+
+  /* Conversations mini bars (7d, today highlighted) */
+  (function () {
+    var g = document.getElementById('conv-bars');
+    var data = [6, 9, 4, 2, 8, 11, 11], bw = 10, gap = (112 - bw * 7) / 6, html = '';
+    data.forEach(function (v, i) {
+      var h = Math.max(2, v / 11 * 28);
+      var fill = i === 6 ? 'hsl(var(--accent))' : 'hsl(var(--fg-muted) / .45)';
+      html += '<rect x="' + (i * (bw + gap)).toFixed(1) + '" y="' + (30 - h).toFixed(1) + '" width="' + bw + '" height="' + h.toFixed(1) + '" rx="2" style="fill:' + fill + '"/>';
+    });
+    g.innerHTML = html;
+  })();
+
+  /* ---------- Activity stacked bars ---------- */
+  var svg = document.getElementById('activity');
+  var legend = document.getElementById('act-legend');
+  var sub = document.getElementById('act-sub');
+  var range = 30;
+
+  /* Smallest axis top of 3 or 4 equal integer steps that fits the peak. */
+  function niceScale(v) {
+    var best = null, m = Math.max(3, v);
+    [3, 4].forEach(function (n) {
+      var top = Math.ceil(m / n) * n;
+      if (!best || top < best.top) best = { top: top, n: n };
+    });
+    return best;
+  }
+
+  function renderActivity() {
+    var rect = svg.getBoundingClientRect();
+    var W = Math.max(320, Math.round(rect.width)), H = 178;
+    var padL = 22, padR = 4, padT = 6, padB = 18;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var slice = days.slice(-range);
+    var maxV = 0, sum = 0, peak = slice[0];
+    var perProj = [0,0,0,0,0,0,0,0];
+    slice.forEach(function (x) {
+      sum += x.total;
+      if (x.total > maxV) { maxV = x.total; peak = x; }
+      x.counts.forEach(function (c, p) { perProj[p] += c; });
+    });
+    var scale = niceScale(maxV), yMax = scale.top, ticks = scale.n;
+    var step = plotW / slice.length;
+    var bw = Math.min(28, step * (range === 90 ? 0.62 : range === 30 ? 0.68 : 0.5));
+    var out = '<g class="grid">';
+    for (var g = 0; g <= ticks; g++) {
+      var v = yMax * g / ticks, y = padT + plotH - (v / yMax) * plotH;
+      out += '<line ' + (g === 0 ? 'class="base" ' : '') + 'x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"/>';
+      out += '<text x="' + (padL - 6) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end">' + v + '</text>';
+    }
+    out += '</g>';
+    var every = range === 7 ? 1 : range === 30 ? 5 : 15;
+    slice.forEach(function (x, i) {
+      var cx = padL + i * step, bx = cx + (step - bw) / 2;
+      var tip = fmt(x.date) + ' · ' + x.total + ' observations';
+      x.counts.forEach(function (c, p) { if (c) tip += '\n' + PROJECTS[p] + ': ' + c; });
+      out += '<g class="col"><title>' + tip + '</title>';
+      out += '<rect class="hit" x="' + cx.toFixed(1) + '" y="' + padT + '" width="' + step.toFixed(1) + '" height="' + plotH + '" rx="3"/>';
+      var yCur = padT + plotH;
+      x.counts.forEach(function (c, p) {
+        if (!c) return;
+        var h = c / yMax * plotH;
+        yCur -= h;
+        out += '<rect x="' + bx.toFixed(1) + '" y="' + yCur.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(0.5, h - 1).toFixed(1) + '" rx="1.5" style="fill:' + series(p) + '"/>';
+      });
+      out += '</g>';
+      if ((slice.length - 1 - i) % every === 0) {
+        out += '<text x="' + (cx + step / 2).toFixed(1) + '" y="' + (H - 4) + '" text-anchor="middle">' + fmt(x.date) + '</text>';
+      }
+    });
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.innerHTML = out;
+    sub.innerHTML = '<span class="mono">' + sum + '</span> observations · peak <span class="mono">' + maxV + '</span> on ' + fmt(peak.date);
+    svg.setAttribute('aria-label', 'Stacked bar chart, last ' + range + ' days: ' + sum + ' observations, peak ' + maxV + ' on ' + fmt(peak.date) + '.');
+    legend.innerHTML = PROJECTS.map(function (name, p) {
+      return '<li><span class="sq" style="background:' + series(p) + '" aria-hidden="true"></span>' + name + ' <span class="num">' + perProj[p] + '</span></li>';
+    }).join('');
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.seg button'), function (b) {
+    b.addEventListener('click', function () {
+      range = +b.getAttribute('data-range');
+      document.querySelectorAll('.seg button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      renderActivity();
+    });
+  });
+  renderActivity();
+  var rt;
+  window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(renderActivity, 120); });
+
+  /* ---------- Donut ---------- */
+  (function () {
+    var TYPES = [['feature',95,0],['pattern',88,1],['config',88,2],['architecture',84,3],['discovery',49,4],['learning',48,5],['others',38,7]];
+    var total = TYPES.reduce(function (a, x) { return a + x[1]; }, 0);
+    var R = 46, C = 2 * Math.PI * R, gap = 2, off = 0;
+    var out = '<circle class="track" cx="60" cy="60" r="' + R + '"/>';
+    TYPES.forEach(function (tp) {
+      var len = tp[1] / total * C;
+      out += '<circle class="seg-arc" cx="60" cy="60" r="' + R + '" transform="rotate(-90 60 60)" stroke-dasharray="' + Math.max(0, len - gap).toFixed(2) + ' ' + (C - len + gap).toFixed(2) + '" stroke-dashoffset="' + (-off).toFixed(2) + '" style="stroke:' + series(tp[2]) + '"><title>' + tp[0] + ': ' + tp[1] + ' (' + Math.round(tp[1] / total * 100) + '%)</title></circle>';
+      off += len;
+    });
+    out += '<text class="total" x="60" y="62" text-anchor="middle">' + total + '</text>';
+    out += '<text class="total-label" x="60" y="76" text-anchor="middle">memories</text>';
+    document.getElementById('donut').innerHTML = out;
+    document.getElementById('type-legend').innerHTML = TYPES.map(function (tp) {
+      return '<li><span class="dot" style="background:' + series(tp[2]) + '" aria-hidden="true"></span>' + tp[0] + '<span class="num">' + tp[1] + '</span></li>';
+    }).join('');
+  })();
+
+  /* ---------- Brain preview: ~40 nodes and synapses ---------- */
+  (function () {
+    var el = document.getElementById('brain');
+    var rb = rng(40);
+    function inBrain(x, y) {
+      var l = Math.pow((x - 108) / 74, 2) + Math.pow((y - 90) / 66, 2) <= 1;
+      var rr = Math.pow((x - 172) / 74, 2) + Math.pow((y - 90) / 66, 2) <= 1;
+      return (l || rr) && y > 24 && y < 160;
+    }
+    var nodes = [], tries = 0;
+    while (nodes.length < 40 && tries < 8000) {
+      tries++;
+      var x = 30 + rb() * 220, y = 22 + rb() * 140;
+      if (!inBrain(x, y)) continue;
+      if (nodes.some(function (n) { return Math.hypot(n.x - x, n.y - y) < 17; })) continue;
+      var ang = Math.atan2(y - 90, x - 140);
+      var type = Math.floor(((ang + Math.PI) / (2 * Math.PI)) * 6) % 6;
+      if (rb() < 0.18) type = 7; // others
+      nodes.push({ x: x, y: y, type: type, deg: 0 });
+    }
+    var edges = [], seen = {};
+    nodes.forEach(function (n, i) {
+      var near = nodes.map(function (m, j) { return [j, Math.hypot(m.x - n.x, m.y - n.y)]; })
+        .filter(function (p) { return p[0] !== i; })
+        .sort(function (a, b) { return a[1] - b[1]; }).slice(0, 3);
+      near.forEach(function (p) {
+        if (p[1] > 46) return;
+        var key = Math.min(i, p[0]) + '-' + Math.max(i, p[0]);
+        if (seen[key]) return;
+        seen[key] = 1; edges.push([i, p[0]]);
+        n.deg++; nodes[p[0]].deg++;
+      });
+    });
+    var hubs = nodes.map(function (n, i) { return i; }).sort(function (a, b) { return nodes[b].deg - nodes[a].deg; }).slice(0, 4);
+    // long-range links between hubs (cross-hemisphere relations)
+    for (var h = 0; h < hubs.length - 1; h++) {
+      var key = Math.min(hubs[h], hubs[h + 1]) + '-' + Math.max(hubs[h], hubs[h + 1]);
+      if (!seen[key]) { seen[key] = 1; edges.push([hubs[h], hubs[h + 1]]); }
+    }
+    var out = '<g class="brain-float">';
+    edges.forEach(function (e) {
+      var a = nodes[e[0]], b = nodes[e[1]];
+      out += '<line class="edge" x1="' + a.x.toFixed(1) + '" y1="' + a.y.toFixed(1) + '" x2="' + b.x.toFixed(1) + '" y2="' + b.y.toFixed(1) + '"/>';
+    });
+    // synapse pulses: prefer edges touching hubs
+    var pulseEdges = edges.filter(function (e) { return hubs.indexOf(e[0]) >= 0 || hubs.indexOf(e[1]) >= 0; });
+    edges.forEach(function (e) { if (pulseEdges.length < 12 && pulseEdges.indexOf(e) < 0 && rb() < 0.25) pulseEdges.push(e); });
+    pulseEdges.slice(0, 14).forEach(function (e, k) {
+      var a = nodes[e[0]], b = nodes[e[1]];
+      if (rb() < 0.5) { var tmp = a; a = b; b = tmp; }
+      out += '<path class="pulse" pathLength="100" d="M' + a.x.toFixed(1) + ' ' + a.y.toFixed(1) + 'L' + b.x.toFixed(1) + ' ' + b.y.toFixed(1) + '" style="--d:' + (2 + rb() * 1.8).toFixed(2) + 's;--delay:-' + (rb() * 3).toFixed(2) + 's"/>';
+    });
+    nodes.forEach(function (n, i) {
+      var isHub = hubs.indexOf(i) >= 0;
+      var rad = isHub ? 4.4 : 1.8 + Math.min(n.deg, 4) * 0.35;
+      var col = series(n.type);
+      if (isHub) out += '<circle class="halo" cx="' + n.x.toFixed(1) + '" cy="' + n.y.toFixed(1) + '" r="10" style="fill:' + col + ';--delay:-' + (rb() * 3).toFixed(2) + 's"/>';
+      var tw = !isHub && rb() < 0.35 ? ' class="tw" style="fill:' + col + ';--delay:-' + (rb() * 3).toFixed(2) + 's"' : ' style="fill:' + col + '"';
+      out += '<circle cx="' + n.x.toFixed(1) + '" cy="' + n.y.toFixed(1) + '" r="' + rad.toFixed(1) + '"' + tw + '/>';
+    });
+    out += '</g>';
+    el.innerHTML = out;
+  })();
+})();
+</script>
+</body>
+</html>

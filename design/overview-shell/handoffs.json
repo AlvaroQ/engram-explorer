@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "chosen": "02-brain-first.html",
+  "handoffs": {
+    "02-brain-first.html": {
+      "status": "sent",
+      "queued": false,
+      "sentAt": "2026-11-04T12:39:54.131Z",
+      "startedAt": null,
+      "implementedAt": null
+    }
+  }
+}

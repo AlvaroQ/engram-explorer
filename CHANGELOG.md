@@ -10,6 +10,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **CI hardening** — CI now also runs on `develop`, uses least-privilege permissions and SHA-pinned actions,
+  runs `go test -race` and `govulncheck`, and fails when generated templ code or the Tailwind CSS bundle is
+  stale. Dependabot keeps Go modules, npm packages and GitHub Actions up to date.
+- **Design specs** — `design/` (design system reference and overview shell directions) is now versioned.
+- **Code of Conduct** — `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1).
+
+### Fixed
+
+- **Fresh clone build** — `go build ./...` compiles on a fresh clone again: the `internal/web/dist`
+  placeholder is committed (it was excluded by the generic `dist/` ignore rule).
+- **Settings DB hot-swap** — changing the Engram database path from Settings now swaps the pool on the
+  provider registry path as well.
+
+### Changed
+
+- **Go toolchain** — releases build with Go 1.26.10 (`toolchain` directive in `go.mod`); the minimum
+  supported Go version stays at 1.25. Go 1.25.0 shipped standard library vulnerabilities reachable from the
+  HTTP server.
+- **Release gating** — the release workflow only publishes after the full CI suite passes for the tag.
+- **Version format** — `make build` reports the version without the leading `v` (e.g. `0.2.0`), matching
+  GoReleaser builds.
+
+### Removed
+
+- Unused Pico CSS stylesheet from the doctor module.
+- `scripts/update-engram.*`, a personal helper unrelated to this project.
+
+## [0.2.0] - 2026-06-12
+
+### Added
+
+- **Demo mode** — `--demo` (or `ENGRAM_DEMO=1`) serves a bundled sample database with writes blocked;
+  `--demo-db=<path>` (or `ENGRAM_DEMO_DB`) points it at another demo file.
+- **Brain WebGL fallback** — the 3D Brain detects missing WebGL support and shows an actionable fallback.
+- **Review due badge** — memories past their review date are flagged in the Memory views.
+- **Combine projects** — a "Combine with another project" action on the project detail page.
+- **Advanced view toggle** — per-profile switch that hides technical columns.
 - **Modular provider framework** — a `Provider` / `Instance` port and an ordered `Registry` replace the
   hard-wired database open in `container.go`. Providers boot independently; a failure in one never prevents
   others from loading.
@@ -52,6 +89,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Navigation** — simplified primary nav; Topics and Prompts fold into Memory as tabs, Claude Code Overview
+  and Sessions merge into one tabbed page, and diagnostics move to **Settings → Maintenance**.
+- **Palette** — the UI moves to a Rose Pine based palette with a pink primary color.
+- **Home page** — simplified for first-glance comprehension.
 - **Settings page** — extended with **Modules** and **Accounts** sections; existing path-override and
   daemon-status fields are unchanged.
 - **`GET /`** — routes to the onboarding screen when no provider is active; routes to the existing overview
@@ -66,3 +107,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   variables and any `explorer-settings.json` overrides. You will see no behavior change.
 - The `config.json` file is created in `$ENGRAM_DATA_DIR` (default `~/.engram/config.json`) on first
   activation via Settings or on first start if env vars are set. You do not need to create it manually.
+
+## [0.1.0] - 2026-06-10
+
+### Added
+
+- **Single-binary dashboard** — one Go binary serves the templ + HTMX UI, the JSON API and the embedded
+  React islands for exploring the Engram memory database.
+- **Claude Code sessions** — overview and sessions views with usage charts, a conversation filter,
+  attachment chips and a redesigned session detail.
+- **Editable data paths** — the Engram database and Claude Code directories can be changed and hot-swapped
+  from Settings.
+
+[Unreleased]: https://github.com/AlvaroQ/engram-explorer/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/AlvaroQ/engram-explorer/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/AlvaroQ/engram-explorer/releases/tag/v0.1.0
