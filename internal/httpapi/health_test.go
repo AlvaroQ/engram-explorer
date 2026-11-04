@@ -388,6 +388,7 @@ func TestSecurityHeaders(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	cases := []struct{ header, want string }{
+		{"Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"},
 		{"X-Frame-Options", "DENY"},
 		{"X-Content-Type-Options", "nosniff"},
 		{"Referrer-Policy", "no-referrer"},

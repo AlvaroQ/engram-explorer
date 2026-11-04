@@ -55,6 +55,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **No internal errors in HTML** — UI and doctor pages no longer show raw error text (SQLite errors,
   filesystem paths). Messages written for the user are still shown; any other error shows a generic
   localized message and the detail goes to the server log.
+- **Stricter Content Security Policy** — `script-src` no longer allows `'unsafe-inline'`: inline scripts,
+  event-handler attributes and `hx-on` moved to a static `ui-actions.js`, and htmx attribute evaluation is
+  disabled (`allowEval: false`). `style-src` still allows `'unsafe-inline'` (inline style attributes and htmx
+  indicator styles); removing it is planned for Phase 2.
 
 ### Changed
 

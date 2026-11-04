@@ -8,11 +8,14 @@ import (
 	"time"
 )
 
-// secureHeaders adds HTTP security headers matching the original Hono
-// secureHeaders middleware configuration carried over during migration.
+// secureHeaders adds the HTTP security headers to every response.
 func secureHeaders(next http.Handler) http.Handler {
-	// Content-Security-Policy string mirrors the Hono secureHeaders config exactly.
-	const csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
+	// script-src is 'self' only: the templates carry no inline <script> or on*=
+	// handlers (behaviours live in /static/ui-actions.js) and htmx runs with
+	// allowEval:false. style-src still allows 'unsafe-inline' for inline style
+	// attributes, the layout <style> block and htmx indicator styles; removing
+	// it is deferred to Phase 2 (see SECURITY.md, Content Security Policy).
+	const csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
