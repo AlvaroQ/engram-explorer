@@ -18,6 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Profile switch lifecycle** — switching profiles closes the providers the new profile disables and opens the
+  ones it enables (it used to leave disabled providers open and never open newly enabled ones); a failed open
+  rolls the switch back without leaking instances.
 - **Database import confirmation** — choosing a file in Settings → Import now submits with
   `requestSubmit()`, so the confirmation dialog runs before anything is uploaded (`form.submit()` skipped it).
 - **`make demo`** — the target now starts the server in demo mode (`--demo` with the seeded database), so the

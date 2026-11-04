@@ -128,49 +128,63 @@ func (r *Registry) Boot(ctx context.Context, profile Profile) {
 	}
 }
 
-// SwitchProfile hot-swaps all providers to the next profile.
-// It opens the next profile's instances BEFORE closing the old ones (validate-
-// first, no downtime window). On ANY open failure it aborts, keeps the old
-// profile fully active, and returns the error — no half-switched state.
+// SwitchProfile moves every registered provider to the state the next profile
+// asks for, using the same lifecycle rules as Boot:
+//
+//   - source not detected        → Detected (degraded, not fatal), no instance
+//   - detected but not enabled   → Disabled, no instance
+//   - detected and enabled       → Enabled with a freshly opened instance
+//
+// It is atomic: every new instance is opened BEFORE any old one is closed
+// (no downtime window). If any open fails, the instances opened during the
+// attempt are closed, every entry keeps its previous instance, state and
+// error, and the error is returned — no half-switched state. Only after all
+// opens succeed are the old instances closed (replaced or disabled) and the
+// new states committed.
 func (r *Registry) SwitchProfile(ctx context.Context, next Profile) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// Phase 1: open every currently-enabled provider for the next profile.
-	type opened struct {
-		id   string
-		inst Instance
+	type target struct {
+		e     *activeEntry
+		inst  Instance
+		state State
 	}
-	var newInsts []opened
+	targets := make([]target, 0, len(r.order))
+
+	// Phase 1: compute every target and open the new instances.
 	for _, id := range r.order {
 		e := r.entries[id]
-		if e.state != Enabled {
-			continue
-		}
 		cfg := next.ProviderCfg(id)
-		if !cfg.Enabled {
-			continue
-		}
-		inst, err := e.p.Open(ctx, cfg)
-		if err != nil {
-			// Abort: close everything we already opened in this loop.
-			for _, o := range newInsts {
-				_ = o.inst.Close(ctx)
+		t := target{e: e}
+		switch {
+		case !e.p.Detect(ctx, cfg).Available:
+			t.state = Detected
+		case !cfg.Enabled:
+			t.state = Disabled
+		default:
+			inst, err := e.p.Open(ctx, cfg)
+			if err != nil {
+				for _, o := range targets {
+					if o.inst != nil {
+						_ = o.inst.Close(ctx)
+					}
+				}
+				return fmt.Errorf("switch profile: provider %q open failed: %w", id, err)
 			}
-			return fmt.Errorf("switch profile: provider %q open failed: %w", id, err)
+			t.inst, t.state = inst, Enabled
 		}
-		newInsts = append(newInsts, opened{id, inst})
+		targets = append(targets, t)
 	}
 
-	// Phase 2: all opens succeeded — swap in the new instances and close old ones.
-	for _, o := range newInsts {
-		e := r.entries[o.id]
-		old := e.inst
-		e.inst = o.inst
+	// Phase 2: every open succeeded — commit and close the superseded instances.
+	for _, t := range targets {
+		old := t.e.inst
+		t.e.inst, t.e.state, t.e.err = t.inst, t.state, nil
 		if old != nil {
-			// Best-effort close of old instance; errors are logged, not fatal.
+			// Best-effort close of the old instance; errors are logged, not fatal.
 			if err := old.Close(ctx); err != nil && r.log != nil {
-				r.log.Warn("close old provider instance", "id", o.id, "err", err)
+				r.log.Warn("close old provider instance", "id", t.e.p.ID(), "err", err)
 			}
 		}
 	}

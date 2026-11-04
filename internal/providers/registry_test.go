@@ -466,3 +466,201 @@ func TestDetectValidate_Contract(t *testing.T) {
 		}
 	})
 }
+
+// fakeInst returns the live FakeInstance for id, failing the test when the
+// provider has no open instance.
+func fakeInst(t *testing.T, reg *providers.Registry, id string) *providertest.FakeInstance {
+	t.Helper()
+	inst, ok := reg.Instance(id).(*providertest.FakeInstance)
+	if !ok || inst == nil {
+		t.Fatalf("provider %q has no live FakeInstance", id)
+	}
+	return inst
+}
+
+func stateOf(reg *providers.Registry, id string) providers.State {
+	for _, e := range reg.Entries() {
+		if e.ID == id {
+			return e.State
+		}
+	}
+	return providers.Registered
+}
+
+// TestSwitchProfile_EnabledToDisabledClosesInstance covers S3: a provider
+// enabled in the old profile but disabled in the next one must be closed and
+// marked Disabled, not left open and Enabled.
+func TestSwitchProfile_EnabledToDisabledClosesInstance(t *testing.T) {
+	fp := providertest.NewFakeProvider(providertest.FakeProviderOptions{ID: "cc", DetectAvailable: true})
+	reg := providertest.NewRegistry(t, makeProfile("cc"), fp)
+	old := fakeInst(t, reg, "cc")
+
+	next := providertest.NewFakeProfile(map[string]providers.ProviderConfig{
+		"cc": {Enabled: false, Path: "/fake/cc"},
+	})
+	if err := reg.SwitchProfile(context.Background(), next); err != nil {
+		t.Fatalf("SwitchProfile: %v", err)
+	}
+	if !old.Closed() {
+		t.Error("old instance was not closed")
+	}
+	if got := stateOf(reg, "cc"); got != providers.Disabled {
+		t.Errorf("state: got %s, want Disabled", got)
+	}
+	if reg.Instance("cc") != nil {
+		t.Error("Instance: want nil after switching to a profile that disables the provider")
+	}
+	if reg.ActiveCount() != 0 {
+		t.Errorf("ActiveCount: got %d, want 0", reg.ActiveCount())
+	}
+}
+
+// TestSwitchProfile_DisabledToEnabledOpens covers S3: a provider that is not
+// Enabled now (Disabled, Detected or Errored) but enabled in the next profile
+// must be opened and marked Enabled with no stale error.
+func TestSwitchProfile_DisabledToEnabledOpens(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		setup func(fp *providertest.FakeProvider) providers.Profile
+		want  providers.State
+	}{
+		{"disabled", func(fp *providertest.FakeProvider) providers.Profile {
+			return providertest.NewFakeProfile(map[string]providers.ProviderConfig{"cc": {Enabled: false, Path: "/a"}})
+		}, providers.Disabled},
+		{"detected", func(fp *providertest.FakeProvider) providers.Profile {
+			fp.SetDetectAvailable(false)
+			return makeProfile("cc")
+		}, providers.Detected},
+		{"errored", func(fp *providertest.FakeProvider) providers.Profile {
+			fp.SetOpenErr(errors.New("boom"))
+			return makeProfile("cc")
+		}, providers.Errored},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fp := providertest.NewFakeProvider(providertest.FakeProviderOptions{ID: "cc", DetectAvailable: true})
+			reg := providertest.NewRegistry(t, tc.setup(fp), fp)
+			if got := stateOf(reg, "cc"); got != tc.want {
+				t.Fatalf("precondition state: got %s, want %s", got, tc.want)
+			}
+			fp.SetDetectAvailable(true)
+			fp.SetOpenErr(nil)
+
+			next := providertest.NewFakeProfile(map[string]providers.ProviderConfig{
+				"cc": {Enabled: true, Path: "/fake/next"},
+			})
+			if err := reg.SwitchProfile(context.Background(), next); err != nil {
+				t.Fatalf("SwitchProfile: %v", err)
+			}
+			if got := stateOf(reg, "cc"); got != providers.Enabled {
+				t.Errorf("state: got %s, want Enabled", got)
+			}
+			inst := fakeInst(t, reg, "cc")
+			if p := inst.Health(context.Background()).Path; p != "/fake/next" {
+				t.Errorf("instance path: got %q, want /fake/next", p)
+			}
+			for _, e := range reg.Entries() {
+				if e.ID == "cc" && e.Err != nil {
+					t.Errorf("stale error after successful switch: %v", e.Err)
+				}
+			}
+		})
+	}
+}
+
+// TestSwitchProfile_NotDetectedInNextClosesOld covers S3: when the next
+// profile's source is missing the provider degrades to Detected (not fatal)
+// and the old instance is closed.
+func TestSwitchProfile_NotDetectedInNextClosesOld(t *testing.T) {
+	fp := providertest.NewFakeProvider(providertest.FakeProviderOptions{ID: "cc", DetectAvailable: true})
+	reg := providertest.NewRegistry(t, makeProfile("cc"), fp)
+	old := fakeInst(t, reg, "cc")
+
+	fp.SetDetectAvailable(false)
+	if err := reg.SwitchProfile(context.Background(), makeProfile("cc")); err != nil {
+		t.Fatalf("SwitchProfile: %v", err)
+	}
+	if !old.Closed() {
+		t.Error("old instance was not closed")
+	}
+	if got := stateOf(reg, "cc"); got != providers.Detected {
+		t.Errorf("state: got %s, want Detected", got)
+	}
+}
+
+// TestSwitchProfile_FailureRollsBackWithoutLeaks covers S3: when any open for
+// the next profile fails, every instance opened during the attempt is closed,
+// the old instances stay open and every state is unchanged.
+func TestSwitchProfile_FailureRollsBackWithoutLeaks(t *testing.T) {
+	a := providertest.NewFakeProvider(providertest.FakeProviderOptions{ID: "a", DetectAvailable: true})
+	b := providertest.NewFakeProvider(providertest.FakeProviderOptions{ID: "b", DetectAvailable: true})
+	c := providertest.NewFakeProvider(providertest.FakeProviderOptions{ID: "c", DetectAvailable: true})
+	boot := providertest.NewFakeProfile(map[string]providers.ProviderConfig{
+		"a": {Enabled: true, Path: "/old/a"},
+		"b": {Enabled: true, Path: "/old/b"},
+		"c": {Enabled: false, Path: "/old/c"},
+	})
+	reg := providertest.NewRegistry(t, boot, a, b, c)
+	oldA, oldB := fakeInst(t, reg, "a"), fakeInst(t, reg, "b")
+
+	b.SetOpenErr(errors.New("open failed"))
+	next := providertest.NewFakeProfile(map[string]providers.ProviderConfig{
+		"a": {Enabled: true, Path: "/next/a"},
+		"b": {Enabled: true, Path: "/next/b"},
+		"c": {Enabled: true, Path: "/next/c"},
+	})
+	if err := reg.SwitchProfile(context.Background(), next); err == nil {
+		t.Fatal("SwitchProfile: expected error, got nil")
+	}
+
+	for _, p := range []*providertest.FakeProvider{a, c} {
+		for _, inst := range p.Opened() {
+			if inst.Health(context.Background()).Path == "/next/"+p.ID() && !inst.Closed() {
+				t.Errorf("provider %q leaked the instance opened for the next profile", p.ID())
+			}
+		}
+	}
+	if oldA.Closed() || oldB.Closed() {
+		t.Error("old instances must stay open after a failed switch")
+	}
+	if fakeInst(t, reg, "a") != oldA || fakeInst(t, reg, "b") != oldB {
+		t.Error("live instances changed after a failed switch")
+	}
+	want := map[string]providers.State{"a": providers.Enabled, "b": providers.Enabled, "c": providers.Disabled}
+	for id, st := range want {
+		if got := stateOf(reg, id); got != st {
+			t.Errorf("%s state: got %s, want %s", id, got, st)
+		}
+	}
+}
+
+// TestRegistry_ConcurrentSwitchAndReads exercises SwitchProfile, Enable,
+// Disable and the read accessors concurrently; run with -race.
+func TestRegistry_ConcurrentSwitchAndReads(t *testing.T) {
+	fp := providertest.NewFakeProvider(providertest.FakeProviderOptions{ID: "cc", DetectAvailable: true})
+	reg := providertest.NewRegistry(t, makeProfile("cc"), fp)
+	ctx := context.Background()
+	done := make(chan struct{})
+	for g := 0; g < 4; g++ {
+		go func(g int) {
+			defer func() { done <- struct{}{} }()
+			for i := 0; i < 50; i++ {
+				switch (g + i) % 4 {
+				case 0:
+					_ = reg.SwitchProfile(ctx, makeProfile("cc"))
+				case 1:
+					_ = reg.Disable(ctx, "cc")
+				case 2:
+					_ = reg.Enable(ctx, "cc", providers.ProviderConfig{Enabled: true, Path: "/x"})
+				default:
+					_ = reg.Entries()
+					_ = reg.AllProviderMetas()
+					_ = reg.NavGroups()
+					_, _ = reg.AggregateHealth(ctx)
+				}
+			}
+		}(g)
+	}
+	for g := 0; g < 4; g++ {
+		<-done
+	}
+}
