@@ -1,7 +1,7 @@
 // Package ccsessions implements the Provider port for the Claude Code sessions
-// data source. It wraps the existing internal/services/cc_sessions.go reader
-// and the internal/httpapi/routes_cc_sessions.go + internal/ui cc-sessions routes
-// behind the providers.Provider interface.
+// data source. It wraps the internal/services/cc_sessions*.go reader behind
+// the providers.Provider interface and serves every enabled Claude account as
+// a vendor-neutral agent-session source (providers.AgentSessionSource).
 //
 // This provider is READ-ONLY: it does NOT implement the providers.Writable
 // capability. The CC sessions store is owned by Claude Code — this provider
@@ -15,6 +15,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"sync"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
@@ -27,13 +28,19 @@ import (
 
 // ccProvider is the singleton descriptor for the Claude Code sessions data source.
 type ccProvider struct {
-	cfg config.Config
-	log *slog.Logger // registry logger (SetLogger); nil logs nothing
+	cfg      config.Config
+	log      *slog.Logger              // registry logger (SetLogger); nil logs nothing
+	accounts func() []config.CCAccount // WithAccounts; nil serves the provider path
+	stats    statsCache                // deprecated /api/cc-sessions/stats
 }
 
 // NewProvider returns the Claude Code sessions Provider adapter.
-func NewProvider(cfg config.Config) providers.Provider {
-	return &ccProvider{cfg: cfg}
+func NewProvider(cfg config.Config, opts ...Option) providers.Provider {
+	p := &ccProvider{cfg: cfg}
+	for _, o := range opts {
+		o(p)
+	}
+	return p
 }
 
 // SetLogger receives the registry logger (providers.LoggerSetter); instances
@@ -114,6 +121,7 @@ func (p *ccProvider) Open(ctx context.Context, cfg providers.ProviderConfig) (pr
 		runtimePaths: runtimePaths,
 		path:         path,
 		health:       providers.NewHealthLog(p.log),
+		accounts:     p.accounts,
 	}, nil
 }
 
@@ -207,6 +215,10 @@ type ccInstance struct {
 	runtimePaths *config.RuntimePaths
 	path         string
 	health       *providers.HealthLog
+	accounts     func() []config.CCAccount
+
+	mu      sync.Mutex
+	sources map[string]*claudeSource // by account id + path (AgentSessionSources)
 }
 
 // Health returns per-provider health for /api/health aggregation. For CC

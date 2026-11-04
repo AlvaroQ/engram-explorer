@@ -166,7 +166,9 @@ func buildContainer(cfg config.Config, logger *slog.Logger) *httpapi.Container {
 	// /api/health, ready for the onboarding flow (WU-10).
 	reg := providers.NewRegistry(logger)
 	reg.Register(engramprovider.NewProvider(cfg))
-	reg.Register(ccsessionsprovider.NewProvider(cfg))
+	// The Claude provider serves one agent-session source per enabled Claude
+	// account; it reads them from the store on every request.
+	reg.Register(ccsessionsprovider.NewProvider(cfg, ccsessionsprovider.WithAccounts(store.EffectiveCCAccounts)))
 	reg.Boot(context.Background(), httpapi.AdaptProfile(activeProfile))
 
 	n := reg.ActiveCount()
