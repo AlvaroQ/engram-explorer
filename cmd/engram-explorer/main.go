@@ -22,6 +22,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/logging"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
 	ccsessionsprovider "github.com/AlvaroQ/engram-explorer/internal/providers/ccsessions"
+	codexsessionsprovider "github.com/AlvaroQ/engram-explorer/internal/providers/codexsessions"
 	engramprovider "github.com/AlvaroQ/engram-explorer/internal/providers/engram"
 )
 
@@ -169,6 +170,7 @@ func buildContainer(cfg config.Config, logger *slog.Logger) *httpapi.Container {
 	// The Claude provider serves one agent-session source per enabled Claude
 	// account; it reads them from the store on every request.
 	reg.Register(ccsessionsprovider.NewProvider(cfg, ccsessionsprovider.WithAccounts(store.EffectiveCCAccounts)))
+	reg.Register(codexsessionsprovider.NewProvider(cfg))
 	reg.Boot(context.Background(), httpapi.AdaptProfile(activeProfile))
 
 	n := reg.ActiveCount()
