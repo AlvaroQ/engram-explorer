@@ -51,7 +51,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `POST /partials/sync-cloud`, with their buttons. Sync diagnostics and the daemon GET proxy remain; use the
   `engram` CLI to enroll or sync. This also closes the gap where cloud actions ignored `ENGRAM_DASH_READONLY`.
 - **JSON body limit** — JSON request bodies are capped at 1 MiB (`http.MaxBytesReader`); larger bodies get
-  `413` with `PAYLOAD_TOO_LARGE`.
+  `413` with `PAYLOAD_TOO_LARGE`. Bodies with data after the JSON value (for example `{"a":1}{"b":2}`) are
+  rejected with `400 BAD_INPUT`; trailing whitespace is still accepted.
 - **Write route rate limits** — every JSON API write route is rate limited per client IP and route pattern (no longer
   by raw path alone, and `X-Forwarded-For` is ignored): database import 5/min, export 10/min, other write
   routes 120/min. Expired buckets are pruned.
