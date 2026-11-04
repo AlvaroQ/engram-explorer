@@ -33,7 +33,7 @@ func handleCCAccountAddPost(d Deps) http.HandlerFunc {
 			errMsg = T(lang, "settings.path.empty")
 		default:
 			if err := d.AddCCAccount(label, path); err != nil {
-				errMsg = err.Error()
+				errMsg = ErrorMessage(r, "", err)
 			}
 		}
 
@@ -68,7 +68,7 @@ func handleCCAccountRemovePost(d Deps) http.HandlerFunc {
 
 		if err := d.RemoveCCAccount(id); err != nil {
 			data := buildSettingsData(d, r, lang, theme)
-			data.CCAccountError = err.Error()
+			data.CCAccountError = ErrorMessage(r, "", err)
 			renderSettings(w, r, d, data)
 			return
 		}
@@ -122,7 +122,7 @@ func handleCCAccountTogglePost(d Deps) http.HandlerFunc {
 
 		if err := d.UpdateCCAccount(id, label, path, enabled); err != nil {
 			data := buildSettingsData(d, r, lang, theme)
-			data.CCAccountError = err.Error()
+			data.CCAccountError = ErrorMessage(r, "", err)
 			renderSettings(w, r, d, data)
 			return
 		}

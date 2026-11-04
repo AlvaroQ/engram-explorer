@@ -8,6 +8,8 @@ import (
 	"strconv"
 
 	"github.com/AlvaroQ/engram-explorer/internal/services"
+	"github.com/AlvaroQ/engram-explorer/internal/ui"
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 // entitySegmentMap maps URL path segments to the canonical EntityKind values
@@ -25,13 +27,14 @@ var errUnknownEntity = errors.New("unknown entity type")
 
 // writeEntityParseError responds to a parseEntityAndID failure: a hard 400 for
 // an unknown entity segment, an inline error partial (status 200, so HTMX still
-// swaps) for anything else.
+// swaps) for anything else. Both messages are user-safe (usererr).
 func writeEntityParseError(w http.ResponseWriter, r *http.Request, err error) {
+	msg := ui.ErrorMessage(r, "", err)
 	if errors.Is(err, errUnknownEntity) {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
-	render(w, r, ErrorPartial(err.Error()))
+	render(w, r, ErrorPartial(msg))
 }
 
 // parseEntityAndID extracts the {entity} and {id} path values and returns the
@@ -43,14 +46,14 @@ func parseEntityAndID(r *http.Request) (services.EntityKind, any, error) {
 
 	kind, ok := entitySegmentMap[entitySeg]
 	if !ok {
-		return "", nil, fmt.Errorf("%w: %q", errUnknownEntity, entitySeg)
+		return "", nil, usererr.Wrap(fmt.Sprintf("unknown entity type: %q", entitySeg), errUnknownEntity)
 	}
 	if kind == services.EntityKindSession {
 		return kind, idStr, nil
 	}
 	n, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		return "", nil, fmt.Errorf("invalid id %q: %v", idStr, err)
+		return "", nil, usererr.New(fmt.Sprintf("invalid id %q", idStr))
 	}
 	return kind, n, nil
 }
@@ -61,7 +64,7 @@ func handleOrphansListPartial(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data, projects, err := loadOrphansData(r.Context(), d)
 		if err != nil {
-			render(w, r, ErrorPartial("Failed to load orphans: "+err.Error()))
+			renderError(w, r, "Failed to load orphans: ", err)
 			return
 		}
 		render(w, r, OrphansList(data, projects))
@@ -86,7 +89,7 @@ func handleOrphanObservationDetail(d Deps) http.HandlerFunc {
 
 		detail, err := services.LoadOrphanObservationDetail(d.RoDB, id)
 		if err != nil {
-			render(w, r, ErrorPartial("Failed to load observation: "+err.Error()))
+			renderError(w, r, "Failed to load observation: ", err)
 			return
 		}
 		if detail == nil {
@@ -113,7 +116,7 @@ func handleOrphansAssign(d Deps) http.HandlerFunc {
 		}
 
 		if err := r.ParseForm(); err != nil {
-			render(w, r, ErrorPartial("Invalid form data: "+err.Error()))
+			renderError(w, r, "Invalid form data: ", err)
 			return
 		}
 		project := r.FormValue("project")
@@ -123,7 +126,7 @@ func handleOrphansAssign(d Deps) http.HandlerFunc {
 		}
 
 		if _, err := services.AssignProject(r.Context(), d.RWDB, kind, id, project); err != nil {
-			respondOrphans(w, r, d, "Assign failed: "+err.Error())
+			respondOrphans(w, r, d, ui.ErrorMessage(r, "Assign failed: ", err))
 			return
 		}
 		respondOrphans(w, r, d, "")
@@ -141,7 +144,7 @@ func handleOrphansDelete(d Deps) http.HandlerFunc {
 		}
 
 		if _, err := services.DeleteEntity(r.Context(), d.RWDB, kind, id); err != nil {
-			respondOrphans(w, r, d, "Delete failed: "+err.Error())
+			respondOrphans(w, r, d, ui.ErrorMessage(r, "Delete failed: ", err))
 			return
 		}
 		respondOrphans(w, r, d, "")
@@ -161,7 +164,7 @@ func respondOrphans(w http.ResponseWriter, r *http.Request, d Deps, errMsg strin
 		if errMsg != "" {
 			render(w, r, ErrorPartial(errMsg))
 		} else {
-			render(w, r, ErrorPartial("Reload failed: "+loadErr.Error()))
+			renderError(w, r, "Reload failed: ", loadErr)
 		}
 		return
 	}

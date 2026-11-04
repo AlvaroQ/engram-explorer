@@ -1,9 +1,10 @@
 package config
 
 import (
-	"errors"
 	"regexp"
 	"strings"
+
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 // CCAccount represents one Claude Code installation that the explorer tracks.
@@ -17,7 +18,8 @@ type CCAccount struct {
 }
 
 // ErrCCAccountNotFound is returned when an account lookup by ID finds no match.
-var ErrCCAccountNotFound = errors.New("CC account not found")
+// It is a user-safe sentinel: compare it with errors.Is.
+var ErrCCAccountNotFound = usererr.New("CC account not found")
 
 var reNonAlnum = regexp.MustCompile(`[^a-z0-9]+`)
 
@@ -79,10 +81,10 @@ func FindCCAccount(store *ProfileStore, id string) (*CCAccount, bool) {
 // It returns an error when label or path is empty, or when the save fails.
 func AddCCAccount(configHome string, store *ProfileStore, label, path string) (*CCAccount, error) {
 	if strings.TrimSpace(label) == "" {
-		return nil, errors.New("label must not be empty")
+		return nil, usererr.New("label must not be empty")
 	}
 	if strings.TrimSpace(path) == "" {
-		return nil, errors.New("path must not be empty")
+		return nil, usererr.New("path must not be empty")
 	}
 
 	base := slugID(label)
@@ -142,7 +144,7 @@ func UpdateCCAccount(configHome string, store *ProfileStore, id, label, path str
 // returns ErrCCAccountNotFound when the id is absent.
 func RemoveCCAccount(configHome string, store *ProfileStore, id string) error {
 	if len(store.CCAccounts) <= 1 {
-		return errors.New("cannot remove the last CC account")
+		return usererr.New("cannot remove the last CC account")
 	}
 
 	idx := -1

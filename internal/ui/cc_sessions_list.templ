@@ -174,7 +174,7 @@ templ ccsLoadMoreRow(cursor string, params services.CCSessionListParams, lang st
 				hx-get={ ccsNextURL(cursor, params) }
 				hx-target="#cc-sessions-tbody"
 				hx-swap="beforeend"
-				hx-on::after-request="document.getElementById('cc-sessions-load-more-row')?.remove()"
+				data-remove-after-request="cc-sessions-load-more-row"
 			>
 				{ T(lang, "common.loadMore") }
 			</button>

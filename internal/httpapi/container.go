@@ -5,13 +5,15 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
+	"github.com/AlvaroQ/engram-explorer/internal/providers/ccsessions"
+	engramprovider "github.com/AlvaroQ/engram-explorer/internal/providers/engram"
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 // Container holds all shared dependencies for the HTTP server.
@@ -54,7 +56,7 @@ type Container struct {
 //
 // The read-write pool (RWDB) is OPTIONAL and powers only the explicit,
 // user-confirmed write routes (observation edits, project reassignment,
-// deletes, project rename, db import/export, and the local cloud unenroll).
+// deletes, project rename, db import/export). Cloud sync is read-only.
 // It is left nil — disabling every write route via guardRWDB — when either:
 //   - ENGRAM_DASH_READONLY is set (the operator opted into a pure read-only
 //     viewer), or
@@ -100,13 +102,23 @@ func NewContainer(cfg config.Config, logger *slog.Logger) (*Container, error) {
 // in-flight queries can drain. On any validation/open error the current DB is
 // left untouched. Live reads of the path go through c.Paths; c.Config is the
 // immutable startup snapshot and is not mutated here.
+//
+// newPath must pass engramprovider.ValidateDBFile (regular SQLite file with the
+// Engram schema) — the same check the Settings Modules path applies. Returned
+// errors are user-facing; OS/SQLite details go to the log only.
 func (c *Container) ReloadEngramDB(newPath string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if err := engramprovider.ValidateDBFile(newPath); err != nil {
+		c.Logger.Warn("rejected engram database path", "path", newPath, "err", err)
+		return err
+	}
+
 	newRo, err := sqlite.OpenReadOnly(newPath)
 	if err != nil {
-		return err
+		c.Logger.Warn("cannot open engram database read-only", "path", newPath, "err", err)
+		return usererr.New(fmt.Sprintf("cannot open database: %s", newPath))
 	}
 
 	var newRw *sql.DB
@@ -114,7 +126,8 @@ func (c *Container) ReloadEngramDB(newPath string) error {
 		newRw, err = sqlite.OpenReadWrite(newPath)
 		if err != nil {
 			newRo.Close()
-			return fmt.Errorf("database is not writable: %w", err)
+			c.Logger.Warn("cannot open engram database read-write", "path", newPath, "err", err)
+			return usererr.New(fmt.Sprintf("database is not writable: %s", newPath))
 		}
 	}
 
@@ -185,13 +198,13 @@ func (c *Container) ReloadEngramDB(newPath string) error {
 // SetClaudeDir validates and applies a new Claude Code projects directory. There
 // is no persistent connection to swap — transcripts are scanned per request — so
 // the change takes effect immediately for every reader of c.Paths.ClaudeDir().
+//
+// newDir must pass ccsessions.ValidateProjectsDir — the same check the Settings
+// Modules path applies. Returned errors are user-facing.
 func (c *Container) SetClaudeDir(newDir string) error {
-	info, err := os.Stat(newDir)
-	if err != nil {
-		return fmt.Errorf("claude projects directory not found: %w", err)
-	}
-	if !info.IsDir() {
-		return fmt.Errorf("not a directory: %s", newDir)
+	if err := ccsessions.ValidateProjectsDir(newDir); err != nil {
+		c.Logger.Warn("rejected claude projects directory", "path", newDir, "err", err)
+		return err
 	}
 
 	// Hold c.mu so the override write is serialised with ReloadEngramDB (both

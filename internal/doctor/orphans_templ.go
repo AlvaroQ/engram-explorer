@@ -737,8 +737,8 @@ func OrphansListWithError(data *services.OrphansResponse, projects []services.Pr
 // observation content, and embeds the same assign-to-project dropdown and delete
 // action used in the row so the user can act without leaving the dialog.
 // Assigning/deleting refreshes #orphans-list (outerHTML), which removes the
-// dialog along with the rest of the list markup. The close button clears the
-// host directly. All strings stay in English to match the doctor view.
+// dialog along with the rest of the list markup. The backdrop and close button
+// clear the host via data-clear-target (/static/ui-actions.js). All strings stay in English to match the doctor view.
 func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects []services.ProjectStats) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -760,7 +760,7 @@ func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects
 			templ_7745c5c3_Var35 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "<dialog class=\"orphan-dialog\" open aria-modal=\"true\" aria-labelledby=\"orphan-dialog-title\"><div class=\"orphan-dialog-backdrop\" onclick=\"document.getElementById('orphan-dialog-host').innerHTML=''\" aria-hidden=\"true\"></div><article class=\"orphan-dialog-card\"><header class=\"orphan-dialog-header\"><h3 id=\"orphan-dialog-title\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "<!-- Esc-to-close: native <dialog open> (attribute, not showModal) does not\n\t     handle Esc; data-escape-clear-target makes /static/ui-actions.js clear\n\t     the host on Escape while this dialog is in the DOM. --><dialog class=\"orphan-dialog\" open aria-modal=\"true\" aria-labelledby=\"orphan-dialog-title\" data-escape-clear-target=\"orphan-dialog-host\"><div class=\"orphan-dialog-backdrop\" data-clear-target=\"orphan-dialog-host\" aria-hidden=\"true\"></div><article class=\"orphan-dialog-card\"><header class=\"orphan-dialog-header\"><h3 id=\"orphan-dialog-title\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -768,7 +768,7 @@ func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects
 			var templ_7745c5c3_Var36 string
 			templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(*d.Title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 249, Col: 16}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 252, Col: 16}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 			if templ_7745c5c3_Err != nil {
@@ -782,14 +782,14 @@ func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects
 			var templ_7745c5c3_Var37 string
 			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", d.ID))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 251, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 254, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "</h3><button type=\"button\" class=\"orphan-dialog-close\" aria-label=\"Close\" onclick=\"document.getElementById('orphan-dialog-host').innerHTML=''\">&times;</button></header><div class=\"orphan-dialog-body\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "</h3><button type=\"button\" class=\"orphan-dialog-close\" aria-label=\"Close\" data-clear-target=\"orphan-dialog-host\">&times;</button></header><div class=\"orphan-dialog-body\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -801,7 +801,7 @@ func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects
 			var templ_7745c5c3_Var38 string
 			templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(*d.SessionDirectory)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 265, Col: 65}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 268, Col: 65}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 			if templ_7745c5c3_Err != nil {
@@ -824,7 +824,7 @@ func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects
 		var templ_7745c5c3_Var39 string
 		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", d.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 276, Col: 35}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 279, Col: 35}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {
@@ -837,7 +837,7 @@ func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects
 		var templ_7745c5c3_Var40 string
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(d.Type)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 280, Col: 18}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 283, Col: 18}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
@@ -851,7 +851,7 @@ func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects
 			var templ_7745c5c3_Var41 string
 			templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(*d.TopicKey)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 286, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 289, Col: 21}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 			if templ_7745c5c3_Err != nil {
@@ -871,7 +871,7 @@ func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects
 			var templ_7745c5c3_Var42 string
 			templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(*d.ToolName)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 296, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 299, Col: 21}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 			if templ_7745c5c3_Err != nil {
@@ -891,7 +891,7 @@ func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects
 			var templ_7745c5c3_Var43 string
 			templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(*d.SessionID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 306, Col: 22}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 309, Col: 22}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 			if templ_7745c5c3_Err != nil {
@@ -911,7 +911,7 @@ func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects
 			var templ_7745c5c3_Var44 string
 			templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(*d.CreatedAt)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 316, Col: 22}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 319, Col: 22}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 			if templ_7745c5c3_Err != nil {
@@ -931,7 +931,7 @@ func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects
 			var templ_7745c5c3_Var45 string
 			templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(*d.UpdatedAt)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 326, Col: 22}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 329, Col: 22}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 			if templ_7745c5c3_Err != nil {
@@ -955,7 +955,7 @@ func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects
 			var templ_7745c5c3_Var46 string
 			templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(*d.Content)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 336, Col: 53}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 339, Col: 53}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 			if templ_7745c5c3_Err != nil {
@@ -978,7 +978,7 @@ func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects
 		var templ_7745c5c3_Var47 string
 		templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(orphanActionURL("observations", fmt.Sprintf("%d", d.ID), "project"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 344, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 347, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 		if templ_7745c5c3_Err != nil {
@@ -999,13 +999,13 @@ func OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects
 		var templ_7745c5c3_Var48 string
 		templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(orphanActionURL("observations", fmt.Sprintf("%d", d.ID), ""))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 353, Col: 77}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/orphans.templ`, Line: 356, Col: 77}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, "\" hx-target=\"#orphans-list\" hx-swap=\"outerHTML\" hx-confirm=\"Delete this orphaned observation? This action cannot be undone.\" class=\"btn-danger\">Delete</button></footer></article></dialog><!-- Esc-to-close: native <dialog open> (attribute, not showModal) does not\n\t     handle Esc, so register a one-shot listener that clears the host. --><script>\n\t\t(function () {\n\t\t\tfunction onKey(e) {\n\t\t\t\tif (e.key === \"Escape\") {\n\t\t\t\t\tvar host = document.getElementById(\"orphan-dialog-host\");\n\t\t\t\t\tif (host) host.innerHTML = \"\";\n\t\t\t\t\tdocument.removeEventListener(\"keydown\", onKey);\n\t\t\t\t}\n\t\t\t}\n\t\t\tdocument.addEventListener(\"keydown\", onKey);\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, "\" hx-target=\"#orphans-list\" hx-swap=\"outerHTML\" hx-confirm=\"Delete this orphaned observation? This action cannot be undone.\" class=\"btn-danger\">Delete</button></footer></article></dialog>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

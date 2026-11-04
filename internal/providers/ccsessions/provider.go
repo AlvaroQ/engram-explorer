@@ -10,13 +10,16 @@ package ccsessions
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 // ---------------------------------------------------------------------------
@@ -147,22 +150,38 @@ func (p *ccProvider) Nav(inst providers.Instance) providers.NavGroup {
 // individual session file access; at provider-level validation we check the
 // base directory itself.
 func (p *ccProvider) Validate(ctx context.Context, cfg providers.ProviderConfig) error {
-	path := cfg.Path
+	if err := ValidateProjectsDir(cfg.Path); err != nil {
+		return fmt.Errorf("cc-sessions: %w", err)
+	}
+	return nil
+}
+
+// ValidateProjectsDir is the single Claude Code projects-directory check shared
+// by the provider's Validate (Settings Modules path) and the Settings Claude
+// dir switcher: the path must be an existing directory holding at least one
+// project subfolder.
+//
+// Error messages are user-facing (usererr): they name only the path the caller
+// supplied and never wrap the underlying OS error text.
+func ValidateProjectsDir(path string) error {
 	if path == "" {
-		return fmt.Errorf("cc-sessions: path is required")
+		return usererr.New("projects directory path is required")
 	}
 
 	info, err := os.Stat(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return usererr.New(fmt.Sprintf("projects directory not found: %s", path))
+	}
 	if err != nil {
-		return fmt.Errorf("cc-sessions: projects directory not found at %q: %w", path, err)
+		return usererr.New(fmt.Sprintf("cannot access projects directory: %s", path))
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("cc-sessions: path %q is not a directory", path)
+		return usererr.New(fmt.Sprintf("not a directory: %s", path))
 	}
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		return fmt.Errorf("cc-sessions: cannot read projects directory %q: %w", path, err)
+		return usererr.New(fmt.Sprintf("cannot read projects directory: %s", path))
 	}
 	for _, e := range entries {
 		if e.IsDir() {
@@ -170,7 +189,7 @@ func (p *ccProvider) Validate(ctx context.Context, cfg providers.ProviderConfig)
 		}
 	}
 
-	return fmt.Errorf("cc-sessions: no project folders found in %q — directory appears empty", path)
+	return usererr.New(fmt.Sprintf("no project folders found in %s — directory appears empty", path))
 }
 
 // ---------------------------------------------------------------------------

@@ -3,6 +3,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,11 +15,13 @@ type Config struct {
 	// HTTP server
 	Host string
 	Port int
+	// AllowRemote, when true (DASHBOARD_ALLOW_REMOTE), permits a non-loopback
+	// Host. The dashboard has no authentication, so this is off by default.
+	AllowRemote bool
 
 	// Data paths
 	EngramDataDir string
 	EngramDbPath  string
-	AuditLogPath  string
 
 	// ConfigHome is the directory where explorer-settings.json (path overrides)
 	// is stored. Defaults to the same directory as EngramDataDir (~/.engram).
@@ -39,8 +42,9 @@ type Config struct {
 
 	// ReadOnly, when true, prevents the backend from opening the read-write
 	// pool at all, so the dashboard becomes a pure read-only viewer: every
-	// mutating route (edits, deletes, project rename, db import, cloud
-	// unenroll) returns 503. Set ENGRAM_DASH_READONLY=true to enable.
+	// mutating route (edits, deletes, project rename/merge, db import) returns
+	// 503. Cloud sync is read-only in every mode. Set ENGRAM_DASH_READONLY=true
+	// to enable.
 	ReadOnly bool
 
 	// DemoMode, when true, means the server is running against the bundled
@@ -160,7 +164,6 @@ func Load() (Config, error) {
 		Port:              envInt("DASHBOARD_PORT", 8787),
 		EngramDataDir:     dataDir,
 		EngramDbPath:      dbPath,
-		AuditLogPath:      filepath.Join(dataDir, "logs", "cloud-mutations.jsonl"),
 		ConfigHome:        configHome,
 		DaemonBaseURL:     envString("ENGRAM_DAEMON_URL", fmt.Sprintf("http://127.0.0.1:%d", engramPort)),
 		DaemonTimeoutMs:   envInt("ENGRAM_DAEMON_TIMEOUT_MS", 1500),
@@ -169,6 +172,23 @@ func Load() (Config, error) {
 		ExposeDetails:     env == "development",
 		ReadOnly:          envBool("ENGRAM_DASH_READONLY", false),
 		ClaudeProjectsDir: claudeProjectsDir,
+		AllowRemote:       envBool("DASHBOARD_ALLOW_REMOTE", false),
+	}
+	if !cfg.AllowRemote && !IsLoopbackHost(cfg.Host) {
+		return Config{}, fmt.Errorf(
+			"refusing to start: DASHBOARD_HOST=%q is not a loopback address. "+
+				"engram-explorer has no authentication and only listens on 127.0.0.1, ::1 or localhost by default; "+
+				"set DASHBOARD_ALLOW_REMOTE=true to bind it anyway at your own risk", cfg.Host)
 	}
 	return cfg, nil
+}
+
+// IsLoopbackHost reports whether host is "localhost" (case-insensitive) or a
+// loopback IP literal. The unspecified addresses (0.0.0.0, ::) are not loopback.
+func IsLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

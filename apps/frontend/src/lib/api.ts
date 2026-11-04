@@ -388,12 +388,6 @@ export interface MetaResponse {
   node: string;
 }
 
-export interface CloudCapabilities {
-  enroll: boolean;
-  unenroll: boolean;
-  raw: string;
-}
-
 export interface ProjectOverviewResponse {
   project: string;
   kpis: {
@@ -479,7 +473,6 @@ export const api = {
   syncProjects: () => request<SyncProjectsResponse>('/api/sync/projects'),
   syncProjectDetail: (project: string) =>
     request<SyncProjectDetailResponse>(`/api/sync/projects/${encodeURIComponent(project)}`),
-  cloudCapabilities: () => request<CloudCapabilities>('/api/cloud/capabilities'),
   projectOverview: (project: string) =>
     request<ProjectOverviewResponse>(`/api/projects/${encodeURIComponent(project)}/overview`),
   listProjects: () => request<{ items: ProjectStats[] }>('/api/projects'),
@@ -494,29 +487,6 @@ export const api = {
     request<SessionListResponse>(`/api/sessions?${buildSessionSearch(params)}`),
   getSession: (id: string) =>
     request<SessionDetailResponse>(`/api/sessions/${encodeURIComponent(id)}`),
-  enrollProject: (project: string) =>
-    request<{ ok: true; project: string; output: string }>(`/api/cloud/enroll`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ project, confirm: true }),
-    }),
-  unenrollProject: (project: string) =>
-    request<{ ok: true; project: string; output: string }>(`/api/cloud/unenroll`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ project, confirm: true }),
-    }),
-  cloudSyncProject: (project: string) =>
-    request<CloudSyncProjectResponse>(`/api/cloud/sync`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ project }),
-    }),
-  cloudSyncAll: () =>
-    request<CloudSyncAllResponse>(`/api/cloud/sync-all`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    }),
   listOrphans: () => request<OrphansResponse>('/api/orphans'),
   // Backend write routes are plural: /api/{observations,sessions,prompts}/...
   // The entity arg is singular, so pluralize with `+s` to hit the real route
@@ -633,25 +603,4 @@ export interface DeleteEntityResponse {
   mode: 'soft' | 'hard';
   mutation_seq: number | null;
   enrolled: boolean;
-}
-
-export interface CloudSyncProjectResponse {
-  ok: true;
-  project: string;
-  action: 'sync';
-  output: string;
-}
-
-export interface CloudSyncAllProjectResult {
-  project: string;
-  ok: boolean;
-  output?: string;
-  error?: { code: string; message: string; stderr?: string };
-}
-
-export interface CloudSyncAllResponse {
-  total: number;
-  ok: number;
-  failed: number;
-  results: CloudSyncAllProjectResult[];
 }

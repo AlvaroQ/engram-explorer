@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
-	"github.com/AlvaroQ/engram-explorer/internal/services"
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
 	"github.com/a-h/templ"
@@ -24,13 +23,6 @@ type Deps struct {
 	RWDB   sqlite.Querier       // read-write pool; nil when read-only mode is active
 	Config config.Config        // full runtime configuration (immutable snapshot)
 	Paths  *config.RuntimePaths // live mutable paths; defaulted from Config in Mount
-
-	// Cloud is an optional CloudController override.  When non-nil it is used
-	// by the sync write handlers instead of constructing a concrete
-	// *services.CloudControlService inside Mount.  Production callers leave this
-	// nil (Mount builds the concrete service); tests inject a fake to exercise
-	// success paths without spawning a real CLI subprocess.
-	Cloud CloudController
 
 	// DaemonPing is an optional override for the daemon availability check used
 	// by handleSyncIssues.  When non-nil it is called instead of making a real
@@ -53,6 +45,13 @@ func render(w http.ResponseWriter, r *http.Request, c templ.Component) {
 	_ = c.Render(ui.NavContext(r), w)
 }
 
+// renderError renders an ErrorPartial with the message chosen by
+// ui.ErrorMessage: user-safe errors verbatim, anything else as the localized
+// generic message with the detail logged.
+func renderError(w http.ResponseWriter, r *http.Request, prefix string, err error) {
+	render(w, r, ErrorPartial(ui.ErrorMessage(r, prefix, err)))
+}
+
 // requireRW wraps a write handler with a read-only guard. It blocks the write
 // in demo mode (the bundled sample DB must stay pristine) and when RWDB is nil
 // (read-only mode), so every write route shares a single source of truth for
@@ -72,7 +71,7 @@ func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
 }
 
 // Mount registers all /doctor/* routes on mux.
-// Call this inside httpapi.NewServeMux after the cloud routes.
+// Call this inside httpapi.NewServeMux after the API routes.
 func Mount(mux *http.ServeMux, d Deps) {
 	// Default the live path holder from the immutable Config so tests that build
 	// Deps without Paths keep working.
@@ -134,21 +133,6 @@ func Mount(mux *http.ServeMux, d Deps) {
 	// Sync routes (Slice 2)
 	// -----------------------------------------------------------------------
 
-	// Resolve the CloudController: use the injected fake when available
-	// (test path), otherwise construct the real *services.CloudControlService
-	// (production path).  This keeps the production call site in
-	// internal/httpapi/server.go unchanged — it never sets Deps.Cloud.
-	var cloud CloudController
-	if d.Cloud != nil {
-		cloud = d.Cloud
-	} else {
-		cloud = services.NewCloudControlService(services.CloudControlOptions{
-			AuditLogPath:  d.Config.AuditLogPath,
-			EngramDataDir: d.Paths.DataDir(),
-			RWDB:          d.RWDB,
-		})
-	}
-
 	// GET /doctor/sync — 303 redirect to the consolidated maintenance page.
 	// HTMX partials (/doctor/sync/projects, etc.) are NOT redirected.
 	mux.HandleFunc("GET /doctor/sync", func(w http.ResponseWriter, r *http.Request) {
@@ -157,8 +141,9 @@ func Mount(mux *http.ServeMux, d Deps) {
 
 	// GET /doctor/sync/projects — projects table partial (polled every 15s).
 	// Must be registered before /doctor/sync/{project} so the literal path wins.
-	// Takes cloud so it can probe capabilities and gate the action buttons.
-	mux.HandleFunc("GET /doctor/sync/projects", handleSyncProjectsList(d, cloud))
+	// Cloud is read-only: the table shows enrollment status but offers no
+	// enroll / unenroll / sync actions (those are done with the engram CLI).
+	mux.HandleFunc("GET /doctor/sync/projects", handleSyncProjectsList(d))
 
 	// GET /doctor/sync/issues — issues banner partial (polled every 15s).
 	// Must be registered before /doctor/sync/{project} (same reason).
@@ -169,18 +154,7 @@ func Mount(mux *http.ServeMux, d Deps) {
 	// but we register them first for clarity.
 	mux.HandleFunc("GET /doctor/sync/{project}", handleSyncProjectDetail(d))
 
-	// POST /doctor/sync/{project}/enroll — enroll project in cloud sync.
-	mux.HandleFunc("POST /doctor/sync/{project}/enroll",
-		requireRW(d, handleSyncCloudAction(d, cloud, "Enroll", cloud.Enroll)))
-
-	// POST /doctor/sync/{project}/unenroll — unenroll project from cloud sync.
-	mux.HandleFunc("POST /doctor/sync/{project}/unenroll",
-		requireRW(d, handleSyncCloudAction(d, cloud, "Unenroll", cloud.Unenroll)))
-
-	// POST /doctor/sync/{project}/sync — trigger manual sync for a project.
-	mux.HandleFunc("POST /doctor/sync/{project}/sync", requireRW(d, handleSyncTrigger(d, cloud)))
-
 	// POST /doctor/sync/{project}/delete — permanently delete an unenrolled,
 	// observation-free project (removes its sessions and prompts).
-	mux.HandleFunc("POST /doctor/sync/{project}/delete", requireRW(d, handleSyncDeleteProject(d, cloud)))
+	mux.HandleFunc("POST /doctor/sync/{project}/delete", requireRW(d, handleSyncDeleteProject(d)))
 }

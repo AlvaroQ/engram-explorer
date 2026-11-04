@@ -230,30 +230,6 @@
   color: var(--doc-green);
 }
 
-/* ── Maintenance > Cloud: sync-all control ───────────────────────── */
-.cloud-sync-all-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1.25rem;
-}
-.cloud-sync-all {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-.cloud-sync-result {
-  font-size: 0.8rem;
-  color: var(--doc-muted, #9ca3af);
-  margin: 0;
-}
-.cloud-sync-result:empty { display: none; }
-.cloud-sync-result--ok      { color: var(--doc-green,  #4ade80); }
-.cloud-sync-result--partial { color: var(--doc-yellow, #facc15); }
-.cloud-sync-result--failed  { color: var(--doc-red,    #f87171); }
-.cloud-sync-result--noEnrolled { color: var(--doc-muted, #9ca3af); }
-
 /* The shared .settings-page shell caps content at 860px, which suits the
    form-based settings pages but starves Maintenance's wide data tables (orphans
    + cloud sync) of horizontal room. Let this page use the full content width so

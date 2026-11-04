@@ -23,6 +23,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Settings DB hot-swap** — changing the Engram database path from Settings now swaps the pool on the
   provider registry path as well.
 
+### Security
+
+- **Stored XSS in prompt search** — FTS snippets are no longer rendered as raw HTML. Snippets are built with
+  private-use sentinel delimiters, rendered as escaped text, and only the match is wrapped in `<mark>`. The
+  JSON `snippet` field keeps its `<mark>` delimiters and must be rendered as text by API consumers.
+- **Import identifiers** — column names read from an uploaded database are quoted in the merge statements
+  (defense in depth: validation already requires them to match the local schema).
+- **Loopback-only bind** — the server refuses to start when `DASHBOARD_HOST` is not a loopback address
+  (`127.0.0.1`, `::1`, `localhost`), because the dashboard has no authentication. Set
+  `DASHBOARD_ALLOW_REMOTE=true` to bind another address at your own risk.
+- **DNS rebinding and CSRF protection** — every request (including the embedded `/islands/` and `/assets/`
+  bundles) must carry a `Host` that names the dashboard (`localhost`, `*.localhost`, an IP literal or the
+  configured `DASHBOARD_HOST`); unsafe methods must be same-origin (`Sec-Fetch-Site` / `Origin`), and
+  `GET /api/db/export` refuses cross-site requests and navigations. Blocked requests get `403` with
+  `HOST_NOT_ALLOWED` or `CROSS_ORIGIN_REQUEST`. Security headers now also apply to the embedded bundles.
+- **Cloud is read-only** — the dashboard no longer enrolls, unenrolls or syncs projects and never spawns the
+  `engram` CLI. Removed `POST /api/cloud/{enroll,unenroll,sync,sync-all}`, `GET /api/cloud/capabilities`,
+  `POST /doctor/sync/{project}/{enroll,unenroll,sync}`, `POST /projects/{project}/{enroll,unenroll}` and
+  `POST /partials/sync-cloud`, with their buttons. Sync diagnostics and the daemon GET proxy remain; use the
+  `engram` CLI to enroll or sync. This also closes the gap where cloud actions ignored `ENGRAM_DASH_READONLY`.
+- **JSON body limit** — JSON request bodies are capped at 1 MiB (`http.MaxBytesReader`); larger bodies get
+  `413` with `PAYLOAD_TOO_LARGE`.
+- **Write route rate limits** — every JSON API write route is rate limited per client IP and route pattern (no longer
+  by raw path alone, and `X-Forwarded-For` is ignored): database import 5/min, export 10/min, other write
+  routes 120/min. Expired buckets are pruned.
+- **Settings path validation** — changing the Engram database path or the Claude projects directory in
+  Settings now validates the target first (an SQLite file with the Engram `observations` and `sessions`
+  tables; a directory with project folders, the same checks the providers apply). On rejection the active
+  database/directory and saved settings stay unchanged, and the message only echoes the typed path.
+- **No internal errors in HTML** — UI and doctor pages no longer show raw error text (SQLite errors,
+  filesystem paths), including the Settings daemon and module hints. Messages written for the user are still
+  shown; any other error shows a generic localized message and the detail goes to the server log.
+- **Stricter Content Security Policy** — `script-src` no longer allows `'unsafe-inline'`: inline scripts,
+  event-handler attributes and `hx-on` moved to a static `ui-actions.js`, and htmx attribute evaluation is
+  disabled (`allowEval: false`). `style-src` still allows `'unsafe-inline'` (inline style attributes and htmx
+  indicator styles); removing it is planned for Phase 2.
+
 ### Changed
 
 - **Go toolchain** — releases build with Go 1.26.10 (`toolchain` directive in `go.mod`); the minimum

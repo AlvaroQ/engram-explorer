@@ -1,7 +1,6 @@
 package ui_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -9,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 func postForm(t *testing.T, mux *http.ServeMux, path, value string) *httptest.ResponseRecorder {
@@ -50,7 +50,7 @@ func TestClaudeDirPost_Error(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{
 		RoDB:         db,
-		SetClaudeDir: func(p string) error { return errors.New("not a directory: /bad") },
+		SetClaudeDir: func(p string) error { return usererr.New("not a directory: /bad") },
 	})
 
 	w := postForm(t, mux, "/settings/claude-dir", "/bad")

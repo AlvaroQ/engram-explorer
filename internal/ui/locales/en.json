@@ -15,6 +15,7 @@
     "ccsessionsOverview": "Overview"
   },
   "common": {
+    "errorGeneric": "Something went wrong. Check the server log for details.",
     "loading": "Loading…",
     "loadMore": "Load more",
     "loadingMore": "Loading more…",
@@ -54,16 +55,6 @@
     "primaryNav": "Primary",
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar",
-    "sync": {
-      "cloud": "Sync cloud",
-      "syncing": "Syncing…",
-      "tooltip": "Sync all enrolled projects to engram cloud",
-      "ariaLabel": "Sync all enrolled projects to engram cloud",
-      "noEnrolled": "No enrolled projects to sync.",
-      "ok": "Synced {{ok}}/{{total}} projects.",
-      "partial": "Synced {{ok}}/{{total}} — {{failed}} failed.",
-      "failed": "Sync failed: {{message}}"
-    },
     "status": {
       "checking": "checking…",
       "backendUnreachable": "backend unreachable",
@@ -519,21 +510,10 @@
         "status": "Status",
         "pending": "Pending",
         "cloudSeq": "Cloud seq",
-        "actions": "Actions",
         "enrolledBadge": "enrolled",
         "notEnrolled": "not enrolled",
         "detail": "Detail"
-      },
-      "actions": {
-        "enroll": "Enroll",
-        "unenroll": "Unenroll",
-        "unenrollUnsupported": "Unenroll unavailable (no writable database adapter configured).",
-        "enrollUnsupported": "engram cloud enroll is not supported by the installed CLI"
-      },
-      "confirmEnroll": "Enroll {{project}}?",
-      "confirmUnenroll": "Unenroll {{project}}?",
-      "confirmEnrollDesc": "This will run `engram cloud enroll {{project}}` as a subprocess. Future observations will sync to the cloud.",
-      "confirmUnenrollDesc": "This removes {{project}} from `sync_enrolled_projects` and clears the orphan `sync_state` row and any unacked pending mutations for the project. Observations already uploaded to the cloud are NOT deleted, and acked mutation history is preserved. To resume syncing, enroll it again."
+      }
     },
     "syncProject": {
       "notFound": "Project not found.",
@@ -702,12 +682,7 @@
     },
     "cloud": {
       "title": "Cloud backup",
-      "syncAll": {
-        "label": "Sync all",
-        "tooltip": "Sync all enrolled projects to engram cloud",
-        "ariaLabel": "Sync all enrolled projects to engram cloud",
-        "description": "Triggers a cloud sync for every enrolled project."
-      }
+      "description": "Read-only sync diagnostics. Enroll, unenroll and sync projects with the engram CLI."
     }
   },
   "settings": {
@@ -772,6 +747,7 @@
     "language": "Language",
     "languageDescription": "Choose the interface language",
     "daemon": "Background service",
+    "daemonErrorHint": "The Engram daemon did not respond. Check the server log for details.",
     "cloudCli": "Cloud CLI capabilities",
     "cloudCliDesc": "Detected from `engram cloud --help`",
     "cloudCliError": "Could not detect CLI capabilities.",

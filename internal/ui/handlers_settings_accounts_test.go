@@ -1,7 +1,6 @@
 package ui_test
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 // ---------------------------------------------------------------------------
@@ -151,7 +151,7 @@ func TestProfileSwitch_Error(t *testing.T) {
 		Profiles:      func() []ui.ProfileInfo { return nil },
 		ActiveProfile: func() string { return "default" },
 		SwitchProfile: func(name string) error {
-			return errors.New("provider-open-failed: engram db missing")
+			return usererr.New(`profile "work" not found`)
 		},
 		CreateProfile: func(name string) error { return nil },
 		DeleteProfile: func(name string) error { return nil },
@@ -167,7 +167,7 @@ func TestProfileSwitch_Error(t *testing.T) {
 		t.Errorf("expected 200 (error re-render), got %d", w.Code)
 	}
 	body := w.Body.String()
-	if !strings.Contains(body, "provider-open-failed") {
+	if !strings.Contains(body, "profile &#34;work&#34; not found") {
 		t.Error("response body must contain the switch error message")
 	}
 }
@@ -269,7 +269,7 @@ func TestProfileCreate_Error(t *testing.T) {
 		ActiveProfile: func() string { return "default" },
 		SwitchProfile: func(name string) error { return nil },
 		CreateProfile: func(name string) error {
-			return errors.New("profile already exists: work")
+			return usererr.New("profile already exists: work")
 		},
 		DeleteProfile: func(name string) error { return nil },
 	})
@@ -331,7 +331,7 @@ func TestProfileDelete_Error(t *testing.T) {
 		SwitchProfile: func(name string) error { return nil },
 		CreateProfile: func(name string) error { return nil },
 		DeleteProfile: func(name string) error {
-			return errors.New("cannot delete active profile")
+			return usererr.New("cannot delete active profile")
 		},
 	})
 

@@ -18,7 +18,7 @@ func handlePromptsPage(d Deps) http.HandlerFunc {
 
 		items, searchItems, err := loadPrompts(d, q)
 		if err != nil {
-			render(w, r, ErrorPartial("Failed to load prompts: "+err.Error()))
+			renderError(w, r, "Failed to load prompts: ", err)
 			return
 		}
 
@@ -39,7 +39,7 @@ func handlePromptsListPartial(d Deps) http.HandlerFunc {
 
 		items, searchItems, err := loadPrompts(d, q)
 		if err != nil {
-			render(w, r, ErrorPartial("Failed to load prompts: "+err.Error()))
+			renderError(w, r, "Failed to load prompts: ", err)
 			return
 		}
 

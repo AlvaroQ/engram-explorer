@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -23,7 +24,6 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
 	ccsessionsprovider "github.com/AlvaroQ/engram-explorer/internal/providers/ccsessions"
 	engramprovider "github.com/AlvaroQ/engram-explorer/internal/providers/engram"
-	"github.com/AlvaroQ/engram-explorer/internal/web"
 )
 
 // version is set at build time via -ldflags "-X main.version=<tag>".
@@ -123,6 +123,9 @@ func run() error {
 	}
 
 	logger := logging.New(cfg.Env, cfg.LogLevel)
+	// UI and doctor handlers log internal error details through slog.Default()
+	// (the user only sees a generic message), so route it to the configured logger.
+	slog.SetDefault(logger)
 
 	if cfg.DemoMode {
 		logger.Info("demo mode active", "db", cfg.EngramDbPath)
@@ -172,12 +175,10 @@ func run() error {
 	container.ProfileStore = profileStore
 	defer container.Close()
 
-	apiHandler := httpapi.NewServeMux(container)
-
-	// Wrap the API mux with the embedded frontend handler.
-	// /islands/* and /assets/* are served from the embedded dist/ FS; everything
-	// else (templ UI, /api/*, /doctor/*, /static/*) goes to apiHandler.
-	handler := web.Handler(apiHandler)
+	// NewHandler composes the request guard (Host allow-list, cross-origin
+	// protection, security headers) in front of the embedded island bundles
+	// (/islands/*, /assets/*) and the API/UI mux.
+	handler := httpapi.NewHandler(container)
 
 	addr := net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.Port))
 	srv := &http.Server{

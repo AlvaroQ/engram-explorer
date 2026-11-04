@@ -57,10 +57,6 @@ func TestDemoMode_WriteRoutes_Return403(t *testing.T) {
 		{"POST rename", http.MethodPost, "/api/projects/myproject/rename"},
 		{"GET export", http.MethodGet, "/api/db/export"},
 		{"POST import", http.MethodPost, "/api/db/import"},
-		{"POST cloud enroll", http.MethodPost, "/api/cloud/enroll"},
-		{"POST cloud unenroll", http.MethodPost, "/api/cloud/unenroll"},
-		{"POST cloud sync", http.MethodPost, "/api/cloud/sync"},
-		{"POST cloud sync-all", http.MethodPost, "/api/cloud/sync-all"},
 	}
 
 	for _, tc := range cases {

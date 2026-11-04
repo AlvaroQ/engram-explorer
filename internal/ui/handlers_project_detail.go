@@ -58,7 +58,7 @@ func handleProjectDetailPage(d Deps) http.HandlerFunc {
 
 		overview, err := services.ProjectsGetOverview(d.RoDB, project)
 		if err != nil {
-			render(w, r, ErrorPartial("Failed to load project: "+err.Error()))
+			renderError(w, r, "Failed to load project: ", err)
 			return
 		}
 		if overview == nil {
@@ -111,7 +111,7 @@ func handleProjectMergePost(d Deps) http.HandlerFunc {
 		lang := langForRequest(r)
 
 		if err := r.ParseForm(); err != nil {
-			render(w, r, ErrorPartial("Bad request: "+err.Error()))
+			renderError(w, r, "Bad request: ", err)
 			return
 		}
 		target := r.FormValue("target")
@@ -131,7 +131,7 @@ func handleProjectMergePost(d Deps) http.HandlerFunc {
 				render(w, r, ErrorPartial(mergeErrorMessage(lang, we)))
 				return
 			}
-			render(w, r, ErrorPartial(T(lang, "projectDetail.combine.error.generic", "message", err.Error())))
+			renderError(w, r, "", err)
 			return
 		}
 

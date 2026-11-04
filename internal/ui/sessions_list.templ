@@ -138,7 +138,7 @@ templ sessionsLoadMoreRow(cursor string, params services.SessionListParams, lang
 				hx-get={ sessionsNextURL(cursor, params) }
 				hx-target="#sessions-tbody"
 				hx-swap="beforeend"
-				hx-on::after-request="document.getElementById('sessions-load-more-row')?.remove()"
+				data-remove-after-request="sessions-load-more-row"
 			>
 				{ T(lang, "common.loadMore") }
 			</button>

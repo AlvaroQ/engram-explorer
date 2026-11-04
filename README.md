@@ -111,8 +111,8 @@ This is the centerpiece. **The Brain renders every observation in your database 
 | 🕑 **Sessions**       | Session timeline and per-session detail                                                                                   |
 | ✍️ **Prompts**        | Captured user prompts, searchable                                                                                         |
 | 🏷️ **Topics**         | Memory grouped by stable `topic_key`                                                                                      |
-| ☁️ **Sync Health**    | Cloud enrollment: enrolled / healthy / broken / pending mutations                                                         |
-| 🔄 **Sync project**   | Per-project cloud sync detail and mutation queue                                                                          |
+| ☁️ **Sync Health**    | Read-only cloud sync diagnostics: enrolled / healthy / broken / pending mutations                                         |
+| 🔄 **Sync project**   | Per-project cloud sync detail and mutation queue (read-only)                                                              |
 | 🧹 **Orphans**        | Observations captured without a project — the capture bugs the CLI can't show                                             |
 | 🩺 **Diagnostics**    | Orphan projects, broken sync — a diagnostic engine across all views                                                       |
 | ⚙️ **Settings**       | UI preferences, language, theme, Modules (provider toggles), Accounts (profiles)                                          |
@@ -123,7 +123,7 @@ This is the centerpiece. **The Brain renders every observation in your database 
 
 Engram Explorer is a **community companion** — a read-only viewer and operational dashboard built on top of [Engram](https://github.com/Gentleman-Programming/engram). It is **not** an official plugin, not a fork, and not affiliated with Gentleman Programming.
 
-The official plugin ecosystem talks to the daemon over HTTP at `127.0.0.1:7437`. Engram Explorer takes a different approach: it reads the SQLite file directly in **WAL read-only mode**, so it runs whether or not the daemon is active and **never competes with `engram serve` as the authoritative owner of the database**. When the daemon is running, the dashboard respects it — it only proxies the daemon's own telemetry endpoints (`/health`, `/sync/status`, `/stats`) and, for user-confirmed cloud operations, shells out to the `engram` CLI the same way you would from a terminal.
+The official plugin ecosystem talks to the daemon over HTTP at `127.0.0.1:7437`. Engram Explorer takes a different approach: it reads the SQLite file directly in **WAL read-only mode**, so it runs whether or not the daemon is active and **never competes with `engram serve` as the authoritative owner of the database**. When the daemon is running, the dashboard respects it — it only proxies the daemon's own telemetry endpoints (`/health`, `/sync/status`, `/stats`). Cloud sync is **read-only**: the dashboard diagnoses enrollment and sync state but never enrolls, unenrolls or syncs a project — do that with the `engram` CLI directly.
 
 > The CLI captures and recalls; this shows you the _shape_ of what your agent has remembered. It complements the official tooling — it doesn't replace it.
 
@@ -186,7 +186,7 @@ go run ./cmd/engram-explorer
 
 ## 🏗️ Architecture
 
-Engram Explorer is a **single Go binary** (`cmd/engram-explorer`) serving all views on one port (default `127.0.0.1:8787`). It opens the Engram SQLite database with two `modernc.org/sqlite` handles (pure-Go, no CGo): a **read-only** pool (`mode=ro` + `query_only`) that serves every view and coexists safely with the live WAL written by the daemon, and a single-connection **read-write** pool that powers a small set of explicit, user-confirmed mutations. API routes (`/api/*`) run on an `internal/httpapi` mux built on Go's standard `net/http`. The backend proxies the daemon's telemetry endpoints (`/health`, `/sync/status`, `/stats`) and — when the user explicitly confirms a cloud enroll/sync — shells out to the `engram` CLI. Set `ENGRAM_DASH_READONLY=true` to disable the write path entirely.
+Engram Explorer is a **single Go binary** (`cmd/engram-explorer`) serving all views on one port (default `127.0.0.1:8787`). It opens the Engram SQLite database with two `modernc.org/sqlite` handles (pure-Go, no CGo): a **read-only** pool (`mode=ro` + `query_only`) that serves every view and coexists safely with the live WAL written by the daemon, and a single-connection **read-write** pool that powers a small set of explicit, user-confirmed mutations. API routes (`/api/*`) run on an `internal/httpapi` mux built on Go's standard `net/http`. The backend proxies the daemon's GET telemetry endpoints (`/health`, `/sync/status`, `/stats`); cloud sync is read-only and the dashboard never spawns the `engram` CLI. Set `ENGRAM_DASH_READONLY=true` to disable the write path entirely.
 
 **The primary UI is server-rendered** using [templ](https://templ.guide) and [HTMX](https://htmx.org) in `internal/ui`. Go handlers load data via the services layer → render templ templates (full-page on navigation, partial fragment on HTMX requests via the `HX-Request` header). Interactivity (filters, pagination, drawers) is driven by `hx-get`/`hx-post`/`hx-swap`. Long lists use server-side cursor-based pagination with `hx-trigger="revealed"` — no client-side virtualization.
 
@@ -263,7 +263,8 @@ The demo database is not shipped with release binaries — generate it with `go 
 | -------------------------- | ----------------------- | ---------------------------------------------------------------------------------- |
 | `ENGRAM_DATA_DIR`          | `~/.engram`             | Directory containing `engram.db`; also the location of `config.json`               |
 | `CLAUDE_PROJECTS_DIR`      | `~/.claude/projects`    | Directory where Claude Code stores session transcripts                             |
-| `DASHBOARD_HOST`           | `127.0.0.1`             | HTTP bind address                                                                  |
+| `DASHBOARD_HOST`           | `127.0.0.1`             | HTTP bind address; must be loopback unless `DASHBOARD_ALLOW_REMOTE=true`           |
+| `DASHBOARD_ALLOW_REMOTE`   | `false`                 | Set to `true` to allow a non-loopback `DASHBOARD_HOST` (no authentication!)        |
 | `DASHBOARD_PORT`           | `8787`                  | HTTP listen port                                                                   |
 | `ENGRAM_PORT`              | `7437`                  | Port of the local `engram serve` daemon (used when `ENGRAM_DAEMON_URL` is not set) |
 | `ENGRAM_DAEMON_URL`        | `http://127.0.0.1:7437` | Full base URL of the Engram daemon (overrides `ENGRAM_PORT`)                       |
@@ -296,7 +297,7 @@ Every mutation is confirmed in the UI, goes through a guarded write path, and ru
 
 > The read path is always safe alongside a running daemon. For **destructive or bulk** edits (project rename/merge, DB import) prefer stopping the daemon first, and keep a backup.
 
-For a strict viewer with **no** write capability, start with `ENGRAM_DASH_READONLY=true` — the read-write pool is never opened and every mutating endpoint returns `503`. See [SECURITY.md](./SECURITY.md) for the full concurrency contract.
+For a strict viewer with **no** write capability, start with `ENGRAM_DASH_READONLY=true` — the read-write pool is never opened and every mutating endpoint returns `503`. Cloud sync is read-only in every mode, so no cloud operation bypasses this switch. See [SECURITY.md](./SECURITY.md) for the full concurrency contract.
 
 ---
 
@@ -340,11 +341,9 @@ Or use a different port: `DASHBOARD_PORT=9090 ./engram-explorer`.
 </details>
 
 <details>
-<summary><strong>Cloud mutations (<code>CLI_NOT_FOUND</code>, <code>429</code>)</strong></summary>
+<summary><strong>Enrolling or syncing a project</strong></summary>
 
-**`CLI_NOT_FOUND`** — `engram` is not on `$PATH` for the user running the dashboard. Install it system-wide or run the dashboard from a shell where `engram --version` resolves.
-
-**`429 Rate limit exceeded`** — cloud mutation endpoints are rate-limited; the `Retry-After` header tells you how long to wait.
+The dashboard is **read-only** for cloud sync: it has no enroll, unenroll or sync buttons or endpoints. Run those operations with the `engram` CLI directly; the Sync Health views pick up the new state on their next refresh.
 
 </details>
 

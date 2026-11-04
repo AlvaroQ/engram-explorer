@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -24,7 +25,7 @@ func handleAdvancedViewPost(d Deps) http.HandlerFunc {
 		}
 		enabled := r.FormValue("enabled") == "true"
 		if err := d.SetAdvancedView(enabled); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, ErrorMessage(r, "", err), http.StatusInternalServerError)
 			return
 		}
 		if IsHTMX(r) {
@@ -56,7 +57,7 @@ func handleModulesTogglePost(d Deps) http.HandlerFunc {
 			lang := langForRequest(r)
 			theme := themeForRequest(r)
 			data := buildSettingsData(d, r, lang, theme)
-			data.ModuleError = err.Error()
+			data.ModuleError = ErrorMessage(r, "", err)
 			renderSettings(w, r, d, data)
 			return
 		}
@@ -89,7 +90,7 @@ func handleModulesPathPost(d Deps) http.HandlerFunc {
 			errMsg = T(lang, "settings.path.empty")
 		} else {
 			if err := d.ValidateModulePath(r.Context(), id, path); err != nil {
-				errMsg = err.Error()
+				errMsg = ErrorMessage(r, "", err)
 			}
 		}
 
@@ -258,9 +259,13 @@ func buildSettingsData(d Deps, r *http.Request, lang, theme string) settingsData
 	dc := daemon.New(d.Config.DaemonBaseURL, d.Config.DaemonTimeoutMs)
 	daemonResult := dc.FetchJSON("/health")
 
+	// The daemon error text (dial/HTTP errors) stays in the log; the hint next
+	// to the "unreachable" badge is a fixed localized message.
 	daemonErrMsg := ""
 	if !daemonResult.OK && daemonResult.Error != nil {
-		daemonErrMsg = daemonResult.Error.Message
+		slog.Default().WarnContext(r.Context(), "daemon health check failed",
+			"url", d.Config.DaemonBaseURL, "err", daemonResult.Error.Message)
+		daemonErrMsg = T(lang, "settings.daemonErrorHint")
 	}
 
 	// Claude Code projects directory check (it is scanned, not connected).
@@ -278,6 +283,11 @@ func buildSettingsData(d Deps, r *http.Request, lang, theme string) settingsData
 	var modules []ModuleInfo
 	if d.Modules != nil {
 		modules = d.Modules()
+		for i := range modules {
+			if modules[i].Cause != nil {
+				modules[i].Err = ErrorMessage(r, "", modules[i].Cause)
+			}
+		}
 	}
 
 	// Collect CC accounts data when the callback is wired.
@@ -327,7 +337,7 @@ func handleEngramDBPost(d Deps) http.HandlerFunc {
 			errMsg = T(lang, "settings.path.unavailable")
 		default:
 			if err := d.ReloadEngramDB(path); err != nil {
-				errMsg = err.Error()
+				errMsg = ErrorMessage(r, "", err)
 			}
 		}
 
@@ -361,7 +371,7 @@ func handleClaudeDirPost(d Deps) http.HandlerFunc {
 			errMsg = T(lang, "settings.path.unavailable")
 		default:
 			if err := d.SetClaudeDir(path); err != nil {
-				errMsg = err.Error()
+				errMsg = ErrorMessage(r, "", err)
 			}
 		}
 

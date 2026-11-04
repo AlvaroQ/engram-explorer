@@ -1294,10 +1294,6 @@ func projectDetailCombineCard(current string, otherProjects []string, lang strin
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templ.RenderScriptItems(ctx, templ_7745c5c3_Buffer, updateMergeConfirm(current))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 104, "<form id=\"project-merge-form\" hx-post=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -1324,12 +1320,16 @@ func projectDetailCombineCard(current string, otherProjects []string, lang strin
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 106, "\" class=\"flex flex-col gap-3 sm:flex-row sm:items-end\" onsubmit=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 106, "\" class=\"flex flex-col gap-3 sm:flex-row sm:items-end\" data-merge-confirm-source=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var69 templ.ComponentScript = updateMergeConfirm(current)
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var69.Call)
+			var templ_7745c5c3_Var69 string
+			templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.JoinStringErrs(current)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/project_detail.templ`, Line: 323, Col: 40}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var69))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1406,28 +1406,6 @@ func projectDetailCombineCard(current string, otherProjects []string, lang strin
 		}
 		return nil
 	})
-}
-
-// updateMergeConfirm is a small script that patches the hx-confirm attribute
-// with the selected target name right before the form submits, so the
-// confirmation dialog shows the real project name rather than an empty string.
-func updateMergeConfirm(source string) templ.ComponentScript {
-	return templ.ComponentScript{
-		Name: `__templ_updateMergeConfirm_92e0`,
-		Function: `function __templ_updateMergeConfirm_92e0(source){const sel = document.getElementById("merge-target");
-	if (sel) {
-		const target = sel.value;
-		const form = document.getElementById("project-merge-form");
-		if (form) {
-			form.setAttribute("hx-confirm",
-				"Combine \"" + source + "\" into \"" + target + "\"? This moves all its memories and cannot be undone."
-			);
-		}
-	}
-}`,
-		Call:       templ.SafeScript(`__templ_updateMergeConfirm_92e0`, source),
-		CallInline: templ.SafeScriptInline(`__templ_updateMergeConfirm_92e0`, source),
-	}
 }
 
 // ---------------------------------------------------------------------------

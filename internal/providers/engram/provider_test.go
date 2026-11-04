@@ -14,6 +14,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
 	"github.com/AlvaroQ/engram-explorer/internal/providers/engram"
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 // ---------------------------------------------------------------------------
@@ -481,5 +482,52 @@ func TestValidate_DSN_IncludesBusyTimeout(t *testing.T) {
 			"Validate DSN must include busy_timeout(5000) to match pool.go; got: %q",
 			dsn,
 		)
+	}
+}
+
+// TestValidateDBFile_RejectsNonEngramFiles asserts the shared S5 check rejects
+// a directory, a missing file, a non-SQLite file and a schemaless SQLite file
+// with user-facing messages that carry no OS/SQLite error text, and that the
+// provider's Validate applies the same check.
+func TestValidateDBFile_RejectsNonEngramFiles(t *testing.T) {
+	notSQLite := filepath.Join(t.TempDir(), "notes.db")
+	if err := os.WriteFile(notSQLite, []byte("plain text, not a database"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	cases := []struct {
+		name, path, want string
+	}{
+		{"empty path", "", "database path is required"},
+		{"directory", t.TempDir(), "not a regular file"},
+		{"missing", filepath.Join(t.TempDir(), "missing.db"), "database file not found"},
+		{"non-SQLite", notSQLite, "not an SQLite database"},
+		{"schemaless", emptyDB(t), "not an"},
+	}
+	p := engram.NewProvider(baseCfg())
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := engram.ValidateDBFile(tc.path)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("ValidateDBFile(%q) = %v, want error containing %q", tc.path, err, tc.want)
+			}
+			for _, leak := range []string{"no such file", "stat ", "file is not a database", "SQLITE"} {
+				if strings.Contains(err.Error(), leak) {
+					t.Errorf("message leaks internal text %q: %v", leak, err)
+				}
+			}
+			verr := p.Validate(context.Background(), providers.ProviderConfig{Path: tc.path})
+			if verr == nil || verr.Error() != "engram: "+err.Error() {
+				t.Errorf("Validate = %v, want %q", verr, "engram: "+err.Error())
+			}
+			// The message is marked user-safe so HTML handlers show it verbatim.
+			for _, e := range []error{err, verr} {
+				if msg, ok := usererr.Message(e); !ok || msg != err.Error() {
+					t.Errorf("usererr.Message(%v) = %q, %v; want %q, true", e, msg, ok, err.Error())
+				}
+			}
+		})
+	}
+	if err := engram.ValidateDBFile(seedEngramSchema(t)); err != nil {
+		t.Errorf("ValidateDBFile(valid) = %v, want nil", err)
 	}
 }

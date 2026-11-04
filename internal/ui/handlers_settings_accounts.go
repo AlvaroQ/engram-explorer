@@ -60,7 +60,7 @@ func handleProfileSwitchPost(d Deps) http.HandlerFunc {
 
 		if err := d.SwitchProfile(name); err != nil {
 			data := buildAccountsData(d, lang, theme)
-			data.AccountsError = err.Error()
+			data.AccountsError = ErrorMessage(r, "", err)
 			renderAccounts(w, r, d, data)
 			return
 		}
@@ -96,7 +96,7 @@ func handleProfileCreatePost(d Deps) http.HandlerFunc {
 
 		if err := d.CreateProfile(name); err != nil {
 			data := buildAccountsData(d, lang, theme)
-			data.AccountsError = err.Error()
+			data.AccountsError = ErrorMessage(r, "", err)
 			renderAccounts(w, r, d, data)
 			return
 		}
@@ -132,7 +132,7 @@ func handleProfileDeletePost(d Deps) http.HandlerFunc {
 
 		if err := d.DeleteProfile(name); err != nil {
 			data := buildAccountsData(d, lang, theme)
-			data.AccountsError = err.Error()
+			data.AccountsError = ErrorMessage(r, "", err)
 			renderAccounts(w, r, d, data)
 			return
 		}

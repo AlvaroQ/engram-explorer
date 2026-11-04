@@ -8,32 +8,48 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
+// Rate limits for write routes, per client and route pattern per minute.
+const (
+	importRateLimit = 5
+	exportRateLimit = 10
+	writeRateLimit  = 120
+)
+
 // writeRoutes registers all write (mutating) routes on mux.
-// Every handler guards demo mode and c.RWDB != nil before proceeding.
+// Every handler guards demo mode and c.RWDB != nil before proceeding, and is
+// wrapped in a per-client, per-route fixed-window rate limiter.
 func writeRoutes(mux *http.ServeMux, c *Container) {
+	writeRL := newRateLimiter(time.Minute, writeRateLimit)
+	exportRL := newRateLimiter(time.Minute, exportRateLimit)
+	importRL := newRateLimiter(time.Minute, importRateLimit)
+	limited := func(rl *rateLimiter, h http.Handler) http.Handler {
+		return withRateLimit(rl, c.Config.ExposeDetails, h)
+	}
+
 	// Observation PATCH
-	mux.HandleFunc("PATCH /api/observations/{id}", handleObservationPatch(c))
+	mux.Handle("PATCH /api/observations/{id}", limited(writeRL, handleObservationPatch(c)))
 
 	// Assignment: PATCH /:entity/:id/project
-	mux.HandleFunc("PATCH /api/observations/{id}/project", handleAssignProject(c, services.EntityKindObservation))
-	mux.HandleFunc("PATCH /api/sessions/{id}/project", handleAssignProject(c, services.EntityKindSession))
-	mux.HandleFunc("PATCH /api/prompts/{id}/project", handleAssignProject(c, services.EntityKindPrompt))
+	mux.Handle("PATCH /api/observations/{id}/project", limited(writeRL, handleAssignProject(c, services.EntityKindObservation)))
+	mux.Handle("PATCH /api/sessions/{id}/project", limited(writeRL, handleAssignProject(c, services.EntityKindSession)))
+	mux.Handle("PATCH /api/prompts/{id}/project", limited(writeRL, handleAssignProject(c, services.EntityKindPrompt)))
 
 	// Deletion: DELETE /:entity/:id
-	mux.HandleFunc("DELETE /api/observations/{id}", handleDeleteEntity(c, services.EntityKindObservation))
-	mux.HandleFunc("DELETE /api/sessions/{id}", handleDeleteEntity(c, services.EntityKindSession))
-	mux.HandleFunc("DELETE /api/prompts/{id}", handleDeleteEntity(c, services.EntityKindPrompt))
+	mux.Handle("DELETE /api/observations/{id}", limited(writeRL, handleDeleteEntity(c, services.EntityKindObservation)))
+	mux.Handle("DELETE /api/sessions/{id}", limited(writeRL, handleDeleteEntity(c, services.EntityKindSession)))
+	mux.Handle("DELETE /api/prompts/{id}", limited(writeRL, handleDeleteEntity(c, services.EntityKindPrompt)))
 
 	// Project rename
-	mux.HandleFunc("POST /api/projects/{project}/rename", handleProjectRename(c))
+	mux.Handle("POST /api/projects/{project}/rename", limited(writeRL, handleProjectRename(c)))
 
 	// Database export / import
-	mux.HandleFunc("GET /api/db/export", handleDBExport(c))
-	mux.HandleFunc("POST /api/db/import", handleDBImport(c))
+	mux.Handle("GET /api/db/export", limited(exportRL, handleDBExport(c)))
+	mux.Handle("POST /api/db/import", limited(importRL, handleDBImport(c)))
 }
 
 // guardDemo returns true and writes a 403 when the server is in demo mode.
@@ -79,8 +95,7 @@ func handleObservationPatch(c *Container) http.HandlerFunc {
 		}
 
 		var body map[string]json.RawMessage
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			writeError(w, http.StatusBadRequest, "BAD_INPUT", "invalid JSON body", nil, c.Config.ExposeDetails)
+		if !decodeJSONBody(w, r, &body, c.Config.ExposeDetails) {
 			return
 		}
 
@@ -201,8 +216,7 @@ func handleAssignProject(c *Container, entity services.EntityKind) http.HandlerF
 		var body struct {
 			Project string `json:"project"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			writeError(w, http.StatusBadRequest, "BAD_INPUT", "invalid JSON body", nil, c.Config.ExposeDetails)
+		if !decodeJSONBody(w, r, &body, c.Config.ExposeDetails) {
 			return
 		}
 		if strings.TrimSpace(body.Project) == "" {
@@ -303,8 +317,7 @@ func handleProjectRename(c *Container) http.HandlerFunc {
 			Target string `json:"target"`
 			Mode   string `json:"mode"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			writeError(w, http.StatusBadRequest, "BAD_INPUT", "invalid JSON body", nil, c.Config.ExposeDetails)
+		if !decodeJSONBody(w, r, &body, c.Config.ExposeDetails) {
 			return
 		}
 		if strings.TrimSpace(body.Target) == "" {

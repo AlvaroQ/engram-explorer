@@ -49,9 +49,6 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.EngramDbPath != filepath.Join(wantDataDir, "engram.db") {
 		t.Errorf("EngramDbPath: got %q", cfg.EngramDbPath)
 	}
-	if cfg.AuditLogPath != filepath.Join(wantDataDir, "logs", "cloud-mutations.jsonl") {
-		t.Errorf("AuditLogPath: got %q", cfg.AuditLogPath)
-	}
 }
 
 func TestLoad_ExposeDetailsDefaultFalse(t *testing.T) {
@@ -81,6 +78,7 @@ func TestLoad_ExposeDetailsInDevelopment(t *testing.T) {
 
 func TestLoad_EnvOverrides(t *testing.T) {
 	t.Setenv("DASHBOARD_HOST", "0.0.0.0")
+	t.Setenv("DASHBOARD_ALLOW_REMOTE", "true")
 	t.Setenv("DASHBOARD_PORT", "9000")
 	t.Setenv("ENGRAM_DATA_DIR", "/tmp/test-engram")
 	t.Setenv("LOG_LEVEL", "warn")

@@ -5,11 +5,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
 	"github.com/AlvaroQ/engram-explorer/internal/providers/ccsessions"
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 // ---------------------------------------------------------------------------
@@ -370,5 +372,51 @@ func TestValidate_RejectsEmptyPath(t *testing.T) {
 	p := ccsessions.NewProvider(baseCfg())
 	if err := p.Validate(context.Background(), providers.ProviderConfig{Path: ""}); err == nil {
 		t.Error("expected error for empty path")
+	}
+}
+
+// TestValidateProjectsDir_SharedUserSafeCheck asserts the shared S5 check used
+// by the Settings Claude dir switcher rejects a file, a missing path and an
+// empty directory with messages free of OS error text, and that the provider's
+// Validate applies the same check.
+func TestValidateProjectsDir_SharedUserSafeCheck(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "file.txt")
+	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	cases := []struct {
+		name, path, want string
+	}{
+		{"empty path", "", "projects directory path is required"},
+		{"file", file, "not a directory"},
+		{"missing", filepath.Join(t.TempDir(), "missing"), "projects directory not found"},
+		{"empty dir", emptyProjectsDir(t), "no project folders found"},
+	}
+	p := ccsessions.NewProvider(baseCfg())
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ccsessions.ValidateProjectsDir(tc.path)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("ValidateProjectsDir(%q) = %v, want error containing %q", tc.path, err, tc.want)
+			}
+			for _, leak := range []string{"no such file", "stat ", "readdirent"} {
+				if strings.Contains(err.Error(), leak) {
+					t.Errorf("message leaks internal text %q: %v", leak, err)
+				}
+			}
+			verr := p.Validate(context.Background(), providers.ProviderConfig{Path: tc.path})
+			if verr == nil || verr.Error() != "cc-sessions: "+err.Error() {
+				t.Errorf("Validate = %v, want %q", verr, "cc-sessions: "+err.Error())
+			}
+			// The message is marked user-safe so HTML handlers show it verbatim.
+			for _, e := range []error{err, verr} {
+				if msg, ok := usererr.Message(e); !ok || msg != err.Error() {
+					t.Errorf("usererr.Message(%v) = %q, %v; want %q, true", e, msg, ok, err.Error())
+				}
+			}
+		})
+	}
+	if err := ccsessions.ValidateProjectsDir(seedProjectsDir(t)); err != nil {
+		t.Errorf("ValidateProjectsDir(valid) = %v, want nil", err)
 	}
 }

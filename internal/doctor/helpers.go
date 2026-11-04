@@ -49,7 +49,7 @@ func projectSlug(project string) string {
 }
 
 // syncProjectURL builds a path-escaped /doctor/sync URL for a project, with an
-// optional trailing action segment ("enroll", "unenroll", "sync"). Escaping the
+// optional trailing action segment (currently only "delete"). Escaping the
 // project segment keeps URLs valid when the key contains spaces or reserved
 // characters. Pass action="" for the project detail URL.
 func syncProjectURL(project, action string) string {

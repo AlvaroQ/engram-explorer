@@ -1,17 +1,21 @@
 package httpapi
 
 import (
+	"net"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 )
 
-// secureHeaders adds HTTP security headers matching the original Hono
-// secureHeaders middleware configuration carried over during migration.
+// secureHeaders adds the HTTP security headers to every response.
 func secureHeaders(next http.Handler) http.Handler {
-	// Content-Security-Policy string mirrors the Hono secureHeaders config exactly.
-	const csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
+	// script-src is 'self' only: the templates carry no inline <script> or on*=
+	// handlers (behaviours live in /static/ui-actions.js) and htmx runs with
+	// allowEval:false. style-src still allows 'unsafe-inline' for inline style
+	// attributes, the layout <style> block and htmx indicator styles; removing
+	// it is deferred to Phase 2 (see SECURITY.md, Content Security Policy).
+	const csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
@@ -55,52 +59,76 @@ func corsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// fixedWindowBucket holds the state for one rate-limit key.
+// defaultRateLimitPruneThreshold is the bucket count above which inserting a
+// new key first sweeps expired buckets, bounding the limiter's memory.
+const defaultRateLimitPruneThreshold = 1024
+
+// fixedWindowBucket holds the state for one rate-limit key. It is guarded by
+// the owning rateLimiter's mutex.
 type fixedWindowBucket struct {
-	mu      sync.Mutex
 	count   int
 	resetAt time.Time
 }
 
-// rateLimiter holds the per-path buckets for a single rate-limit rule.
+// rateLimiter is a fixed-window limiter for a single rule (window + max).
+// Buckets are keyed by rateLimitKey (client IP + method + route pattern), so
+// every client gets its own budget per route and requests to different ids of
+// the same pattern share it. Expired buckets are pruned when a new key is
+// inserted and the map has grown past pruneThreshold.
 type rateLimiter struct {
-	windowMs time.Duration
-	max      int
-	mu       sync.Mutex
-	buckets  map[string]*fixedWindowBucket
+	window         time.Duration
+	max            int
+	now            func() time.Time
+	pruneThreshold int
+	mu             sync.Mutex
+	buckets        map[string]*fixedWindowBucket
 }
 
-// newRateLimiter creates a rateLimiter matching the Node fixed-window implementation.
-func newRateLimiter(windowMs int, max int) *rateLimiter {
+// newRateLimiter creates a fixed-window rateLimiter allowing max requests per
+// window for each key.
+func newRateLimiter(window time.Duration, max int) *rateLimiter {
 	return &rateLimiter{
-		windowMs: time.Duration(windowMs) * time.Millisecond,
-		max:      max,
-		buckets:  make(map[string]*fixedWindowBucket),
+		window:         window,
+		max:            max,
+		now:            time.Now,
+		pruneThreshold: defaultRateLimitPruneThreshold,
+		buckets:        make(map[string]*fixedWindowBucket),
 	}
 }
 
-func (rl *rateLimiter) bucket(key string) *fixedWindowBucket {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-	b, ok := rl.buckets[key]
-	if !ok {
-		b = &fixedWindowBucket{}
-		rl.buckets[key] = b
+// pruneLocked removes buckets whose window has ended. Caller holds rl.mu.
+// If live buckets alone exceed the threshold, the threshold doubles so the
+// sweep does not run on every insert.
+func (rl *rateLimiter) pruneLocked(now time.Time) {
+	for k, b := range rl.buckets {
+		if now.After(b.resetAt) {
+			delete(rl.buckets, k)
+		}
 	}
-	return b
+	if len(rl.buckets) >= rl.pruneThreshold {
+		rl.pruneThreshold = 2 * len(rl.buckets)
+	}
 }
 
 // allow returns true if the request is within limits and increments the counter.
 // Returns the retry-after seconds if rate-limited.
 func (rl *rateLimiter) allow(key string) (ok bool, retryAfterSec int) {
-	b := rl.bucket(key)
-	b.mu.Lock()
-	defer b.mu.Unlock()
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
 
-	now := time.Now()
+	now := rl.now()
+	b, found := rl.buckets[key]
+	if !found {
+		if len(rl.buckets) >= rl.pruneThreshold {
+			rl.pruneLocked(now)
+		}
+		b = &fixedWindowBucket{}
+		rl.buckets[key] = b
+	}
+
 	if b.resetAt.IsZero() || now.After(b.resetAt) {
 		b.count = 0
-		b.resetAt = now.Add(rl.windowMs)
+		b.resetAt = now.Add(rl.window)
 	}
 	b.count++
 	if b.count > rl.max {
@@ -109,18 +137,37 @@ func (rl *rateLimiter) allow(key string) (ok bool, retryAfterSec int) {
 			remaining = 0
 		}
 		secs := int(remaining.Seconds())
-		if remaining > 0 && secs == 0 {
-			secs = 1 // round up
+		if remaining > time.Duration(secs)*time.Second {
+			secs++ // round up partial seconds
 		}
 		return false, secs
 	}
 	return true, 0
 }
 
-// withRateLimit wraps a handler with a fixed-window rate limiter keyed by path.
+// rateLimitKey identifies the client and route for a request: the host part of
+// r.RemoteAddr (falling back to the raw value), the method, and the matched
+// mux pattern (falling back to r.URL.Path when the request was not routed by a
+// ServeMux). Proxy headers such as X-Forwarded-For are deliberately ignored:
+// the dashboard binds to loopback and those headers are client-controlled.
+func rateLimitKey(r *http.Request) string {
+	client := r.RemoteAddr
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		client = host
+	}
+	route := r.Pattern
+	if route == "" {
+		route = r.URL.Path
+	}
+	return client + " " + r.Method + " " + route
+}
+
+// withRateLimit wraps a handler with a fixed-window rate limiter keyed by
+// rateLimitKey. Wrap the per-route handler at mux registration (not the mux
+// itself) so r.Pattern is populated when the key is computed.
 func withRateLimit(rl *rateLimiter, exposeDetails bool, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ok, retryAfter := rl.allow(r.URL.Path)
+		ok, retryAfter := rl.allow(rateLimitKey(r))
 		if !ok {
 			// Retry-After must be delay-seconds (RFC 7231 §7.1.3), not status text.
 			w.Header().Set("Retry-After", strconv.Itoa(retryAfter))

@@ -100,8 +100,9 @@ templ promptCard(p services.PromptRow, lang string) {
 	</article>
 }
 
-// promptSearchCard renders a single prompt search result with an HTML snippet.
-// The snippet is pre-generated safe HTML from the FTS engine — use templ.Raw.
+// promptSearchCard renders a single prompt search result with its FTS snippet.
+// Prompt content is untrusted: every segment is rendered as escaped text and
+// only the match segments are wrapped in <mark>. Never use templ.Raw here.
 templ promptSearchCard(p services.PromptWithSnippet, lang string) {
 	<article class="prompt-card">
 		<header class="prompt-card-header">
@@ -110,9 +111,15 @@ templ promptSearchCard(p services.PromptWithSnippet, lang string) {
 				<span class="badge badge-accent">{ *p.Project }</span>
 			}
 		</header>
-		if p.Snippet != "" {
+		if len(p.Segments) > 0 {
 			<p class="prompt-card-content prompt-card-snippet">
-				@templ.Raw(p.Snippet)
+				for _, seg := range p.Segments {
+					if seg.Marked {
+						<mark>{ seg.Text }</mark>
+					} else {
+						{ seg.Text }
+					}
+				}
 			</p>
 		} else if p.Content != nil && *p.Content != "" {
 			<p class="prompt-card-content">{ *p.Content }</p>

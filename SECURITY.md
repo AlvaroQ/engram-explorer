@@ -21,13 +21,14 @@ Engram Explorer opens your local `engram.db` with **two** SQLite handles:
 - **Write path (opt-out):** a single-connection read-write pool powers a small
   set of **explicit, user-confirmed** mutations — editing an observation,
   reassigning an item's project, deleting an observation/session/prompt,
-  renaming/merging a project, importing/exporting a database snapshot, and the
-  local cloud `unenroll`. Every write route is guarded; if the writable handle
-  is unavailable the route returns `503`.
+  renaming/merging a project, and importing/exporting a database snapshot.
+  Every write route is guarded; if the writable handle is unavailable the
+  route returns `503`.
 
 > **Read-only mode.** Set `ENGRAM_DASH_READONLY=true` to run as a pure viewer:
 > the read-write pool is never opened and every mutating route returns `503`.
 > Use this when pointing the dashboard at a database you must not modify.
+> Cloud sync is read-only in every mode, so no cloud operation bypasses it.
 
 ### Concurrency with the daemon
 
@@ -42,7 +43,30 @@ safety backup next to the DB before merging.
 
 ## Scope notes
 
-- The local backend binds to `127.0.0.1` only — it is not meant to be reachable over a network.
-- Cloud `enroll` / `sync` are delegated to the official `engram` CLI as a subprocess (args passed as a slice, project names whitelisted) — the dashboard never writes to cloud storage directly. The one local SQL exception is `unenroll`, which removes the local enrollment/state rows for that project.
-- Cloud mutation endpoints are rate-limited and require explicit user confirmation.
+- The local backend binds to `127.0.0.1` only — it is not meant to be reachable over a network. It refuses to
+  start when `DASHBOARD_HOST` is not a loopback address (`127.0.0.1`, `::1`, `localhost`); the
+  `DASHBOARD_ALLOW_REMOTE=true` override exists for isolated setups only, since there is no authentication.
+- Browser protections: every request must carry a `Host` that names the dashboard (`localhost`, `*.localhost`,
+  an IP literal or the configured `DASHBOARD_HOST`), which defeats DNS rebinding. Unsafe methods (`POST`,
+  `PUT`, `PATCH`, `DELETE`) must be same-origin according to `Sec-Fetch-Site` / `Origin`, and
+  `GET /api/db/export` refuses cross-site requests and navigations. Non-browser clients that send neither
+  header (curl, scripts) are unaffected. Blocked requests get `403` (`HOST_NOT_ALLOWED` /
+  `CROSS_ORIGIN_REQUEST`).
+- Cloud sync is **read-only**: the dashboard shows sync diagnostics and proxies the daemon's GET telemetry endpoints (`/health`, `/sync/status`, `/stats`). It never enrolls, unenrolls or syncs a project and never spawns the `engram` CLI — do those with the `engram` CLI directly.
 - In production (`ENGRAM_DASH_ENV` unset) internal error details are never returned to the client.
+
+## Content Security Policy
+
+Every response carries:
+
+```text
+default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'
+```
+
+- **Scripts:** `script-src 'self'` only. The templates contain no inline `<script>` blocks or `on*=` handlers;
+  their behaviours live in `/static/ui-actions.js` (event delegation on `data-*` attributes). htmx runs with
+  `allowEval: false`, so `hx-on`, `hx-trigger` `[filters]` and `js:` values are never evaluated. A test scans
+  every `.templ` file and fails on any of these constructs.
+- **Styles (deferred to Phase 2):** `style-src` still allows `'unsafe-inline'` for inline `style=""` attributes,
+  the layout's view-transition `<style>` block and the indicator styles htmx injects. Removing it needs those
+  moved into stylesheets (or nonces) and is tracked for Phase 2.

@@ -233,10 +233,11 @@ func validateImportSchema(ctx context.Context, rwDB sqlite.Querier, uploadPath s
 				Message: fmt.Sprintf(`The uploaded database is missing the "%s" table. It does not look like an engram database.`, table),
 			}
 		}
+		// A table missing locally yields an empty column list, which fails the
+		// match below: source columns must always equal the local schema.
 		localCols, err := pragmaTableInfoCols(ctx, conn, "main", table)
 		if err != nil {
-			// Table may not exist locally yet — skip schema check.
-			continue
+			return fmt.Errorf("local columns %s: %w", table, err)
 		}
 		if !stringSlicesMatch(localCols, srcCols) {
 			return &DatabaseImportError{
@@ -311,6 +312,23 @@ func pragmaTableInfoCols(ctx context.Context, conn *sql.Conn, schema, table stri
 	return sortedStrings(names), nil
 }
 
+// quoteIdent quotes a SQLite identifier, doubling embedded double quotes.
+// Column names come from the uploaded file's PRAGMA table_info; validation
+// already requires them to equal the local schema, and quoting keeps them
+// inert in the generated INSERT statements regardless (defense in depth).
+func quoteIdent(name string) string {
+	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+}
+
+// quoteIdentList quotes and comma-joins identifiers for a column list.
+func quoteIdentList(names []string) string {
+	q := make([]string, len(names))
+	for i, n := range names {
+		q[i] = quoteIdent(n)
+	}
+	return strings.Join(q, ", ")
+}
+
 func sortedStrings(s []string) []string {
 	// simple insertion sort — tables are small
 	out := make([]string, len(s))
@@ -348,7 +366,7 @@ func runMerge(ctx context.Context, conn *sql.Conn, tx *sql.Tx, uploadPath, backu
 		if err != nil {
 			return MergeResult{}, fmt.Errorf("cols sessions: %w", err)
 		}
-		list := strings.Join(cols, ", ")
+		list := quoteIdentList(cols)
 		srcTotal, err := countRows(tx, "srcdb.sessions")
 		if err != nil {
 			return MergeResult{}, err
@@ -379,7 +397,7 @@ func runMerge(ctx context.Context, conn *sql.Conn, tx *sql.Tx, uploadPath, backu
 		}
 		// Exclude the auto-increment PK.
 		cols = filterOut(cols, "id")
-		list := strings.Join(cols, ", ")
+		list := quoteIdentList(cols)
 		where := `
 			(sync_id IS NOT NULL AND sync_id NOT IN (SELECT sync_id FROM observations WHERE sync_id IS NOT NULL))
 			OR (sync_id IS NULL AND normalized_hash IS NOT NULL
@@ -408,7 +426,7 @@ func runMerge(ctx context.Context, conn *sql.Conn, tx *sql.Tx, uploadPath, backu
 			return MergeResult{}, fmt.Errorf("cols user_prompts: %w", err)
 		}
 		cols = filterOut(cols, "id")
-		list := strings.Join(cols, ", ")
+		list := quoteIdentList(cols)
 		where := `
 			(sync_id IS NOT NULL AND sync_id NOT IN (SELECT sync_id FROM user_prompts WHERE sync_id IS NOT NULL))
 			OR sync_id IS NULL`
@@ -439,14 +457,14 @@ func runMerge(ctx context.Context, conn *sql.Conn, tx *sql.Tx, uploadPath, backu
 				return MergeResult{}, fmt.Errorf("cols memory_relations: %w", err)
 			}
 			cols = filterOut(cols, "id")
-			list := strings.Join(cols, ", ")
+			list := quoteIdentList(cols)
 			// superseded_by_relation_id is a local FK — map to NULL.
 			selectCols := make([]string, len(cols))
 			for i, c := range cols {
 				if c == "superseded_by_relation_id" {
 					selectCols[i] = "NULL"
 				} else {
-					selectCols[i] = c
+					selectCols[i] = quoteIdent(c)
 				}
 			}
 			selectList := strings.Join(selectCols, ", ")

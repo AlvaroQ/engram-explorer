@@ -8,18 +8,18 @@ import (
 )
 
 // ProjectsListPage renders the full page shell for the projects list view.
-templ ProjectsListPage(stats []services.ProjectStats, sync services.SyncProjectsResponse, caps services.CloudCapabilities, q, lang, theme, sidebarState string) {
-	@Layout(T(lang, "projects.title"), "projects", lang, theme, sidebarState, projectsContent(stats, sync, caps, q, lang))
+templ ProjectsListPage(stats []services.ProjectStats, sync services.SyncProjectsResponse, q, lang, theme, sidebarState string) {
+	@Layout(T(lang, "projects.title"), "projects", lang, theme, sidebarState, projectsContent(stats, sync, q, lang))
 }
 
 // ProjectsListPartial renders only the projects content (no HTML shell).
 // Used when HTMX requests a partial update.
-templ ProjectsListPartial(stats []services.ProjectStats, sync services.SyncProjectsResponse, caps services.CloudCapabilities, q, lang string) {
-	@projectsContent(stats, sync, caps, q, lang)
+templ ProjectsListPartial(stats []services.ProjectStats, sync services.SyncProjectsResponse, q, lang string) {
+	@projectsContent(stats, sync, q, lang)
 }
 
 // projectsContent is the shared projects body.
-templ projectsContent(stats []services.ProjectStats, sync services.SyncProjectsResponse, caps services.CloudCapabilities, q, lang string) {
+templ projectsContent(stats []services.ProjectStats, sync services.SyncProjectsResponse, q, lang string) {
 	<div>
 		<div class="page-header">
 			<h1>{ T(lang, "projects.title") }</h1>
@@ -46,14 +46,14 @@ templ projectsContent(stats []services.ProjectStats, sync services.SyncProjectsR
 				</div>
 			</div>
 			<div class="card-body p-0" id="projects-table-container">
-				@ProjectsTablePartial(stats, sync, caps, q, lang)
+				@ProjectsTablePartial(stats, sync, q, lang)
 			</div>
 		</div>
 	</div>
 }
 
 // ProjectsTablePartial renders only the projects table body (HTMX swap target).
-templ ProjectsTablePartial(stats []services.ProjectStats, sync services.SyncProjectsResponse, caps services.CloudCapabilities, q, lang string) {
+templ ProjectsTablePartial(stats []services.ProjectStats, sync services.SyncProjectsResponse, q, lang string) {
 	if len(stats) == 0 {
 		@EmptyState(T(lang, "projects.noMatch"))
 	} else {
@@ -68,12 +68,11 @@ templ ProjectsTablePartial(stats []services.ProjectStats, sync services.SyncProj
 						<th class="px-3 py-2 text-left">{ T(lang, "projects.table.lastActivity") }</th>
 						<th class="px-3 py-2 text-left">{ T(lang, "projects.table.syncLag") }</th>
 						<th class="px-3 py-2 text-left">{ T(lang, "projects.table.sync") }</th>
-						<th class="px-3 py-2 text-right">{ T(lang, "syncHealth.projects.table.actions") }</th>
 					</tr>
 				</thead>
 				<tbody class="table-divide">
 					for _, p := range stats {
-						@projectRow(p, syncByProject(sync, p.Project), caps, lang)
+						@projectRow(p, syncByProject(sync, p.Project), lang)
 					}
 				</tbody>
 			</table>
@@ -81,8 +80,9 @@ templ ProjectsTablePartial(stats []services.ProjectStats, sync services.SyncProj
 	}
 }
 
-// projectRow renders a single project table row.
-templ projectRow(p services.ProjectStats, syncRow *services.SyncProjectRow, caps services.CloudCapabilities, lang string) {
+// projectRow renders a single project table row. Enrollment is shown as a
+// read-only status badge; cloud mutations are done with the engram CLI.
+templ projectRow(p services.ProjectStats, syncRow *services.SyncProjectRow, lang string) {
 	<tr class="hover:bg-surface-2">
 		<td class="px-3 py-2">
 			if p.Project == "" {
@@ -100,11 +100,6 @@ templ projectRow(p services.ProjectStats, syncRow *services.SyncProjectRow, caps
 		</td>
 		<td class="px-3 py-2">
 			@syncStatusCell(syncRow, lang)
-		</td>
-		<td class="px-3 py-2 text-right">
-			if p.Project != "" {
-				@enrollUnenrollButton(p.Project, syncRow != nil && syncRow.Enrolled, caps, lang)
-			}
 		</td>
 	</tr>
 }
@@ -140,68 +135,6 @@ templ syncStatusCell(syncRow *services.SyncProjectRow, lang string) {
 	}
 }
 
-// enrollUnenrollButton renders the enroll/unenroll action button.
-// Uses hx-post to trigger the operation and hx-target to refresh the table.
-templ enrollUnenrollButton(project string, enrolled bool, caps services.CloudCapabilities, lang string) {
-	if enrolled {
-		if caps.Unenroll {
-			<button
-				class="btn-icon text-fail"
-				hx-post={ projectActionURL(project, "unenroll") }
-				hx-target="#projects-table-container"
-				hx-swap="innerHTML"
-				title={ T(lang, "syncHealth.projects.actions.unenroll") }
-				aria-label={ T(lang, "syncHealth.projects.actions.unenroll") }
-			>
-				@cloudOffIcon()
-			</button>
-		} else {
-			<button class="btn-icon text-fail opacity-40 cursor-not-allowed" disabled title={ T(lang, "syncHealth.projects.actions.unenrollUnsupported") }>
-				@cloudOffIcon()
-			</button>
-		}
-	} else {
-		if caps.Enroll {
-			<button
-				class="btn-icon text-accent"
-				hx-post={ projectActionURL(project, "enroll") }
-				hx-target="#projects-table-container"
-				hx-swap="innerHTML"
-				title={ T(lang, "syncHealth.projects.actions.enroll") }
-				aria-label={ T(lang, "syncHealth.projects.actions.enroll") }
-			>
-				@cloudUploadIcon()
-			</button>
-		} else {
-			<button class="btn-icon text-accent opacity-40 cursor-not-allowed" disabled title={ T(lang, "syncHealth.projects.actions.enrollUnsupported") }>
-				@cloudUploadIcon()
-			</button>
-		}
-	}
-}
-
-// cloudUploadIcon is the enroll action glyph: a cloud with an upward arrow,
-// signalling "enroll this project into Engram cloud sync". Stroke style matches
-// the sidebar-sync-icon in layout.templ.
-templ cloudUploadIcon() {
-	<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-		<path d="M12 13v8"></path>
-		<path d="m8 17 4-4 4 4"></path>
-		<path d="M4.5 16.5a4.5 4.5 0 0 1 1-8.86A6 6 0 0 1 17 8a4.5 4.5 0 0 1 2 8.5"></path>
-	</svg>
-}
-
-// cloudOffIcon is the unenroll action glyph: a cloud struck through, signalling
-// "remove this project from Engram cloud sync". Stroke style matches the
-// sidebar-sync-icon in layout.templ.
-templ cloudOffIcon() {
-	<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-		<path d="m2 2 20 20"></path>
-		<path d="M5.8 5.8A6 6 0 0 0 6 18h10.5a4.5 4.5 0 0 0 2.5-.76"></path>
-		<path d="M9.5 6.5A6 6 0 0 1 17 8a4.5 4.5 0 0 1 2.55 8.18"></path>
-	</svg>
-}
-
 // ---------------------------------------------------------------------------
 // Template helper functions
 // ---------------------------------------------------------------------------
@@ -222,9 +155,4 @@ func derefOrDash(s *string) string {
 		return "—"
 	}
 	return *s
-}
-
-// projectActionURL builds the URL for enroll/unenroll POST actions.
-func projectActionURL(project, action string) string {
-	return "/projects/" + url.PathEscape(project) + "/" + action
 }

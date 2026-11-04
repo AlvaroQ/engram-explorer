@@ -236,19 +236,12 @@ templ observationsContent(items []services.ObservationRow, nextCursor *string, p
 				</div>
 			</div>
 			<!-- Detail aside (empty until a row is clicked) -->
-			<aside id="obs-detail" class="card" style="width:380px;min-width:280px;overflow-y:auto;display:none">
+			<!-- data-show-on-swap: ui-actions.js shows the aside when HTMX swaps content into it. -->
+			<aside id="obs-detail" class="card" style="width:380px;min-width:280px;overflow-y:auto;display:none" data-show-on-swap>
 				<!-- Populated by hx-get /observations/{id} on row click -->
 			</aside>
 		</div>
 	</div>
-	<!-- Show the detail aside when HTMX swaps content into it. -->
-	<script>
-	document.body.addEventListener('htmx:afterSwap', function(e) {
-		if (e.target && e.target.id === 'obs-detail') {
-			e.target.style.display = '';
-		}
-	});
-	</script>
 }
 
 // ObservationsTablePartial renders the full table with load-more.
@@ -380,7 +373,7 @@ templ ObservationDetailPartial(obs *services.ObservationRow, revisions []service
 			<button
 				type="button"
 				class="btn btn-ghost btn-sm"
-				onclick="document.getElementById('obs-detail').style.display='none'"
+				data-hide-target="obs-detail"
 				aria-label={ T(lang, "common.close") }
 			>×</button>
 		</div>

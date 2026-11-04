@@ -160,7 +160,11 @@ type ModuleInfo struct {
 	Tier        ModuleTier
 	State       ModuleState
 	Path        string // current path from config; may be empty
-	Err         string // error message when State == ModuleErrored
+	Err         string // display message when State == ModuleErrored (set from Cause by the settings handler)
+	// Cause is the provider error. The settings handler turns it into Err via
+	// ErrorMessage: usererr messages are shown, anything else is logged and
+	// replaced by the generic message.
+	Cause error
 }
 
 // ---------------------------------------------------------------------------
@@ -216,21 +220,8 @@ func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// Mount registers all UI routes at the root of mux. It constructs the production
-// CloudControlService for the projects enroll/unenroll endpoints.
+// Mount registers all UI routes at the root of mux.
 func Mount(mux *http.ServeMux, d Deps) {
-	cloud := services.NewCloudControlService(services.CloudControlOptions{
-		AuditLogPath:  d.Config.AuditLogPath,
-		EngramDataDir: d.Config.EngramDataDir,
-		RWDB:          d.RWDB,
-	})
-	MountWithCloud(mux, d, cloud)
-}
-
-// MountWithCloud registers all UI routes at the root of mux with an explicit
-// cloud controller. This overload is used by tests to inject a fake implementation
-// without spawning a real CLI subprocess.
-func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 	// Default the live path holder from the immutable Config so tests that build
 	// Deps without Paths keep working (handlers read mutable paths via d.Paths).
 	if d.Paths == nil {
@@ -292,12 +283,10 @@ func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 	// Projects routes.
 	// Note: Go 1.22 mux resolves exact paths over wildcards, so /projects and
 	// /projects/list are matched before /projects/{project}.
-	mux.HandleFunc("GET /projects", handleProjectsPage(d, cloud))
-	mux.HandleFunc("GET /projects/list", handleProjectsListPartial(d, cloud))
+	mux.HandleFunc("GET /projects", handleProjectsPage(d))
+	mux.HandleFunc("GET /projects/list", handleProjectsListPartial(d))
 	mux.HandleFunc("GET /projects/{project}", handleProjectDetailPage(d))
 	mux.HandleFunc("POST /projects/{project}/merge", handleProjectMergePost(d))
-	mux.HandleFunc("POST /projects/{project}/enroll", requireRW(d, handleProjectsEnroll(d, cloud)))
-	mux.HandleFunc("POST /projects/{project}/unenroll", requireRW(d, handleProjectsUnenroll(d, cloud)))
 
 	// Settings routes.
 	mux.HandleFunc("GET /settings", handleSettingsPage(d))
@@ -337,10 +326,4 @@ func MountWithCloud(mux *http.ServeMux, d Deps, cloud projectsCloud) {
 
 	// Sidebar status pill partial (polled by HTMX from the sidebar footer).
 	mux.HandleFunc("GET /partials/status-pill", handleStatusPillPartial(d))
-
-	// "Sync all" action — triggers a cloud sync for all enrolled projects.
-	// Powers the CloudSyncAllControl button embedded in Maintenance > Cloud
-	// (internal/doctor/maintenance.templ). Returns an HTML fragment via
-	// syncCloudButtonWithResult that replaces #cloud-sync-all (outerHTML swap).
-	mux.HandleFunc("POST /partials/sync-cloud", handleSyncCloudPost(d, cloud))
 }

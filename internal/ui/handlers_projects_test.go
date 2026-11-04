@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AlvaroQ/engram-explorer/internal/services"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
 )
 
@@ -40,27 +39,6 @@ CREATE TABLE IF NOT EXISTS sync_enrolled_projects (
 );
 `
 
-// fakeCloud is a minimal projectsCloud implementation for tests.
-type fakeCloud struct {
-	enrollCalls   []string
-	unenrollCalls []string
-	caps          services.CloudCapabilities
-}
-
-func (f *fakeCloud) Enroll(_ context.Context, project string) (services.CloudResult, error) {
-	f.enrollCalls = append(f.enrollCalls, project)
-	return services.CloudResult{OK: true, Project: project}, nil
-}
-
-func (f *fakeCloud) Unenroll(_ context.Context, project string) (services.CloudResult, error) {
-	f.unenrollCalls = append(f.unenrollCalls, project)
-	return services.CloudResult{OK: true, Project: project}, nil
-}
-
-func (f *fakeCloud) Capabilities(_ context.Context) (services.CloudCapabilities, error) {
-	return f.caps, nil
-}
-
 // openProjectsDB opens a test DB with the full projects+sync schema.
 func openProjectsDB(t *testing.T) *sql.DB {
 	t.Helper()
@@ -82,8 +60,7 @@ func TestProjectsFullPage(t *testing.T) {
 	}
 
 	mux := http.NewServeMux()
-	cloud := &fakeCloud{caps: services.CloudCapabilities{Enroll: true, Unenroll: true}}
-	ui.MountWithCloud(mux, ui.Deps{RoDB: db}, cloud)
+	ui.Mount(mux, ui.Deps{RoDB: db})
 
 	req := httptest.NewRequest(http.MethodGet, "/projects", nil)
 	w := httptest.NewRecorder()
@@ -106,8 +83,7 @@ func TestProjectsHTMXPartial(t *testing.T) {
 	db := openProjectsDB(t)
 
 	mux := http.NewServeMux()
-	cloud := &fakeCloud{caps: services.CloudCapabilities{Enroll: true, Unenroll: true}}
-	ui.MountWithCloud(mux, ui.Deps{RoDB: db}, cloud)
+	ui.Mount(mux, ui.Deps{RoDB: db})
 
 	req := httptest.NewRequest(http.MethodGet, "/projects", nil)
 	req.Header.Set("HX-Request", "true")
@@ -127,8 +103,7 @@ func TestProjectsListPartialEndpoint(t *testing.T) {
 	db := openProjectsDB(t)
 
 	mux := http.NewServeMux()
-	cloud := &fakeCloud{caps: services.CloudCapabilities{Enroll: true, Unenroll: true}}
-	ui.MountWithCloud(mux, ui.Deps{RoDB: db}, cloud)
+	ui.Mount(mux, ui.Deps{RoDB: db})
 
 	req := httptest.NewRequest(http.MethodGet, "/projects/list", nil)
 	w := httptest.NewRecorder()
@@ -145,8 +120,7 @@ func TestProjectsListPartialEndpoint(t *testing.T) {
 // TestProjectsRoDBNil verifies nil RoDB does not panic and returns 200.
 func TestProjectsRoDBNil(t *testing.T) {
 	mux := http.NewServeMux()
-	cloud := &fakeCloud{caps: services.CloudCapabilities{Enroll: true, Unenroll: true}}
-	ui.MountWithCloud(mux, ui.Deps{RoDB: nil}, cloud)
+	ui.Mount(mux, ui.Deps{RoDB: nil})
 
 	req := httptest.NewRequest(http.MethodGet, "/projects", nil)
 	w := httptest.NewRecorder()
@@ -177,8 +151,7 @@ func TestProjectsTextFilter(t *testing.T) {
 	}
 
 	mux := http.NewServeMux()
-	cloud := &fakeCloud{caps: services.CloudCapabilities{Enroll: true, Unenroll: true}}
-	ui.MountWithCloud(mux, ui.Deps{RoDB: db}, cloud)
+	ui.Mount(mux, ui.Deps{RoDB: db})
 
 	req := httptest.NewRequest(http.MethodGet, "/projects?q=alpha", nil)
 	w := httptest.NewRecorder()
