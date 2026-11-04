@@ -2,6 +2,10 @@ module github.com/AlvaroQ/engram-explorer
 
 go 1.25.0
 
+// Release and CI toolchain: keep on a patched release; govulncheck in CI
+// fails when the standard library has reachable vulnerabilities.
+toolchain go1.26.10
+
 require (
 	github.com/a-h/templ v0.3.1001
 	golang.org/x/sync v0.20.0

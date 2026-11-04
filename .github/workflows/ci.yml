@@ -2,9 +2,23 @@ name: CI
 
 on:
   push:
-    branches: [main, 'feature/**', 'chore/**', 'fix/**']
+    branches: [main, develop, 'feature/**', 'chore/**', 'fix/**']
   pull_request:
-    branches: [main]
+    branches: [main, develop]
+  # Lets release.yml run the same checks before publishing a tag.
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Keep in sync with the github.com/a-h/templ version in go.mod.
+  TEMPL_VERSION: v0.3.1001
+  GOVULNCHECK_VERSION: v1.9.0
 
 jobs:
   ci:
@@ -13,15 +27,34 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # A fresh clone must compile against the committed placeholder in
+      # internal/web/dist before any frontend build runs.
+      - name: Go build (fresh clone, placeholder embed)
+        run: go build ./...
+
+      - name: templ generate drift
+        run: |
+          go run "github.com/a-h/templ/cmd/templ@${TEMPL_VERSION}" generate
+          if ! git diff --exit-code -- '*_templ.go'; then
+            echo "::error::Generated *_templ.go files are stale. Run 'templ generate' (${TEMPL_VERSION}) and commit the result."
+            exit 1
+          fi
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: '20'
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -35,6 +68,14 @@ jobs:
       - name: Frontend tests
         run: pnpm test
 
+      - name: Tailwind CSS drift
+        run: |
+          pnpm -F @engram-explorer/frontend build:ui-css
+          if ! git diff --exit-code -- internal/ui/static/app.css; then
+            echo "::error::internal/ui/static/app.css is stale. Run 'pnpm -F @engram-explorer/frontend build:ui-css' and commit the result."
+            exit 1
+          fi
+
       - name: Build frontend
         run: RELEASE=1 pnpm -F @engram-explorer/frontend build
 
@@ -46,12 +87,6 @@ jobs:
 
       - name: Assert embed real build present
         run: test -f internal/web/dist/islands/loader.js
-
-      - name: Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: true
 
       - name: gofmt
         run: |
@@ -65,5 +100,22 @@ jobs:
       - name: go vet
         run: go vet ./...
 
-      - name: go test
-        run: go test ./...
+      - name: go test (race detector)
+        run: go test -race ./...
+
+  govulncheck:
+    name: govulncheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: govulncheck
+        run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
