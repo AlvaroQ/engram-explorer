@@ -63,9 +63,10 @@ func guardDemo(w http.ResponseWriter, c *Container) bool {
 	return false
 }
 
-// guardRWDB returns true and writes a 503 if the RW pool is unavailable.
+// guardRWDB returns true and writes a 503 if the RW pool is unavailable: the
+// live store does not implement providers.Writable or reports false.
 func guardRWDB(w http.ResponseWriter, c *Container) bool {
-	if c.RWDB == nil {
+	if !c.writable() {
 		writeError(w, http.StatusServiceUnavailable, "RW_UNAVAILABLE",
 			"The read-write database is not available. The server started with a read-only connection.",
 			nil, c.Config.ExposeDetails)
