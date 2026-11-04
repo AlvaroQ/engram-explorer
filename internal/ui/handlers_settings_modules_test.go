@@ -2,7 +2,7 @@ package ui_test
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 // ---------------------------------------------------------------------------
@@ -240,7 +241,7 @@ func TestModulesPathPost_InvalidPath(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{
 		ValidateModulePath: func(ctx context.Context, id, path string) error {
-			return errors.New("schema-invalid: not a valid engram database")
+			return fmt.Errorf("engram: %w", usererr.New("not an Engram database (missing observations or sessions tables): /bad/path"))
 		},
 	})
 
@@ -254,7 +255,7 @@ func TestModulesPathPost_InvalidPath(t *testing.T) {
 		t.Errorf("expected 200 (error page re-render) on validation failure, got %d", w.Code)
 	}
 	body := w.Body.String()
-	if !strings.Contains(body, "schema-invalid") {
+	if !strings.Contains(body, "not an Engram database (missing observations or sessions tables): /bad/path") {
 		t.Error("response body must contain the validation error message")
 	}
 }

@@ -24,7 +24,7 @@ func handleAdvancedViewPost(d Deps) http.HandlerFunc {
 		}
 		enabled := r.FormValue("enabled") == "true"
 		if err := d.SetAdvancedView(enabled); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, ErrorMessage(r, "", err), http.StatusInternalServerError)
 			return
 		}
 		if IsHTMX(r) {
@@ -56,7 +56,7 @@ func handleModulesTogglePost(d Deps) http.HandlerFunc {
 			lang := langForRequest(r)
 			theme := themeForRequest(r)
 			data := buildSettingsData(d, r, lang, theme)
-			data.ModuleError = err.Error()
+			data.ModuleError = ErrorMessage(r, "", err)
 			renderSettings(w, r, d, data)
 			return
 		}
@@ -89,7 +89,7 @@ func handleModulesPathPost(d Deps) http.HandlerFunc {
 			errMsg = T(lang, "settings.path.empty")
 		} else {
 			if err := d.ValidateModulePath(r.Context(), id, path); err != nil {
-				errMsg = err.Error()
+				errMsg = ErrorMessage(r, "", err)
 			}
 		}
 
@@ -327,7 +327,7 @@ func handleEngramDBPost(d Deps) http.HandlerFunc {
 			errMsg = T(lang, "settings.path.unavailable")
 		default:
 			if err := d.ReloadEngramDB(path); err != nil {
-				errMsg = err.Error()
+				errMsg = ErrorMessage(r, "", err)
 			}
 		}
 
@@ -361,7 +361,7 @@ func handleClaudeDirPost(d Deps) http.HandlerFunc {
 			errMsg = T(lang, "settings.path.unavailable")
 		default:
 			if err := d.SetClaudeDir(path); err != nil {
-				errMsg = err.Error()
+				errMsg = ErrorMessage(r, "", err)
 			}
 		}
 

@@ -85,7 +85,7 @@ func handleOverviewPage(d Deps) http.HandlerFunc {
 
 		data, err := loadOverview(d)
 		if err != nil {
-			renderDeps(w, r, d, ErrorPartial("Failed to load overview: "+err.Error()))
+			renderDeps(w, r, d, ErrorPartial(ErrorMessage(r, "Failed to load overview: ", err)))
 			return
 		}
 

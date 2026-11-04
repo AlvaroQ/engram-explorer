@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -122,6 +123,9 @@ func run() error {
 	}
 
 	logger := logging.New(cfg.Env, cfg.LogLevel)
+	// UI and doctor handlers log internal error details through slog.Default()
+	// (the user only sees a generic message), so route it to the configured logger.
+	slog.SetDefault(logger)
 
 	if cfg.DemoMode {
 		logger.Info("demo mode active", "db", cfg.EngramDbPath)

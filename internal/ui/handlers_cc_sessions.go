@@ -49,7 +49,7 @@ func handleCCOverviewPage(d Deps) http.HandlerFunc {
 			sources := ccsAccountSources(d)
 			result, err := services.CCSessionsListMulti(sources, params)
 			if err != nil {
-				render(w, r, ErrorPartial("Failed to load Claude Code sessions: "+err.Error()))
+				renderError(w, r, "Failed to load Claude Code sessions: ", err)
 				return
 			}
 			if IsHTMX(r) {
@@ -68,7 +68,7 @@ func handleCCOverviewPage(d Deps) http.HandlerFunc {
 			if len(sources) > 1 {
 				m, err := services.CCSessionsStatsMulti(sources)
 				if err != nil {
-					render(w, r, ErrorPartial("Failed to load Claude Code stats: "+err.Error()))
+					renderError(w, r, "Failed to load Claude Code stats: ", err)
 					return
 				}
 				multi = m
@@ -94,7 +94,7 @@ func handleCCSessionsListPage(d Deps) http.HandlerFunc {
 		sources := ccsAccountSources(d)
 		result, err := services.CCSessionsListMulti(sources, params)
 		if err != nil {
-			render(w, r, ErrorPartial("Failed to load Claude Code sessions: "+err.Error()))
+			renderError(w, r, "Failed to load Claude Code sessions: ", err)
 			return
 		}
 
@@ -116,7 +116,7 @@ func handleCCSessionsListPartial(d Deps) http.HandlerFunc {
 		sources := ccsAccountSources(d)
 		result, err := services.CCSessionsListMulti(sources, params)
 		if err != nil {
-			render(w, r, ErrorPartial("Failed to load Claude Code sessions: "+err.Error()))
+			renderError(w, r, "Failed to load Claude Code sessions: ", err)
 			return
 		}
 
@@ -175,7 +175,7 @@ func handleCCSessionDetailPage(d Deps) http.HandlerFunc {
 
 		detail, err := services.CCSessionGetDetail(reader, projectFolder, id)
 		if err != nil {
-			render(w, r, ErrorPartial("Failed to load session: "+err.Error()))
+			renderError(w, r, "Failed to load session: ", err)
 			return
 		}
 		if detail == nil {

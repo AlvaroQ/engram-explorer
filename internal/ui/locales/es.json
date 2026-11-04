@@ -15,6 +15,7 @@
     "ccsessionsOverview": "Resumen"
   },
   "common": {
+    "errorGeneric": "Algo salió mal. Revisa el registro del servidor para más detalles.",
     "loading": "Cargando…",
     "loadMore": "Cargar más",
     "loadingMore": "Cargando más…",

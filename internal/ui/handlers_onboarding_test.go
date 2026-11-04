@@ -2,7 +2,7 @@ package ui_test
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 // ---------------------------------------------------------------------------
@@ -226,7 +227,7 @@ func TestOnboardingPathPost_InvalidPath_ShowsError(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{
 		ValidateModulePath: func(ctx context.Context, id, path string) error {
-			return errors.New("path-missing: file not found")
+			return fmt.Errorf("engram: %w", usererr.New("database file not found: /nonexistent"))
 		},
 	})
 
@@ -241,7 +242,7 @@ func TestOnboardingPathPost_InvalidPath_ShowsError(t *testing.T) {
 		t.Errorf("expected 200 (error re-render), got %d", w.Code)
 	}
 	body := w.Body.String()
-	if !strings.Contains(body, "path-missing") {
+	if !strings.Contains(body, "database file not found: /nonexistent") {
 		t.Error("error response must contain the validation error message")
 	}
 }

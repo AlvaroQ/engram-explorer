@@ -15,6 +15,7 @@
     "ccsessionsOverview": "Overview"
   },
   "common": {
+    "errorGeneric": "Something went wrong. Check the server log for details.",
     "loading": "Loading…",
     "loadMore": "Load more",
     "loadingMore": "Loading more…",

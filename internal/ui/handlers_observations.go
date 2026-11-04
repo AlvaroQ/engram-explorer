@@ -97,7 +97,7 @@ func handleObservationsPage(d Deps) http.HandlerFunc {
 			q := strings.TrimSpace(r.URL.Query().Get("q"))
 			topics, err := loadTopics(r, d, q)
 			if err != nil {
-				render(w, r, ErrorPartial("Failed to load topics: "+err.Error()))
+				renderError(w, r, "Failed to load topics: ", err)
 				return
 			}
 			if IsHTMX(r) {
@@ -110,7 +110,7 @@ func handleObservationsPage(d Deps) http.HandlerFunc {
 			q := r.URL.Query().Get("q")
 			items, searchItems, err := loadPrompts(d, q)
 			if err != nil {
-				render(w, r, ErrorPartial("Failed to load prompts: "+err.Error()))
+				renderError(w, r, "Failed to load prompts: ", err)
 				return
 			}
 			if IsHTMX(r) {
@@ -124,7 +124,7 @@ func handleObservationsPage(d Deps) http.HandlerFunc {
 			params := observationListParamsFromQuery(r)
 			items, nextCursor, err := loadObservations(d, params)
 			if err != nil {
-				render(w, r, ErrorPartial("Failed to load observations: "+err.Error()))
+				renderError(w, r, "Failed to load observations: ", err)
 				return
 			}
 			projects := loadProjectNames(d)
@@ -153,7 +153,7 @@ func handleObservationsListPartial(d Deps) http.HandlerFunc {
 
 		items, nextCursor, err := loadObservations(d, params)
 		if err != nil {
-			render(w, r, ErrorPartial("Failed to load observations: "+err.Error()))
+			renderError(w, r, "Failed to load observations: ", err)
 			return
 		}
 
@@ -186,7 +186,7 @@ func handleObservationDetailPartial(d Deps) http.HandlerFunc {
 
 		obs, revisions, err := services.ObservationsGetByID(d.RoDB, id)
 		if err != nil {
-			render(w, r, ErrorPartial("Failed to load observation: "+err.Error()))
+			renderError(w, r, "Failed to load observation: ", err)
 			return
 		}
 		if obs == nil {
