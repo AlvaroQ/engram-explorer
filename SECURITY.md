@@ -45,6 +45,12 @@ safety backup next to the DB before merging.
 - The local backend binds to `127.0.0.1` only — it is not meant to be reachable over a network. It refuses to
   start when `DASHBOARD_HOST` is not a loopback address (`127.0.0.1`, `::1`, `localhost`); the
   `DASHBOARD_ALLOW_REMOTE=true` override exists for isolated setups only, since there is no authentication.
+- Browser protections: every request must carry a `Host` that names the dashboard (`localhost`, `*.localhost`,
+  an IP literal or the configured `DASHBOARD_HOST`), which defeats DNS rebinding. Unsafe methods (`POST`,
+  `PUT`, `PATCH`, `DELETE`) must be same-origin according to `Sec-Fetch-Site` / `Origin`, and
+  `GET /api/db/export` refuses cross-site requests and navigations. Non-browser clients that send neither
+  header (curl, scripts) are unaffected. Blocked requests get `403` (`HOST_NOT_ALLOWED` /
+  `CROSS_ORIGIN_REQUEST`).
 - Cloud `enroll` / `sync` are delegated to the official `engram` CLI as a subprocess (args passed as a slice, project names whitelisted) — the dashboard never writes to cloud storage directly. The one local SQL exception is `unenroll`, which removes the local enrollment/state rows for that project.
 - Cloud mutation endpoints are rate-limited and require explicit user confirmation.
 - In production (`ENGRAM_DASH_ENV` unset) internal error details are never returned to the client.

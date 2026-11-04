@@ -23,7 +23,6 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
 	ccsessionsprovider "github.com/AlvaroQ/engram-explorer/internal/providers/ccsessions"
 	engramprovider "github.com/AlvaroQ/engram-explorer/internal/providers/engram"
-	"github.com/AlvaroQ/engram-explorer/internal/web"
 )
 
 // version is set at build time via -ldflags "-X main.version=<tag>".
@@ -172,12 +171,10 @@ func run() error {
 	container.ProfileStore = profileStore
 	defer container.Close()
 
-	apiHandler := httpapi.NewServeMux(container)
-
-	// Wrap the API mux with the embedded frontend handler.
-	// /islands/* and /assets/* are served from the embedded dist/ FS; everything
-	// else (templ UI, /api/*, /doctor/*, /static/*) goes to apiHandler.
-	handler := web.Handler(apiHandler)
+	// NewHandler composes the request guard (Host allow-list, cross-origin
+	// protection, security headers) in front of the embedded island bundles
+	// (/islands/*, /assets/*) and the API/UI mux.
+	handler := httpapi.NewHandler(container)
 
 	addr := net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.Port))
 	srv := &http.Server{

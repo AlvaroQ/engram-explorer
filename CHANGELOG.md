@@ -33,6 +33,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Loopback-only bind** — the server refuses to start when `DASHBOARD_HOST` is not a loopback address
   (`127.0.0.1`, `::1`, `localhost`), because the dashboard has no authentication. Set
   `DASHBOARD_ALLOW_REMOTE=true` to bind another address at your own risk.
+- **DNS rebinding and CSRF protection** — every request (including the embedded `/islands/` and `/assets/`
+  bundles) must carry a `Host` that names the dashboard (`localhost`, `*.localhost`, an IP literal or the
+  configured `DASHBOARD_HOST`); unsafe methods must be same-origin (`Sec-Fetch-Site` / `Origin`), and
+  `GET /api/db/export` refuses cross-site requests and navigations. Blocked requests get `403` with
+  `HOST_NOT_ALLOWED` or `CROSS_ORIGIN_REQUEST`. Security headers now also apply to the embedded bundles.
 
 ### Changed
 
