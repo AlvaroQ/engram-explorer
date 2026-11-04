@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Database import confirmation** — choosing a file in Settings → Import now submits with
+  `requestSubmit()`, so the confirmation dialog runs before anything is uploaded (`form.submit()` skipped it).
 - **`make demo`** — the target now starts the server in demo mode (`--demo` with the seeded database), so the
   demo banner is shown and writes are rejected.
 - **Concurrent database exports** — each export snapshot is written to its own private temp directory instead

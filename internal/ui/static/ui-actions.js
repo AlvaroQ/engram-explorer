@@ -9,7 +9,9 @@
 //   data-hide-target="id"          click: set #id display to none
 //   data-clear-target="id"         click: empty #id (innerHTML = '')
 //   data-escape-clear-target="id"  Escape while the element is in the DOM: empty #id
-//   data-auto-submit               change: submit the input's form (form.submit())
+//   data-auto-submit               change: submit the input's form via
+//                                  requestSubmit(), so submit listeners such
+//                                  as data-submit-confirm still run
 //   data-submit-confirm="text"     submit: cancel unless confirm(text) is accepted
 //   data-merge-confirm-source="p"  submit: set hx-confirm from #merge-target value
 //   data-show-on-swap              htmx:afterSwap into this element: clear display
@@ -60,7 +62,7 @@
   document.addEventListener('change', function (e) {
     var input = e.target;
     if (input instanceof Element && input.hasAttribute('data-auto-submit') && input.form) {
-      input.form.submit();
+      input.form.requestSubmit();
     }
   });
 

@@ -156,3 +156,23 @@ func TestCSP_UIActionsScriptServed(t *testing.T) {
 		}
 	}
 }
+
+// submitCallRe matches a direct HTMLFormElement.submit() call. form.submit()
+// fires no submit event, so the capture-phase data-submit-confirm hook would
+// never run; auto-submit must go through requestSubmit() instead.
+var submitCallRe = regexp.MustCompile(`\.submit\(\s*\)`)
+
+// TestUIActions_AutoSubmitUsesRequestSubmit checks the data-auto-submit hook
+// submits via form.requestSubmit(), which dispatches the submit event that the
+// data-submit-confirm listener (window.confirm) relies on (Settings import).
+func TestUIActions_AutoSubmitUsesRequestSubmit(t *testing.T) {
+	mux := http.NewServeMux()
+	ui.Mount(mux, ui.Deps{})
+	body := cspGet(t, mux, "/static/ui-actions.js", false).Body.String()
+	if !strings.Contains(body, ".requestSubmit()") {
+		t.Error("ui-actions.js must auto-submit with form.requestSubmit()")
+	}
+	if m := submitCallRe.FindAllString(body, -1); len(m) != 0 {
+		t.Errorf("ui-actions.js calls form.submit() (%d times), which skips the submit event and its confirm", len(m))
+	}
+}
