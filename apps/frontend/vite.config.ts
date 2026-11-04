@@ -71,7 +71,6 @@ export default defineConfig({
       output: {
         // Islands get stable, hash-free file names so templ pages can
         // reference them by predictable URL (/islands/<name>.js).
-        // The SPA entry keeps the default Vite fingerprinted name.
         entryFileNames: (chunk) => {
           if (chunk.name.startsWith('islands/')) {
             // e.g. "islands/type-breakdown" → "islands/type-breakdown.js"
@@ -79,7 +78,7 @@ export default defineConfig({
           }
           return 'assets/[name]-[hash].js';
         },
-        // Shared chunks and CSS keep fingerprinted names (SPA only cares).
+        // Shared chunks and CSS keep fingerprinted names.
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash][extname]',
       },

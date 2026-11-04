@@ -266,7 +266,7 @@ templ projectDetailRecentSessions(sessions []services.RecentSession, lang string
 }
 
 // projectDetailRecentObservations renders the recent-observations list.
-// "Open in Observations" links to the React SPA observations page (external href).
+// "Open in Observations" links to the Observations page (full-page href).
 templ projectDetailRecentObservations(obs []services.RecentObs, project string, lang string) {
 	if len(obs) == 0 {
 		<p class="p-4 text-sm text-fg-muted">{ T(lang, "projectDetail.recentObservations.empty") }</p>

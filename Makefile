@@ -16,7 +16,7 @@ templ:
 	templ generate ./internal/doctor/...
 	templ generate ./internal/ui/...
 
-## frontend: compile the React SPA + island bundles, then the Tailwind CSS the
+## frontend: compile the React island bundles, then the Tailwind CSS the
 ##           templ UI consumes (scans the .templ files; output embedded via the
 ##           ui package's //go:embed static).
 frontend:

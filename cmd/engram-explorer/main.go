@@ -1,6 +1,6 @@
 // Command engram-explorer is the single-binary server for the Engram Explorer dashboard.
-// It embeds the compiled React frontend and serves both the API and the SPA on
-// one port (default 127.0.0.1:8787).
+// It embeds the compiled React island bundles and serves the templ UI, the API
+// and the islands on one port (default 127.0.0.1:8787).
 // Build with: make build  (runs pnpm frontend build → embed → go build)
 // Version is injected via: -ldflags "-X main.version=<tag>"
 package main
@@ -175,8 +175,8 @@ func run() error {
 	apiHandler := httpapi.NewServeMux(container)
 
 	// Wrap the API mux with the embedded frontend handler.
-	// All /api/* traffic is forwarded to apiHandler; everything else is served
-	// from the embedded dist/ FS with SPA deep-link fallback.
+	// /islands/* and /assets/* are served from the embedded dist/ FS; everything
+	// else (templ UI, /api/*, /doctor/*, /static/*) goes to apiHandler.
 	handler := web.Handler(apiHandler)
 
 	addr := net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.Port))

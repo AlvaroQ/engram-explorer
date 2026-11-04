@@ -6,7 +6,7 @@ Sources read:
 - `apps/frontend/src/styles.css` (canonical HSL tokens, `.card`, brain keyframes)
 - `apps/frontend/tailwind.config.ts` (color mapping, radii, font stacks)
 - `internal/ui/static/styles.css` (mirrored tokens, spacing, radii, elevation, state layers, shell components)
-- `internal/doctor/static/styles.css` (doctor module status palette; `pico.min.css` is shipped but no longer loaded)
+- `internal/doctor/static/styles.css` (doctor module status palette)
 
 Known drift: the token triplets are duplicated by hand in `apps/frontend/src/styles.css` and `internal/ui/static/styles.css`. Treat `apps/frontend/src/styles.css` as canonical when they differ.
 

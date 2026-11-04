@@ -12,7 +12,7 @@ interface ErrorBoundaryState {
 /**
  * ErrorBoundary catches render-time errors in its subtree (e.g. a WebGL context
  * loss or a Three.js exception inside the R3F Canvas) and shows a fallback
- * instead of letting the error unmount the whole SPA. React has no hook-based
+ * instead of letting the error unmount the whole island. React has no hook-based
  * equivalent, so this stays a class component by necessity.
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {

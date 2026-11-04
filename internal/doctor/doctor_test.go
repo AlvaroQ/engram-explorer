@@ -93,20 +93,26 @@ func TestIsHTMXHeader(t *testing.T) {
 	}
 }
 
-// TestStaticPicoCSSServed verifies pico.min.css is embedded and served.
-func TestStaticPicoCSSServed(t *testing.T) {
+// TestStaticPicoCSSNotShipped verifies the unused Pico stylesheet is no longer
+// embedded, while the doctor stylesheet that replaced it is still served.
+func TestStaticPicoCSSNotShipped(t *testing.T) {
 	mux := http.NewServeMux()
 	doctor.Mount(mux, doctor.Deps{})
 
 	req := httptest.NewRequest(http.MethodGet, "/doctor/static/pico.min.css", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200 for pico.min.css, got %d", w.Code)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for pico.min.css, got %d", w.Code)
 	}
-	ct := w.Header().Get("Content-Type")
-	if !strings.Contains(ct, "css") {
+
+	req = httptest.NewRequest(http.MethodGet, "/doctor/static/styles.css", nil)
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for styles.css, got %d", w.Code)
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.Contains(ct, "css") {
 		t.Errorf("expected CSS content-type, got %q", ct)
 	}
 }

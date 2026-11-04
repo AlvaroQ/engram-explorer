@@ -15,7 +15,7 @@ export class ApiRequestError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  // The SPA is always served same-origin — by the Go binary in production, and
+  // The islands are always served same-origin — by the Go binary in production, and
   // via Vite's /api proxy in dev — so every /api/* fetch is same-origin: no base
   // URL, no CORS, and no proxy config needed.
   const res = await fetch(path, {

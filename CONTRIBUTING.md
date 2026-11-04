@@ -60,6 +60,6 @@ Open <http://127.0.0.1:8787>. The `engram serve` daemon is optional — the dash
 - Keep **one logical change per PR**.
 - **Do not** add AI attribution or `Co-Authored-By` trailers to commits.
 
-## Parity contract
+## Read-only database and API shape
 
-The dashboard opens the Engram SQLite database with a **read-only** handle so it never blocks the daemon's writes. When you touch data queries, keep responses in parity with the existing API shape — the templ templates and React islands depend on exact field names, nullability, and ordering.
+The dashboard opens the Engram SQLite database with a **read-only** handle so it never blocks the daemon's writes. When you touch data queries, keep responses compatible with the existing API shape — the templ templates and React islands depend on exact field names, nullability, and ordering.
