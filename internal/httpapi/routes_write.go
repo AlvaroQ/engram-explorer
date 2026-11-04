@@ -79,8 +79,7 @@ func handleObservationPatch(c *Container) http.HandlerFunc {
 		}
 
 		var body map[string]json.RawMessage
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			writeError(w, http.StatusBadRequest, "BAD_INPUT", "invalid JSON body", nil, c.Config.ExposeDetails)
+		if !decodeJSONBody(w, r, &body, c.Config.ExposeDetails) {
 			return
 		}
 
@@ -201,8 +200,7 @@ func handleAssignProject(c *Container, entity services.EntityKind) http.HandlerF
 		var body struct {
 			Project string `json:"project"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			writeError(w, http.StatusBadRequest, "BAD_INPUT", "invalid JSON body", nil, c.Config.ExposeDetails)
+		if !decodeJSONBody(w, r, &body, c.Config.ExposeDetails) {
 			return
 		}
 		if strings.TrimSpace(body.Project) == "" {
@@ -303,8 +301,7 @@ func handleProjectRename(c *Container) http.HandlerFunc {
 			Target string `json:"target"`
 			Mode   string `json:"mode"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			writeError(w, http.StatusBadRequest, "BAD_INPUT", "invalid JSON body", nil, c.Config.ExposeDetails)
+		if !decodeJSONBody(w, r, &body, c.Config.ExposeDetails) {
 			return
 		}
 		if strings.TrimSpace(body.Target) == "" {
