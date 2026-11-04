@@ -7,8 +7,8 @@ import (
 )
 
 // DemoBanner renders a thin dismissible bar at the top of the page when the
-// server is running in demo mode. Dismissal is client-side only via a hidden
-// checkbox toggle — no JS framework, no round-trip.
+// server is running in demo mode. Dismissal is client-side only: the button's
+// data-hide-target is handled by /static/ui-actions.js — no round-trip.
 templ DemoBanner(lang string) {
 	<div class="demo-banner" id="demo-banner" role="alert">
 		<span class="demo-banner-text">{ T(lang, "demo.banner.text") }</span>
@@ -16,7 +16,7 @@ templ DemoBanner(lang string) {
 			type="button"
 			class="demo-banner-dismiss"
 			aria-label={ T(lang, "demo.banner.dismiss") }
-			onclick="document.getElementById('demo-banner').style.display='none'"
+			data-hide-target="demo-banner"
 		>
 			<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 				<line x1="18" y1="6" x2="6" y2="18"></line>
@@ -35,10 +35,14 @@ templ Layout(title, activeNav, lang, theme, sidebarState string, content templ.C
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<!-- htmx never evaluates attribute code (hx-on, trigger filters, js:):
+			     the CSP has no 'unsafe-eval' and behaviours live in ui-actions.js. -->
+			<meta name="htmx-config" content='{"allowEval":false}'/>
 			<title>{ title } — Engram</title>
 			<link rel="stylesheet" href="/static/app.css"/>
 			<link rel="stylesheet" href="/static/styles.css"/>
 			<script src="/static/htmx.min.js" defer></script>
+			<script src="/static/ui-actions.js" defer></script>
 			<!-- Island loader: mounts React components declared with data-island.
 			     Only fetches island bundles when [data-island] elements are present. -->
 			<script type="module" src="/islands/loader.js"></script>
@@ -86,10 +90,12 @@ templ LayoutFullBleed(title, activeNav, lang, theme, sidebarState string, conten
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<meta name="htmx-config" content='{"allowEval":false}'/>
 			<title>{ title } — Engram</title>
 			<link rel="stylesheet" href="/static/app.css"/>
 			<link rel="stylesheet" href="/static/styles.css"/>
 			<script src="/static/htmx.min.js" defer></script>
+			<script src="/static/ui-actions.js" defer></script>
 			<script type="module" src="/islands/loader.js"></script>
 		</head>
 		<body>

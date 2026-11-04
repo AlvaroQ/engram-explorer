@@ -880,7 +880,7 @@ func ccsLoadMoreRow(cursor string, params services.CCSessionListParams, lang str
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 72, "\" hx-target=\"#cc-sessions-tbody\" hx-swap=\"beforeend\" hx-on::after-request=\"document.getElementById('cc-sessions-load-more-row')?.remove()\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 72, "\" hx-target=\"#cc-sessions-tbody\" hx-swap=\"beforeend\" data-remove-after-request=\"cc-sessions-load-more-row\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
