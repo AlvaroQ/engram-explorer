@@ -20,7 +20,12 @@ type PromptRow struct {
 // PromptWithSnippet is used by the search endpoint.
 type PromptWithSnippet struct {
 	PromptRow
+	// Snippet keeps the API contract: plain text with literal <mark> delimiters.
+	// The text is not HTML-escaped; consumers must render it as text.
 	Snippet string `json:"snippet"`
+	// Segments is the parsed snippet for HTML rendering: each segment is
+	// rendered escaped and only Marked segments are wrapped in <mark>.
+	Segments []fts.Segment `json:"-"`
 }
 
 // PromptsListParams holds filter parameters for the list endpoint.
@@ -64,13 +69,13 @@ func PromptsSearch(db sqlite.Querier, rawQ string, limit int) ([]PromptWithSnipp
 		return []PromptWithSnippet{}, nil
 	}
 	query := `SELECT p.id, p.session_id, p.content, p.project, p.created_at, p.sync_id,
-		snippet(prompts_fts, 0, '<mark>', '</mark>', '…', 16) AS snippet
+		snippet(prompts_fts, 0, ?, ?, '…', 16) AS snippet
 		FROM user_prompts p
 		JOIN prompts_fts ON prompts_fts.rowid = p.id
 		WHERE prompts_fts MATCH ?
 		ORDER BY rank, p.id DESC
 		LIMIT ?`
-	rows, err := db.Query(query, sanitized, limit)
+	rows, err := db.Query(query, fts.HighlightStart, fts.HighlightEnd, sanitized, limit)
 	if err != nil {
 		// FTS table may not exist; mirror Node's silent fallback.
 		return []PromptWithSnippet{}, nil
@@ -82,6 +87,8 @@ func PromptsSearch(db sqlite.Querier, rawQ string, limit int) ([]PromptWithSnipp
 		if err := rows.Scan(&r.ID, &r.SessionID, &r.Content, &r.Project, &r.CreatedAt, &r.SyncID, &r.Snippet); err != nil {
 			return nil, err
 		}
+		r.Segments = fts.SplitHighlight(r.Snippet)
+		r.Snippet = fts.MarkupHighlight(r.Snippet)
 		results = append(results, r)
 	}
 	if err := rows.Err(); err != nil {

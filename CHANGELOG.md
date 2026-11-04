@@ -23,6 +23,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Settings DB hot-swap** — changing the Engram database path from Settings now swaps the pool on the
   provider registry path as well.
 
+### Security
+
+- **Stored XSS in prompt search** — FTS snippets are no longer rendered as raw HTML. Snippets are built with
+  private-use sentinel delimiters, rendered as escaped text, and only the match is wrapped in `<mark>`. The
+  JSON `snippet` field keeps its `<mark>` delimiters and must be rendered as text by API consumers.
+
 ### Changed
 
 - **Go toolchain** — releases build with Go 1.26.10 (`toolchain` directive in `go.mod`); the minimum
