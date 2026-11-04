@@ -1,8 +1,8 @@
 // Package web embeds the compiled React island bundles and wires them with
 // the API handler into a single http.Handler.  The embedded FS is populated
 // by `make embed` which copies apps/frontend/dist/* into internal/web/dist/.
-// A minimal placeholder dist/islands/.keep is committed so that
-// `go build ./...` always compiles without running the frontend build first.
+// A minimal placeholder dist/index.html is committed so that `go build ./...`
+// always compiles on a fresh clone without running the frontend build first.
 package web
 
 import (
