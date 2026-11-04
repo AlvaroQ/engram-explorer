@@ -206,8 +206,8 @@ func EnsureConfig(configHome string, resolved Config) (*ProfileStore, error) {
 }
 
 // ProfileFromConfig is the exported form of profileFromResolved. It builds a
-// Profile from an already-resolved Config. Used for in-memory stores (demo
-// mode and the fallback when config.json cannot be loaded) and by tests.
+// Profile from an already-resolved Config. Used for the in-memory store boot
+// falls back to when config.json cannot be loaded, and by tests.
 func ProfileFromConfig(cfg Config) Profile {
 	return profileFromResolved(cfg)
 }

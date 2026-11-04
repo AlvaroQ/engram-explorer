@@ -70,14 +70,15 @@ engram serve   # creates ~/.engram/engram.db on first run
 
 ### 👀 Just want to look around first? (demo data)
 
-No Engram, no real data needed — seed a realistic demo database and explore every view. Requires [building from source](#-build-from-source):
+No Engram, no real data needed — seed a realistic demo dataset and explore every view. Requires [building from source](#-build-from-source):
 
 ```bash
-go run ./cmd/seed-demo        # generates ./demo/engram.db
-./engram-explorer --demo      # run against the demo data (write actions disabled)
+make demo   # seeds ./demo (engram.db + sample Claude Code sessions) and runs read-only against it
 ```
 
-See [Command-line flags](#command-line-flags) for `--demo-db=<path>` and the matching env vars.
+`make demo` is a normal run with three environment variables — `ENGRAM_DATA_DIR=./demo`,
+`CLAUDE_PROJECTS_DIR=./demo/claude` and `ENGRAM_DASH_READONLY=true` — so it never reads `~/.engram` or
+`~/.claude/projects`, Engram write actions answer `503`, and Settings changes are saved in `./demo/config.json`.
 
 ---
 
@@ -145,10 +146,10 @@ The official plugin ecosystem talks to the daemon over HTTP at `127.0.0.1:7437`.
 git clone https://github.com/AlvaroQ/engram-explorer.git
 cd engram-explorer
 
-make build                   # frontend → embed → go build
-go run ./cmd/seed-demo       # seed a realistic demo DB in ./demo/engram.db
-./engram-explorer --demo     # run against demo data in demo mode
-# open http://127.0.0.1:8787
+make build                                  # frontend → embed → go build
+go run ./cmd/seed-demo --out ./demo --force # engram.db + sample Claude Code sessions in ./demo
+ENGRAM_DATA_DIR=./demo CLAUDE_PROJECTS_DIR=./demo/claude ENGRAM_DASH_READONLY=true ./engram-explorer
+# open http://127.0.0.1:8787   (`make demo` does the last two steps with `go run`)
 ```
 
 ### Path B — Use your real Engram database
@@ -251,13 +252,13 @@ If a profile references a path that no longer exists, that provider is marked **
 
 ### Command-line flags
 
-| Flag                         | Purpose                                                                                                                                                                                                                                                                                                                                                                   |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--demo`                     | Run against the demo database in **demo mode**: a demo banner is shown and write actions are disabled (API write endpoints return `403 DEMO_MODE`). The profile lives in memory only: `config.json` is neither read nor written, and data-source changes in Settings (database, Claude Code directory, modules, profiles, accounts) are refused. Same as `ENGRAM_DEMO=1`. |
-| `--demo-db=<path>`           | Demo database to use with `--demo`. Same as `ENGRAM_DEMO_DB`. Without it, `demo/engram.db` is looked up next to the executable, then in the working directory; if none exists the binary exits with `demo database not found … run: go run ./cmd/seed-demo`.                                                                                                              |
-| `--version`, `-v`, `version` | Print `engram-explorer <version>` and exit.                                                                                                                                                                                                                                                                                                                               |
+| Flag                         | Purpose                                     |
+| ---------------------------- | ------------------------------------------- |
+| `--version`, `-v`, `version` | Print `engram-explorer <version>` and exit. |
 
-The demo database is not shipped with release binaries — generate it with `go run ./cmd/seed-demo` (or `make seed-demo`).
+The former demo mode (`--demo`, `--demo-db`, `ENGRAM_DEMO`, `ENGRAM_DEMO_DB`) was removed: the binary refuses to
+start when one of them is set and points to `make demo`. The demo dataset is not shipped with release binaries —
+generate it with `go run ./cmd/seed-demo` (or `make seed-demo`).
 
 ### Environment variables
 
@@ -274,8 +275,6 @@ The demo database is not shipped with release binaries — generate it with `go 
 | `LOG_LEVEL`                | `info` / `debug` in dev | Logging verbosity: `debug`, `info`, `warn`, `error`                                                                                               |
 | `ENGRAM_DASH_ENV`          | `production`            | Set to `development` to expose internal error details in API responses and trust the Vite dev server origins (`localhost:5173`, `127.0.0.1:5173`) |
 | `ENGRAM_DASH_READONLY`     | `false`                 | Set to `true` to disable all mutating routes (returns `503`)                                                                                      |
-| `ENGRAM_DEMO`              | unset                   | `1`, `true`, `yes`, or `on` enables demo mode (same as `--demo`)                                                                                  |
-| `ENGRAM_DEMO_DB`           | `demo/engram.db`        | Demo database path used in demo mode (same as `--demo-db=<path>`)                                                                                 |
 
 ### config.json (persistent settings)
 
@@ -310,7 +309,7 @@ For a strict viewer with **no** write capability, start with `ENGRAM_DASH_READON
 
 The dashboard shows the **onboarding screen** instead of crashing. From there you can activate Engram or Claude Code Sessions. If you have Engram but it isn't auto-detected: go to **Settings → Modules** and enter the path to `engram.db`, or set `ENGRAM_DATA_DIR=/path/to/dir` before starting.
 
-To get a real DB: `brew install gentleman-programming/tap/engram && engram serve`. To try demo data: `go run ./cmd/seed-demo`, then `./engram-explorer --demo`.
+To get a real DB: `brew install gentleman-programming/tap/engram && engram serve`. To try demo data: `make demo`.
 
 </details>
 
@@ -377,7 +376,7 @@ engram-explorer/
 ├── go.mod                          # module github.com/AlvaroQ/engram-explorer
 ├── cmd/
 │   ├── engram-explorer/            # Binary entry point — config → container → serve
-│   └── seed-demo/                  # Demo database seeder (generates ./demo/engram.db)
+│   └── seed-demo/                  # Demo dataset seeder (./demo/engram.db + ./demo/claude)
 ├── internal/
 │   ├── config/                     # Env-var config, ProfileStore, EnsureConfig
 │   ├── httpapi/                    # net/http mux, routes, middleware, container (/api/*)

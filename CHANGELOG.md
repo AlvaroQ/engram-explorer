@@ -36,9 +36,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   error instead of panicking.
 - **`/api/health` after a database switch** — `db.path` reports the database in use after a Settings switch (it
   kept the path opened at startup).
-- **Demo mode served the real database** — with an existing `config.json` profile, `--demo` served the profile's
-  database. Demo mode now runs on an in-memory profile: it always serves the demo database and never reads or
-  writes `config.json`.
 - **Environment overrides ignored** — `ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR` and `ENGRAM_DAEMON_URL` were ignored once
   `config.json` existed; they now win over the saved profile at startup and are never written to disk.
 - **Profile store races** — concurrent Settings requests no longer race on the profile store (`config.Store`
@@ -50,8 +47,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   rolls the switch back without leaking instances.
 - **Database import confirmation** — choosing a file in Settings → Import now submits with
   `requestSubmit()`, so the confirmation dialog runs before anything is uploaded (`form.submit()` skipped it).
-- **`make demo`** — the target now starts the server in demo mode (`--demo` with the seeded database), so the
-  demo banner is shown and writes are rejected.
 - **Concurrent database exports** — each export snapshot is written to its own private temp directory instead
   of a second-resolution file name, so two exports in the same second no longer fail with `500` (and one no
   longer deletes the other's file).
@@ -145,6 +140,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 
+- **BREAKING: demo mode** — `--demo`, `--demo-db`, `ENGRAM_DEMO`, `ENGRAM_DEMO_DB`, the demo banner and the
+  `403 DEMO_MODE` answer are gone. The binary now refuses to start when one of those flags or variables is set
+  (instead of serving your real data) and names the replacement. `make demo` seeds `./demo` — `engram.db` plus
+  sample Claude Code sessions in `./demo/claude` — and runs the normal binary with `ENGRAM_DATA_DIR=./demo`,
+  `CLAUDE_PROJECTS_DIR=./demo/claude` and `ENGRAM_DASH_READONLY=true`: write routes answer
+  `503 RW_UNAVAILABLE`, Settings changes persist in `./demo/config.json`, and `~/.claude/projects` is no longer
+  read by the demo. Scripts that ran `engram-explorer --demo` must switch to `make demo` or those variables.
 - `doctor.IsHTMX`, `doctor.ErrorPartial` and `doctor.EmptyState` (internal): the doctor module reuses the UI
   shell helpers (`ui.Render`, `ui.RenderError`, `ui.IsHTMX`, `ui.RequireRW`, `ui.ErrorPartial`,
   `ui.EmptyState`) instead of keeping copies.

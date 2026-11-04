@@ -100,7 +100,7 @@ func NewContainer(cfg config.Config, logger *slog.Logger) (*Container, error) {
 
 // ReloadEngramDB validates newPath, opens fresh pools, swaps them in live, and
 // saves the path into the active profile of config.json (through the Store,
-// so an ephemeral demo store saves nothing). The previous pools are closed after a short grace so
+// so an ephemeral store saves nothing). The previous pools are closed after a short grace so
 // in-flight queries can drain. On any validation/open error the current DB is
 // left untouched. Live reads of the path go through c.Paths; c.Config is the
 // immutable startup snapshot and is not mutated here.

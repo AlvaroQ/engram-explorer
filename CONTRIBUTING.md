@@ -8,14 +8,15 @@ By participating in this project you agree to abide by its [Code of Conduct](./C
 
 - **Go 1.25+** (the backend + single binary; matches the `go` directive in `go.mod`)
 - **Node.js 20+** and **pnpm 10+** (only to build the frontend that gets embedded)
-- An Engram database at `~/.engram/engram.db` — or generate a demo one with `go run ./cmd/seed-demo` (see below)
+- An Engram database at `~/.engram/engram.db` — or run `make demo`, which seeds `./demo` with `go run ./cmd/seed-demo`
+  and starts the binary read-only against it
 
 ## Project layout
 
 | Path                   | What                                                                                                               |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `cmd/engram-explorer/` | Single-binary entrypoint — serves the templ+HTMX UI **and** the JSON API on one port                               |
-| `cmd/seed-demo/`       | Generates a self-contained demo database so you can try the app without Engram                                     |
+| `cmd/seed-demo/`       | Generates the demo dataset (Engram database + sample Claude Code sessions) used by `make demo`                     |
 | `internal/ui/`         | Primary UI: templ+HTMX server-rendered pages, i18n (en/es), layout, static assets (Tailwind CSS)                   |
 | `internal/doctor/`     | Diagnostic module: `/doctor/sync`, `/doctor/orphans` (templ+HTMX, reuses services layer)                           |
 | `internal/`            | Go backend — `config`, `sqlite` (read-only + read-write pools), `services`, `httpapi`, `web` (embedding), `daemon` |

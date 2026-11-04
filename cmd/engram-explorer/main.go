@@ -146,21 +146,15 @@ func run(args []string) error {
 func buildContainer(cfg config.Config, logger *slog.Logger) *httpapi.Container {
 	// Configuration precedence: env > config.json (active profile) > default.
 	// config.json is the only persisted source; env overrides are applied in
-	// memory by the store and never saved. Demo mode never reads or writes
-	// config.json: it serves the demo database from an ephemeral store.
-	var store *config.Store
-	if cfg.DemoMode {
+	// memory by the store and never saved.
+	store, err := config.OpenStore(cfg)
+	if err != nil {
+		// Non-fatal, and never overwrite an unreadable config.json: run on an
+		// ephemeral profile derived from env + defaults.
+		logger.Warn("could not load or seed config.json; using in-memory defaults (changes will not be saved)",
+			"err", err,
+		)
 		store = config.NewMemoryStore(cfg)
-	} else {
-		var err error
-		if store, err = config.OpenStore(cfg); err != nil {
-			// Non-fatal, and never overwrite an unreadable config.json: run on an
-			// ephemeral profile derived from env + defaults.
-			logger.Warn("could not load or seed config.json; using in-memory defaults (changes will not be saved)",
-				"err", err,
-			)
-			store = config.NewMemoryStore(cfg)
-		}
 	}
 	_, persisted, _ := store.ActiveProfile()
 	activeProfile := store.Effective(persisted)

@@ -27,8 +27,8 @@ func OpenStore(resolved Config) (*Store, error) {
 
 // NewMemoryStore returns an ephemeral Store holding a single "default" profile
 // built from cfg (ProfileFromConfig). Nothing it does is ever written to disk:
-// demo mode uses it so the demo database is served and config.json is never
-// read or modified, and boot falls back to it when config.json is unreadable.
+// boot falls back to it when config.json is unreadable, so a file the user may
+// want to repair is never overwritten.
 func NewMemoryStore(cfg Config) *Store {
 	data := ProfileStore{
 		Version:       1,
