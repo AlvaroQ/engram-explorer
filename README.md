@@ -231,6 +231,8 @@ Both are **Tier-1**: if not found at their default paths the UI keeps them visib
 
 **Disabled modules:** routes are mounted once at startup and follow the module's live state. While a module is disabled its API routes answer `503` with code `MODULE_DISABLED` and its pages show "This module is disabled. Enable it in Settings → Modules."; enabling it serves them again without a restart. A request that is already running when a module is disabled or the profile changes finishes on the data source it started with.
 
+**Limits:** that grace is bounded. A superseded data source waits at most **30 s** (the drain timeout) for the requests still using it, then it is closed and a request still running on it fails. The HTTP server's write timeout is also **30 s**, so no response can take longer than that in any case — a database import that needs more time fails either way.
+
 **To activate a Tier-1 provider manually:** Settings → Modules → find the `detected`/`registered` row → enter the path → **Validate & Activate**. On success it becomes `enabled` and its sidebar section appears immediately; the path is persisted to `~/.engram/config.json`.
 
 ---

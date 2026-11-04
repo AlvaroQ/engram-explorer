@@ -19,16 +19,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - **Disabled-module page** — opening a disabled module's page directly shows the full app layout (sidebar,
-  account switcher, demo banner) with the notice and status `503`, instead of an unstyled fragment.
+  account switcher) with the notice and status `503`, instead of an unstyled fragment.
 - **Module toggles and profile switches during requests** — a module disabled, re-opened or switched while
   pages and API calls are in flight no longer fails them with `500` ("database is closed"): each request keeps
-  the data source it started with, and the old one is closed when those requests finish (at most 30 s later).
+  the data source it started with, and the old one is closed when those requests finish (at most 30 s later). A
+  request still running after that 30 s drain timeout has its data source closed under it and fails; the HTTP
+  write timeout is also 30 s, so no response could outlast it anyway (see "Limits" in the README).
+- **Failed module re-open kept the old data source open** — when re-opening a module fails (it becomes `errored`),
+  its previous database or directory handle is now closed once the requests using it finish, instead of staying
+  open until the server stops. Disabling an `errored` module closes anything it still held.
+- **Health-check log noise** — a failing provider health check (missing Claude Code projects directory, unusable
+  Engram database) is logged once when it starts failing and once when it recovers, through the configured
+  logger, instead of a warning on every `/api/health` poll.
+- **Maintenance page sidebar** — Settings → Maintenance and the sync project page show the same sidebar as the
+  other pages (enabled modules only, account switcher) instead of a fixed Engram + Claude Code layout.
 - **Stale cloud locale strings** — removed leftover UI strings that claimed the `engram` CLI has no
   `cloud unenroll` and that the dashboard writes `sync_enrolled_projects` directly.
-- **Demo mode data-source lock** — demo mode rejects every change of data source (Engram database path, Claude Code
-  directory, module enable/disable and path, profile create/switch/delete, Claude Code accounts) with "Write
-  operations are disabled in demo mode.", so a demo instance can never be repointed at a real database. Theme,
-  language, sidebar and advanced-view preferences still work.
 - **Module enable/disable without restart** — enabling a module in Settings serves its pages, API and
   maintenance routes right away (they used to 404 until a restart when the module was off at boot). While a
   module is disabled its API routes answer `503 MODULE_DISABLED` and its pages show a localized notice, instead
