@@ -385,12 +385,25 @@ func handleDBExport(c *Container) http.HandlerFunc {
 			return
 		}
 
-		tmpPath, err := services.ExportSnapshot(r.Context(), c.RWDB)
+		// Build filename stamp matching the Node route format: "YYYY-MM-DDTHH-MM-SS"
+		stamp := strings.NewReplacer(":", "-", " ", "T").Replace(services.NowSqlite())
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", `attachment; filename="engram-backup-`+stamp+`.db"`)
+
+		// HEAD (routed here by the GET pattern) only describes the download:
+		// building a full snapshot just to discard it would let HEAD requests
+		// run VACUUM INTO for free.
+		if r.Method == http.MethodHead {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		tmpPath, cleanup, err := services.ExportSnapshot(r.Context(), c.RWDB)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "INTERNAL", "export failed", err.Error(), c.Config.ExposeDetails)
 			return
 		}
-		defer os.Remove(tmpPath)
+		defer cleanup()
 
 		f, err := os.Open(tmpPath)
 		if err != nil {
@@ -405,11 +418,6 @@ func handleDBExport(c *Container) http.HandlerFunc {
 			return
 		}
 
-		// Build filename stamp matching the Node route format: "YYYY-MM-DDTHH-MM-SS"
-		stamp := strings.NewReplacer(":", "-", " ", "T").Replace(services.NowSqlite())
-
-		w.Header().Set("Content-Type", "application/octet-stream")
-		w.Header().Set("Content-Disposition", `attachment; filename="engram-backup-`+stamp+`.db"`)
 		w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
 		w.WriteHeader(http.StatusOK)
 		_, _ = io.Copy(w, f)

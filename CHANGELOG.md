@@ -20,6 +20,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **`make demo`** — the target now starts the server in demo mode (`--demo` with the seeded database), so the
   demo banner is shown and writes are rejected.
+- **Concurrent database exports** — each export snapshot is written to its own private temp directory instead
+  of a second-resolution file name, so two exports in the same second no longer fail with `500` (and one no
+  longer deletes the other's file).
+- **`HEAD /api/db/export`** — answers the download headers without building a snapshot (it used to run a full
+  `VACUUM INTO` and discard it).
 - **Fresh clone build** — `go build ./...` compiles on a fresh clone again: the `internal/web/dist`
   placeholder is committed (it was excluded by the generic `dist/` ignore rule).
 - **Settings DB hot-swap** — changing the Engram database path from Settings now swaps the pool on the

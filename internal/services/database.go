@@ -74,18 +74,24 @@ var requiredTables = []string{"sessions", "observations", "user_prompts"}
 // ---------------------------------------------------------------------------
 
 // ExportSnapshot creates a consistent read-only snapshot of the DB at rwDB
-// using VACUUM INTO and writes it to a temp file. Returns the temp file path.
-// The caller is responsible for deleting the temp file.
-func ExportSnapshot(ctx context.Context, rwDB sqlite.Querier) (string, error) {
-	dest := filepath.Join(os.TempDir(), fmt.Sprintf("engram-export-%s.db", fileTimestamp()))
+// using VACUUM INTO. The snapshot lives in a fresh private temp directory
+// (os.MkdirTemp), so concurrent exports never collide and the name is not
+// predictable. It returns the snapshot path and a cleanup func that removes the
+// directory; the caller must call cleanup once the file has been served.
+func ExportSnapshot(ctx context.Context, rwDB sqlite.Querier) (path string, cleanup func(), err error) {
+	dir, err := os.MkdirTemp("", "engram-export-*")
+	if err != nil {
+		return "", nil, fmt.Errorf("create export dir: %w", err)
+	}
+	cleanup = func() { _ = os.RemoveAll(dir) }
+	dest := filepath.Join(dir, "engram-export.db")
 
 	// VACUUM INTO works with WAL mode and is safe for online backup.
-	_, err := rwDB.ExecContext(ctx, `VACUUM INTO ?`, dest)
-	if err != nil {
-		_ = os.Remove(dest)
-		return "", fmt.Errorf("VACUUM INTO: %w", err)
+	if _, err := rwDB.ExecContext(ctx, `VACUUM INTO ?`, dest); err != nil {
+		cleanup()
+		return "", nil, fmt.Errorf("VACUUM INTO: %w", err)
 	}
-	return dest, nil
+	return dest, cleanup, nil
 }
 
 // fileTimestamp returns a sortable timestamp string safe for filenames.

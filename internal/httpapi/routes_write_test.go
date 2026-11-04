@@ -616,3 +616,34 @@ func TestDBExport_NoRWDB_Returns503(t *testing.T) {
 		t.Errorf("status: got %d, want 503", rec.Code)
 	}
 }
+
+// HEAD on the export route answers the download metadata without building a
+// snapshot: with an unwritable temp dir a GET fails, a HEAD still succeeds.
+func TestDBExport_HEADDoesNotExport(t *testing.T) {
+	handler := httpapi.NewServeMux(newWriteContainer(t))
+	ro := t.TempDir()
+	if err := os.Chmod(ro, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(ro, 0o700) })
+	t.Setenv("TMPDIR", ro)
+
+	if rec := doGet(t, handler, "/api/db/export"); rec.Code != http.StatusInternalServerError {
+		t.Fatalf("GET with unwritable temp dir: got %d, want 500", rec.Code)
+	}
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodHead, "/api/db/export", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("HEAD status: got %d, want 200 (body: %s)", rec.Code, rec.Body.String())
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != "application/octet-stream" {
+		t.Errorf("Content-Type: got %q", ct)
+	}
+	if cd := rec.Header().Get("Content-Disposition"); !strings.HasPrefix(cd, `attachment; filename="engram-backup-`) {
+		t.Errorf("Content-Disposition: got %q", cd)
+	}
+	if rec.Body.Len() != 0 {
+		t.Errorf("HEAD body: got %d bytes, want 0", rec.Body.Len())
+	}
+}
