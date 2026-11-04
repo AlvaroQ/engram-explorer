@@ -47,9 +47,10 @@ build: templ frontend embed
 run: build
 	./$(BINARY)
 
-## dev: run the Go binary in watch/dev mode (frontend dev server handled separately via pnpm dev)
+## dev: run the Go binary in development mode (detailed errors, Vite dev origins trusted;
+##      frontend dev server handled separately via pnpm dev)
 dev:
-	go run -ldflags "-X main.version=dev" ./cmd/engram-explorer
+	ENGRAM_DASH_ENV=development go run -ldflags "-X main.version=dev" ./cmd/engram-explorer
 
 ## test: run all Go tests
 test:

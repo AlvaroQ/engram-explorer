@@ -259,21 +259,21 @@ The demo database is not shipped with release binaries — generate it with `go 
 
 ### Environment variables
 
-| Env var                    | Default                 | Purpose                                                                            |
-| -------------------------- | ----------------------- | ---------------------------------------------------------------------------------- |
-| `ENGRAM_DATA_DIR`          | `~/.engram`             | Directory containing `engram.db`; also the location of `config.json`               |
-| `CLAUDE_PROJECTS_DIR`      | `~/.claude/projects`    | Directory where Claude Code stores session transcripts                             |
-| `DASHBOARD_HOST`           | `127.0.0.1`             | HTTP bind address; must be loopback unless `DASHBOARD_ALLOW_REMOTE=true`           |
-| `DASHBOARD_ALLOW_REMOTE`   | `false`                 | Set to `true` to allow a non-loopback `DASHBOARD_HOST` (no authentication!)        |
-| `DASHBOARD_PORT`           | `8787`                  | HTTP listen port                                                                   |
-| `ENGRAM_PORT`              | `7437`                  | Port of the local `engram serve` daemon (used when `ENGRAM_DAEMON_URL` is not set) |
-| `ENGRAM_DAEMON_URL`        | `http://127.0.0.1:7437` | Full base URL of the Engram daemon (overrides `ENGRAM_PORT`)                       |
-| `ENGRAM_DAEMON_TIMEOUT_MS` | `1500`                  | HTTP timeout for daemon proxy calls (milliseconds)                                 |
-| `LOG_LEVEL`                | `info` / `debug` in dev | Logging verbosity: `debug`, `info`, `warn`, `error`                                |
-| `ENGRAM_DASH_ENV`          | `production`            | Set to `development` to expose internal error details in API responses             |
-| `ENGRAM_DASH_READONLY`     | `false`                 | Set to `true` to disable all mutating routes (returns `503`)                       |
-| `ENGRAM_DEMO`              | unset                   | `1`, `true`, `yes`, or `on` enables demo mode (same as `--demo`)                   |
-| `ENGRAM_DEMO_DB`           | `demo/engram.db`        | Demo database path used in demo mode (same as `--demo-db=<path>`)                  |
+| Env var                    | Default                 | Purpose                                                                                                                                           |
+| -------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ENGRAM_DATA_DIR`          | `~/.engram`             | Directory containing `engram.db`; also the location of `config.json`                                                                              |
+| `CLAUDE_PROJECTS_DIR`      | `~/.claude/projects`    | Directory where Claude Code stores session transcripts                                                                                            |
+| `DASHBOARD_HOST`           | `127.0.0.1`             | HTTP bind address; must be loopback unless `DASHBOARD_ALLOW_REMOTE=true`                                                                          |
+| `DASHBOARD_ALLOW_REMOTE`   | `false`                 | Set to `true` to allow a non-loopback `DASHBOARD_HOST` (no authentication!)                                                                       |
+| `DASHBOARD_PORT`           | `8787`                  | HTTP listen port                                                                                                                                  |
+| `ENGRAM_PORT`              | `7437`                  | Port of the local `engram serve` daemon (used when `ENGRAM_DAEMON_URL` is not set)                                                                |
+| `ENGRAM_DAEMON_URL`        | `http://127.0.0.1:7437` | Full base URL of the Engram daemon (overrides `ENGRAM_PORT`)                                                                                      |
+| `ENGRAM_DAEMON_TIMEOUT_MS` | `1500`                  | HTTP timeout for daemon proxy calls (milliseconds)                                                                                                |
+| `LOG_LEVEL`                | `info` / `debug` in dev | Logging verbosity: `debug`, `info`, `warn`, `error`                                                                                               |
+| `ENGRAM_DASH_ENV`          | `production`            | Set to `development` to expose internal error details in API responses and trust the Vite dev server origins (`localhost:5173`, `127.0.0.1:5173`) |
+| `ENGRAM_DASH_READONLY`     | `false`                 | Set to `true` to disable all mutating routes (returns `503`)                                                                                      |
+| `ENGRAM_DEMO`              | unset                   | `1`, `true`, `yes`, or `on` enables demo mode (same as `--demo`)                                                                                  |
+| `ENGRAM_DEMO_DB`           | `demo/engram.db`        | Demo database path used in demo mode (same as `--demo-db=<path>`)                                                                                 |
 
 ### config.json (persistent settings)
 

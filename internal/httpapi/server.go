@@ -69,7 +69,7 @@ func NewServeMux(c *Container) http.Handler {
 
 	// Apply middleware stack (outermost = first to run).
 	var handler http.Handler = mux
-	handler = corsMiddleware(handler)
+	handler = corsMiddleware(handler, trustedDevOrigins(c.Config.Env))
 	handler = requestLogger(c.Logger, handler)
 	handler = secureHeaders(handler)
 

@@ -191,3 +191,42 @@ func TestGuard_EdgeCases(t *testing.T) {
 		}
 	}
 }
+
+// TestGuard_ViteOriginsOnlyInDevelopment: the Vite dev server origins
+// (localhost/127.0.0.1:5173) are trusted for CORS, CSRF and the export route
+// only when ENGRAM_DASH_ENV=development; in production they are foreign.
+func TestGuard_ViteOriginsOnlyInDevelopment(t *testing.T) {
+	const host = "127.0.0.1:8787"
+	for _, env := range []string{"development", "production"} {
+		t.Run(env, func(t *testing.T) {
+			c := newEngramContainer(t)
+			c.Config.Env = env
+			h := httpapi.NewHandler(c)
+			dev := env == "development"
+			for _, origin := range []string{"http://localhost:5173", "http://127.0.0.1:5173"} {
+				vite := map[string]string{"Origin": origin, "Sec-Fetch-Site": "same-site"}
+
+				rec := serveGuard(t, h, guardReq{method: http.MethodPost, path: "/api/projects/p/rename", host: host, headers: vite})
+				blocked := guardCode(t, rec) == "CROSS_ORIGIN_REQUEST"
+				if blocked == dev {
+					t.Errorf("POST from %s: blocked=%v (%d), want blocked=%v", origin, blocked, rec.Code, !dev)
+				}
+
+				rec = serveGuard(t, h, guardReq{method: http.MethodGet, path: "/api/db/export", host: host, headers: vite})
+				blocked = guardCode(t, rec) == "CROSS_ORIGIN_REQUEST"
+				if blocked == dev {
+					t.Errorf("export from %s: blocked=%v (%d), want blocked=%v", origin, blocked, rec.Code, !dev)
+				}
+
+				rec = serveGuard(t, h, guardReq{method: http.MethodGet, path: "/api/health", host: host, headers: map[string]string{"Origin": origin}})
+				acao := rec.Header().Get("Access-Control-Allow-Origin")
+				if dev && acao != origin {
+					t.Errorf("CORS for %s in development: got %q, want %q", origin, acao, origin)
+				}
+				if !dev && acao != "" {
+					t.Errorf("CORS for %s in production: got %q, want none", origin, acao)
+				}
+			}
+		})
+	}
+}

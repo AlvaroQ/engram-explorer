@@ -39,8 +39,8 @@ go run ./cmd/engram-explorer  # run backend
 For island hot-reload during development:
 
 ```bash
-# Terminal 1 — Go server
-go run ./cmd/engram-explorer
+# Terminal 1 — Go server (development mode trusts the Vite origin on :5173)
+make dev   # ENGRAM_DASH_ENV=development go run ./cmd/engram-explorer
 
 # Terminal 2 — Vite dev server (proxies /api/* to :8787)
 pnpm -F @engram-explorer/frontend dev

@@ -45,6 +45,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   configured `DASHBOARD_HOST`); unsafe methods must be same-origin (`Sec-Fetch-Site` / `Origin`), and
   `GET /api/db/export` refuses cross-site requests and navigations. Blocked requests get `403` with
   `HOST_NOT_ALLOWED` or `CROSS_ORIGIN_REQUEST`. Security headers now also apply to the embedded bundles.
+- **Vite dev origins only in development** — `http://localhost:5173` and `http://127.0.0.1:5173` are trusted
+  for CORS, cross-origin protection and `GET /api/db/export` only when `ENGRAM_DASH_ENV=development`
+  (`make dev`). In production they are treated like any other foreign origin.
 - **Cloud is read-only** — the dashboard no longer enrolls, unenrolls or syncs projects and never spawns the
   `engram` CLI. Removed `POST /api/cloud/{enroll,unenroll,sync,sync-all}`, `GET /api/cloud/capabilities`,
   `POST /doctor/sync/{project}/{enroll,unenroll,sync}`, `POST /projects/{project}/{enroll,unenroll}` and

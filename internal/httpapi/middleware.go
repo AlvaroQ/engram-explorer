@@ -29,22 +29,31 @@ func secureHeaders(next http.Handler) http.Handler {
 	})
 }
 
-// corsAllowedOrigins is the dev-only allow-list, matching the Node CORS config.
-// In production the frontend is served from the same origin (Go single binary),
-// so CORS headers are only emitted for the Vite dev server origin.
-var corsAllowedOrigins = map[string]bool{
+// viteDevOrigins are the Vite dev server origins. They are trusted (CORS,
+// cross-origin protection and the export route) only in development
+// (ENGRAM_DASH_ENV=development); in production the frontend is served from the
+// same origin by the Go binary and these origins are foreign like any other.
+var viteDevOrigins = map[string]bool{
 	"http://localhost:5173": true,
 	"http://127.0.0.1:5173": true,
 }
 
-// corsMiddleware applies CORS headers for the allow-listed origins.
-// In production the frontend is served from the same origin, so CORS headers
-// are only emitted when the request Origin is in the allow-list.
-func corsMiddleware(next http.Handler) http.Handler {
+// trustedDevOrigins returns the Vite dev origins when env is "development" and
+// an empty set otherwise.
+func trustedDevOrigins(env string) map[string]bool {
+	if env == "development" {
+		return viteDevOrigins
+	}
+	return nil
+}
+
+// corsMiddleware emits CORS headers only for the given trusted origins (the
+// Vite dev server in development, none in production).
+func corsMiddleware(next http.Handler, trusted map[string]bool) http.Handler {
 	const methods = "GET, POST, PATCH, DELETE, OPTIONS"
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		if origin != "" && corsAllowedOrigins[origin] {
+		if origin != "" && trusted[origin] {
 			h := w.Header()
 			h.Set("Access-Control-Allow-Origin", origin)
 			h.Set("Access-Control-Allow-Methods", methods)

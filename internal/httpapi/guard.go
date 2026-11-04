@@ -14,7 +14,7 @@ import (
 // NewHandler returns the complete production handler: the request guard in
 // front of the embedded island bundles and the API/UI mux.
 func NewHandler(c *Container) http.Handler {
-	return Guard(web.Handler(NewServeMux(c)), c.Config.Host, c.Logger)
+	return Guard(web.Handler(NewServeMux(c)), c.Config.Host, trustedDevOrigins(c.Config.Env), c.Logger)
 }
 
 // sameOriginOnlyGETs are safe-method routes that must not be triggered by
@@ -35,13 +35,15 @@ var sameOriginOnlyGETs = map[string]bool{
 //     without either header (curl, scripts) are not browser CSRF and pass.
 //   - GET /api/db/export additionally refuses cross-site and same-site fetches
 //     and navigations.
+//   - trustedOrigins (the Vite dev server, development only) count as
+//     same-origin for both checks.
 //   - Security headers are set on every response.
-func Guard(next http.Handler, configuredHost string, logger *slog.Logger) http.Handler {
+func Guard(next http.Handler, configuredHost string, trustedOrigins map[string]bool, logger *slog.Logger) http.Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
 	cop := http.NewCrossOriginProtection()
-	for origin := range corsAllowedOrigins {
+	for origin := range trustedOrigins {
 		if err := cop.AddTrustedOrigin(origin); err != nil {
 			panic("httpapi: invalid trusted origin " + origin + ": " + err.Error())
 		}
@@ -60,7 +62,7 @@ func Guard(next http.Handler, configuredHost string, logger *slog.Logger) http.H
 			writeError(w, http.StatusForbidden, "HOST_NOT_ALLOWED", "host not allowed", nil, false)
 			return
 		}
-		if sameOriginOnlyGETs[path.Clean("/"+r.URL.Path)] && !sameOriginRequest(r) {
+		if sameOriginOnlyGETs[path.Clean("/"+r.URL.Path)] && !sameOriginRequest(r, trustedOrigins) {
 			deny(w, r)
 			return
 		}
@@ -93,9 +95,9 @@ func hostAllowed(hostport, configuredHost string) bool {
 // sameOriginRequest reports whether a request is same-origin, a user-initiated
 // navigation (Sec-Fetch-Site: none), a trusted dev origin, or carries no
 // browser metadata at all (non-browser client).
-func sameOriginRequest(r *http.Request) bool {
+func sameOriginRequest(r *http.Request, trustedOrigins map[string]bool) bool {
 	origin := r.Header.Get("Origin")
-	if corsAllowedOrigins[origin] {
+	if trustedOrigins[origin] {
 		return true
 	}
 	switch r.Header.Get("Sec-Fetch-Site") {
