@@ -9,7 +9,10 @@ package engram
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
@@ -39,6 +42,55 @@ func SchemaValid(db *sql.DB) bool {
 		`SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('observations','sessions')`,
 	).Scan(&n)
 	return err == nil && n >= 2
+}
+
+// sqliteMagic is the 16-byte header every SQLite 3 database file starts with.
+const sqliteMagic = "SQLite format 3\x00"
+
+// ValidateDBFile checks that path is a usable Engram database before anything
+// is pointed at it: a regular file that starts with the SQLite header, opens
+// read-only, and passes SchemaValid. It is the single check shared by the
+// provider's Validate (Settings Modules path) and the Settings DB switcher.
+//
+// Error messages are user-facing: they name only the path the caller supplied
+// and never wrap the underlying OS or SQLite error text.
+func ValidateDBFile(path string) error {
+	if path == "" {
+		return errors.New("database path is required")
+	}
+	info, err := os.Stat(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("database file not found: %s", path)
+	}
+	if err != nil {
+		return fmt.Errorf("cannot access database file: %s", path)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("not a regular file: %s", path)
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("cannot read database file: %s", path)
+	}
+	header := make([]byte, len(sqliteMagic))
+	_, err = io.ReadFull(f, header)
+	f.Close()
+	if err != nil || string(header) != sqliteMagic {
+		return fmt.Errorf("not an SQLite database: %s", path)
+	}
+
+	// Same busy_timeout-aware read-only DSN as Detect, resilient against WAL
+	// checkpoint pressure from the Engram daemon.
+	db, err := sql.Open("sqlite", checkRODSN(path))
+	if err != nil {
+		return fmt.Errorf("cannot open database: %s", path)
+	}
+	defer db.Close()
+	if !SchemaValid(db) {
+		return fmt.Errorf("not an Engram database (missing observations or sessions tables): %s", path)
+	}
+	return nil
 }
 
 // checkRODSN returns the SQLite DSN for one-shot read-only schema checks used
@@ -201,26 +253,11 @@ func (p *engramProvider) Nav(inst providers.Instance) providers.NavGroup {
 }
 
 // Validate checks a candidate config before activation (Tier-1 manual path
-// entry). For Engram: (1) file must exist, (2) schema must be valid.
+// entry). It delegates to ValidateDBFile so the Modules path and the Settings
+// DB switcher apply the same check.
 func (p *engramProvider) Validate(ctx context.Context, cfg providers.ProviderConfig) error {
-	path := cfg.Path
-	if path == "" {
-		return fmt.Errorf("engram: path is required")
-	}
-	if _, err := os.Stat(path); err != nil {
-		return fmt.Errorf("engram: database file not found at %q: %w", path, err)
-	}
-
-	// Use the same busy_timeout-aware DSN as Detect to be resilient against
-	// WAL checkpoint pressure from the Engram daemon.
-	db, err := sql.Open("sqlite", checkRODSN(path))
-	if err != nil {
-		return fmt.Errorf("engram: cannot open database for validation: %w", err)
-	}
-	defer db.Close()
-
-	if !SchemaValid(db) {
-		return fmt.Errorf("engram: database at %q is not a valid Engram DB (missing observations or sessions tables)", path)
+	if err := ValidateDBFile(cfg.Path); err != nil {
+		return fmt.Errorf("engram: %w", err)
 	}
 	return nil
 }
