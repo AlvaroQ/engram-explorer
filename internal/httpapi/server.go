@@ -259,7 +259,7 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 //	{
 //	  "ok": bool,
 //	  "db": { "ok": bool, "path": string },
-//	  "daemon": { "ok": bool, "url": string, "error"?: string },
+//	  "daemon": { "ok": bool, "url": string, "error"?: string, "code"?: string },
 //	  "uptime_s": int
 //	}
 //
@@ -278,7 +278,13 @@ func healthHandler(c *Container) http.HandlerFunc {
 			"url": c.Config.DaemonBaseURL,
 		}
 		if !daemonResult.OK && daemonResult.Error != nil {
-			daemonBody["error"] = daemonResult.Error.Message
+			// The client error text names the URL and the dial error; only
+			// development (ExposeDetails) shows it. The code is always safe.
+			daemonBody["code"] = string(daemonResult.Error.Code)
+			daemonBody["error"] = "daemon unavailable"
+			if c.Config.ExposeDetails {
+				daemonBody["error"] = daemonResult.Error.Message
+			}
 		}
 
 		uptime := math.Floor(time.Since(startTime).Seconds())

@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **`/api/health` after a database switch** — `db.path` reports the database in use after a Settings switch (it
+  kept the path opened at startup).
 - **Demo mode served the real database** — with an existing `config.json` profile, `--demo` served the profile's
   database. Demo mode now runs on an in-memory profile: it always serves the demo database and never reads or
   writes `config.json`.
@@ -75,6 +77,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   by raw path alone, and `X-Forwarded-For` is ignored): database import 5/min, export 10/min, other write
   routes 120/min. Expired buckets are pruned. Rate-limited requests answer `429` with error code `RATE_LIMITED`
   (was `BAD_INPUT`) and a `Retry-After` header.
+- **Health endpoint without daemon error text** — when the daemon is unreachable, `/api/health` reports
+  `"error": "daemon unavailable"` plus a `code` (`NETWORK`, `TIMEOUT`, `HTTP`, `PARSE`); the raw client error (URL,
+  dial error) is only shown with `ENGRAM_DASH_ENV=development`.
 - **UI and doctor rate limit** — form posts and doctor actions (`POST`/`PUT`/`PATCH`/`DELETE` outside `/api/`) share a
   limiter of 120 requests per minute per client, method and route pattern (path parameters share one budget). API
   write routes keep their own limits and are not limited twice.

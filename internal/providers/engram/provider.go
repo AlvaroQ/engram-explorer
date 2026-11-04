@@ -281,9 +281,11 @@ type engramInstance struct {
 // This is what fixes the false-positive: an empty/schemaless DB now reports
 // ok=false.
 func (i *engramInstance) Health(ctx context.Context) providers.ProviderHealth {
+	// The path comes from the live RuntimePaths: a Settings DB switch
+	// (ReloadEngramDB) swaps the pools of this instance and updates it.
 	h := providers.ProviderHealth{
 		ID:   "engram",
-		Path: i.path,
+		Path: i.livePath(),
 	}
 
 	roDB := i.deps.RoDB
@@ -321,6 +323,16 @@ func (i *engramInstance) Health(ctx context.Context) providers.ProviderHealth {
 		}
 	}
 	return h
+}
+
+// livePath returns the database path currently served by this instance.
+func (i *engramInstance) livePath() string {
+	if i.deps.Paths != nil {
+		if p := i.deps.Paths.EngramDB(); p != "" {
+			return p
+		}
+	}
+	return i.path
 }
 
 // Close releases the SQLite pools. Called by the registry on profile switch
