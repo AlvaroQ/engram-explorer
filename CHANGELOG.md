@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Environment overrides ignored** — `ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR` and `ENGRAM_DAEMON_URL` were ignored once
+  `config.json` existed; they now win over the saved profile at startup and are never written to disk.
 - **Profile store races** — concurrent Settings requests no longer race on the profile store (`config.Store`
   guards it with a lock), and module toggles after a profile switch are saved into the new active profile
   instead of the previous one.

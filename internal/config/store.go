@@ -19,11 +19,16 @@ import (
 //
 // An ephemeral Store (NewEphemeralStore) applies changes in memory only and
 // never touches the disk; demo mode uses it so nothing it does is persisted.
+//
+// Environment overrides (OpenStore) are kept apart from the persisted data:
+// Effective applies them on top of a profile for the live providers, and they
+// are never saved.
 type Store struct {
 	mu         sync.RWMutex
 	data       ProfileStore
 	configHome string
 	ephemeral  bool
+	env        PathSettings // immutable after construction
 }
 
 // NewStore returns a Store persisted to config.json in configHome, holding a
@@ -117,7 +122,7 @@ func (s *Store) UpdateActive(fn func(name string, p *Profile) error) error {
 }
 
 // SwitchActive makes name the active profile. apply receives the next profile
-// and must bring the live providers in line with it (Registry.SwitchProfile);
+// (with environment overrides applied, see Effective) and must bring the live providers in line with it (Registry.SwitchProfile);
 // it runs under the write lock, so no other profile change interleaves. When
 // apply fails nothing changes. When the save fails, apply is called again with
 // the previous profile to restore the live providers and the error is returned.
@@ -130,7 +135,7 @@ func (s *Store) SwitchActive(name string, apply func(next Profile) error) error 
 		return usererr.New(fmt.Sprintf("profile %q not found", name))
 	}
 	prevName := s.data.ActiveProfile
-	if err := apply(cloneProfile(next)); err != nil {
+	if err := apply(s.Effective(next)); err != nil {
 		return err
 	}
 	err := s.updateLocked(func(st *ProfileStore) error {
@@ -139,7 +144,7 @@ func (s *Store) SwitchActive(name string, apply func(next Profile) error) error 
 	})
 	if err != nil {
 		if prev, ok := s.data.Profiles[prevName]; ok {
-			_ = apply(cloneProfile(prev))
+			_ = apply(s.Effective(prev))
 		}
 		return err
 	}

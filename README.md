@@ -279,7 +279,7 @@ The demo database is not shipped with release binaries — generate it with `go 
 
 Provider paths and account profiles are stored at `$ENGRAM_DATA_DIR/config.json` (default `~/.engram/config.json`), written atomically on every change. **You don't need to edit it manually — the Settings UI writes it for you.**
 
-**Precedence** (highest wins): **1.** environment variable → **2.** `config.json` active profile → **3.** legacy `explorer-settings.json` (read once on first run to seed the default) → **4.** built-in default. Existing users relying on env vars see no change.
+**Precedence** (highest wins): **1.** environment variable (`ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR`, `ENGRAM_DAEMON_URL`), applied in memory at startup and never saved → **2.** the active profile in `config.json`, the only file the explorer writes → **3.** built-in default. The legacy `explorer-settings.json` is read once, only to create `config.json` on first run, and is never written. While an environment variable is set it wins over a path saved in Settings; the saved value applies again once the variable is unset. `CLAUDE_PROJECTS_DIR` applies to the `default` Claude Code account.
 
 ---
 
