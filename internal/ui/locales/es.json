@@ -16,6 +16,7 @@
   },
   "common": {
     "errorGeneric": "Algo salió mal. Revisa el registro del servidor para más detalles.",
+    "moduleDisabled": "Este módulo está desactivado. Actívalo en Ajustes → Módulos.",
     "loading": "Cargando…",
     "loadMore": "Cargar más",
     "loadingMore": "Cargando más…",

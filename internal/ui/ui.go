@@ -109,6 +109,22 @@ type Deps struct {
 	// SetAdvancedView persists the advanced-view preference to the active
 	// profile in config.json. When nil, the toggle endpoint returns 503.
 	SetAdvancedView func(enabled bool) error
+
+	// Live, when non-nil, reports the data handles of the modules that are
+	// enabled right now. Mount calls it on every request and hands the
+	// handlers a copy of Deps carrying them, so enabling or disabling a module
+	// needs no remount and no handler keeps a closed pool. Memory pages
+	// answer 503 (RenderModuleDisabled) while RoDB is nil, Claude Code pages
+	// while Claude is false. When nil (tests, legacy path) RoDB/RWDB are used
+	// as mounted and no page is gated.
+	Live func() LiveHandles
+}
+
+// LiveHandles is the per-request module state returned by Deps.Live.
+type LiveHandles struct {
+	RoDB   sqlite.Querier // read-only pool; nil when the Engram module is not enabled
+	RWDB   sqlite.Querier // read-write pool; nil when writes are not available
+	Claude bool           // the Claude Code sessions module is enabled
 }
 
 // ---------------------------------------------------------------------------
@@ -225,6 +241,40 @@ func RequireRW(demoMode, writable bool, h http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// RenderModuleDisabled answers 503 with a localized HTML message for a page
+// whose module is disabled. Shared by the HTTP layer for provider-owned routes.
+func RenderModuleDisabled(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusServiceUnavailable)
+	_ = ErrorPartial(T(langForRequest(r), "common.moduleDisabled")).Render(NavContext(r), w)
+}
+
+// handlerFactory builds a page handler from Deps.
+type handlerFactory func(Deps) http.HandlerFunc
+
+// liveHandler builds the handler per request from Deps carrying the handles
+// d.Live reports right now; available, when non-nil, gates the page (503 via
+// RenderModuleDisabled when it returns false). Without d.Live the handler is
+// built once from d and never gated.
+func liveHandler(d Deps, available func(LiveHandles) bool, factory handlerFactory) http.HandlerFunc {
+	if d.Live == nil {
+		return factory(d)
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		h := d.Live()
+		if available != nil && !available(h) {
+			RenderModuleDisabled(w, r)
+			return
+		}
+		dd := d
+		dd.RoDB, dd.RWDB = h.RoDB, h.RWDB
+		factory(dd)(w, r)
+	}
+}
+
+func engramEnabled(h LiveHandles) bool { return h.RoDB != nil }
+func claudeEnabled(h LiveHandles) bool { return h.Claude }
+
 // requireRW applies RequireRW with the demo flag and read-write pool of d.
 func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
 	return RequireRW(d.DemoMode, d.RWDB != nil, h)
@@ -237,6 +287,11 @@ func Mount(mux *http.ServeMux, d Deps) {
 	if d.Paths == nil {
 		d.Paths = config.NewRuntimePaths(d.Config.EngramDbPath, d.Config.ClaudeProjectsDir)
 	}
+	// shell pages work with any module state; memory and claude pages answer
+	// 503 while their module is disabled (see Deps.Live).
+	shell := func(f handlerFactory) http.HandlerFunc { return liveHandler(d, nil, f) }
+	memory := func(f handlerFactory) http.HandlerFunc { return liveHandler(d, engramEnabled, f) }
+	claude := func(f handlerFactory) http.HandlerFunc { return liveHandler(d, claudeEnabled, f) }
 
 	// Static assets (/static/*).
 	staticSub, err := fs.Sub(StaticFS, "static")
@@ -250,7 +305,7 @@ func Mount(mux *http.ServeMux, d Deps) {
 
 	// Root: overview page (home).
 	// GET /{$} is Go 1.22 exact-match for "/"; it does not catch-all like GET /.
-	mux.HandleFunc("GET /{$}", handleOverviewPage(d))
+	mux.HandleFunc("GET /{$}", shell(handleOverviewPage))
 
 	// Topics routes.
 	// GET /topics redirects to the Threads tab on the Memory page (PR6a).
@@ -259,14 +314,14 @@ func Mount(mux *http.ServeMux, d Deps) {
 	mux.HandleFunc("GET /topics", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/observations?view=threads", http.StatusMovedPermanently)
 	})
-	mux.HandleFunc("GET /topics/list", handleTopicsListPartial(d))
+	mux.HandleFunc("GET /topics/list", memory(handleTopicsListPartial))
 
 	// Sessions list routes (must be registered before {id} wildcard).
-	mux.HandleFunc("GET /sessions", handleSessionsListPage(d))
-	mux.HandleFunc("GET /sessions/list", handleSessionsListPartial(d))
+	mux.HandleFunc("GET /sessions", memory(handleSessionsListPage))
+	mux.HandleFunc("GET /sessions/list", memory(handleSessionsListPartial))
 
 	// Claude Code route — Overview tab (charts) and Sessions tab (?tab=sessions).
-	mux.HandleFunc("GET /cc-overview", handleCCOverviewPage(d))
+	mux.HandleFunc("GET /cc-overview", claude(handleCCOverviewPage))
 
 	// GET /cc-sessions redirects to the Sessions tab on the CC page (PR8).
 	// /cc-sessions/list (HTMX load-more partial) and /cc-sessions/{project}/{id}
@@ -275,11 +330,11 @@ func Mount(mux *http.ServeMux, d Deps) {
 	mux.HandleFunc("GET /cc-sessions", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/cc-overview?tab=sessions", http.StatusMovedPermanently)
 	})
-	mux.HandleFunc("GET /cc-sessions/list", handleCCSessionsListPartial(d))
-	mux.HandleFunc("GET /cc-sessions/{project}/{id}", handleCCSessionDetailPage(d))
+	mux.HandleFunc("GET /cc-sessions/list", claude(handleCCSessionsListPartial))
+	mux.HandleFunc("GET /cc-sessions/{project}/{id}", claude(handleCCSessionDetailPage))
 
 	// Session detail route.
-	mux.HandleFunc("GET /sessions/{id}", handleSessionDetailPage(d))
+	mux.HandleFunc("GET /sessions/{id}", memory(handleSessionDetailPage))
 
 	// Prompts routes.
 	// GET /prompts redirects to the Conversations tab on the Memory page (PR6a).
@@ -288,52 +343,52 @@ func Mount(mux *http.ServeMux, d Deps) {
 	mux.HandleFunc("GET /prompts", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/observations?view=conversations", http.StatusMovedPermanently)
 	})
-	mux.HandleFunc("GET /prompts/list", handlePromptsListPartial(d))
+	mux.HandleFunc("GET /prompts/list", memory(handlePromptsListPartial))
 
 	// Projects routes.
 	// Note: Go 1.22 mux resolves exact paths over wildcards, so /projects and
 	// /projects/list are matched before /projects/{project}.
-	mux.HandleFunc("GET /projects", handleProjectsPage(d))
-	mux.HandleFunc("GET /projects/list", handleProjectsListPartial(d))
-	mux.HandleFunc("GET /projects/{project}", handleProjectDetailPage(d))
-	mux.HandleFunc("POST /projects/{project}/merge", handleProjectMergePost(d))
+	mux.HandleFunc("GET /projects", memory(handleProjectsPage))
+	mux.HandleFunc("GET /projects/list", memory(handleProjectsListPartial))
+	mux.HandleFunc("GET /projects/{project}", memory(handleProjectDetailPage))
+	mux.HandleFunc("POST /projects/{project}/merge", memory(handleProjectMergePost))
 
 	// Settings routes.
-	mux.HandleFunc("GET /settings", handleSettingsPage(d))
-	mux.HandleFunc("POST /settings/engram-db", handleEngramDBPost(d))
-	mux.HandleFunc("POST /settings/claude-dir", handleClaudeDirPost(d))
+	mux.HandleFunc("GET /settings", shell(handleSettingsPage))
+	mux.HandleFunc("POST /settings/engram-db", shell(handleEngramDBPost))
+	mux.HandleFunc("POST /settings/claude-dir", shell(handleClaudeDirPost))
 	mux.HandleFunc("POST /settings/nav-visibility", handleNavVisibilityPost())
 	mux.HandleFunc("POST /theme", handleThemePost())
 	mux.HandleFunc("POST /lang", handleLangPost())
 
 	// Settings → Advanced view toggle (PR6b).
-	mux.HandleFunc("POST /settings/advanced-view", handleAdvancedViewPost(d))
+	mux.HandleFunc("POST /settings/advanced-view", shell(handleAdvancedViewPost))
 
 	// Settings → Modules routes (WU-8).
-	mux.HandleFunc("POST /settings/modules/{id}/toggle", handleModulesTogglePost(d))
-	mux.HandleFunc("POST /settings/modules/{id}/path", handleModulesPathPost(d))
+	mux.HandleFunc("POST /settings/modules/{id}/toggle", shell(handleModulesTogglePost))
+	mux.HandleFunc("POST /settings/modules/{id}/path", shell(handleModulesPathPost))
 
 	// Settings → Accounts routes (WU-9).
-	mux.HandleFunc("GET /settings/accounts", handleAccountsPage(d))
-	mux.HandleFunc("POST /settings/profile/switch", handleProfileSwitchPost(d))
-	mux.HandleFunc("POST /settings/profile/create", handleProfileCreatePost(d))
-	mux.HandleFunc("POST /settings/profile/delete", handleProfileDeletePost(d))
+	mux.HandleFunc("GET /settings/accounts", shell(handleAccountsPage))
+	mux.HandleFunc("POST /settings/profile/switch", shell(handleProfileSwitchPost))
+	mux.HandleFunc("POST /settings/profile/create", shell(handleProfileCreatePost))
+	mux.HandleFunc("POST /settings/profile/delete", shell(handleProfileDeletePost))
 
 	// Settings → CC Accounts routes (Slice 2b).
-	mux.HandleFunc("POST /settings/cc-accounts", handleCCAccountAddPost(d))
-	mux.HandleFunc("POST /settings/cc-accounts/{id}/remove", handleCCAccountRemovePost(d))
-	mux.HandleFunc("POST /settings/cc-accounts/{id}/toggle", handleCCAccountTogglePost(d))
+	mux.HandleFunc("POST /settings/cc-accounts", shell(handleCCAccountAddPost))
+	mux.HandleFunc("POST /settings/cc-accounts/{id}/remove", shell(handleCCAccountRemovePost))
+	mux.HandleFunc("POST /settings/cc-accounts/{id}/toggle", shell(handleCCAccountTogglePost))
 
 	// Observations routes.
 	// /list and /{id} must be registered before the wildcard so Go 1.22 exact
 	// matching takes precedence.
-	mux.HandleFunc("GET /observations", handleObservationsPage(d))
-	mux.HandleFunc("GET /observations/list", handleObservationsListPartial(d))
-	mux.HandleFunc("GET /observations/{id}", handleObservationDetailPartial(d))
+	mux.HandleFunc("GET /observations", memory(handleObservationsPage))
+	mux.HandleFunc("GET /observations/list", memory(handleObservationsListPartial))
+	mux.HandleFunc("GET /observations/{id}", memory(handleObservationDetailPartial))
 
 	// Brain page (React island — Three.js graph).
-	mux.HandleFunc("GET /brain", handleBrainPage(d))
+	mux.HandleFunc("GET /brain", memory(handleBrainPage))
 
 	// Sidebar status pill partial (polled by HTMX from the sidebar footer).
-	mux.HandleFunc("GET /partials/status-pill", handleStatusPillPartial(d))
+	mux.HandleFunc("GET /partials/status-pill", shell(handleStatusPillPartial))
 }

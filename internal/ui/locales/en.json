@@ -16,6 +16,7 @@
   },
   "common": {
     "errorGeneric": "Something went wrong. Check the server log for details.",
+    "moduleDisabled": "This module is disabled. Enable it in Settings → Modules.",
     "loading": "Loading…",
     "loadMore": "Load more",
     "loadingMore": "Loading more…",
