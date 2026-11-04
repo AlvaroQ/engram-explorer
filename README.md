@@ -341,9 +341,18 @@ Or use a different port: `DASHBOARD_PORT=9090 ./engram-explorer`.
 </details>
 
 <details>
-<summary><strong>Enrolling or syncing a project</strong></summary>
+<summary><strong>Enrolling, unenrolling or syncing a project</strong></summary>
 
 The dashboard is **read-only** for cloud sync: it has no enroll, unenroll or sync buttons or endpoints. Run those operations with the `engram` CLI directly; the Sync Health views pick up the new state on their next refresh.
+
+```bash
+engram cloud enroll <project>     # start replicating a project to the cloud
+engram cloud unenroll <project>   # stop future replication (local and remote data are kept)
+engram cloud status               # check the cloud connection
+```
+
+Use the project name exactly as the dashboard shows it. Run `engram cloud <subcommand> --help` for the options your
+installed version supports.
 
 </details>
 

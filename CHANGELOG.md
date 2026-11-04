@@ -53,6 +53,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `POST /doctor/sync/{project}/{enroll,unenroll,sync}`, `POST /projects/{project}/{enroll,unenroll}` and
   `POST /partials/sync-cloud`, with their buttons. Sync diagnostics and the daemon GET proxy remain; use the
   `engram` CLI to enroll or sync. This also closes the gap where cloud actions ignored `ENGRAM_DASH_READONLY`.
+  The README documents `engram cloud enroll|unenroll <project>`, and the unused island strings for the removed
+  sync button are gone.
 - **JSON body limit** — JSON request bodies are capped at 1 MiB (`http.MaxBytesReader`); larger bodies get
   `413` with `PAYLOAD_TOO_LARGE`. Bodies with data after the JSON value (for example `{"a":1}{"b":2}`) are
   rejected with `400 BAD_INPUT`; trailing whitespace is still accepted.

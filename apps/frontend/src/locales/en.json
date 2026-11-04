@@ -475,13 +475,6 @@
     },
     "syncProject": {
       "notFound": "Project not found.",
-      "syncOk": "Cloud sync ok.",
-      "syncFailed": "Sync failed: {{message}}",
-      "syncCloud": "Sync cloud",
-      "syncing": "Syncing…",
-      "tooltipEnabled": "Run engram sync --cloud for this project",
-      "tooltipDisabled": "Project must be enrolled before it can be synced",
-      "ariaLabel": "Sync {{project}} to engram cloud",
       "status": "Status",
       "lifecycle": "Lifecycle",
       "enrolled": "Enrolled",

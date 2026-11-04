@@ -475,13 +475,6 @@
     },
     "syncProject": {
       "notFound": "Proyecto no encontrado.",
-      "syncOk": "Sync a la nube ok.",
-      "syncFailed": "Falló la sincronización: {{message}}",
-      "syncCloud": "Sincronizar nube",
-      "syncing": "Sincronizando…",
-      "tooltipEnabled": "Ejecuta engram sync --cloud para este proyecto",
-      "tooltipDisabled": "El proyecto debe estar inscrito antes de poder sincronizarlo",
-      "ariaLabel": "Sincronizar {{project}} a la nube de engram",
       "status": "Estado",
       "lifecycle": "Ciclo de vida",
       "enrolled": "Inscrito",

@@ -53,7 +53,7 @@ safety backup next to the DB before merging.
   header (curl, scripts) are unaffected. Blocked requests get `403` (`HOST_NOT_ALLOWED` /
   `CROSS_ORIGIN_REQUEST`). The Vite dev server origins (`http://localhost:5173`, `http://127.0.0.1:5173`) are
   trusted for CORS, CSRF and the export route only when `ENGRAM_DASH_ENV=development`.
-- Cloud sync is **read-only**: the dashboard shows sync diagnostics and proxies the daemon's GET telemetry endpoints (`/health`, `/sync/status`, `/stats`). It never enrolls, unenrolls or syncs a project and never spawns the `engram` CLI — do those with the `engram` CLI directly.
+- Cloud sync is **read-only**: the dashboard shows sync diagnostics and proxies the daemon's GET telemetry endpoints (`/health`, `/sync/status`, `/stats`). It never enrolls, unenrolls or syncs a project and never spawns the `engram` CLI — do those with the `engram` CLI directly (`engram cloud enroll <project>`, `engram cloud unenroll <project>`).
 - In production (`ENGRAM_DASH_ENV` unset) internal error details are never returned to the client.
 
 ## Content Security Policy
