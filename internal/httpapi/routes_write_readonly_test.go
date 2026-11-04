@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -105,6 +106,7 @@ func TestReadOnly_WriteRoutes_Return503(t *testing.T) {
 		{"DELETE prompt", http.MethodDelete, "/api/prompts/1", ""},
 		{"POST rename", http.MethodPost, "/api/projects/myproject/rename", `{"target":"renamed"}`},
 		{"GET export", http.MethodGet, "/api/db/export", ""},
+		{"HEAD export", http.MethodHead, "/api/db/export", ""},
 		{"POST import", http.MethodPost, "/api/db/import", ""},
 	}
 	for _, tc := range cases {
@@ -123,6 +125,37 @@ func TestReadOnly_WriteRoutes_Return503(t *testing.T) {
 				t.Errorf("%s %s changed the database:\nbefore %s\nafter  %s", tc.method, tc.path, before, after)
 			}
 		})
+	}
+}
+
+// TestReadOnly_ReloadKeepsWritesDisabled: switching the data source at runtime
+// (Container.ReloadEngramDB, as Settings does) to a writable copy of the
+// database must not reopen a read-write pool in read-only mode; a write to the
+// new file still answers 503 RW_UNAVAILABLE and leaves it unchanged.
+func TestReadOnly_ReloadKeepsWritesDisabled(t *testing.T) {
+	c, path := newReadOnlyContainer(t)
+	handler := httpapi.NewServeMux(c)
+
+	src, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read db: %v", err)
+	}
+	copyPath := filepath.Join(t.TempDir(), "engram.db")
+	if err := os.WriteFile(copyPath, src, 0o644); err != nil {
+		t.Fatalf("write copy: %v", err)
+	}
+	if err := c.ReloadEngramDB(copyPath); err != nil {
+		t.Fatalf("ReloadEngramDB(copy): %v", err)
+	}
+	before := dbDigest(t, copyPath)
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodDelete, "/api/observations/1", nil))
+	if rec.Code != http.StatusServiceUnavailable || errorCode(rec) != "RW_UNAVAILABLE" {
+		t.Errorf("DELETE after reload: status %d body %q, want 503 RW_UNAVAILABLE", rec.Code, rec.Body.String())
+	}
+	if after := dbDigest(t, copyPath); after != before {
+		t.Errorf("DELETE after reload changed the copy:\nbefore %s\nafter  %s", before, after)
 	}
 }
 
