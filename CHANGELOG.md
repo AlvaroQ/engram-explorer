@@ -18,6 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Demo mode served the real database** — with an existing `config.json` profile, `--demo` served the profile's
+  database. Demo mode now runs on an in-memory profile: it always serves the demo database and never reads or
+  writes `config.json`.
 - **Environment overrides ignored** — `ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR` and `ENGRAM_DAEMON_URL` were ignored once
   `config.json` existed; they now win over the saved profile at startup and are never written to disk.
 - **Profile store races** — concurrent Settings requests no longer race on the profile store (`config.Store`
@@ -91,6 +94,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Unreadable `config.json`** — a `config.json` that cannot be parsed is left untouched; the explorer runs on
+  defaults and saves nothing.
 - **Single saved configuration** — `config.json` is the only file the explorer writes: Settings database and
   Claude directory changes are saved in the active profile (a Claude directory change now survives a
   restart), and `explorer-settings.json` is read once to create `config.json` and never written again.
