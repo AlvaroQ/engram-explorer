@@ -44,7 +44,7 @@ func (s State) String() string {
 // activeEntry holds one provider's runtime state.
 type activeEntry struct {
 	p     Provider
-	h     *handle // the open instance; nil unless state == Enabled (or a failed re-open kept it)
+	h     *handle // the open instance; nil unless state == Enabled
 	state State
 	err   error
 }
@@ -427,7 +427,9 @@ func (r *Registry) Validate(ctx context.Context, id string, cfg ProviderConfig) 
 // provider is not registered or if Open fails.
 //
 // A replaced instance is retired and closed once the requests holding it
-// finish (see Lease); new requests get the re-opened instance.
+// finish (see Lease); new requests get the re-opened instance. When Open fails
+// the entry becomes Errored and stops serving, so its previous instance is
+// retired the same way instead of staying open until Shutdown.
 func (r *Registry) Enable(ctx context.Context, id string, cfg ProviderConfig) error {
 	r.mu.Lock()
 	var retired []retiredHandle
@@ -443,6 +445,7 @@ func (r *Registry) Enable(ctx context.Context, id string, cfg ProviderConfig) er
 
 	inst, err := e.p.Open(ctx, cfg)
 	if err != nil {
+		retired = e.retire(retired)
 		e.state = Errored
 		e.err = err
 		if r.log != nil {
@@ -463,8 +466,8 @@ func (r *Registry) Enable(ctx context.Context, id string, cfg ProviderConfig) er
 // Disable transitions the named provider to Disabled state and retires its
 // active instance: new requests no longer get it, and it is closed once the
 // requests holding it finish (see Lease). Returns an error if the provider is
-// not registered. If the provider is not currently Enabled, Disable is a
-// no-op (returns nil).
+// not registered. Whatever the current state, the entry ends Disabled and any
+// instance it still holds is retired.
 func (r *Registry) Disable(ctx context.Context, id string) error {
 	r.mu.Lock()
 	var retired []retiredHandle
@@ -477,11 +480,6 @@ func (r *Registry) Disable(ctx context.Context, id string) error {
 	if !ok {
 		return fmt.Errorf("provider %q is not registered", id)
 	}
-	if e.state != Enabled {
-		e.state = Disabled
-		return nil
-	}
-
 	retired = e.retire(retired)
 	e.state = Disabled
 	return nil
