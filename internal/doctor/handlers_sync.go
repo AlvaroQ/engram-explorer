@@ -18,7 +18,7 @@ func renderSyncProjects(w http.ResponseWriter, r *http.Request, d Deps) {
 	}
 	resp, err := services.SyncListProjects(d.RoDB)
 	if err != nil {
-		render(w, r, ErrorPartial("Failed to load sync projects: "+err.Error()))
+		renderError(w, r, "Failed to load sync projects: ", err)
 		return
 	}
 	render(w, r, SyncProjectsPartial(resp))
@@ -67,7 +67,7 @@ func handleSyncIssues(d Deps) http.HandlerFunc {
 
 		resp, err := services.SyncComputeIssues(d.RoDB, daemonAvailable)
 		if err != nil {
-			render(w, r, ErrorPartial("Failed to compute sync issues: "+err.Error()))
+			renderError(w, r, "Failed to compute sync issues: ", err)
 			return
 		}
 		render(w, r, SyncIssuesPartial(resp))
@@ -89,7 +89,7 @@ func handleSyncProjectDetail(d Deps) http.HandlerFunc {
 
 		detail, err := services.SyncGetProjectDetail(d.RoDB, project)
 		if err != nil {
-			render(w, r, ErrorPartial("Failed to load project detail: "+err.Error()))
+			renderError(w, r, "Failed to load project detail: ", err)
 			return
 		}
 		if detail == nil {
@@ -116,7 +116,7 @@ func handleSyncDeleteProject(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		project := r.PathValue("project")
 		if _, err := services.DeleteProject(r.Context(), d.RWDB, project); err != nil {
-			render(w, r, ErrorPartial("Delete failed: "+err.Error()))
+			renderError(w, r, "Delete failed: ", err)
 			return
 		}
 		renderSyncProjects(w, r, d)

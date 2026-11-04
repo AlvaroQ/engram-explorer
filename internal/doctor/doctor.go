@@ -45,6 +45,13 @@ func render(w http.ResponseWriter, r *http.Request, c templ.Component) {
 	_ = c.Render(ui.NavContext(r), w)
 }
 
+// renderError renders an ErrorPartial with the message chosen by
+// ui.ErrorMessage: user-safe errors verbatim, anything else as the localized
+// generic message with the detail logged.
+func renderError(w http.ResponseWriter, r *http.Request, prefix string, err error) {
+	render(w, r, ErrorPartial(ui.ErrorMessage(r, prefix, err)))
+}
+
 // requireRW wraps a write handler with a read-only guard. It blocks the write
 // in demo mode (the bundled sample DB must stay pristine) and when RWDB is nil
 // (read-only mode), so every write route shares a single source of truth for

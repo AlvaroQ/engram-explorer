@@ -52,6 +52,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Settings now validates the target first (an SQLite file with the Engram `observations` and `sessions`
   tables; a directory with project folders, the same checks the providers apply). On rejection the active
   database/directory and saved settings stay unchanged, and the message only echoes the typed path.
+- **No internal errors in HTML** — UI and doctor pages no longer show raw error text (SQLite errors,
+  filesystem paths). Messages written for the user are still shown; any other error shows a generic
+  localized message and the detail goes to the server log.
 
 ### Changed
 
