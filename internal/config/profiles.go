@@ -80,6 +80,39 @@ type ProfileStore struct {
 	CCAccounts []CCAccount `json:"ccAccounts,omitempty"`
 }
 
+// cloneProfileStore returns a deep copy of st (maps and slices included).
+func cloneProfileStore(st ProfileStore) ProfileStore {
+	out := st
+	if st.Profiles != nil {
+		out.Profiles = make(map[string]Profile, len(st.Profiles))
+		for name, p := range st.Profiles {
+			out.Profiles[name] = cloneProfile(p)
+		}
+	}
+	out.CCAccounts = append([]CCAccount(nil), st.CCAccounts...)
+	return out
+}
+
+// cloneProfile returns a deep copy of p.
+func cloneProfile(p Profile) Profile {
+	out := p
+	if p.Providers != nil {
+		out.Providers = make(map[string]ProviderConfig, len(p.Providers))
+		for id, c := range p.Providers {
+			out.Providers[id] = c
+		}
+	}
+	return out
+}
+
+// SetProviderCfg sets the config of one provider, allocating the map if needed.
+func (p *Profile) SetProviderCfg(providerID string, c ProviderConfig) {
+	if p.Providers == nil {
+		p.Providers = make(map[string]ProviderConfig)
+	}
+	p.Providers[providerID] = c
+}
+
 // configFilePath returns the absolute path of config.json in configHome.
 func configFilePath(configHome string) string {
 	return filepath.Join(configHome, configFileName)
@@ -132,13 +165,14 @@ func SaveProfileStore(configHome string, store *ProfileStore) error {
 	return os.Rename(tmp, configFilePath(configHome))
 }
 
-// EnsureConfig loads config.json from configHome, or seeds a new "default"
-// profile from resolved (the already-precedence-resolved Config: ENV >
-// explorer-settings.json > built-in default) when no config.json exists.
+// EnsureConfig loads config.json from configHome, or seeds and saves a new
+// "default" profile when no config.json exists.
 //
-// Seeding from explorer-settings.json is implicit: the caller passes the
-// result of config.Load(), which already applied the legacy overrides file.
-// EnsureConfig never deletes or modifies explorer-settings.json.
+// The seed is the one-time migration of the legacy explorer-settings.json:
+// each path comes from that file when it sets one, otherwise from the built-in
+// default (resolved.Defaults, or the resolved value when Defaults is empty).
+// Environment overrides are never written into the seed. Once config.json
+// exists the legacy file is ignored; EnsureConfig never modifies it.
 func EnsureConfig(configHome string, resolved Config) (*ProfileStore, error) {
 	store, err := LoadProfileStore(configHome)
 	if err == nil {
@@ -150,15 +184,21 @@ func EnsureConfig(configHome string, resolved Config) (*ProfileStore, error) {
 		return nil, err
 	}
 
-	// No config.json yet — seed from the resolved config.
+	// No config.json yet — migrate the legacy file over the built-in defaults.
+	// DaemonURL is not seeded so the default keeps following ENGRAM_PORT.
+	legacy := LoadOverrides(configHome)
+	base := Config{
+		EngramDbPath:      firstNonEmpty(legacy.EngramDbPath, resolved.Defaults.EngramDbPath, resolved.EngramDbPath),
+		ClaudeProjectsDir: firstNonEmpty(legacy.ClaudeProjectsDir, resolved.Defaults.ClaudeProjectsDir, resolved.ClaudeProjectsDir),
+	}
 	seed := &ProfileStore{
 		Version:       1,
 		ActiveProfile: "default",
 		Profiles: map[string]Profile{
-			"default": profileFromResolved(resolved),
+			"default": profileFromResolved(base),
 		},
 	}
-	SeedDefaultAccount(seed, resolved.ClaudeProjectsDir)
+	SeedDefaultAccount(seed, base.ClaudeProjectsDir)
 	if err := SaveProfileStore(configHome, seed); err != nil {
 		return nil, err
 	}
@@ -166,14 +206,13 @@ func EnsureConfig(configHome string, resolved Config) (*ProfileStore, error) {
 }
 
 // ProfileFromConfig is the exported form of profileFromResolved. It builds a
-// Profile from an already-resolved Config (ENV wins already applied by Load).
-// Used by main.go as a fallback when EnsureConfig fails.
+// Profile from an already-resolved Config. Used for in-memory stores (demo
+// mode and the fallback when config.json cannot be loaded) and by tests.
 func ProfileFromConfig(cfg Config) Profile {
 	return profileFromResolved(cfg)
 }
 
-// profileFromResolved builds a Profile from an already-resolved Config (ENV
-// wins already applied by config.Load).
+// profileFromResolved builds a Profile from an already-resolved Config.
 func profileFromResolved(cfg Config) Profile {
 	providers := make(map[string]ProviderConfig)
 

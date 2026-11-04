@@ -33,10 +33,11 @@ type Container struct {
 	// and callers that construct via NewContainer).
 	Registry *providers.Registry
 
-	// ProfileStore, when non-nil, is the persistent config used by the Settings
-	// Modules page to read and write per-provider enablement and paths. It is
-	// set from main.go via NewContainerWithRegistry when a registry is used.
-	ProfileStore *config.ProfileStore
+	// ProfileStore, when non-nil, is the lock-guarded owner of config.json and
+	// the active profile, used by the Settings pages to read and write
+	// per-provider enablement and paths. It is set from main.go when a registry
+	// is used. Never access the underlying ProfileStore data directly.
+	ProfileStore *config.Store
 
 	// CloseGrace is how long ReloadEngramDB waits before closing the superseded
 	// pools, letting in-flight queries drain. Tests set it to 0 to close
@@ -98,7 +99,8 @@ func NewContainer(cfg config.Config, logger *slog.Logger) (*Container, error) {
 }
 
 // ReloadEngramDB validates newPath, opens fresh pools, swaps them in live, and
-// persists the override. The previous pools are closed after a short grace so
+// saves the path into the active profile of config.json (through the Store,
+// so an ephemeral demo store saves nothing). The previous pools are closed after a short grace so
 // in-flight queries can drain. On any validation/open error the current DB is
 // left untouched. Live reads of the path go through c.Paths; c.Config is the
 // immutable startup snapshot and is not mutated here.
@@ -131,44 +133,45 @@ func (c *Container) ReloadEngramDB(newPath string) error {
 		}
 	}
 
-	oldRo := c.roSwap.Swap(newRo)
+	roSwap, rwSwap, instPaths := c.liveSwaps()
+	if roSwap == nil {
+		newRo.Close()
+		if newRw != nil {
+			newRw.Close()
+		}
+		return usererr.New("the Engram module is disabled; enable it in Settings → Modules first")
+	}
+
+	oldRo := roSwap.Swap(newRo)
 	var oldRw *sql.DB
 	switch {
-	case c.rwSwap != nil && newRw != nil:
-		oldRw = c.rwSwap.Swap(newRw)
+	case rwSwap != nil && newRw != nil:
+		oldRw = rwSwap.Swap(newRw)
 	case newRw != nil:
 		// Started without a writable pool (read-only mode / earlier open failure).
-		// Deps captured a nil RWDB, so writes cannot be retroactively enabled
-		// without a restart; discard the freshly opened writable pool.
+		// The instance stays read-only until it is reopened (toggle or restart);
+		// discard the freshly opened writable pool.
 		newRw.Close()
 	}
 
 	c.Paths.SetEngramDB(newPath)
-	if err := config.SaveOverrides(c.Config.ConfigHome, config.Overrides{
-		EngramDbPath:      newPath,
-		ClaudeProjectsDir: c.Paths.ClaudeDir(),
-	}); err != nil {
-		c.Logger.Warn("failed to persist path override", "err", err)
+	if instPaths != nil && instPaths != c.Paths {
+		instPaths.SetEngramDB(newPath) // the live instance reports it in /api/health
 	}
 
-	// On the registry path the active profile (config.json) is the source of
-	// truth used to open the Engram provider at boot, so the override file alone
-	// would not survive a restart. Persist the new path into the active profile
-	// too, keeping the live swap and the next boot in agreement.
+	// config.json is the only persisted configuration source (the legacy
+	// explorer-settings.json is no longer written). Containers built without a
+	// store (legacy tests) apply the change live only.
 	if c.ProfileStore != nil {
-		name := c.ProfileStore.ActiveProfile
-		if prof, ok := c.ProfileStore.Profiles[name]; ok {
-			if prof.Providers == nil {
-				prof.Providers = make(map[string]config.ProviderConfig)
-			}
-			ec := prof.Providers["engram"]
+		err := c.ProfileStore.UpdateActive(func(_ string, p *config.Profile) error {
+			ec := p.ProviderCfg("engram")
 			ec.Enabled = true
 			ec.Path = newPath
-			prof.Providers["engram"] = ec
-			c.ProfileStore.Profiles[name] = prof
-			if err := config.SaveProfileStore(c.Config.ConfigHome, c.ProfileStore); err != nil {
-				c.Logger.Warn("failed to persist engram path to active profile", "err", err)
-			}
+			p.SetProviderCfg("engram", ec)
+			return nil
+		})
+		if err != nil {
+			c.Logger.Warn("failed to persist engram path to active profile", "err", err)
 		}
 	}
 
@@ -195,9 +198,28 @@ func (c *Container) ReloadEngramDB(newPath string) error {
 	return nil
 }
 
+// liveSwaps returns the swappable pools ReloadEngramDB swaps: the container's
+// own in legacy mode, the live store instance's in registry mode (nil when
+// the Engram module is disabled), plus that instance's RuntimePaths.
+func (c *Container) liveSwaps() (ro, rw *sqlite.SwapDB, paths *config.RuntimePaths) {
+	if c.Registry == nil {
+		return c.roSwap, c.rwSwap, nil
+	}
+	inst, ok := c.Registry.Find(isSQLiteStore).(sqliteStore)
+	if !ok {
+		return nil, nil, nil
+	}
+	roQ, rwQ, paths := inst.ContainerDeps()
+	ro, _ = roQ.(*sqlite.SwapDB)
+	rw, _ = rwQ.(*sqlite.SwapDB)
+	return ro, rw, paths
+}
+
 // SetClaudeDir validates and applies a new Claude Code projects directory. There
 // is no persistent connection to swap — transcripts are scanned per request — so
 // the change takes effect immediately for every reader of c.Paths.ClaudeDir().
+// The directory is saved as the cc-sessions path of the active profile in
+// config.json (through the Store; never when the store is ephemeral).
 //
 // newDir must pass ccsessions.ValidateProjectsDir — the same check the Settings
 // Modules path applies. Returned errors are user-facing.
@@ -207,17 +229,20 @@ func (c *Container) SetClaudeDir(newDir string) error {
 		return err
 	}
 
-	// Hold c.mu so the override write is serialised with ReloadEngramDB (both
-	// persist the same file).
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.Paths.SetClaudeDir(newDir)
-	if err := config.SaveOverrides(c.Config.ConfigHome, config.Overrides{
-		EngramDbPath:      c.Paths.EngramDB(),
-		ClaudeProjectsDir: newDir,
-	}); err != nil {
-		c.Logger.Warn("failed to persist path override", "err", err)
+	if c.ProfileStore != nil {
+		err := c.ProfileStore.UpdateActive(func(_ string, p *config.Profile) error {
+			cc := p.ProviderCfg("cc-sessions")
+			cc.Path = newDir
+			p.SetProviderCfg("cc-sessions", cc)
+			return nil
+		})
+		if err != nil {
+			c.Logger.Warn("failed to persist claude projects dir to active profile", "err", err)
+		}
 	}
 	return nil
 }
@@ -244,15 +269,14 @@ func (c *Container) Close() {
 
 // NewContainerWithRegistry creates a Container backed by a provider Registry.
 // Unlike NewContainer it does NOT call sqlite.OpenReadOnly at construction
-// time — database handles are owned by the registry's Engram provider instance.
+// time — database handles are owned by the registry's provider instances.
 // Boot (registry.Boot) must be called BEFORE NewContainerWithRegistry so that
-// provider instances are already open; this constructor only links the registry
-// into the container for route mounting and health aggregation.
+// provider instances are already open.
 //
-// When the Engram provider is active in the registry, RoDB/RWDB are populated
-// from its instance's Deps (via the engramDepsAccessor interface) so that
-// legacy route handlers still work. When Engram is absent (zero providers),
-// RoDB/RWDB remain nil — which is the correct non-fatal-boot state.
+// RoDB/RWDB are liveDB queriers: every call goes to the pool of the store
+// instance that is live at that moment (none when the Engram module is off),
+// so enabling, disabling or switching profiles never leaves a handler on a
+// closed pool.
 func NewContainerWithRegistry(reg *providers.Registry, cfg config.Config, logger *slog.Logger) *Container {
 	c := &Container{
 		Config:     cfg,
@@ -263,54 +287,26 @@ func NewContainerWithRegistry(reg *providers.Registry, cfg config.Config, logger
 	}
 
 	if reg != nil {
+		c.RoDB = liveDB{c: c}
+		c.RWDB = liveDB{c: c, rw: true}
 		populateFromRegistry(c, reg)
 	}
 
 	return c
 }
 
-// engramDepsAccessor is a narrow interface satisfied by the Engram provider's
-// engramInstance. It exposes the DB handles and RuntimePaths needed to
-// populate Container fields without importing internal/providers/engram
-// (avoiding any import-cycle risk in container.go).
-//
-// The Engram provider implements this interface via its ContainerDeps() method.
-type engramDepsAccessor interface {
-	ContainerDeps() (roDB sqlite.Querier, rwDB sqlite.Querier, paths *config.RuntimePaths)
-}
-
-// populateFromRegistry inspects the registry for an active Engram provider
-// instance and extracts its DB handles and RuntimePaths into the container's
-// legacy fields (RoDB, RWDB, Paths). This keeps existing route handlers and
-// tests that read c.RoDB / c.Paths working on the new registry-based path.
+// populateFromRegistry seeds the container's live paths from the instances
+// enabled at boot: the database path of the SQLite store and the projects
+// directory of the transcript source.
 func populateFromRegistry(c *Container, reg *providers.Registry) {
-	for _, entry := range reg.Entries() {
-		if entry.State != providers.Enabled {
-			continue
+	if st, ok := reg.Find(isSQLiteStore).(sqliteStore); ok {
+		if _, _, paths := st.ContainerDeps(); paths != nil {
+			c.Paths.SetEngramDB(paths.EngramDB())
 		}
-		inst := reg.Instance(entry.ID)
-		if inst == nil {
-			continue
-		}
-		if ea, ok := inst.(engramDepsAccessor); ok {
-			roDB, rwDB, paths := ea.ContainerDeps()
-			c.RoDB = roDB
-			c.RWDB = rwDB
-			if paths != nil {
-				c.Paths = paths
-			}
-			// Recover the concrete SwapDB handles so ReloadEngramDB can hot-swap
-			// the very pools the handlers read through. The Engram provider wraps
-			// both pools in *sqlite.SwapDB and hands them to the container as the
-			// sqlite.Querier interface; without these assignments c.roSwap/c.rwSwap
-			// stay nil on the registry path and ReloadEngramDB panics on swap
-			// (the in-app DB-path switcher "does nothing"/crashes bug).
-			if sw, ok := roDB.(*sqlite.SwapDB); ok {
-				c.roSwap = sw
-			}
-			if sw, ok := rwDB.(*sqlite.SwapDB); ok {
-				c.rwSwap = sw
-			}
+	}
+	if ts, ok := reg.Find(isTranscriptSource).(transcriptSource); ok {
+		if paths := ts.RuntimePaths(); paths != nil {
+			c.Paths.SetClaudeDir(paths.ClaudeDir())
 		}
 	}
 }

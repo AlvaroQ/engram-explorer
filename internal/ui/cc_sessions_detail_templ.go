@@ -226,7 +226,7 @@ func ccsDetailContent(detail *services.CCSessionDetail, lang string) templ.Compo
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div></div></div></div><!-- Conversation timeline --><div class=\"card cc-conv\" style=\"margin-top: 1rem;\"><div class=\"card-header card-header-flex\"><div><h2>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div></div></div></div><!-- Conversation timeline --><div class=\"card cc-conv card-gap-top\"><div class=\"card-header card-header-flex\"><div><h2>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

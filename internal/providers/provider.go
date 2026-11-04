@@ -4,7 +4,6 @@ package providers
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 )
 
@@ -52,10 +51,12 @@ type Provider interface {
 	// (provider, profile).
 	Open(ctx context.Context, cfg ProviderConfig) (Instance, error)
 
-	// Routes registers the provider's HTTP routes on mux. The provider receives
-	// the same *http.ServeMux used by the whole server and registers its own
-	// handlers. Existing paths are kept verbatim (no forced /api/{id}/ prefix in v1).
-	Routes(mux *http.ServeMux, inst Instance, logger *slog.Logger)
+	// Routes registers the provider's own HTTP routes on r. The host calls it
+	// exactly once at boot for every registered provider, whatever its state;
+	// r serves each route only while the provider is Enabled and hands the
+	// live instance to handlers through r.Live(req) per request. Existing paths
+	// are kept verbatim (no forced /api/{id}/ prefix in v1).
+	Routes(r Router)
 
 	// Nav returns the sidebar group + links for this provider (data-driven menu).
 	Nav(inst Instance) NavGroup
@@ -64,6 +65,23 @@ type Provider interface {
 	// entry). Engram: file exists AND schema valid. CC: dir exists AND contains
 	// project subdirectories. Returns nil on success, a descriptive error on failure.
 	Validate(ctx context.Context, cfg ProviderConfig) error
+}
+
+// Router is the route registrar the host hands to Provider.Routes. It is
+// defined here, not in the HTTP layer, so provider packages can register
+// routes without importing it. The host implementation gates every route by
+// the provider's state: while the provider is not Enabled the route answers
+// 503 with code MODULE_DISABLED (JSON under /api/, an HTML message
+// elsewhere), so enabling or disabling a provider never remounts routes.
+type Router interface {
+	Handle(pattern string, h http.Handler)
+	HandleFunc(pattern string, h func(http.ResponseWriter, *http.Request))
+
+	// Live returns the provider instance serving req, or nil when the
+	// provider was not Enabled when req started. The instance stays open
+	// until req's handler returns, even if a toggle or a profile switch
+	// supersedes it meanwhile; never keep it beyond the request.
+	Live(req *http.Request) Instance
 }
 
 // Instance is the per-profile live activation of a provider — handles, pools,
@@ -76,21 +94,28 @@ type Instance interface {
 	Close(ctx context.Context) error
 }
 
-// Optional capabilities discovered by type-assertion on Instance — NOT in the
-// core port. Providers that do not implement a capability simply omit it.
+// Optional capabilities discovered by type-assertion on the live Instance —
+// NOT in the core port. Providers that do not implement a capability simply
+// omit it. The host resolves them per request on the first Enabled instance
+// (registry order) that implements them (Registry.Find).
 
-// Searcher is an optional capability for providers that support full-text search.
+// Searcher is an optional capability for providers that support full-text
+// search. It backs GET /api/observations/search; the result is encoded as the
+// "items" array of the response.
 type Searcher interface {
-	Search(ctx context.Context, q string) (any, error)
+	Search(ctx context.Context, q string, limit int) (any, error)
 }
 
-// StatsSource is an optional capability for providers that expose aggregate stats.
+// StatsSource is an optional capability for providers that expose aggregate
+// stats. It backs GET /api/overview; the result is encoded as the response body.
 type StatsSource interface {
 	Stats(ctx context.Context) (any, error)
 }
 
-// Writable marks a provider as capable of accepting write operations. Only the
-// Engram provider implements this; absence means read-only at the provider layer.
+// Writable marks an instance that can accept write operations right now.
+// The host serves write routes and hands out read-write handles only when the
+// live instance implements Writable and reports true; absence or false means
+// read-only (write routes answer RW_UNAVAILABLE).
 type Writable interface {
 	Writable() bool
 }

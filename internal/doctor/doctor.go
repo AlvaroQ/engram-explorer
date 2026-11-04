@@ -11,7 +11,6 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
-	"github.com/a-h/templ"
 )
 
 // Deps carries the concrete dependencies required by the doctor module.
@@ -24,6 +23,15 @@ type Deps struct {
 	Config config.Config        // full runtime configuration (immutable snapshot)
 	Paths  *config.RuntimePaths // live mutable paths; defaulted from Config in Mount
 
+	// Live, when non-nil, returns the read-only and read-write pools to use for
+	// one request (rw is nil when writes are not available); they stay open
+	// until that request's handler returns. Mount calls it on every request
+	// and hands the handlers a copy of Deps carrying those pools, so a module
+	// enabled or disabled after Mount needs no remount and no handler keeps a
+	// closed pool. When nil, RoDB and RWDB are used as mounted (tests and the
+	// legacy direct-mount path).
+	Live func(r *http.Request) (ro, rw sqlite.Querier)
+
 	// DaemonPing is an optional override for the daemon availability check used
 	// by handleSyncIssues.  When non-nil it is called instead of making a real
 	// HTTP round-trip to the daemon.  Production callers leave this nil; tests
@@ -31,52 +39,44 @@ type Deps struct {
 	DaemonPing func() bool
 }
 
-// IsHTMX reports whether the request was issued by HTMX (i.e. the HX-Request
-// header is present and set to "true").
-func IsHTMX(r *http.Request) bool {
-	return r.Header.Get("HX-Request") == "true"
-}
+// HTML shell helpers (HTMX detection, rendering, error partials and the
+// write guard) come from the ui package, so doctor and the main UI share one
+// render path: ui.IsHTMX, ui.Render, ui.RenderError, ui.ErrorPartial and
+// ui.RequireRW.
 
-// render writes a templ component to the response.  It always sets the
-// Content-Type header to text/html; charset=utf-8.
-func render(w http.ResponseWriter, r *http.Request, c templ.Component) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	// Carry the sidebar section-visibility prefs (shared ui.Sidebar reads them).
-	_ = c.Render(ui.NavContext(r), w)
-}
-
-// renderError renders an ErrorPartial with the message chosen by
-// ui.ErrorMessage: user-safe errors verbatim, anything else as the localized
-// generic message with the detail logged.
-func renderError(w http.ResponseWriter, r *http.Request, prefix string, err error) {
-	render(w, r, ErrorPartial(ui.ErrorMessage(r, prefix, err)))
-}
-
-// requireRW wraps a write handler with a read-only guard. It blocks the write
-// in demo mode (the bundled sample DB must stay pristine) and when RWDB is nil
-// (read-only mode), so every write route shares a single source of truth for
-// the writability check.
-func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if d.Config.DemoMode {
-			render(w, r, ErrorPartial("Write operations are disabled in demo mode."))
-			return
-		}
-		if d.RWDB == nil {
-			render(w, r, ErrorPartial("Write operations are not available in read-only mode."))
-			return
-		}
-		h(w, r)
-	}
+// Registrar is the route registrar Mount writes to. *http.ServeMux satisfies
+// it, and so does the providers.Router the host hands to the Engram provider.
+type Registrar interface {
+	Handle(pattern string, h http.Handler)
+	HandleFunc(pattern string, h func(http.ResponseWriter, *http.Request))
 }
 
 // Mount registers all /doctor/* routes on mux.
 // Call this inside httpapi.NewServeMux after the API routes.
-func Mount(mux *http.ServeMux, d Deps) {
+func Mount(mux Registrar, d Deps) {
 	// Default the live path holder from the immutable Config so tests that build
 	// Deps without Paths keep working.
 	if d.Paths == nil {
 		d.Paths = config.NewRuntimePaths(d.Config.EngramDbPath, d.Config.ClaudeProjectsDir)
+	}
+	// live builds the handler per request from Deps carrying the pools Live
+	// returns right now; without Live it builds it once from d.
+	live := func(factory func(Deps) http.HandlerFunc) http.HandlerFunc {
+		if d.Live == nil {
+			return factory(d)
+		}
+		return func(w http.ResponseWriter, r *http.Request) {
+			dd := d
+			dd.RoDB, dd.RWDB = d.Live(r)
+			factory(dd)(w, r)
+		}
+	}
+	// writeGuard blocks write routes in demo mode and in read-only mode; the
+	// read-write pool is checked per request.
+	writeGuard := func(factory func(Deps) http.HandlerFunc) http.HandlerFunc {
+		return live(func(dd Deps) http.HandlerFunc {
+			return ui.RequireRW(dd.Config.DemoMode, dd.RWDB != nil, factory(dd))
+		})
 	}
 
 	// Static assets (/doctor/static/*).
@@ -93,7 +93,7 @@ func Mount(mux *http.ServeMux, d Deps) {
 	// Consolidated maintenance page — reachable from Settings.
 	// Registered before /doctor/* redirects so Go's ServeMux matches the literal
 	// path first (exact wins over prefix).
-	mux.HandleFunc("GET /settings/maintenance", handleMaintenancePage(d))
+	mux.HandleFunc("GET /settings/maintenance", live(handleMaintenancePage))
 
 	// Root: redirect to consolidated maintenance page.
 	mux.HandleFunc("GET /doctor/", func(w http.ResponseWriter, r *http.Request) {
@@ -116,18 +116,18 @@ func Mount(mux *http.ServeMux, d Deps) {
 	})
 
 	// GET /doctor/orphans/list — bare list partial; hx-get deferred load target.
-	mux.HandleFunc("GET /doctor/orphans/list", handleOrphansListPartial(d))
+	mux.HandleFunc("GET /doctor/orphans/list", live(handleOrphansListPartial))
 
 	// GET /doctor/orphans/observations/{id}/detail — observation detail dialog.
 	// Renders a modal with metadata, session working directory, full content,
 	// and the assign/delete actions, so the user can assign from inside it.
-	mux.HandleFunc("GET /doctor/orphans/observations/{id}/detail", handleOrphanObservationDetail(d))
+	mux.HandleFunc("GET /doctor/orphans/observations/{id}/detail", live(handleOrphanObservationDetail))
 
 	// POST /doctor/orphans/{entity}/{id}/project — assign entity to a project.
-	mux.HandleFunc("POST /doctor/orphans/{entity}/{id}/project", requireRW(d, handleOrphansAssign(d)))
+	mux.HandleFunc("POST /doctor/orphans/{entity}/{id}/project", writeGuard(handleOrphansAssign))
 
 	// DELETE /doctor/orphans/{entity}/{id} — delete orphaned entity.
-	mux.HandleFunc("DELETE /doctor/orphans/{entity}/{id}", requireRW(d, handleOrphansDelete(d)))
+	mux.HandleFunc("DELETE /doctor/orphans/{entity}/{id}", writeGuard(handleOrphansDelete))
 
 	// -----------------------------------------------------------------------
 	// Sync routes (Slice 2)
@@ -143,18 +143,18 @@ func Mount(mux *http.ServeMux, d Deps) {
 	// Must be registered before /doctor/sync/{project} so the literal path wins.
 	// Cloud is read-only: the table shows enrollment status but offers no
 	// enroll / unenroll / sync actions (those are done with the engram CLI).
-	mux.HandleFunc("GET /doctor/sync/projects", handleSyncProjectsList(d))
+	mux.HandleFunc("GET /doctor/sync/projects", live(handleSyncProjectsList))
 
 	// GET /doctor/sync/issues — issues banner partial (polled every 15s).
 	// Must be registered before /doctor/sync/{project} (same reason).
-	mux.HandleFunc("GET /doctor/sync/issues", handleSyncIssues(d))
+	mux.HandleFunc("GET /doctor/sync/issues", live(handleSyncIssues))
 
 	// GET /doctor/sync/{project} — project detail partial.
 	// Go 1.22+ ServeMux: literal paths above win over wildcards automatically,
 	// but we register them first for clarity.
-	mux.HandleFunc("GET /doctor/sync/{project}", handleSyncProjectDetail(d))
+	mux.HandleFunc("GET /doctor/sync/{project}", live(handleSyncProjectDetail))
 
 	// POST /doctor/sync/{project}/delete — permanently delete an unenrolled,
 	// observation-free project (removes its sessions and prompts).
-	mux.HandleFunc("POST /doctor/sync/{project}/delete", requireRW(d, handleSyncDeleteProject(d)))
+	mux.HandleFunc("POST /doctor/sync/{project}/delete", writeGuard(handleSyncDeleteProject))
 }

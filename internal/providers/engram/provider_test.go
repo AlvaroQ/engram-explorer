@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -321,22 +322,50 @@ func TestInstance_ImplementsWritable(t *testing.T) {
 // Routes
 // ---------------------------------------------------------------------------
 
-// TestRoutes_RegistersOnMux asserts that Routes does not panic and registers
-// at least some routes on the mux (smoke test; verifies call doesn't crash).
-func TestRoutes_RegistersOnMux(t *testing.T) {
+// liveRouter is a minimal providers.Router: it mounts on a ServeMux and
+// reports a settable live instance (the host's gating is out of scope here).
+type liveRouter struct {
+	*http.ServeMux
+	live providers.Instance
+}
+
+func (r *liveRouter) Live(*http.Request) providers.Instance { return r.live }
+
+// TestRoutes_ServesDoctorFromLiveInstance asserts Routes mounts the doctor
+// module and that each request reads the pools of the instance r.Live(req)
+// reports at that moment, not one captured at mount time.
+func TestRoutes_ServesDoctorFromLiveInstance(t *testing.T) {
 	path := seedEngramSchema(t)
 	p := engram.NewProvider(baseCfg())
 	cfg := providers.ProviderConfig{Enabled: true, Path: path}
+
+	r := &liveRouter{ServeMux: http.NewServeMux()}
+	p.Routes(r) // mounted with no live instance
+
+	get := func(route string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, route, nil))
+		return rec
+	}
+	const detail = "/doctor/orphans/observations/1/detail"
+	const noDB = "Database is not available."
+	if body := get(detail).Body.String(); !strings.Contains(body, noDB) {
+		t.Fatalf("without a live instance: body %.200q, want %q", body, noDB)
+	}
 
 	inst, err := p.Open(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
 	defer inst.Close(context.Background()) //nolint:errcheck
+	r.live = inst
 
-	mux := http.NewServeMux()
-	// Must not panic.
-	p.Routes(mux, inst, nil)
+	if body := get(detail).Body.String(); strings.Contains(body, noDB) {
+		t.Errorf("with a live instance the handler still saw no pool: %.200q", body)
+	}
+	if rec := get("/settings/maintenance"); rec.Code != http.StatusOK {
+		t.Errorf("GET /settings/maintenance: status %d, want 200", rec.Code)
+	}
 }
 
 // ---------------------------------------------------------------------------

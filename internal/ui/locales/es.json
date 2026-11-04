@@ -16,6 +16,8 @@
   },
   "common": {
     "errorGeneric": "Algo salió mal. Revisa el registro del servidor para más detalles.",
+    "moduleDisabled": "Este módulo está desactivado. Actívalo en Ajustes → Módulos.",
+    "moduleDisabledTitle": "Módulo desactivado",
     "loading": "Cargando…",
     "loadMore": "Cargar más",
     "loadingMore": "Cargando más…",
@@ -596,8 +598,6 @@
     "toast": {
       "enrollSuccess": "{{project}} inscrito en cloud. El daemon empezará a sincronizar en los próximos minutos.",
       "enrollError": "No se pudo inscribir {{project}}: {{error}}",
-      "unenrollSuccess": "{{project}} dado de baja del cloud.",
-      "unenrollError": "No se pudo dar de baja {{project}}: {{error}}",
       "syncStarted": "Sincronizando {{project}}…",
       "syncSuccess": "{{project}} sincronizado.",
       "syncError": "Falló la sincronización de {{project}}: {{error}}"
@@ -682,7 +682,8 @@
     },
     "cloud": {
       "title": "Copia de seguridad en la nube",
-      "description": "Diagnóstico de sincronización de solo lectura. Inscribe, desinscribe y sincroniza proyectos con el CLI de engram."
+      "description": "Diagnóstico de sincronización de solo lectura. Inscribe, desinscribe y sincroniza proyectos con el CLI de engram.",
+      "lastErrorGeneric": "El daemon de sincronización registró un error para este proyecto. Consulta el registro del daemon de Engram para ver los detalles."
     }
   },
   "settings": {
@@ -751,7 +752,6 @@
     "cloudCli": "Capacidades del CLI cloud",
     "cloudCliDesc": "Detectado a partir de `engram cloud --help`",
     "cloudCliError": "No se pudieron detectar las capacidades del CLI.",
-    "cloudCliTip": "Nota: el CLI no expone `cloud unenroll` (verificado hasta v1.15.1). El panel lo gestiona escribiendo directo a `sync_enrolled_projects`.",
     "runtime": "Runtime",
     "navTitle": "Secciones del menú",
     "navHeaderDesc": "Mostrá u ocultá secciones enteras del menú lateral.",
@@ -790,7 +790,6 @@
       "status": "Estado",
       "url": "URL",
       "cloudEnroll": "cloud enroll",
-      "cloudUnenroll": "cloud unenroll",
       "dashboard": "Panel",
       "node": "Node",
       "uptime": "Uptime"

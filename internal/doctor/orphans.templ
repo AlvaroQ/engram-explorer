@@ -3,6 +3,7 @@ package doctor
 import (
 	"fmt"
 	"github.com/AlvaroQ/engram-explorer/internal/services"
+	"github.com/AlvaroQ/engram-explorer/internal/ui"
 )
 
 // OrphansList renders only the orphans content fragment — no Layout shell.
@@ -18,7 +19,7 @@ templ orphansContent(data *services.OrphansResponse, projects []services.Project
 		     <dialog> into here; the dialog's close button clears it again. -->
 		<div id="orphan-dialog-host"></div>
 		if data.Totals.Observations == 0 && data.Totals.Sessions == 0 && data.Totals.Prompts == 0 {
-			@EmptyState("No orphaned entities found. All observations, sessions, and prompts are assigned to a project.")
+			@ui.EmptyState("No orphaned entities found. All observations, sessions, and prompts are assigned to a project.")
 		} else {
 			if data.Totals.Observations > 0 {
 				<section class="orphans-section">
@@ -227,7 +228,7 @@ templ projectSelect(projects []services.ProjectStats) {
 // OrphansListWithError renders the orphans list preceded by an inline error
 // message. Used when a write action fails but we still want to refresh the list.
 templ OrphansListWithError(data *services.OrphansResponse, projects []services.ProjectStats, errMsg string) {
-	@ErrorPartial(errMsg)
+	@ui.ErrorPartial(errMsg)
 	@orphansContent(data, projects)
 }
 

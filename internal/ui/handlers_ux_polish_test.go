@@ -42,8 +42,9 @@ func TestLayout_MainContentHasID(t *testing.T) {
 	}
 }
 
-// TestLayout_ViewTransitionCSS verifies that the layout head includes a
-// view-transition CSS rule or @view-transition declaration.
+// TestLayout_ViewTransitionCSS verifies that the layout links the static
+// stylesheet carrying the view-transition rules (they cannot be inline: the
+// CSP is style-src 'self').
 func TestLayout_ViewTransitionCSS(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{
@@ -56,10 +57,15 @@ func TestLayout_ViewTransitionCSS(t *testing.T) {
 	mux.ServeHTTP(w, req)
 
 	body := w.Body.String()
-	// Either an inline <style> block or a separate stylesheet reference must
-	// contain view-transition-name.
-	if !strings.Contains(body, "view-transition-name") && !strings.Contains(body, "view-transitions.css") {
-		t.Error("layout head must reference view-transition-name CSS (inline or via stylesheet)")
+	if !strings.Contains(body, `<link rel="stylesheet" href="/static/styles.css">`) {
+		t.Fatal("layout head must link /static/styles.css")
+	}
+	css := httptest.NewRecorder()
+	mux.ServeHTTP(css, httptest.NewRequest(http.MethodGet, "/static/styles.css", nil))
+	for _, rule := range []string{"@view-transition", "view-transition-name: main-content", "::view-transition-old(main-content)"} {
+		if !strings.Contains(css.Body.String(), rule) {
+			t.Errorf("styles.css must carry %q", rule)
+		}
 	}
 }
 

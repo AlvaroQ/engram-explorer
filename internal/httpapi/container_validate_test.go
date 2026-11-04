@@ -58,7 +58,8 @@ func makeSchemalessDB(t *testing.T) string {
 }
 
 // settingsFixture builds a legacy container on Engram DB "a" and a valid Claude
-// dir, persists both as the current overrides, and returns the served handler.
+// dir, persists both in the active profile of config.json (the only persisted
+// configuration source), and returns the served handler.
 type settingsFixture struct {
 	c         *httpapi.Container
 	h         http.Handler
@@ -77,11 +78,16 @@ func newSettingsFixture(t *testing.T) settingsFixture {
 		ClaudeProjectsDir: claudeDir,
 		ConfigHome:        t.TempDir(),
 	}
-	if err := config.SaveOverrides(cfg.ConfigHome, config.Overrides{
-		EngramDbPath:      dbPath,
-		ClaudeProjectsDir: claudeDir,
-	}); err != nil {
-		t.Fatalf("seed overrides: %v", err)
+	data := config.ProfileStore{
+		Version:       1,
+		ActiveProfile: "default",
+		Profiles: map[string]config.Profile{"default": {Providers: map[string]config.ProviderConfig{
+			"engram":      {Enabled: true, Path: dbPath},
+			"cc-sessions": {Enabled: true, Path: claudeDir},
+		}}},
+	}
+	if err := config.SaveProfileStore(cfg.ConfigHome, &data); err != nil {
+		t.Fatalf("seed config.json: %v", err)
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	c, err := httpapi.NewContainer(cfg, logger)
@@ -89,6 +95,7 @@ func newSettingsFixture(t *testing.T) settingsFixture {
 		t.Fatalf("NewContainer: %v", err)
 	}
 	c.CloseGrace = 0
+	c.ProfileStore = config.NewStore(cfg.ConfigHome, data)
 	t.Cleanup(c.Close)
 	return settingsFixture{c: c, h: httpapi.NewServeMux(c), cfg: cfg, dbPath: dbPath, claudeDir: claudeDir}
 }
@@ -101,6 +108,17 @@ func (f settingsFixture) post(t *testing.T, route, value string) *httptest.Respo
 	w := httptest.NewRecorder()
 	f.h.ServeHTTP(w, req)
 	return w
+}
+
+// saved returns the engram and cc-sessions paths persisted in config.json.
+func (f settingsFixture) saved(t *testing.T) (engramDB, claudeDir string) {
+	t.Helper()
+	st, err := config.LoadProfileStore(f.cfg.ConfigHome)
+	if err != nil {
+		t.Fatalf("LoadProfileStore: %v", err)
+	}
+	p := st.Profiles[st.ActiveProfile]
+	return p.ProviderCfg("engram").Path, p.ProviderCfg("cc-sessions").Path
 }
 
 func (f settingsFixture) marker(t *testing.T) string {
@@ -124,7 +142,7 @@ func assertNoInternals(t *testing.T, body string) {
 // TestEngramDBPost_RejectsInvalidDatabase covers S5: the Engram DB path must be
 // a regular SQLite file with the Engram schema before the dashboard repoints.
 // Every rejection leaves the live DB, the runtime path and the persisted
-// overrides unchanged and shows a user-safe message.
+// config.json unchanged and shows a user-safe message.
 func TestEngramDBPost_RejectsInvalidDatabase(t *testing.T) {
 	notSQLite := filepath.Join(t.TempDir(), "notes.db")
 	if err := os.WriteFile(notSQLite, []byte("just some text, not a database\n"), 0o644); err != nil {
@@ -162,9 +180,8 @@ func TestEngramDBPost_RejectsInvalidDatabase(t *testing.T) {
 			if got := f.c.Paths.EngramDB(); got != f.dbPath {
 				t.Errorf("runtime path changed: got %q, want %q", got, f.dbPath)
 			}
-			ov := config.LoadOverrides(f.cfg.ConfigHome)
-			if ov.EngramDbPath != f.dbPath || ov.ClaudeProjectsDir != f.claudeDir {
-				t.Errorf("persisted overrides changed: got %+v", ov)
+			if db, dir := f.saved(t); db != f.dbPath || dir != f.claudeDir {
+				t.Errorf("persisted config changed: got %q, %q", db, dir)
 			}
 		})
 	}
@@ -183,15 +200,15 @@ func TestEngramDBPost_ValidDatabaseSwitches(t *testing.T) {
 	if got := f.marker(t); got != "b" {
 		t.Errorf("live DB: marker %q, want b", got)
 	}
-	if ov := config.LoadOverrides(f.cfg.ConfigHome); ov.EngramDbPath != pathB {
-		t.Errorf("persisted EngramDbPath: got %q, want %q", ov.EngramDbPath, pathB)
+	if db, _ := f.saved(t); db != pathB {
+		t.Errorf("persisted engram path: got %q, want %q", db, pathB)
 	}
 }
 
 // TestClaudeDirPost_RejectsInvalidDirectory covers S5 for the Claude projects
 // directory: it must pass the cc-sessions provider validation (an existing
 // directory with at least one project folder). Rejections leave the runtime
-// path and the persisted overrides unchanged.
+// path and the persisted config.json unchanged.
 func TestClaudeDirPost_RejectsInvalidDirectory(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "file.txt")
 	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
@@ -225,9 +242,8 @@ func TestClaudeDirPost_RejectsInvalidDirectory(t *testing.T) {
 			if got := f.c.Paths.ClaudeDir(); got != f.claudeDir {
 				t.Errorf("runtime Claude dir changed: got %q, want %q", got, f.claudeDir)
 			}
-			ov := config.LoadOverrides(f.cfg.ConfigHome)
-			if ov.EngramDbPath != f.dbPath || ov.ClaudeProjectsDir != f.claudeDir {
-				t.Errorf("persisted overrides changed: got %+v", ov)
+			if db, dir := f.saved(t); db != f.dbPath || dir != f.claudeDir {
+				t.Errorf("persisted config changed: got %q, %q", db, dir)
 			}
 		})
 	}
@@ -245,7 +261,7 @@ func TestClaudeDirPost_ValidDirectorySwitches(t *testing.T) {
 	if got := f.c.Paths.ClaudeDir(); got != dirB {
 		t.Errorf("runtime Claude dir: got %q, want %q", got, dirB)
 	}
-	if ov := config.LoadOverrides(f.cfg.ConfigHome); ov.ClaudeProjectsDir != dirB {
-		t.Errorf("persisted ClaudeProjectsDir: got %q, want %q", ov.ClaudeProjectsDir, dirB)
+	if _, dir := f.saved(t); dir != dirB {
+		t.Errorf("persisted cc-sessions path: got %q, want %q", dir, dirB)
 	}
 }

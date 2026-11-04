@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -51,5 +52,36 @@ func TestSettingsPage_NoRawErrorText(t *testing.T) {
 	}
 	if !strings.Contains(body, "The Engram daemon did not respond") {
 		t.Error("fixed daemon hint expected in place of the dial error")
+	}
+}
+
+// TestSettingsPage_ModuleErrorOnlyFromCause proves the Modules view model is
+// safe by construction: the only way to get an error hint on a module row is
+// Cause, which goes through ErrorMessage. If ModuleInfo ever exposes a settable
+// display-message field again, the raw text set on it must still not render.
+func TestSettingsPage_ModuleErrorOnlyFromCause(t *testing.T) {
+	const secret = "open /home/me/.engram/engram.db: token=sk-live-SECRET"
+	m := ui.ModuleInfo{ID: "engram", DisplayName: "Engram", Tier: ui.ModuleTier1, State: ui.ModuleErrored}
+	// Fill every other settable string field (e.g. a display field such as Err).
+	v := reflect.ValueOf(&m).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		switch name := v.Type().Field(i).Name; {
+		case name == "ID" || name == "DisplayName" || name == "Path":
+		case v.Field(i).Kind() == reflect.String && v.Field(i).CanSet():
+			v.Field(i).SetString(secret)
+		}
+	}
+	mux := http.NewServeMux()
+	ui.Mount(mux, ui.Deps{
+		RoDB:    openTestDB(t),
+		Modules: func() []ui.ModuleInfo { return []ui.ModuleInfo{m} },
+	})
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/settings", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	if strings.Contains(w.Body.String(), "sk-live-SECRET") {
+		t.Error("settings page renders raw module error text that did not come from Cause via ErrorMessage")
 	}
 }

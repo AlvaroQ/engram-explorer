@@ -1,4 +1,17 @@
-// Package config loads application configuration from environment variables.
+// Package config loads application configuration.
+//
+// Configuration sources and precedence (highest first):
+//
+//  1. Environment variables (ENGRAM_DATA_DIR, CLAUDE_PROJECTS_DIR,
+//     ENGRAM_DAEMON_URL): in-memory overrides applied to the active profile at
+//     boot. They are NEVER written to disk.
+//  2. config.json in ConfigHome (ProfileStore): the ONLY persisted source.
+//     Every change made from the UI is saved here, through Store.
+//  3. Built-in defaults (~/.engram/engram.db, ~/.claude/projects,
+//     http://127.0.0.1:$ENGRAM_PORT).
+//
+// The legacy explorer-settings.json is read once, only to seed config.json
+// when it does not exist yet (see EnsureConfig); it is never written.
 package config
 
 import (
@@ -23,9 +36,18 @@ type Config struct {
 	EngramDataDir string
 	EngramDbPath  string
 
-	// ConfigHome is the directory where explorer-settings.json (path overrides)
-	// is stored. Defaults to the same directory as EngramDataDir (~/.engram).
+	// ConfigHome is the directory where config.json is stored (and where the
+	// legacy explorer-settings.json is migrated from). It is ENGRAM_DATA_DIR
+	// when set, otherwise ~/.engram.
 	ConfigHome string
+
+	// EnvOverrides holds the data-source settings supplied through environment
+	// variables. They win over config.json at boot and are never persisted.
+	EnvOverrides PathSettings
+
+	// Defaults holds the built-in data-source settings, used when neither an
+	// environment variable nor config.json provides a value.
+	Defaults PathSettings
 
 	// Daemon
 	DaemonBaseURL   string
@@ -57,6 +79,14 @@ type Config struct {
 	// and each *.jsonl file within is a session transcript.
 	// Override with CLAUDE_PROJECTS_DIR env var.
 	ClaudeProjectsDir string
+}
+
+// PathSettings groups the data-source settings that a profile can also hold.
+// Empty fields mean "not set".
+type PathSettings struct {
+	EngramDbPath      string // ENGRAM_DATA_DIR/engram.db
+	ClaudeProjectsDir string // CLAUDE_PROJECTS_DIR
+	DaemonBaseURL     string // ENGRAM_DAEMON_URL
 }
 
 func envString(name, fallback string) string {
@@ -97,55 +127,37 @@ func envBool(name string, fallback bool) bool {
 }
 
 // Load reads all env vars and returns a Config.
-// The only source of error is failing to resolve the home directory.
+// It fails when the home directory cannot be resolved or the bind host is not
+// loopback without DASHBOARD_ALLOW_REMOTE.
 //
-// Path resolution precedence (for both EngramDbPath and ClaudeProjectsDir):
-//
-//  1. Environment variable (ENGRAM_DATA_DIR / CLAUDE_PROJECTS_DIR)
-//  2. Saved override in explorer-settings.json
-//  3. Cross-platform default (~/.engram / ~/.claude/projects)
+// EngramDbPath, ClaudeProjectsDir and DaemonBaseURL hold the environment value
+// when set, otherwise the built-in default; EnvOverrides and Defaults keep the
+// two apart. Load does not read config.json: the boot code applies the active
+// profile with Config.WithProfile (precedence env > config.json > default).
 func Load() (Config, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return Config{}, fmt.Errorf("resolve home dir: %w", err)
 	}
 
-	// configHome is where we store explorer-settings.json.
-	// When ENGRAM_DATA_DIR is set it doubles as the config home; otherwise
-	// we use the default ~/.engram.
-	envDataDir := os.Getenv("ENGRAM_DATA_DIR")
-	configHome := filepath.Join(home, ".engram")
-	if envDataDir != "" {
-		configHome = envDataDir
-	}
-
-	// Load saved user overrides (best-effort; missing file → empty struct).
-	ov := LoadOverrides(configHome)
-
-	// Resolve the Engram DB path: ENV > override > default.
-	var dataDir, dbPath string
-	if envDataDir != "" {
-		dataDir = envDataDir
-		dbPath = filepath.Join(dataDir, "engram.db")
-	} else if ov.EngramDbPath != "" {
-		dbPath = ov.EngramDbPath
-		dataDir = filepath.Dir(dbPath)
-	} else {
-		dataDir = filepath.Join(home, ".engram")
-		dbPath = filepath.Join(dataDir, "engram.db")
-	}
-
-	// Resolve the Claude projects dir: ENV > override > default.
-	claudeProjectsDir := os.Getenv("CLAUDE_PROJECTS_DIR")
-	if claudeProjectsDir == "" {
-		if ov.ClaudeProjectsDir != "" {
-			claudeProjectsDir = ov.ClaudeProjectsDir
-		} else {
-			claudeProjectsDir = filepath.Join(home, ".claude", "projects")
-		}
-	}
-
 	engramPort := envInt("ENGRAM_PORT", 7437)
+	defaults := PathSettings{
+		EngramDbPath:      filepath.Join(home, ".engram", "engram.db"),
+		ClaudeProjectsDir: filepath.Join(home, ".claude", "projects"),
+		DaemonBaseURL:     fmt.Sprintf("http://127.0.0.1:%d", engramPort),
+	}
+
+	// ENGRAM_DATA_DIR doubles as the config home; otherwise ~/.engram.
+	var overrides PathSettings
+	configHome := filepath.Dir(defaults.EngramDbPath)
+	if dir := os.Getenv("ENGRAM_DATA_DIR"); dir != "" {
+		configHome = dir
+		overrides.EngramDbPath = filepath.Join(dir, "engram.db")
+	}
+	overrides.ClaudeProjectsDir = os.Getenv("CLAUDE_PROJECTS_DIR")
+	overrides.DaemonBaseURL = os.Getenv("ENGRAM_DAEMON_URL")
+
+	dbPath := firstNonEmpty(overrides.EngramDbPath, defaults.EngramDbPath)
 
 	rawEnv := envString("ENGRAM_DASH_ENV", "production")
 	env := "production"
@@ -162,16 +174,18 @@ func Load() (Config, error) {
 	cfg := Config{
 		Host:              envString("DASHBOARD_HOST", "127.0.0.1"),
 		Port:              envInt("DASHBOARD_PORT", 8787),
-		EngramDataDir:     dataDir,
+		EngramDataDir:     filepath.Dir(dbPath),
 		EngramDbPath:      dbPath,
 		ConfigHome:        configHome,
-		DaemonBaseURL:     envString("ENGRAM_DAEMON_URL", fmt.Sprintf("http://127.0.0.1:%d", engramPort)),
+		EnvOverrides:      overrides,
+		Defaults:          defaults,
+		DaemonBaseURL:     firstNonEmpty(overrides.DaemonBaseURL, defaults.DaemonBaseURL),
 		DaemonTimeoutMs:   envInt("ENGRAM_DAEMON_TIMEOUT_MS", 1500),
 		LogLevel:          envString("LOG_LEVEL", defaultLogLevel),
 		Env:               env,
 		ExposeDetails:     env == "development",
 		ReadOnly:          envBool("ENGRAM_DASH_READONLY", false),
-		ClaudeProjectsDir: claudeProjectsDir,
+		ClaudeProjectsDir: firstNonEmpty(overrides.ClaudeProjectsDir, defaults.ClaudeProjectsDir),
 		AllowRemote:       envBool("DASHBOARD_ALLOW_REMOTE", false),
 	}
 	if !cfg.AllowRemote && !IsLoopbackHost(cfg.Host) {
@@ -181,6 +195,33 @@ func Load() (Config, error) {
 				"set DASHBOARD_ALLOW_REMOTE=true to bind it anyway at your own risk", cfg.Host)
 	}
 	return cfg, nil
+}
+
+// WithProfile returns c with the data-source settings of the (env-applied)
+// active profile p, so the startup snapshot matches what the providers open.
+// Settings p leaves empty keep their current value.
+func (c Config) WithProfile(p Profile) Config {
+	engram := p.ProviderCfg("engram")
+	if engram.Path != "" {
+		c.EngramDbPath = engram.Path
+		c.EngramDataDir = filepath.Dir(engram.Path)
+	}
+	if engram.DaemonURL != "" {
+		c.DaemonBaseURL = engram.DaemonURL
+	}
+	if dir := p.ProviderCfg("cc-sessions").Path; dir != "" {
+		c.ClaudeProjectsDir = dir
+	}
+	return c
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // IsLoopbackHost reports whether host is "localhost" (case-insensitive) or a

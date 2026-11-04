@@ -5,7 +5,7 @@ package providertest
 import (
 	"context"
 	"log/slog"
-	"net/http"
+	"sync"
 	"testing"
 
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
@@ -29,11 +29,21 @@ type FakeProviderOptions struct {
 	OpenErr error
 	// ValidateErr, if non-nil, is returned by Validate.
 	ValidateErr error
+	// Routes, if non-nil, is called by Routes with the host's router, so a
+	// test can register the provider's own routes.
+	Routes func(r providers.Router)
+	// Wrap, if non-nil, decorates every opened instance (for example with
+	// optional capabilities such as providers.Writable or providers.Searcher).
+	// Opened still records the undecorated *FakeInstance.
+	Wrap func(*FakeInstance) providers.Instance
 }
 
-// FakeProvider is a test-double Provider.
+// FakeProvider is a test-double Provider. It is safe for concurrent use and
+// records every instance it opens so tests can assert none leak.
 type FakeProvider struct {
-	opts FakeProviderOptions
+	mu     sync.Mutex
+	opts   FakeProviderOptions
+	opened []*FakeInstance
 }
 
 // NewFakeProvider returns a FakeProvider configured by opts.
@@ -60,6 +70,8 @@ func (f *FakeProvider) ProviderTier() providers.Tier { return f.opts.Tier }
 func (f *FakeProvider) Featured() bool               { return f.opts.Featured }
 
 func (f *FakeProvider) Detect(_ context.Context, cfg providers.ProviderConfig) providers.Detection {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	return providers.Detection{
 		Available: f.opts.DetectAvailable,
 		Reason:    f.opts.DetectReason,
@@ -68,13 +80,32 @@ func (f *FakeProvider) Detect(_ context.Context, cfg providers.ProviderConfig) p
 }
 
 func (f *FakeProvider) Open(_ context.Context, cfg providers.ProviderConfig) (providers.Instance, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	if f.opts.OpenErr != nil {
 		return nil, f.opts.OpenErr
 	}
-	return &FakeInstance{providerID: f.opts.ID, path: cfg.Path}, nil
+	inst := &FakeInstance{providerID: f.opts.ID, path: cfg.Path}
+	f.opened = append(f.opened, inst)
+	if f.opts.Wrap != nil {
+		return f.opts.Wrap(inst), nil
+	}
+	return inst, nil
 }
 
-func (f *FakeProvider) Routes(_ *http.ServeMux, _ providers.Instance, _ *slog.Logger) {}
+// Opened returns every instance Open has returned so far, oldest first.
+func (f *FakeProvider) Opened() []*FakeInstance {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]*FakeInstance(nil), f.opened...)
+}
+
+// Routes calls the Routes option, if any, with the host's router.
+func (f *FakeProvider) Routes(r providers.Router) {
+	if f.opts.Routes != nil {
+		f.opts.Routes(r)
+	}
+}
 
 func (f *FakeProvider) Nav(_ providers.Instance) providers.NavGroup {
 	return providers.NavGroup{
@@ -85,17 +116,23 @@ func (f *FakeProvider) Nav(_ providers.Instance) providers.NavGroup {
 }
 
 func (f *FakeProvider) Validate(_ context.Context, _ providers.ProviderConfig) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	return f.opts.ValidateErr
 }
 
 // SetOpenErr replaces the error returned by Open. Useful for mid-test error injection.
 func (f *FakeProvider) SetOpenErr(err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.opts.OpenErr = err
 }
 
 // SetDetectAvailable changes whether Detect reports the source as available.
 // Useful for simulating a path becoming valid after initial boot.
 func (f *FakeProvider) SetDetectAvailable(available bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.opts.DetectAvailable = available
 	if available {
 		f.opts.DetectReason = "ok"
@@ -108,6 +145,7 @@ func (f *FakeProvider) SetDetectAvailable(available bool) {
 type FakeInstance struct {
 	providerID string
 	path       string
+	mu         sync.Mutex
 	closed     bool
 }
 
@@ -121,12 +159,18 @@ func (i *FakeInstance) Health(_ context.Context) providers.ProviderHealth {
 }
 
 func (i *FakeInstance) Close(_ context.Context) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
 	i.closed = true
 	return nil
 }
 
 // Closed reports whether Close was called.
-func (i *FakeInstance) Closed() bool { return i.closed }
+func (i *FakeInstance) Closed() bool {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	return i.closed
+}
 
 // FakeProfile implements providers.Profile for tests.
 type FakeProfile struct {

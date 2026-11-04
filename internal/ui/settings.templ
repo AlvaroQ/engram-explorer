@@ -281,9 +281,9 @@ templ settingsContent(d settingsData) {
 					enctype="multipart/form-data"
 					data-submit-confirm="Import database? Only new memories are added — nothing is overwritten. A backup is taken first."
 				>
-					<label class="btn btn-sm" style="cursor:pointer;">
+					<label class="btn btn-sm">
 						{ T(d.Lang, "settings.db.import") }
-						<input type="file" name="file" accept=".db,.sqlite,.sqlite3,application/octet-stream" style="display:none;" data-auto-submit/>
+						<input type="file" name="file" accept=".db,.sqlite,.sqlite3,application/octet-stream" class="file-input-hidden" data-auto-submit/>
 					</label>
 				</form>
 			</div>
@@ -500,8 +500,8 @@ templ moduleRow(lang string, m ModuleInfo, pathError string) {
 				<span class="info-value mono">{ m.Path }</span>
 			</div>
 		}
-		if m.Err != "" {
-			<p class="error-hint">{ m.Err }</p>
+		if m.errMsg != "" {
+			<p class="error-hint">{ m.errMsg }</p>
 		}
 		<!-- Tier-1 manual path entry: show when provider is not enabled -->
 		if m.Tier == ModuleTier1 && m.State != ModuleEnabled {

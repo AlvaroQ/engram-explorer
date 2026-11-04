@@ -13,7 +13,7 @@ import (
 // registered BEFORE /api/observations/{id} so that the static paths take
 // precedence. Go 1.22+ ServeMux matches most-specific path first, but explicit
 // order avoids any ambiguity.
-func observationsRoutes(mux *http.ServeMux, c *Container) {
+func observationsRoutes(mux routeMux, c *Container) {
 	mux.HandleFunc("GET /api/observations", handleObservationsList(c))
 	mux.HandleFunc("GET /api/observations/types", handleObservationsTypes(c))
 	mux.HandleFunc("GET /api/observations/search", handleObservationsSearch(c))
@@ -60,7 +60,7 @@ func handleObservationsList(c *Container) http.HandlerFunc {
 			Limit:          limit,
 		}
 
-		items, nextCursor, err := services.ObservationsList(c.RoDB, params)
+		items, nextCursor, err := services.ObservationsList(c.ro(r), params)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
@@ -80,7 +80,7 @@ func handleObservationsList(c *Container) http.HandlerFunc {
 
 func handleObservationsTypes(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		types, err := services.ObservationsListTypes(c.RoDB)
+		types, err := services.ObservationsListTypes(c.ro(r))
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
@@ -100,14 +100,20 @@ func handleObservationsSearch(c *Container) http.HandlerFunc {
 			return
 		}
 		limit := parseLimit(r.URL.Query(), 50, 1, 200)
-		items, err := services.ObservationsSearch(c.RoDB, rawQ, limit)
+		// Served by the live providers.Searcher capability.
+		searcher := c.searcher(r)
+		if searcher == nil {
+			c.writeModuleDisabled(w, r)
+			return
+		}
+		items, err := searcher.Search(r.Context(), rawQ, limit)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
 		}
 
 		type resp struct {
-			Items []services.ObservationWithSnippet `json:"items"`
+			Items any `json:"items"`
 		}
 		writeJSON(w, http.StatusOK, resp{Items: items})
 	}
@@ -122,7 +128,7 @@ func handleObservationsGetByID(c *Container) http.HandlerFunc {
 			return
 		}
 
-		obs, revisions, err := services.ObservationsGetByID(c.RoDB, id)
+		obs, revisions, err := services.ObservationsGetByID(c.ro(r), id)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return

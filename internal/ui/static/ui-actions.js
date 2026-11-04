@@ -9,10 +9,13 @@
 //   data-hide-target="id"          click: set #id display to none
 //   data-clear-target="id"         click: empty #id (innerHTML = '')
 //   data-escape-clear-target="id"  Escape while the element is in the DOM: empty #id
-//   data-auto-submit               change: submit the input's form (form.submit())
+//   data-auto-submit               change: submit the input's form via
+//                                  requestSubmit(), so submit listeners such
+//                                  as data-submit-confirm still run
 //   data-submit-confirm="text"     submit: cancel unless confirm(text) is accepted
 //   data-merge-confirm-source="p"  submit: set hx-confirm from #merge-target value
-//   data-show-on-swap              htmx:afterSwap into this element: clear display
+//   data-show-on-swap              htmx:afterSwap into this element: clear the
+//                                  hidden attribute and any inline display
 //   data-remove-after-request="id" htmx:afterRequest from this element: remove #id
 //   data-poll-visible-only         htmx:beforeRequest after the first one: skip
 //                                  while the document is hidden
@@ -60,7 +63,7 @@
   document.addEventListener('change', function (e) {
     var input = e.target;
     if (input instanceof Element && input.hasAttribute('data-auto-submit') && input.form) {
-      input.form.submit();
+      input.form.requestSubmit();
     }
   });
 
@@ -98,7 +101,8 @@
 
   document.addEventListener('htmx:afterSwap', function (e) {
     var target = e.target;
-    if (target instanceof Element && target.hasAttribute('data-show-on-swap')) {
+    if (target instanceof HTMLElement && target.hasAttribute('data-show-on-swap')) {
+      target.hidden = false;
       target.style.display = '';
     }
   });

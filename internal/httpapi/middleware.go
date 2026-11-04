@@ -12,10 +12,11 @@ import (
 func secureHeaders(next http.Handler) http.Handler {
 	// script-src is 'self' only: the templates carry no inline <script> or on*=
 	// handlers (behaviours live in /static/ui-actions.js) and htmx runs with
-	// allowEval:false. style-src still allows 'unsafe-inline' for inline style
-	// attributes, the layout <style> block and htmx indicator styles; removing
-	// it is deferred to Phase 2 (see SECURITY.md, Content Security Policy).
-	const csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
+	// allowEval:false. style-src is 'self' only too: templates carry no style=
+	// attributes or <style> elements (rules live in /static/styles.css) and htmx
+	// runs with includeIndicatorStyles:false (see SECURITY.md, Content Security
+	// Policy).
+	const csp = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
@@ -29,22 +30,31 @@ func secureHeaders(next http.Handler) http.Handler {
 	})
 }
 
-// corsAllowedOrigins is the dev-only allow-list, matching the Node CORS config.
-// In production the frontend is served from the same origin (Go single binary),
-// so CORS headers are only emitted for the Vite dev server origin.
-var corsAllowedOrigins = map[string]bool{
+// viteDevOrigins are the Vite dev server origins. They are trusted (CORS,
+// cross-origin protection and the export route) only in development
+// (ENGRAM_DASH_ENV=development); in production the frontend is served from the
+// same origin by the Go binary and these origins are foreign like any other.
+var viteDevOrigins = map[string]bool{
 	"http://localhost:5173": true,
 	"http://127.0.0.1:5173": true,
 }
 
-// corsMiddleware applies CORS headers for the allow-listed origins.
-// In production the frontend is served from the same origin, so CORS headers
-// are only emitted when the request Origin is in the allow-list.
-func corsMiddleware(next http.Handler) http.Handler {
+// trustedDevOrigins returns the Vite dev origins when env is "development" and
+// an empty set otherwise.
+func trustedDevOrigins(env string) map[string]bool {
+	if env == "development" {
+		return viteDevOrigins
+	}
+	return nil
+}
+
+// corsMiddleware emits CORS headers only for the given trusted origins (the
+// Vite dev server in development, none in production).
+func corsMiddleware(next http.Handler, trusted map[string]bool) http.Handler {
 	const methods = "GET, POST, PATCH, DELETE, OPTIONS"
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		if origin != "" && corsAllowedOrigins[origin] {
+		if origin != "" && trusted[origin] {
 			h := w.Header()
 			h.Set("Access-Control-Allow-Origin", origin)
 			h.Set("Access-Control-Allow-Methods", methods)
@@ -151,15 +161,20 @@ func (rl *rateLimiter) allow(key string) (ok bool, retryAfterSec int) {
 // ServeMux). Proxy headers such as X-Forwarded-For are deliberately ignored:
 // the dashboard binds to loopback and those headers are client-controlled.
 func rateLimitKey(r *http.Request) string {
-	client := r.RemoteAddr
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		client = host
-	}
 	route := r.Pattern
 	if route == "" {
 		route = r.URL.Path
 	}
-	return client + " " + r.Method + " " + route
+	return rateLimitClient(r) + " " + r.Method + " " + route
+}
+
+// rateLimitClient returns the host part of r.RemoteAddr, or the raw value when
+// it is not host:port. X-Forwarded-For and similar headers are never read.
+func rateLimitClient(r *http.Request) string {
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
 }
 
 // withRateLimit wraps a handler with a fixed-window rate limiter keyed by
@@ -169,12 +184,17 @@ func withRateLimit(rl *rateLimiter, exposeDetails bool, next http.Handler) http.
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ok, retryAfter := rl.allow(rateLimitKey(r))
 		if !ok {
-			// Retry-After must be delay-seconds (RFC 7231 §7.1.3), not status text.
-			w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
-			writeError(w, http.StatusTooManyRequests, "BAD_INPUT",
-				"Rate limit exceeded", nil, exposeDetails)
+			writeRateLimited(w, retryAfter, exposeDetails)
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// writeRateLimited writes the 429 answer shared by every limiter: the
+// Retry-After header and the RATE_LIMITED error envelope.
+func writeRateLimited(w http.ResponseWriter, retryAfterSec int, exposeDetails bool) {
+	// Retry-After must be delay-seconds (RFC 7231 §7.1.3), not status text.
+	w.Header().Set("Retry-After", strconv.Itoa(retryAfterSec))
+	writeError(w, http.StatusTooManyRequests, codeRateLimited, "Rate limit exceeded", nil, exposeDetails)
 }

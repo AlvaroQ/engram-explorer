@@ -22,7 +22,7 @@ func handleSessionDetailPage(d Deps) http.HandlerFunc {
 
 		detail, err := services.SessionsGetDetail(d.RoDB, id)
 		if err != nil {
-			renderError(w, r, "Failed to load session: ", err)
+			RenderError(w, r, "Failed to load session: ", err)
 			return
 		}
 		if detail == nil {
@@ -31,7 +31,7 @@ func handleSessionDetailPage(d Deps) http.HandlerFunc {
 		}
 
 		if IsHTMX(r) {
-			render(w, r, SessionDetailPartial(detail, lang))
+			Render(w, r, SessionDetailPartial(detail, lang))
 		} else {
 			renderDeps(w, r, d, SessionDetailPage(detail, lang, theme, sidebarStateForRequest(r)))
 		}

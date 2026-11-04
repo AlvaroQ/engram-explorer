@@ -35,7 +35,8 @@ func ErrorMessage(r *http.Request, prefix string, err error) string {
 	return T(langForRequest(r), "common.errorGeneric")
 }
 
-// renderError renders an ErrorPartial with the message chosen by ErrorMessage.
-func renderError(w http.ResponseWriter, r *http.Request, prefix string, err error) {
-	render(w, r, ErrorPartial(ErrorMessage(r, prefix, err)))
+// RenderError renders an ErrorPartial with the message chosen by ErrorMessage.
+// Shared by the doctor package.
+func RenderError(w http.ResponseWriter, r *http.Request, prefix string, err error) {
+	Render(w, r, ErrorPartial(ErrorMessage(r, prefix, err)))
 }

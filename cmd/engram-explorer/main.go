@@ -131,49 +131,9 @@ func run() error {
 		logger.Info("demo mode active", "db", cfg.EngramDbPath)
 	}
 
-	// Ensure config.json exists (seeds default profile from env + legacy
-	// explorer-settings.json on first run). This is non-fatal — if it fails
-	// the server still starts with an in-memory profile derived from cfg.
-	profileStore, err := config.EnsureConfig(cfg.ConfigHome, cfg)
-	if err != nil {
-		logger.Warn("could not load or seed config.json; using in-memory defaults",
-			"err", err,
-		)
-		profileStore = &config.ProfileStore{
-			Version:       1,
-			ActiveProfile: "default",
-			Profiles: map[string]config.Profile{
-				"default": config.ProfileFromConfig(cfg),
-			},
-		}
-	}
-
-	activeProfile := profileStore.Profiles[profileStore.ActiveProfile]
-
-	// Build the provider registry and boot all providers. Boot is NEVER fatal:
-	// a provider that fails to open enters Errored state and the server
-	// continues. With zero active providers, the server serves the UI shell and
-	// /api/health, ready for the onboarding flow (WU-10).
-	reg := providers.NewRegistry(logger)
-	reg.Register(engramprovider.NewProvider(cfg))
-	reg.Register(ccsessionsprovider.NewProvider(cfg))
-	reg.Boot(context.Background(), httpapi.AdaptProfile(activeProfile))
-
-	n := reg.ActiveCount()
-	if n == 0 {
-		logger.Info("no providers active at startup — server running in zero-provider mode",
-			"hint", "visit /settings to configure a data source",
-		)
-	} else {
-		logger.Info("providers booted", "active", n)
-	}
-
-	// NewContainerWithRegistry never calls sqlite.OpenReadOnly — it gets DB
-	// handles from the registry's Engram instance (if any). This is the
-	// non-fatal-boot path: the server starts whether Engram is present or not.
-	container := httpapi.NewContainerWithRegistry(reg, cfg, logger)
-	container.ProfileStore = profileStore
+	container := buildContainer(cfg, logger)
 	defer container.Close()
+	n := container.Registry.ActiveCount()
 
 	// NewHandler composes the request guard (Host allow-list, cross-origin
 	// protection, security headers) in front of the embedded island bundles
@@ -216,4 +176,56 @@ func run() error {
 		return fmt.Errorf("listen: %w", err)
 	}
 	return nil
+}
+
+// buildContainer loads the profile configuration, boots the provider registry
+// and returns the HTTP container. Boot is never fatal.
+func buildContainer(cfg config.Config, logger *slog.Logger) *httpapi.Container {
+	// Configuration precedence: env > config.json (active profile) > default.
+	// config.json is the only persisted source; env overrides are applied in
+	// memory by the store and never saved. Demo mode never reads or writes
+	// config.json: it serves the demo database from an ephemeral store.
+	var store *config.Store
+	if cfg.DemoMode {
+		store = config.NewMemoryStore(cfg)
+	} else {
+		var err error
+		if store, err = config.OpenStore(cfg); err != nil {
+			// Non-fatal, and never overwrite an unreadable config.json: run on an
+			// ephemeral profile derived from env + defaults.
+			logger.Warn("could not load or seed config.json; using in-memory defaults (changes will not be saved)",
+				"err", err,
+			)
+			store = config.NewMemoryStore(cfg)
+		}
+	}
+	_, persisted, _ := store.ActiveProfile()
+	activeProfile := store.Effective(persisted)
+	cfg = cfg.WithProfile(activeProfile)
+
+	// Build the provider registry and boot all providers. Boot is NEVER fatal:
+	// a provider that fails to open enters Errored state and the server
+	// continues. With zero active providers, the server serves the UI shell and
+	// /api/health, ready for the onboarding flow (WU-10).
+	reg := providers.NewRegistry(logger)
+	reg.Register(engramprovider.NewProvider(cfg))
+	reg.Register(ccsessionsprovider.NewProvider(cfg))
+	reg.Boot(context.Background(), httpapi.AdaptProfile(activeProfile))
+
+	n := reg.ActiveCount()
+	if n == 0 {
+		logger.Info("no providers active at startup — server running in zero-provider mode",
+			"hint", "visit /settings to configure a data source",
+		)
+	} else {
+		logger.Info("providers booted", "active", n)
+	}
+
+	// NewContainerWithRegistry never calls sqlite.OpenReadOnly — it gets DB
+	// handles from the registry's Engram instance (if any). This is the
+	// non-fatal-boot path: the server starts whether Engram is present or not.
+	container := httpapi.NewContainerWithRegistry(reg, cfg, logger)
+	container.ProfileStore = store
+
+	return container
 }

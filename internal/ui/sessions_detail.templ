@@ -69,7 +69,7 @@ templ sessionDetailContent(sess *services.SessionDetailResponse, lang string) {
 			</div>
 		</div>
 		<!-- Timeline card -->
-		<div class="card" style="margin-top: 1rem;">
+		<div class="card card-gap-top">
 			<div class="card-header">
 				<h2>{ T(lang, "sessions.timeline") }</h2>
 				<p>{ T(lang, "sessions.timelineDesc", "count", fmt.Sprintf("%d", len(sess.Events))) }</p>

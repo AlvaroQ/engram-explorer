@@ -18,11 +18,12 @@ import templruntime "github.com/a-h/templ/runtime"
 //
 //	@Island("type-breakdown", map[string]any{"by_type": data.ByType})
 //
-// The container fills its parent's height (height:100%) so recharts'
-// ResponsiveContainer — which sizes to its parent — can measure a real height;
-// it falls back to min-height:240px when the parent has no defined height (e.g.
-// a plain grid cell). Callers that host a chart should give the wrapper a fixed
-// height (e.g. style="height:300px") so the 100% chain resolves.
+// The container (.island-mount in styles.css) fills its parent's height
+// (height:100%) so recharts' ResponsiveContainer — which sizes to its parent —
+// can measure a real height; it falls back to min-height:240px when the parent
+// has no defined height (e.g. a plain grid cell). Callers that host a chart
+// should give the wrapper a fixed height (e.g. the chart-h-300 class) so the
+// 100% chain resolves. No style attribute: the CSP is style-src 'self'.
 func Island(name string, props any) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -51,7 +52,7 @@ func Island(name string, props any) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/islands.templ`, Line: 20, Col: 20}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/islands.templ`, Line: 21, Col: 20}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -64,13 +65,13 @@ func Island(name string, props any) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(islandPropsJSON(props))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/islands.templ`, Line: 21, Col: 37}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/islands.templ`, Line: 22, Col: 37}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" style=\"height:100%;min-height:240px\"></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" class=\"island-mount\"></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -167,7 +167,7 @@ templ observationsContent(items []services.ObservationRow, nextCursor *string, p
 										{ fmt.Sprintf("(%d)", len(params.Projects)) }
 									}
 								</summary>
-								<div class="obs-filter-dropdown-body input overflow-y-auto" style="max-height:120px">
+								<div class="obs-filter-dropdown-body input overflow-y-auto">
 									for _, p := range projects {
 										<label class="flex items-center gap-2 py-0.5 text-xs">
 											<input type="checkbox" name="project" value={ p } checked?={ obsContains(params.Projects, p) }/>
@@ -186,7 +186,7 @@ templ observationsContent(items []services.ObservationRow, nextCursor *string, p
 										{ fmt.Sprintf("(%d)", len(params.Types)) }
 									}
 								</summary>
-								<div class="obs-filter-dropdown-body input overflow-y-auto" style="max-height:120px">
+								<div class="obs-filter-dropdown-body input overflow-y-auto">
 									for _, typ := range obsTypeOptions() {
 										<label class="flex items-center gap-2 py-0.5 text-xs">
 											<input type="checkbox" name="type" value={ typ } checked?={ obsContains(params.Types, typ) }/>
@@ -224,7 +224,7 @@ templ observationsContent(items []services.ObservationRow, nextCursor *string, p
 			</div>
 		</div>
 		<!-- Table + detail layout -->
-		<div class="flex gap-4" style="min-height:0; flex:1">
+		<div class="flex gap-4 obs-split">
 			<!-- Table card -->
 			<div class="card flex-1 overflow-hidden">
 				<div class="card-header">
@@ -236,8 +236,9 @@ templ observationsContent(items []services.ObservationRow, nextCursor *string, p
 				</div>
 			</div>
 			<!-- Detail aside (empty until a row is clicked) -->
-			<!-- data-show-on-swap: ui-actions.js shows the aside when HTMX swaps content into it. -->
-			<aside id="obs-detail" class="card" style="width:380px;min-width:280px;overflow-y:auto;display:none" data-show-on-swap>
+			<!-- Starts hidden; data-show-on-swap: ui-actions.js clears hidden (and any
+			     inline display) when HTMX swaps content into it. -->
+			<aside id="obs-detail" class="card obs-detail-panel" hidden data-show-on-swap>
 				<!-- Populated by hx-get /observations/{id} on row click -->
 			</aside>
 		</div>
@@ -309,7 +310,7 @@ templ obsRow(obs services.ObservationRow, lang string, advanced bool) {
 		<td class="mono text-xs text-fg-muted whitespace-nowrap">
 			@dateClockCell(obsDateRaw(obs))
 		</td>
-		<td class="text-sm text-fg truncate" style="max-width:320px">
+		<td class="text-sm text-fg truncate obs-cell-title">
 			if obs.ReviewDue() {
 				<span class="badge badge-warn mr-1">{ T(lang, "observations.badge.reviewDue") }</span>
 			}
@@ -319,7 +320,7 @@ templ obsRow(obs services.ObservationRow, lang string, advanced bool) {
 				<span class="muted">{ T(lang, "common.untitled") }</span>
 			}
 		</td>
-		<td class="mono text-xs text-fg-muted truncate" style="max-width:160px">
+		<td class="mono text-xs text-fg-muted truncate obs-cell-topic">
 			if obs.TopicKey != nil && *obs.TopicKey != "" {
 				{ *obs.TopicKey }
 			} else {

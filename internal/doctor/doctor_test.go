@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/AlvaroQ/engram-explorer/internal/doctor"
+	"github.com/AlvaroQ/engram-explorer/internal/ui"
 )
 
 // TestDoctorPackageCompiles is a compile-only smoke test that verifies the
@@ -62,12 +63,8 @@ func TestDoctorRootRedirectsMaintenance(t *testing.T) {
 	}
 }
 
-// TestIsHTMX validates the isHTMX helper is exported as a test helper or
-// through the render path.  We test indirectly: hitting a route with
-// HX-Request: true should return a fragment (no <html>), hitting without
-// should return a full page (contains <html> or a redirect).
-//
-// This is a table-driven test for the isHTMX detection logic.
+// TestIsHTMXHeader pins the HX-Request detection doctor handlers rely on. The
+// helper is shared with the main UI (ui.IsHTMX); doctor has no copy.
 func TestIsHTMXHeader(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -85,7 +82,7 @@ func TestIsHTMXHeader(t *testing.T) {
 			if tc.header != "" {
 				req.Header.Set("HX-Request", tc.header)
 			}
-			got := doctor.IsHTMX(req)
+			got := ui.IsHTMX(req)
 			if got != tc.wantIsHTMX {
 				t.Errorf("IsHTMX() = %v, want %v", got, tc.wantIsHTMX)
 			}

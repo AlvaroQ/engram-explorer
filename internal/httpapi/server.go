@@ -13,8 +13,6 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/daemon"
 	"github.com/AlvaroQ/engram-explorer/internal/doctor"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
-	"github.com/AlvaroQ/engram-explorer/internal/providers/ccsessions"
-	engramprovider "github.com/AlvaroQ/engram-explorer/internal/providers/engram"
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
 	"github.com/AlvaroQ/engram-explorer/internal/usererr"
@@ -30,25 +28,31 @@ var startTime = time.Now()
 //  3. CORS (dev only, allow-list)
 //  4. Route dispatch (rate limiters applied per-route in mux registration)
 //
-// When c.Registry is non-nil (registry-backed container from WU-5+), routes
-// are mounted by looping over enabled providers. Provider-specific routes
-// (Engram SQLite, CC sessions) are wired only when the corresponding provider
-// is active; if no providers are active, only the health endpoint and the UI
-// shell are registered — the server starts successfully with zero providers.
+// When c.Registry is non-nil (registry-backed container), every route is
+// mounted once whatever the state of the providers, and each request resolves
+// the live instance it needs (see modules.go): a module enabled later is
+// served without a restart and a disabled one answers 503 MODULE_DISABLED.
 //
 // When c.Registry is nil (legacy direct-mount mode, used by existing tests),
 // the original direct-mount code path is used unchanged.
 func NewServeMux(c *Container) http.Handler {
+	// Apply middleware stack (outermost = first to run).
+	var handler = c.withLeases(newRouter(c))
+	handler = corsMiddleware(handler, trustedDevOrigins(c.Config.Env))
+	handler = requestLogger(c.Logger, handler)
+	handler = secureHeaders(handler)
+
+	return handler
+}
+
+// newRouter builds the ServeMux and mounts every route (no middleware).
+func newRouter(c *Container) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// --- Phase 1 routes ---
 	mux.HandleFunc("GET /api/health", healthHandler(c))
 
 	if c.Registry != nil {
-		// Registry-backed path (WU-5+): mount per-provider routes by looping
-		// over enabled instances. Each provider's Routes() stub is a no-op;
-		// the real wiring happens here by type-asserting the instance to access
-		// provider-specific deps (Engram Deps/DoctorDeps, CC RuntimePaths).
 		mountRegistryRoutes(mux, c)
 	} else {
 		// Legacy direct-mount path: preserved verbatim so all existing tests
@@ -67,13 +71,7 @@ func NewServeMux(c *Container) http.Handler {
 		})
 	})
 
-	// Apply middleware stack (outermost = first to run).
-	var handler http.Handler = mux
-	handler = corsMiddleware(handler)
-	handler = requestLogger(c.Logger, handler)
-	handler = secureHeaders(handler)
-
-	return handler
+	return mux
 }
 
 // mountLegacyRoutes registers all routes in the original direct-mount style.
@@ -119,137 +117,74 @@ func mountLegacyRoutes(mux *http.ServeMux, c *Container) {
 	})
 }
 
-// mountRegistryRoutes registers routes for all enabled providers in the
-// registry. Engram-specific routes (observations, prompts, sessions, write,
-// sync, doctor, etc.) are mounted only when the Engram provider is active.
-// CC-sessions routes are mounted only when the CC provider is active.
-// The UI shell (GET /, settings, etc.) and daemon routes are always registered.
+// mountRegistryRoutes mounts every route once, for every registered provider
+// whatever its state. Nothing here switches on a provider ID:
+//
+//   - each provider's own routes come from Provider.Routes, on a router that
+//     serves them only while that provider is Enabled;
+//   - the host route families (the Engram JSON API and the Claude Code stats)
+//     are gated on an Enabled instance with the matching capability, and read
+//     the pools pinned for the request (c.ro / c.rw, see withLeases);
+//   - the UI shell resolves the module handles per request (ui.Deps.Live).
 func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 	reg := c.Registry
-	engramMounted := false
+	// Every profile callback below goes through c.ProfileStore, which owns the
+	// active profile name and guards all access with a lock. Nothing captures
+	// the active profile by value, so after a switch every read and write
+	// targets the new active profile.
+	store := c.ProfileStore
 
-	// Resolve active profile name for WU-8 Modules callbacks and WU-9 Accounts.
-	// We hold a pointer so that buildSwitchProfileFn can mutate it in-place and
-	// buildProfilesFn / buildActiveProfileFn always read the live value.
-	activeProfileNameVal := "default"
-	if c.ProfileStore != nil && c.ProfileStore.ActiveProfile != "" {
-		activeProfileNameVal = c.ProfileStore.ActiveProfile
-	}
-	activeProfileName := &activeProfileNameVal
+	memory := c.capabilityMux(mux, isSQLiteStore)
+	observationsRoutes(memory, c)
+	promptsRoutes(memory, c)
+	projectsRoutes(memory, c)
+	overviewRoutes(memory, c)
+	orphansRoutes(memory, c)
+	sessionsRoutes(memory, c)
+	syncRoutes(memory, c)
+	graphRoutes(memory, c)
+	writeRoutes(memory, c)
 
-	for _, entry := range reg.Entries() {
-		if entry.State != providers.Enabled {
-			continue
-		}
-		inst := reg.Instance(entry.ID)
-		if inst == nil {
-			continue
-		}
+	ccSessionsRoutes(c.capabilityMux(mux, isTranscriptSource), c)
 
-		switch entry.ID {
-		case "engram":
-			// Mount all Engram-specific routes via the package-level accessor.
-			if deps, ddeps, ok := engramprovider.EngramDeps(inst); ok {
-				// Propagate live handles into container fields so that route-group
-				// functions (which accept *Container) pick up the open DB pools.
-				c.RoDB = deps.RoDB
-				c.RWDB = deps.RWDB
-				c.Paths = deps.Paths
-
-				observationsRoutes(mux, c)
-				promptsRoutes(mux, c)
-				projectsRoutes(mux, c)
-				overviewRoutes(mux, c)
-				orphansRoutes(mux, c)
-				sessionsRoutes(mux, c)
-				syncRoutes(mux, c)
-				graphRoutes(mux, c)
-				writeRoutes(mux, c)
-
-				doctor.Mount(mux, ddeps)
-
-				// Wire the container's ReloadEngramDB / SetClaudeDir callbacks so
-				// the existing settings handlers (POST /settings/engram-db etc.)
-				// keep working on the registry-backed path.
-				deps.ReloadEngramDB = c.ReloadEngramDB
-				deps.SetClaudeDir = c.SetClaudeDir
-				// Wire NavGroups so the sidebar is data-driven from the registry.
-				deps.NavGroups = reg.NavGroups
-				// Wire WU-8 Modules callbacks.
-				deps.Modules = buildModulesFn(reg, c.ProfileStore, *activeProfileName)
-				deps.ToggleModule = buildToggleModuleFn(reg, c.ProfileStore, *activeProfileName, c.Config.ConfigHome)
-				deps.ValidateModulePath = buildValidateModulePathFn(reg, c.ProfileStore, *activeProfileName, c.Config.ConfigHome)
-				// Wire WU-9 Accounts callbacks.
-				deps.Profiles = buildProfilesFn(c.ProfileStore, activeProfileName)
-				deps.ActiveProfile = buildActiveProfileFn(activeProfileName)
-				deps.SwitchProfile = buildSwitchProfileFn(reg, c.ProfileStore, activeProfileName, c.Config.ConfigHome)
-				deps.CreateProfile = buildCreateProfileFn(c.ProfileStore, c.Config.ConfigHome)
-				deps.DeleteProfile = buildDeleteProfileFn(c.ProfileStore, activeProfileName, c.Config.ConfigHome)
-				// Wire WU-10 ActiveCount for onboarding zero-state branching.
-				deps.ActiveCount = reg.ActiveCount
-				// Wire WU-11 CC account sources for multi-account read path.
-				deps.CCAccountSources = buildCCAccountSourcesFn(c.ProfileStore, c.Paths.ClaudeDir(), c.Config.ConfigHome)
-				// Wire Slice 2b CC accounts management callbacks.
-				deps.CCAccounts = buildCCAccountsFn(c.ProfileStore)
-				deps.AddCCAccount = buildAddCCAccountFn(reg, c.ProfileStore, c.Config.ConfigHome)
-				deps.UpdateCCAccount = buildUpdateCCAccountFn(c.ProfileStore, c.Config.ConfigHome)
-				deps.RemoveCCAccount = buildRemoveCCAccountFn(c.ProfileStore, c.Config.ConfigHome)
-				// Wire PR6b advanced-view per-profile preference.
-				deps.AdvancedView = buildAdvancedViewFn(c.ProfileStore, activeProfileName)
-				deps.SetAdvancedView = buildSetAdvancedViewFn(c.ProfileStore, activeProfileName, c.Config.ConfigHome)
-				// Thread demo mode into the UI layer.
-				deps.DemoMode = c.Config.DemoMode
-				ui.Mount(mux, deps)
-				engramMounted = true
-			}
-		case "cc-sessions":
-			// Mount CC-sessions routes via the package-level accessor.
-			if rtp, ok := ccsessions.CCRuntimePaths(inst); ok {
-				c.Paths.SetClaudeDir(rtp.ClaudeDir())
-				ccSessionsRoutes(mux, c)
-			}
-		}
-	}
-
-	// Always register daemon routes (independent of provider state).
+	// Daemon routes are independent of provider state.
 	daemonRoutes(mux, c)
 
-	// Always mount the UI shell (GET /, settings, etc.) — it renders a working
-	// skeleton even with zero providers active (onboarding zero-state is WU-10).
-	// When Engram was not mounted above, ui.Mount receives nil RoDB/RWDB so
-	// data-fetch handlers degrade gracefully, but the shell itself renders.
-	if !engramMounted {
-		ui.Mount(mux, ui.Deps{
-			RoDB:               c.RoDB,
-			RWDB:               c.RWDB,
-			Config:             c.Config,
-			Paths:              c.Paths,
-			DemoMode:           c.Config.DemoMode,
-			ReloadEngramDB:     c.ReloadEngramDB,
-			SetClaudeDir:       c.SetClaudeDir,
-			NavGroups:          reg.NavGroups,
-			Modules:            buildModulesFn(reg, c.ProfileStore, *activeProfileName),
-			ToggleModule:       buildToggleModuleFn(reg, c.ProfileStore, *activeProfileName, c.Config.ConfigHome),
-			ValidateModulePath: buildValidateModulePathFn(reg, c.ProfileStore, *activeProfileName, c.Config.ConfigHome),
-			Profiles:           buildProfilesFn(c.ProfileStore, activeProfileName),
-			ActiveProfile:      buildActiveProfileFn(activeProfileName),
-			SwitchProfile:      buildSwitchProfileFn(reg, c.ProfileStore, activeProfileName, c.Config.ConfigHome),
-			CreateProfile:      buildCreateProfileFn(c.ProfileStore, c.Config.ConfigHome),
-			DeleteProfile:      buildDeleteProfileFn(c.ProfileStore, activeProfileName, c.Config.ConfigHome),
-			// WU-10: wire ActiveCount for onboarding zero-state branching.
-			ActiveCount: reg.ActiveCount,
-			// WU-11: wire CC account sources for multi-account read path.
-			CCAccountSources: buildCCAccountSourcesFn(c.ProfileStore, c.Paths.ClaudeDir(), c.Config.ConfigHome),
-			// Slice 2b: CC accounts management callbacks.
-			CCAccounts:      buildCCAccountsFn(c.ProfileStore),
-			AddCCAccount:    buildAddCCAccountFn(reg, c.ProfileStore, c.Config.ConfigHome),
-			UpdateCCAccount: buildUpdateCCAccountFn(c.ProfileStore, c.Config.ConfigHome),
-			RemoveCCAccount: buildRemoveCCAccountFn(c.ProfileStore, c.Config.ConfigHome),
-			// PR6b: advanced-view per-profile preference.
-			AdvancedView:    buildAdvancedViewFn(c.ProfileStore, activeProfileName),
-			SetAdvancedView: buildSetAdvancedViewFn(c.ProfileStore, activeProfileName, c.Config.ConfigHome),
-		})
+	for _, p := range reg.Providers() {
+		p.Routes(newModuleRouter(mux, c, p.ID()))
 	}
+
+	// The UI shell renders with zero providers (onboarding zero-state); module
+	// pages are gated per request through Live.
+	ui.Mount(mux, ui.Deps{
+		Config:             c.Config,
+		Paths:              c.Paths,
+		DemoMode:           c.Config.DemoMode,
+		Live:               c.uiLive,
+		ReloadEngramDB:     c.ReloadEngramDB,
+		SetClaudeDir:       c.SetClaudeDir,
+		NavGroups:          reg.NavGroups,
+		Modules:            buildModulesFn(reg, store),
+		ToggleModule:       buildToggleModuleFn(reg, store),
+		ValidateModulePath: buildValidateModulePathFn(reg, store),
+		Profiles:           buildProfilesFn(store),
+		ActiveProfile:      buildActiveProfileFn(store),
+		SwitchProfile:      buildSwitchProfileFn(reg, store),
+		CreateProfile:      buildCreateProfileFn(store),
+		DeleteProfile:      buildDeleteProfileFn(store),
+		// WU-10: wire ActiveCount for onboarding zero-state branching.
+		ActiveCount: reg.ActiveCount,
+		// WU-11: wire CC account sources for multi-account read path.
+		CCAccountSources: buildCCAccountSourcesFn(store, c.Paths.ClaudeDir(), c.Config.ConfigHome),
+		// Slice 2b: CC accounts management callbacks.
+		CCAccounts:      buildCCAccountsFn(store),
+		AddCCAccount:    buildAddCCAccountFn(reg, store),
+		UpdateCCAccount: buildUpdateCCAccountFn(store),
+		RemoveCCAccount: buildRemoveCCAccountFn(store),
+		// PR6b: advanced-view per-profile preference.
+		AdvancedView:    buildAdvancedViewFn(store),
+		SetAdvancedView: buildSetAdvancedViewFn(store),
+	})
 }
 
 // healthHandler replicates the Node /api/health shape exactly:
@@ -257,7 +192,7 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 //	{
 //	  "ok": bool,
 //	  "db": { "ok": bool, "path": string },
-//	  "daemon": { "ok": bool, "url": string, "error"?: string },
+//	  "daemon": { "ok": bool, "url": string, "error"?: string, "code"?: string },
 //	  "uptime_s": int
 //	}
 //
@@ -276,7 +211,13 @@ func healthHandler(c *Container) http.HandlerFunc {
 			"url": c.Config.DaemonBaseURL,
 		}
 		if !daemonResult.OK && daemonResult.Error != nil {
-			daemonBody["error"] = daemonResult.Error.Message
+			// The client error text names the URL and the dial error; only
+			// development (ExposeDetails) shows it. The code is always safe.
+			daemonBody["code"] = string(daemonResult.Error.Code)
+			daemonBody["error"] = "daemon unavailable"
+			if c.Config.ExposeDetails {
+				daemonBody["error"] = daemonResult.Error.Message
+			}
 		}
 
 		uptime := math.Floor(time.Since(startTime).Seconds())
@@ -361,25 +302,23 @@ func healthHandler(c *Container) http.HandlerFunc {
 // ---------------------------------------------------------------------------
 
 // buildModulesFn returns a closure that maps Registry.AllProviderMetas() to
-// []ui.ModuleInfo view-models for the Settings → Modules page. The ProfileStore
-// (may be nil) is used to read the current path for each provider.
-func buildModulesFn(reg *providers.Registry, store *config.ProfileStore, activeProfileName string) func() []ui.ModuleInfo {
+// []ui.ModuleInfo view-models for the Settings → Modules page. The store (may
+// be nil) supplies the active profile's path for each provider.
+func buildModulesFn(reg *providers.Registry, store *config.Store) func() []ui.ModuleInfo {
 	return func() []ui.ModuleInfo {
+		var active config.Profile
+		if store != nil {
+			_, active, _ = store.ActiveProfile()
+		}
 		metas := reg.AllProviderMetas()
 		out := make([]ui.ModuleInfo, 0, len(metas))
 		for _, m := range metas {
-			var path string
-			if store != nil {
-				if p, ok := store.Profiles[activeProfileName]; ok {
-					path = p.ProviderCfg(m.ID).Path
-				}
-			}
 			out = append(out, ui.ModuleInfo{
 				ID:          m.ID,
 				DisplayName: m.DisplayName,
 				Tier:        registryTierToUITier(m.Tier),
 				State:       registryStateToUIState(m.State),
-				Path:        path,
+				Path:        active.ProviderCfg(m.ID).Path,
 				Cause:       m.Err,
 			})
 		}
@@ -411,77 +350,62 @@ func registryStateToUIState(s providers.State) ui.ModuleState {
 	}
 }
 
+// errNoProfileStore is returned by profile callbacks on paths built without a
+// store (legacy containers).
+var errNoProfileStore = fmt.Errorf("profile store not available")
+
 // buildToggleModuleFn returns a closure that enables or disables a provider in
 // the registry and persists the change to the active profile in config.json.
-func buildToggleModuleFn(reg *providers.Registry, store *config.ProfileStore, activeProfileName, configHome string) func(id string, enabled bool) error {
+// The registry call and the save run inside one store transaction, so the
+// toggle always lands in the profile that is active at that moment.
+func buildToggleModuleFn(reg *providers.Registry, store *config.Store) func(id string, enabled bool) error {
 	return func(id string, enabled bool) error {
 		if store == nil {
-			return fmt.Errorf("profile store not available")
+			return errNoProfileStore
 		}
-
-		// Get current profile config for this provider.
-		profile, ok := store.Profiles[activeProfileName]
-		if !ok {
-			return fmt.Errorf("active profile %q not found", activeProfileName)
-		}
-		cfg := providerConfigFrom(profile.ProviderCfg(id))
-
-		if enabled {
-			cfg.Enabled = true
-			if err := reg.Enable(context.Background(), id, cfg); err != nil {
+		return store.UpdateActive(func(_ string, p *config.Profile) error {
+			pc := p.ProviderCfg(id)
+			if enabled {
+				// Open with the effective config (env overrides applied); only
+				// the enabled flag is persisted.
+				cfg := providerConfigFrom(store.Effective(*p).ProviderCfg(id))
+				cfg.Enabled = true
+				if err := reg.Enable(context.Background(), id, cfg); err != nil {
+					return err
+				}
+			} else if err := reg.Disable(context.Background(), id); err != nil {
 				return err
 			}
-		} else {
-			if err := reg.Disable(context.Background(), id); err != nil {
-				return err
-			}
-		}
-
-		// Persist the updated enablement to the active profile.
-		if profile.Providers == nil {
-			profile.Providers = make(map[string]config.ProviderConfig)
-		}
-		existing := profile.Providers[id]
-		existing.Enabled = enabled
-		profile.Providers[id] = existing
-		store.Profiles[activeProfileName] = profile
-		return config.SaveProfileStore(configHome, store)
+			pc.Enabled = enabled
+			p.SetProviderCfg(id, pc)
+			return nil
+		})
 	}
 }
 
 // buildValidateModulePathFn returns a closure that validates a provider path,
 // opens the provider with the validated config, and persists the path to the
 // active profile in config.json.
-func buildValidateModulePathFn(reg *providers.Registry, store *config.ProfileStore, activeProfileName, configHome string) func(ctx context.Context, id, path string) error {
+func buildValidateModulePathFn(reg *providers.Registry, store *config.Store) func(ctx context.Context, id, path string) error {
 	return func(ctx context.Context, id, path string) error {
 		if store == nil {
-			return fmt.Errorf("profile store not available")
+			return errNoProfileStore
 		}
-
 		cfg := providers.ProviderConfig{Enabled: true, Path: path}
 		if err := reg.Validate(ctx, id, cfg); err != nil {
 			return err
 		}
-
-		// Validation passed — enable the provider with the new config.
-		if err := reg.Enable(ctx, id, cfg); err != nil {
-			return err
-		}
-
-		// Persist path + enabled to the active profile.
-		profile, ok := store.Profiles[activeProfileName]
-		if !ok {
-			return fmt.Errorf("active profile %q not found", activeProfileName)
-		}
-		if profile.Providers == nil {
-			profile.Providers = make(map[string]config.ProviderConfig)
-		}
-		existing := profile.Providers[id]
-		existing.Enabled = true
-		existing.Path = path
-		profile.Providers[id] = existing
-		store.Profiles[activeProfileName] = profile
-		return config.SaveProfileStore(configHome, store)
+		return store.UpdateActive(func(_ string, p *config.Profile) error {
+			// Validation passed — enable the provider with the new config.
+			if err := reg.Enable(ctx, id, cfg); err != nil {
+				return err
+			}
+			pc := p.ProviderCfg(id)
+			pc.Enabled = true
+			pc.Path = path
+			p.SetProviderCfg(id, pc)
+			return nil
+		})
 	}
 }
 
@@ -489,28 +413,25 @@ func buildValidateModulePathFn(reg *providers.Registry, store *config.ProfileSto
 // WU-9: Accounts page helpers — profile CRUD + switch wiring
 // ---------------------------------------------------------------------------
 
-// buildProfilesFn returns a closure that maps ProfileStore profiles to []ui.ProfileInfo
-// view-models for the Settings → Accounts page and account switcher.
-func buildProfilesFn(store *config.ProfileStore, activeProfileName *string) func() []ui.ProfileInfo {
+// buildProfilesFn returns a closure that maps the store's profiles to
+// []ui.ProfileInfo view-models for the Settings → Accounts page and switcher.
+func buildProfilesFn(store *config.Store) func() []ui.ProfileInfo {
 	return func() []ui.ProfileInfo {
 		if store == nil {
 			return nil
 		}
-		out := make([]ui.ProfileInfo, 0, len(store.Profiles))
+		snap := store.Snapshot()
 		// Stable order: default first, then alphabetical.
-		names := make([]string, 0, len(store.Profiles))
-		for name := range store.Profiles {
+		names := make([]string, 0, len(snap.Profiles))
+		for name := range snap.Profiles {
 			names = append(names, name)
 		}
 		sortProfileNames(names)
-		active := ""
-		if activeProfileName != nil {
-			active = *activeProfileName
-		}
+		out := make([]ui.ProfileInfo, 0, len(names))
 		for _, name := range names {
 			out = append(out, ui.ProfileInfo{
 				Name:   name,
-				Active: name == active,
+				Active: name == snap.ActiveProfile,
 			})
 		}
 		return out
@@ -536,12 +457,12 @@ func sortProfileNames(names []string) {
 }
 
 // buildActiveProfileFn returns a closure that reads the current active profile name.
-func buildActiveProfileFn(activeProfileName *string) func() string {
+func buildActiveProfileFn(store *config.Store) func() string {
 	return func() string {
-		if activeProfileName == nil {
+		if store == nil {
 			return ""
 		}
-		return *activeProfileName
+		return store.ActiveProfileName()
 	}
 }
 
@@ -553,73 +474,60 @@ func buildActiveProfileFn(activeProfileName *string) func() string {
 //   - On ANY open failure: aborts, keeps old profile active, returns error.
 //   - On success: swaps handles, persists activeProfile atomically.
 //   - A missing-path provider degrades to unavailable (not fatal) — design spec §5.
-func buildSwitchProfileFn(reg *providers.Registry, store *config.ProfileStore, activeProfileName *string, configHome string) func(name string) error {
+func buildSwitchProfileFn(reg *providers.Registry, store *config.Store) func(name string) error {
 	return func(name string) error {
 		if store == nil {
-			return fmt.Errorf("profile store not available")
+			return errNoProfileStore
 		}
-		if activeProfileName == nil {
-			return fmt.Errorf("active profile name pointer is nil")
-		}
-		nextProfile, ok := store.Profiles[name]
-		if !ok {
-			return usererr.New(fmt.Sprintf("profile %q not found", name))
-		}
-
-		// Attempt hot-swap via registry.SwitchProfile (open-before-close, abort-on-error).
-		// Per spec §5: if a Tier-1 source is missing, that provider degrades — not fatal.
-		if err := reg.SwitchProfile(context.Background(), configProfileAdapter{p: nextProfile}); err != nil {
-			// SwitchProfile returns error only when a critical open fails.
-			// Degraded (path-missing) providers are handled internally with state=Detected.
-			return fmt.Errorf("profile switch failed: %w", err)
-		}
-
-		// Persist the new active profile only after all opens succeeded.
-		*activeProfileName = name
-		store.ActiveProfile = name
-		return config.SaveProfileStore(configHome, store)
+		return store.SwitchActive(name, func(next config.Profile) error {
+			if err := reg.SwitchProfile(context.Background(), configProfileAdapter{p: next}); err != nil {
+				return fmt.Errorf("profile switch failed: %w", err)
+			}
+			return nil
+		})
 	}
 }
 
 // buildCreateProfileFn returns a closure that creates a new named profile in
-// the ProfileStore. The new profile starts empty (no provider configs).
-// Returns an error if a profile with that name already exists.
-func buildCreateProfileFn(store *config.ProfileStore, configHome string) func(name string) error {
+// the store. The new profile starts empty (no provider configs). Returns an
+// error if a profile with that name already exists.
+func buildCreateProfileFn(store *config.Store) func(name string) error {
 	return func(name string) error {
 		if store == nil {
-			return fmt.Errorf("profile store not available")
+			return errNoProfileStore
 		}
-		if _, exists := store.Profiles[name]; exists {
-			return usererr.New(fmt.Sprintf("profile already exists: %q", name))
-		}
-		if store.Profiles == nil {
-			store.Profiles = make(map[string]config.Profile)
-		}
-		store.Profiles[name] = config.Profile{}
-		return config.SaveProfileStore(configHome, store)
+		return store.Update(func(st *config.ProfileStore) error {
+			if _, exists := st.Profiles[name]; exists {
+				return usererr.New(fmt.Sprintf("profile already exists: %q", name))
+			}
+			st.Profiles[name] = config.Profile{}
+			return nil
+		})
 	}
 }
 
 // buildDeleteProfileFn returns a closure that deletes the named profile from
-// the ProfileStore. Returns an error if:
+// the store. Returns an error if:
 //   - The profile is the currently active profile.
 //   - It is the last remaining profile (must always have ≥1).
-func buildDeleteProfileFn(store *config.ProfileStore, activeProfileName *string, configHome string) func(name string) error {
+func buildDeleteProfileFn(store *config.Store) func(name string) error {
 	return func(name string) error {
 		if store == nil {
-			return fmt.Errorf("profile store not available")
+			return errNoProfileStore
 		}
-		if activeProfileName != nil && *activeProfileName == name {
-			return usererr.New(fmt.Sprintf("cannot delete active profile %q; switch to another profile first", name))
-		}
-		if len(store.Profiles) <= 1 {
-			return usererr.New("cannot delete the last remaining profile")
-		}
-		if _, exists := store.Profiles[name]; !exists {
-			return usererr.New(fmt.Sprintf("profile %q not found", name))
-		}
-		delete(store.Profiles, name)
-		return config.SaveProfileStore(configHome, store)
+		return store.Update(func(st *config.ProfileStore) error {
+			if st.ActiveProfile == name {
+				return usererr.New(fmt.Sprintf("cannot delete active profile %q; switch to another profile first", name))
+			}
+			if len(st.Profiles) <= 1 {
+				return usererr.New("cannot delete the last remaining profile")
+			}
+			if _, exists := st.Profiles[name]; !exists {
+				return usererr.New(fmt.Sprintf("profile %q not found", name))
+			}
+			delete(st.Profiles, name)
+			return nil
+		})
 	}
 }
 
@@ -628,51 +536,37 @@ func buildDeleteProfileFn(store *config.ProfileStore, activeProfileName *string,
 // ---------------------------------------------------------------------------
 
 // buildCCAccountSourcesFn returns a closure that builds []services.CCAccountSource
-// from the enabled CC accounts in the ProfileStore.
-//
-// Lazy seed: if the store has no CC accounts yet (users who existed before this
-// feature was added), a single "Personal" account is seeded pointing at
-// defaultClaudeDir and immediately persisted to disk so the next call returns a
-// populated list.
+// from the enabled CC accounts in the store (CLAUDE_PROJECTS_DIR, when set,
+// replaces the path of the "default" account in memory). It never writes:
+// config.OpenStore seeds the default account once at boot.
 //
 // Guard nil store: if the store is nil (legacy/no-registry paths that build Deps
-// without a ProfileStore), falls back to a single source using defaultClaudeDir.
-func buildCCAccountSourcesFn(store *config.ProfileStore, defaultClaudeDir, configHome string) func() []services.CCAccountSource {
+// without a store), falls back to a single source using defaultClaudeDir.
+// The configHome parameter is unused: the store knows where it persists.
+func buildCCAccountSourcesFn(store *config.Store, defaultClaudeDir, _ string) func() []services.CCAccountSource {
+	fallback := []services.CCAccountSource{{
+		ID:     "default",
+		Label:  "Personal",
+		Reader: services.DiskProjectsReader{BaseDir: defaultClaudeDir},
+	}}
 	return func() []services.CCAccountSource {
 		if store == nil {
-			return []services.CCAccountSource{
-				{
-					ID:     "default",
-					Label:  "Personal",
-					Reader: services.DiskProjectsReader{BaseDir: defaultClaudeDir},
-				},
+			return fallback
+		}
+		var out []services.CCAccountSource
+		for _, acc := range store.EffectiveCCAccounts() {
+			if !acc.Enabled {
+				continue
 			}
-		}
-		// Lazy seed: if this is an existing install with no CCAccounts yet, create
-		// the default account and persist it once.
-		if len(store.CCAccounts) == 0 {
-			config.SeedDefaultAccount(store, defaultClaudeDir)
-			// Best-effort persist; if it fails the seed stays in memory for this run.
-			_ = config.SaveProfileStore(configHome, store)
-		}
-		enabled := config.ListEnabledCCAccounts(store)
-		if len(enabled) == 0 {
-			// All accounts disabled — fall back so the UI still shows something.
-			return []services.CCAccountSource{
-				{
-					ID:     "default",
-					Label:  "Personal",
-					Reader: services.DiskProjectsReader{BaseDir: defaultClaudeDir},
-				},
-			}
-		}
-		out := make([]services.CCAccountSource, 0, len(enabled))
-		for _, acc := range enabled {
 			out = append(out, services.CCAccountSource{
 				ID:     acc.ID,
 				Label:  acc.Label,
 				Reader: services.DiskProjectsReader{BaseDir: acc.Path},
 			})
+		}
+		if len(out) == 0 {
+			// No account or all disabled — fall back so the UI still shows something.
+			return fallback
 		}
 		return out
 	}
@@ -682,15 +576,16 @@ func buildCCAccountSourcesFn(store *config.ProfileStore, defaultClaudeDir, confi
 // Slice 2b: CC Accounts settings helpers
 // ---------------------------------------------------------------------------
 
-// buildCCAccountsFn returns a closure that maps all CC accounts in the
-// ProfileStore to []ui.CCAccountInfo view-models (enabled and disabled).
-func buildCCAccountsFn(store *config.ProfileStore) func() []ui.CCAccountInfo {
+// buildCCAccountsFn returns a closure that maps all CC accounts in the store
+// to []ui.CCAccountInfo view-models (enabled and disabled).
+func buildCCAccountsFn(store *config.Store) func() []ui.CCAccountInfo {
 	return func() []ui.CCAccountInfo {
 		if store == nil {
 			return nil
 		}
-		out := make([]ui.CCAccountInfo, 0, len(store.CCAccounts))
-		for _, acc := range store.CCAccounts {
+		accounts := store.CCAccounts()
+		out := make([]ui.CCAccountInfo, 0, len(accounts))
+		for _, acc := range accounts {
 			out = append(out, ui.CCAccountInfo{
 				ID:      acc.ID,
 				Label:   acc.Label,
@@ -704,41 +599,40 @@ func buildCCAccountsFn(store *config.ProfileStore) func() []ui.CCAccountInfo {
 
 // buildAddCCAccountFn returns a closure that validates a path via the
 // cc-sessions provider and then creates a new CC account in the store.
-func buildAddCCAccountFn(reg *providers.Registry, store *config.ProfileStore, configHome string) func(label, path string) error {
+func buildAddCCAccountFn(reg *providers.Registry, store *config.Store) func(label, path string) error {
 	return func(label, path string) error {
 		if store == nil {
-			return fmt.Errorf("profile store not available")
+			return errNoProfileStore
 		}
 		// Validate the path using the cc-sessions provider.
 		cfg := providers.ProviderConfig{Enabled: false, Path: path}
 		if err := reg.Validate(context.Background(), "cc-sessions", cfg); err != nil {
 			return err
 		}
-		_, err := config.AddCCAccount(configHome, store, label, path)
+		_, err := store.AddCCAccount(label, path)
 		return err
 	}
 }
 
 // buildUpdateCCAccountFn returns a closure that updates a CC account's
-// label, path and enabled state and persists via SaveProfileStore.
-func buildUpdateCCAccountFn(store *config.ProfileStore, configHome string) func(id, label, path string, enabled bool) error {
+// label, path and enabled state and persists it through the store.
+func buildUpdateCCAccountFn(store *config.Store) func(id, label, path string, enabled bool) error {
 	return func(id, label, path string, enabled bool) error {
 		if store == nil {
-			return fmt.Errorf("profile store not available")
+			return errNoProfileStore
 		}
-		return config.UpdateCCAccount(configHome, store, id, label, path, enabled)
+		return store.UpdateCCAccount(id, label, path, enabled)
 	}
 }
 
-// buildRemoveCCAccountFn returns a closure that removes a CC account from
-// the store. It delegates to config.RemoveCCAccount which already guards
-// against removing the last account.
-func buildRemoveCCAccountFn(store *config.ProfileStore, configHome string) func(id string) error {
+// buildRemoveCCAccountFn returns a closure that removes a CC account from the
+// store, which refuses to remove the last account.
+func buildRemoveCCAccountFn(store *config.Store) func(id string) error {
 	return func(id string) error {
 		if store == nil {
-			return fmt.Errorf("profile store not available")
+			return errNoProfileStore
 		}
-		return config.RemoveCCAccount(configHome, store, id)
+		return store.RemoveCCAccount(id)
 	}
 }
 
@@ -749,36 +643,27 @@ func buildRemoveCCAccountFn(store *config.ProfileStore, configHome string) func(
 // buildAdvancedViewFn returns a closure that reads the AdvancedView preference
 // from the active profile. Returns false when the store is nil or the profile
 // does not exist.
-func buildAdvancedViewFn(store *config.ProfileStore, activeProfileName *string) func() bool {
+func buildAdvancedViewFn(store *config.Store) func() bool {
 	return func() bool {
-		if store == nil || activeProfileName == nil {
+		if store == nil {
 			return false
 		}
-		p, ok := store.Profiles[*activeProfileName]
-		if !ok {
-			return false
-		}
-		return p.IsAdvancedView()
+		_, p, ok := store.ActiveProfile()
+		return ok && p.IsAdvancedView()
 	}
 }
 
 // buildSetAdvancedViewFn returns a closure that sets the AdvancedView preference
-// on the active profile and persists the change to config.json via SaveProfileStore.
-func buildSetAdvancedViewFn(store *config.ProfileStore, activeProfileName *string, configHome string) func(enabled bool) error {
+// on the active profile and persists the change to config.json.
+func buildSetAdvancedViewFn(store *config.Store) func(enabled bool) error {
 	return func(enabled bool) error {
 		if store == nil {
-			return fmt.Errorf("profile store not available")
+			return errNoProfileStore
 		}
-		if activeProfileName == nil {
-			return fmt.Errorf("active profile name pointer is nil")
-		}
-		profile, ok := store.Profiles[*activeProfileName]
-		if !ok {
-			return fmt.Errorf("active profile %q not found", *activeProfileName)
-		}
-		profile.Preferences.AdvancedView = enabled
-		store.Profiles[*activeProfileName] = profile
-		return config.SaveProfileStore(configHome, store)
+		return store.UpdateActive(func(_ string, p *config.Profile) error {
+			p.Preferences.AdvancedView = enabled
+			return nil
+		})
 	}
 }
 

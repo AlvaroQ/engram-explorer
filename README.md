@@ -228,6 +228,8 @@ Both are **Tier-1**: if not found at their default paths the UI keeps them visib
 
 **Provider states:** `enabled` (open and serving) · `detected` (found, not yet activated) · `disabled` (toggled off) · `errored` (failed to open — check the path) · `registered` (known, detection not attempted).
 
+**Disabled modules:** routes are mounted once at startup and follow the module's live state. While a module is disabled its API routes answer `503` with code `MODULE_DISABLED` and its pages show "This module is disabled. Enable it in Settings → Modules."; enabling it serves them again without a restart. A request that is already running when a module is disabled or the profile changes finishes on the data source it started with.
+
 **To activate a Tier-1 provider manually:** Settings → Modules → find the `detected`/`registered` row → enter the path → **Validate & Activate**. On success it becomes `enabled` and its sidebar section appears immediately; the path is persisted to `~/.engram/config.json`.
 
 ---
@@ -238,7 +240,7 @@ Both are **Tier-1**: if not found at their default paths the UI keeps them visib
 
 - **Create:** Settings → Accounts → name it → **Create** → configure providers in Settings → Modules.
 - **Switch:** click **Switch** next to the profile (or use the sidebar account switcher when ≥2 profiles exist). Switches are **hot-swap** — no restart; in-flight requests complete against the previous profile first.
-- **Default profile:** created automatically on first run, seeded from env vars and the legacy `~/.engram/explorer-settings.json` if present, so existing users see no change after upgrading.
+- **Default profile:** created on first run from the legacy `~/.engram/explorer-settings.json` if present, otherwise from the built-in defaults. Environment variables are applied on top at startup and are not written into it.
 - **Persistence:** active profile name and all settings live in `~/.engram/config.json` and are restored on restart.
 
 If a profile references a path that no longer exists, that provider is marked **unavailable** with an inline warning; other providers still load normally.
@@ -249,37 +251,37 @@ If a profile references a path that no longer exists, that provider is marked **
 
 ### Command-line flags
 
-| Flag                         | Purpose                                                                                                                                                                                                                                                      |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--demo`                     | Run against the demo database in **demo mode**: a demo banner is shown and write actions are disabled (API write endpoints return `403 DEMO_MODE`). Same as `ENGRAM_DEMO=1`.                                                                                 |
-| `--demo-db=<path>`           | Demo database to use with `--demo`. Same as `ENGRAM_DEMO_DB`. Without it, `demo/engram.db` is looked up next to the executable, then in the working directory; if none exists the binary exits with `demo database not found … run: go run ./cmd/seed-demo`. |
-| `--version`, `-v`, `version` | Print `engram-explorer <version>` and exit.                                                                                                                                                                                                                  |
+| Flag                         | Purpose                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--demo`                     | Run against the demo database in **demo mode**: a demo banner is shown and write actions are disabled (API write endpoints return `403 DEMO_MODE`). The profile lives in memory only: `config.json` is neither read nor written, and data-source changes in Settings (database, Claude Code directory, modules, profiles, accounts) are refused. Same as `ENGRAM_DEMO=1`. |
+| `--demo-db=<path>`           | Demo database to use with `--demo`. Same as `ENGRAM_DEMO_DB`. Without it, `demo/engram.db` is looked up next to the executable, then in the working directory; if none exists the binary exits with `demo database not found … run: go run ./cmd/seed-demo`.                                                                                                              |
+| `--version`, `-v`, `version` | Print `engram-explorer <version>` and exit.                                                                                                                                                                                                                                                                                                                               |
 
 The demo database is not shipped with release binaries — generate it with `go run ./cmd/seed-demo` (or `make seed-demo`).
 
 ### Environment variables
 
-| Env var                    | Default                 | Purpose                                                                            |
-| -------------------------- | ----------------------- | ---------------------------------------------------------------------------------- |
-| `ENGRAM_DATA_DIR`          | `~/.engram`             | Directory containing `engram.db`; also the location of `config.json`               |
-| `CLAUDE_PROJECTS_DIR`      | `~/.claude/projects`    | Directory where Claude Code stores session transcripts                             |
-| `DASHBOARD_HOST`           | `127.0.0.1`             | HTTP bind address; must be loopback unless `DASHBOARD_ALLOW_REMOTE=true`           |
-| `DASHBOARD_ALLOW_REMOTE`   | `false`                 | Set to `true` to allow a non-loopback `DASHBOARD_HOST` (no authentication!)        |
-| `DASHBOARD_PORT`           | `8787`                  | HTTP listen port                                                                   |
-| `ENGRAM_PORT`              | `7437`                  | Port of the local `engram serve` daemon (used when `ENGRAM_DAEMON_URL` is not set) |
-| `ENGRAM_DAEMON_URL`        | `http://127.0.0.1:7437` | Full base URL of the Engram daemon (overrides `ENGRAM_PORT`)                       |
-| `ENGRAM_DAEMON_TIMEOUT_MS` | `1500`                  | HTTP timeout for daemon proxy calls (milliseconds)                                 |
-| `LOG_LEVEL`                | `info` / `debug` in dev | Logging verbosity: `debug`, `info`, `warn`, `error`                                |
-| `ENGRAM_DASH_ENV`          | `production`            | Set to `development` to expose internal error details in API responses             |
-| `ENGRAM_DASH_READONLY`     | `false`                 | Set to `true` to disable all mutating routes (returns `503`)                       |
-| `ENGRAM_DEMO`              | unset                   | `1`, `true`, `yes`, or `on` enables demo mode (same as `--demo`)                   |
-| `ENGRAM_DEMO_DB`           | `demo/engram.db`        | Demo database path used in demo mode (same as `--demo-db=<path>`)                  |
+| Env var                    | Default                 | Purpose                                                                                                                                           |
+| -------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ENGRAM_DATA_DIR`          | `~/.engram`             | Directory containing `engram.db`; also the location of `config.json`                                                                              |
+| `CLAUDE_PROJECTS_DIR`      | `~/.claude/projects`    | Directory where Claude Code stores session transcripts                                                                                            |
+| `DASHBOARD_HOST`           | `127.0.0.1`             | HTTP bind address; must be loopback unless `DASHBOARD_ALLOW_REMOTE=true`                                                                          |
+| `DASHBOARD_ALLOW_REMOTE`   | `false`                 | Set to `true` to allow a non-loopback `DASHBOARD_HOST` (no authentication!)                                                                       |
+| `DASHBOARD_PORT`           | `8787`                  | HTTP listen port                                                                                                                                  |
+| `ENGRAM_PORT`              | `7437`                  | Port of the local `engram serve` daemon (used when `ENGRAM_DAEMON_URL` is not set)                                                                |
+| `ENGRAM_DAEMON_URL`        | `http://127.0.0.1:7437` | Full base URL of the Engram daemon (overrides `ENGRAM_PORT`)                                                                                      |
+| `ENGRAM_DAEMON_TIMEOUT_MS` | `1500`                  | HTTP timeout for daemon proxy calls (milliseconds)                                                                                                |
+| `LOG_LEVEL`                | `info` / `debug` in dev | Logging verbosity: `debug`, `info`, `warn`, `error`                                                                                               |
+| `ENGRAM_DASH_ENV`          | `production`            | Set to `development` to expose internal error details in API responses and trust the Vite dev server origins (`localhost:5173`, `127.0.0.1:5173`) |
+| `ENGRAM_DASH_READONLY`     | `false`                 | Set to `true` to disable all mutating routes (returns `503`)                                                                                      |
+| `ENGRAM_DEMO`              | unset                   | `1`, `true`, `yes`, or `on` enables demo mode (same as `--demo`)                                                                                  |
+| `ENGRAM_DEMO_DB`           | `demo/engram.db`        | Demo database path used in demo mode (same as `--demo-db=<path>`)                                                                                 |
 
 ### config.json (persistent settings)
 
 Provider paths and account profiles are stored at `$ENGRAM_DATA_DIR/config.json` (default `~/.engram/config.json`), written atomically on every change. **You don't need to edit it manually — the Settings UI writes it for you.**
 
-**Precedence** (highest wins): **1.** environment variable → **2.** `config.json` active profile → **3.** legacy `explorer-settings.json` (read once on first run to seed the default) → **4.** built-in default. Existing users relying on env vars see no change.
+**Precedence** (highest wins): **1.** environment variable (`ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR`, `ENGRAM_DAEMON_URL`), applied in memory at startup and never saved → **2.** the active profile in `config.json`, the only file the explorer writes → **3.** built-in default. The legacy `explorer-settings.json` is read once, only to create `config.json` on first run, and is never written. While an environment variable is set it wins over a path saved in Settings; the saved value applies again once the variable is unset. `CLAUDE_PROJECTS_DIR` applies to the `default` Claude Code account.
 
 ---
 
@@ -341,9 +343,18 @@ Or use a different port: `DASHBOARD_PORT=9090 ./engram-explorer`.
 </details>
 
 <details>
-<summary><strong>Enrolling or syncing a project</strong></summary>
+<summary><strong>Enrolling, unenrolling or syncing a project</strong></summary>
 
 The dashboard is **read-only** for cloud sync: it has no enroll, unenroll or sync buttons or endpoints. Run those operations with the `engram` CLI directly; the Sync Health views pick up the new state on their next refresh.
+
+```bash
+engram cloud enroll <project>     # start replicating a project to the cloud
+engram cloud unenroll <project>   # stop future replication (local and remote data are kept)
+engram cloud status               # check the cloud connection
+```
+
+Use the project name exactly as the dashboard shows it. Run `engram cloud <subcommand> --help` for the options your
+installed version supports.
 
 </details>
 

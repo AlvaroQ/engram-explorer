@@ -285,7 +285,7 @@ func buildSettingsData(d Deps, r *http.Request, lang, theme string) settingsData
 		modules = d.Modules()
 		for i := range modules {
 			if modules[i].Cause != nil {
-				modules[i].Err = ErrorMessage(r, "", modules[i].Cause)
+				modules[i].errMsg = ErrorMessage(r, "", modules[i].Cause)
 			}
 		}
 	}

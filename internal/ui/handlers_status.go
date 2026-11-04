@@ -82,6 +82,6 @@ func handleStatusPillPartial(d Deps) http.HandlerFunc {
 			Lang:  lang,
 			State: resolveStatusState(d),
 		}
-		render(w, r, statusPill(data))
+		Render(w, r, statusPill(data))
 	}
 }

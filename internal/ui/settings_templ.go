@@ -994,7 +994,7 @@ func settingsContent(d settingsData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 70, "</a><form method=\"post\" action=\"/api/db/import\" enctype=\"multipart/form-data\" data-submit-confirm=\"Import database? Only new memories are added — nothing is overwritten. A backup is taken first.\"><label class=\"btn btn-sm\" style=\"cursor:pointer;\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 70, "</a><form method=\"post\" action=\"/api/db/import\" enctype=\"multipart/form-data\" data-submit-confirm=\"Import database? Only new memories are added — nothing is overwritten. A backup is taken first.\"><label class=\"btn btn-sm\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1007,7 +1007,7 @@ func settingsContent(d settingsData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, " <input type=\"file\" name=\"file\" accept=\".db,.sqlite,.sqlite3,application/octet-stream\" style=\"display:none;\" data-auto-submit></label></form></div></section><!-- Claude Code --><section class=\"settings-group\"><h2 class=\"settings-group-title\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, " <input type=\"file\" name=\"file\" accept=\".db,.sqlite,.sqlite3,application/octet-stream\" class=\"file-input-hidden\" data-auto-submit></label></form></div></section><!-- Claude Code --><section class=\"settings-group\"><h2 class=\"settings-group-title\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1827,15 +1827,15 @@ func moduleRow(lang string, m ModuleInfo, pathError string) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		if m.Err != "" {
+		if m.errMsg != "" {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 145, "<p class=\"error-hint\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var110 string
-			templ_7745c5c3_Var110, templ_7745c5c3_Err = templ.JoinStringErrs(m.Err)
+			templ_7745c5c3_Var110, templ_7745c5c3_Err = templ.JoinStringErrs(m.errMsg)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 504, Col: 32}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/settings.templ`, Line: 504, Col: 35}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var110))
 			if templ_7745c5c3_Err != nil {

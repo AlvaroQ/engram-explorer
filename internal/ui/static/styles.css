@@ -1792,3 +1792,94 @@ code {
   font-size: 12px;
   padding: 4px 8px;
 }
+
+/* ---------- CSP: no inline styles (style-src 'self') ----------
+   These rules replace the former style= attributes, the layout <style> block
+   and the <style> element htmx injects for its indicators (disabled with
+   includeIndicatorStyles:false in the htmx-config meta tag). Do not add
+   style= attributes or <style> elements to templates; add a class here. */
+
+/* View Transitions API: smooth cross-page transitions via htmx swaps. Falls
+   back gracefully when the API is unsupported. */
+@view-transition {
+  navigation: auto;
+}
+#main-content {
+  view-transition-name: main-content;
+}
+::view-transition-old(main-content),
+::view-transition-new(main-content) {
+  animation-duration: 0.18s;
+  animation-timing-function: ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(main-content),
+  ::view-transition-new(main-content) {
+    animation: none;
+  }
+}
+
+/* htmx 2 indicator defaults (what htmx would inject as an inline <style>). */
+.htmx-indicator {
+  opacity: 0;
+}
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  opacity: 1;
+  transition: opacity 200ms ease-in;
+}
+
+/* React island mount points (Island / brainContent). */
+.island-mount {
+  height: 100%;
+  min-height: 240px;
+}
+.brain-mount {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+}
+
+/* Fixed chart heights so the island's height:100% chain resolves. */
+.card-body.chart-h-300 {
+  height: 300px;
+}
+.card-body.chart-h-280 {
+  height: 280px;
+}
+
+/* Spacing between stacked cards. */
+.card.card-gap-top {
+  margin-top: 1rem;
+}
+.card.card-gap-top-lg {
+  margin-top: 1.5rem;
+}
+
+/* Memory page: filter dropdowns, table + detail split, truncated cells. */
+.obs-filter-dropdown-body {
+  max-height: 120px;
+}
+.obs-split {
+  min-height: 0;
+  flex: 1;
+}
+.card.obs-detail-panel {
+  width: 380px;
+  min-width: 280px;
+  overflow-y: auto;
+}
+.card.obs-detail-panel[hidden] {
+  display: none;
+}
+.obs-cell-title {
+  max-width: 320px;
+}
+.obs-cell-topic {
+  max-width: 160px;
+}
+
+/* Settings import: the file input is triggered by its label. */
+.file-input-hidden {
+  display: none;
+}

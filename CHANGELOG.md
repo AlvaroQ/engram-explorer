@@ -18,6 +18,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Disabled-module page** — opening a disabled module's page directly shows the full app layout (sidebar,
+  account switcher, demo banner) with the notice and status `503`, instead of an unstyled fragment.
+- **Module toggles and profile switches during requests** — a module disabled, re-opened or switched while
+  pages and API calls are in flight no longer fails them with `500` ("database is closed"): each request keeps
+  the data source it started with, and the old one is closed when those requests finish (at most 30 s later).
+- **Stale cloud locale strings** — removed leftover UI strings that claimed the `engram` CLI has no
+  `cloud unenroll` and that the dashboard writes `sync_enrolled_projects` directly.
+- **Demo mode data-source lock** — demo mode rejects every change of data source (Engram database path, Claude Code
+  directory, module enable/disable and path, profile create/switch/delete, Claude Code accounts) with "Write
+  operations are disabled in demo mode.", so a demo instance can never be repointed at a real database. Theme,
+  language, sidebar and advanced-view preferences still work.
+- **Module enable/disable without restart** — enabling a module in Settings serves its pages, API and
+  maintenance routes right away (they used to 404 until a restart when the module was off at boot). While a
+  module is disabled its API routes answer `503 MODULE_DISABLED` and its pages show a localized notice, instead
+  of 404s or `500` errors on closed database handles. Switching the database with Engram disabled returns a user
+  error instead of panicking.
+- **`/api/health` after a database switch** — `db.path` reports the database in use after a Settings switch (it
+  kept the path opened at startup).
+- **Demo mode served the real database** — with an existing `config.json` profile, `--demo` served the profile's
+  database. Demo mode now runs on an in-memory profile: it always serves the demo database and never reads or
+  writes `config.json`.
+- **Environment overrides ignored** — `ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR` and `ENGRAM_DAEMON_URL` were ignored once
+  `config.json` existed; they now win over the saved profile at startup and are never written to disk.
+- **Profile store races** — concurrent Settings requests no longer race on the profile store (`config.Store`
+  guards it with a lock), and module toggles after a profile switch are saved into the new active profile
+  instead of the previous one. If saving a profile switch fails and restoring the previous profile fails too, both
+  errors are reported.
+- **Profile switch lifecycle** — switching profiles closes the providers the new profile disables and opens the
+  ones it enables (it used to leave disabled providers open and never open newly enabled ones); a failed open
+  rolls the switch back without leaking instances.
+- **Database import confirmation** — choosing a file in Settings → Import now submits with
+  `requestSubmit()`, so the confirmation dialog runs before anything is uploaded (`form.submit()` skipped it).
+- **`make demo`** — the target now starts the server in demo mode (`--demo` with the seeded database), so the
+  demo banner is shown and writes are rejected.
+- **Concurrent database exports** — each export snapshot is written to its own private temp directory instead
+  of a second-resolution file name, so two exports in the same second no longer fail with `500` (and one no
+  longer deletes the other's file).
+- **`HEAD /api/db/export`** — answers the download headers without building a snapshot (it used to run a full
+  `VACUUM INTO` and discard it).
 - **Fresh clone build** — `go build ./...` compiles on a fresh clone again: the `internal/web/dist`
   placeholder is committed (it was excluded by the generic `dist/` ignore rule).
 - **Settings DB hot-swap** — changing the Engram database path from Settings now swaps the pool on the
@@ -38,16 +77,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   configured `DASHBOARD_HOST`); unsafe methods must be same-origin (`Sec-Fetch-Site` / `Origin`), and
   `GET /api/db/export` refuses cross-site requests and navigations. Blocked requests get `403` with
   `HOST_NOT_ALLOWED` or `CROSS_ORIGIN_REQUEST`. Security headers now also apply to the embedded bundles.
+- **Vite dev origins only in development** — `http://localhost:5173` and `http://127.0.0.1:5173` are trusted
+  for CORS, cross-origin protection and `GET /api/db/export` only when `ENGRAM_DASH_ENV=development`
+  (`make dev`). In production they are treated like any other foreign origin.
 - **Cloud is read-only** — the dashboard no longer enrolls, unenrolls or syncs projects and never spawns the
   `engram` CLI. Removed `POST /api/cloud/{enroll,unenroll,sync,sync-all}`, `GET /api/cloud/capabilities`,
   `POST /doctor/sync/{project}/{enroll,unenroll,sync}`, `POST /projects/{project}/{enroll,unenroll}` and
   `POST /partials/sync-cloud`, with their buttons. Sync diagnostics and the daemon GET proxy remain; use the
   `engram` CLI to enroll or sync. This also closes the gap where cloud actions ignored `ENGRAM_DASH_READONLY`.
+  The README documents `engram cloud enroll|unenroll <project>`, and the unused island strings for the removed
+  sync button are gone.
 - **JSON body limit** — JSON request bodies are capped at 1 MiB (`http.MaxBytesReader`); larger bodies get
-  `413` with `PAYLOAD_TOO_LARGE`.
+  `413` with `PAYLOAD_TOO_LARGE`. Bodies with data after the JSON value (for example `{"a":1}{"b":2}`) are
+  rejected with `400 BAD_INPUT`; trailing whitespace is still accepted.
 - **Write route rate limits** — every JSON API write route is rate limited per client IP and route pattern (no longer
   by raw path alone, and `X-Forwarded-For` is ignored): database import 5/min, export 10/min, other write
-  routes 120/min. Expired buckets are pruned.
+  routes 120/min. Expired buckets are pruned. Rate-limited requests answer `429` with error code `RATE_LIMITED`
+  (was `BAD_INPUT`) and a `Retry-After` header.
+- **Health endpoint without daemon error text** — when the daemon is unreachable, `/api/health` reports
+  `"error": "daemon unavailable"` plus a `code` (`NETWORK`, `TIMEOUT`, `HTTP`, `PARSE`); the raw client error (URL,
+  dial error) is only shown with `ENGRAM_DASH_ENV=development`.
+- **Health provider errors without OS text** — `/api/health` `providers[].error` shows a generic message
+  (`projects directory unavailable`, `database unavailable`) outside development; the OS detail (paths) goes to
+  the server log.
+- **Daemon proxy without client error text** — `/api/daemon/*` errors answer `DAEMON_UNAVAILABLE` with
+  `daemon <path> unavailable (<CODE>)` in production; the raw client error (URL, dial error) goes to the log and is
+  only returned with `ENGRAM_DASH_ENV=development`.
+- **UI and doctor rate limit** — form posts and doctor actions (`POST`/`PUT`/`PATCH`/`DELETE` outside `/api/`) share a
+  limiter of 120 requests per minute per client, method and route pattern (path parameters share one budget). API
+  write routes keep their own limits and are not limited twice.
 - **Settings path validation** — changing the Engram database path or the Claude projects directory in
   Settings now validates the target first (an SQLite file with the Engram `observations` and `sessions`
   tables; a directory with project folders, the same checks the providers apply). On rejection the active
@@ -55,22 +113,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **No internal errors in HTML** — UI and doctor pages no longer show raw error text (SQLite errors,
   filesystem paths), including the Settings daemon and module hints. Messages written for the user are still
   shown; any other error shows a generic localized message and the detail goes to the server log.
-- **Stricter Content Security Policy** — `script-src` no longer allows `'unsafe-inline'`: inline scripts,
-  event-handler attributes and `hx-on` moved to a static `ui-actions.js`, and htmx attribute evaluation is
-  disabled (`allowEval: false`). `style-src` still allows `'unsafe-inline'` (inline style attributes and htmx
-  indicator styles); removing it is planned for Phase 2.
+- **No raw module or sync errors in HTML** — the Settings module row error is unexported and only built from
+  the provider error through the safe error mapper, so raw error text cannot reach the page by construction,
+  and Maintenance → Cloud project detail replaces the daemon's `last_error` text with a generic localized
+  message and no longer shows its `reason_message` (the reason code is still shown).
+- **Stricter Content Security Policy** — the policy is now `script-src 'self'; style-src 'self'` with no
+  `'unsafe-inline'`: inline scripts, event-handler attributes and `hx-on` moved to a static `ui-actions.js`,
+  htmx attribute evaluation is disabled (`allowEval: false`), templates carry no `style` attributes or
+  `<style>` elements (view-transition and htmx indicator rules live in `/static/styles.css`), and htmx runs
+  with `includeIndicatorStyles: false`.
 
 ### Changed
 
+- **Provider capabilities** — provider wiring goes through capability interfaces (`Provider.Routes` with a host
+  `Router`, `Writable`, `Searcher`, `StatsSource`) instead of a switch on provider IDs: search
+  (`GET /api/observations/search`) and overview stats (`GET /api/overview`) are served through `Searcher` and
+  `StatsSource`, and write routes and read-write handles are gated by `Writable`.
+- **Unreadable `config.json`** — a `config.json` that cannot be parsed is left untouched; the explorer runs on
+  defaults and saves nothing.
+- **Single saved configuration** — `config.json` is the only file the explorer writes: Settings database and
+  Claude directory changes are saved in the active profile (a Claude directory change now survives a
+  restart), and `explorer-settings.json` is read once to create `config.json` and never written again.
 - **Go toolchain** — releases build with Go 1.26.10 (`toolchain` directive in `go.mod`); the minimum
   supported Go version stays at 1.25. Go 1.25.0 shipped standard library vulnerabilities reachable from the
   HTTP server.
 - **Release gating** — the release workflow only publishes after the full CI suite passes for the tag.
 - **Version format** — `make build` reports the version without the leading `v` (e.g. `0.2.0`), matching
   GoReleaser builds.
+- **Pinned templ generator** — `make templ` (and `make build`) runs `templ@v0.3.1001` via `go run`, the same
+  version CI uses for its drift check, instead of whatever `templ` binary is on `PATH`.
 
 ### Removed
 
+- `doctor.IsHTMX`, `doctor.ErrorPartial` and `doctor.EmptyState` (internal): the doctor module reuses the UI
+  shell helpers (`ui.Render`, `ui.RenderError`, `ui.IsHTMX`, `ui.RequireRW`, `ui.ErrorPartial`,
+  `ui.EmptyState`) instead of keeping copies.
+- `doctor.IsHTMX`, `doctor.ErrorPartial` and `doctor.EmptyState` (internal): the doctor module reuses the UI
+  shell helpers (`ui.Render`, `ui.RenderError`, `ui.IsHTMX`, `ui.RequireRW`, `ui.ErrorPartial`,
+  `ui.EmptyState`) instead of keeping copies.
 - Unused Pico CSS stylesheet from the doctor module.
 - `scripts/update-engram.*`, a personal helper unrelated to this project.
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -485,11 +486,11 @@ func TestExportSnapshot_WritesValidSQLite(t *testing.T) {
 	db, _ := newWriteDB(t)
 	db.Exec(`INSERT INTO sessions (id, project, directory) VALUES ('ex1', 'proj', '/tmp')`)
 
-	exportPath, err := services.ExportSnapshot(context.Background(), db)
+	exportPath, cleanup, err := services.ExportSnapshot(context.Background(), db)
 	if err != nil {
 		t.Fatalf("ExportSnapshot: %v", err)
 	}
-	t.Cleanup(func() { os.Remove(exportPath) })
+	t.Cleanup(cleanup)
 
 	// Verify it opens as a valid SQLite DB.
 	db2, err := sql.Open("sqlite", "file:"+exportPath+"?mode=ro")
@@ -511,11 +512,11 @@ func TestImportMerge_RoundTrip(t *testing.T) {
 	db.Exec(`INSERT INTO sessions (id, project, directory) VALUES ('imp1', 'projA', '/tmp')`)
 	db.Exec(`INSERT INTO observations (session_id, type, title, content, project, scope, created_at, updated_at) VALUES ('imp1', 'note', 'ImportTest', 'content', 'projA', 'project', '2026-01-01 10:00:00', '2026-01-01 10:00:00')`)
 
-	exportPath, err := services.ExportSnapshot(context.Background(), db)
+	exportPath, cleanup, err := services.ExportSnapshot(context.Background(), db)
 	if err != nil {
 		t.Fatalf("ExportSnapshot: %v", err)
 	}
-	t.Cleanup(func() { os.Remove(exportPath) })
+	t.Cleanup(cleanup)
 
 	dataDir := filepath.Dir(path)
 	result, err := services.ImportMerge(context.Background(), db, exportPath, dataDir)
@@ -570,5 +571,43 @@ func assertWriteErrorCode(t *testing.T, err error, code string) {
 	}
 	if we.Code != code {
 		t.Errorf("error code: got %q, want %q (msg: %s)", we.Code, code, we.Message)
+	}
+}
+
+func TestExportSnapshot_ConcurrentCallsDoNotCollide(t *testing.T) {
+	db, _ := newWriteDB(t)
+
+	const n = 4
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	paths := make([]string, n)
+	cleanups := make([]func(), n)
+	errs := make([]error, n)
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			<-start
+			paths[i], cleanups[i], errs[i] = services.ExportSnapshot(context.Background(), db)
+		}(i)
+	}
+	close(start)
+	wg.Wait()
+
+	seen := map[string]bool{}
+	for i := 0; i < n; i++ {
+		if errs[i] != nil {
+			t.Fatalf("export %d: %v", i, errs[i])
+		}
+		if seen[paths[i]] {
+			t.Fatalf("export %d reused path %s", i, paths[i])
+		}
+		seen[paths[i]] = true
+	}
+	for i := 0; i < n; i++ {
+		cleanups[i]()
+		if _, err := os.Stat(filepath.Dir(paths[i])); !os.IsNotExist(err) {
+			t.Errorf("export %d: cleanup left %s behind (stat err: %v)", i, filepath.Dir(paths[i]), err)
+		}
 	}
 }

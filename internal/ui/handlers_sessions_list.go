@@ -17,12 +17,12 @@ func handleSessionsListPage(d Deps) http.HandlerFunc {
 
 		result, err := loadSessions(d, params)
 		if err != nil {
-			renderError(w, r, "Failed to load sessions: ", err)
+			RenderError(w, r, "Failed to load sessions: ", err)
 			return
 		}
 
 		if IsHTMX(r) {
-			render(w, r, SessionsListPartial(result, params, lang))
+			Render(w, r, SessionsListPartial(result, params, lang))
 		} else {
 			renderDeps(w, r, d, SessionsListPage(result, params, lang, theme, sidebarStateForRequest(r)))
 		}
@@ -38,15 +38,15 @@ func handleSessionsListPartial(d Deps) http.HandlerFunc {
 
 		result, err := loadSessions(d, params)
 		if err != nil {
-			renderError(w, r, "Failed to load sessions: ", err)
+			RenderError(w, r, "Failed to load sessions: ", err)
 			return
 		}
 
 		// append=true signals load-more: only emit the new rows (no container wrapper).
 		if r.URL.Query().Get("append") == "true" {
-			render(w, r, SessionsRowsPartial(result, params, lang))
+			Render(w, r, SessionsRowsPartial(result, params, lang))
 		} else {
-			render(w, r, SessionsListBodyPartial(result, params, lang))
+			Render(w, r, SessionsListBodyPartial(result, params, lang))
 		}
 	}
 }

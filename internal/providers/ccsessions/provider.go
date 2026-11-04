@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
-	"net/http"
 	"os"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
@@ -112,18 +111,12 @@ func (p *ccProvider) Open(ctx context.Context, cfg providers.ProviderConfig) (pr
 	}, nil
 }
 
-// Routes registers the Claude Code sessions HTTP routes on mux. It calls the
-// same route-group functions that server.go and ui.Mount call today, moved
-// verbatim (incremental adapter strategy).
-//
-// Like the Engram provider, the actual route wiring is a stub in WU-4 to avoid
-// the import cycle (providers/ccsessions cannot import internal/httpapi or
-// internal/ui). WU-5 (container wiring) will perform the real registration by
-// calling the existing ccSessionsRoutes and ui.Mount CC routes through the
-// container which already imports both packages.
-func (p *ccProvider) Routes(mux *http.ServeMux, inst providers.Instance, logger *slog.Logger) {
-	// Stub: route wiring deferred to WU-5 (container) to avoid import cycle.
-}
+// Routes registers the routes the Claude Code provider owns: none. Its pages
+// (/cc-overview, /cc-sessions/...) and GET /api/cc-sessions/stats read every
+// enabled CC account from the profile store, which only the host has, so the
+// host serves them and gates them on an enabled instance exposing
+// RuntimePaths (this provider's capability).
+func (p *ccProvider) Routes(providers.Router) {}
 
 // Nav returns the sidebar NavGroup for the CC sessions provider.
 // cc-sessions list is intentionally omitted from the primary nav (PR1 UX
@@ -196,6 +189,10 @@ func ValidateProjectsDir(path string) error {
 // ccInstance — implements providers.Instance (NO Writable — read-only)
 // ---------------------------------------------------------------------------
 
+// errProjectsDirUnavailable is the production health message for a missing or
+// unreadable projects directory.
+const errProjectsDirUnavailable = "projects directory unavailable"
+
 // ccInstance is the per-profile live activation of the CC sessions provider.
 // Because the DiskProjectsReader has no persistent handle (reads per request),
 // this struct only holds the resolved path and config.
@@ -207,6 +204,8 @@ type ccInstance struct {
 
 // Health returns per-provider health for /api/health aggregation. For CC
 // sessions the health check is whether the projects directory still exists.
+// The error is generic in production (the OS error text names the path and
+// goes to the log); development (ExposeDetails) shows the detail.
 func (i *ccInstance) Health(ctx context.Context) providers.ProviderHealth {
 	h := providers.ProviderHealth{
 		ID:   "cc-sessions",
@@ -215,10 +214,14 @@ func (i *ccInstance) Health(ctx context.Context) providers.ProviderHealth {
 
 	info, err := os.Stat(i.path)
 	if err != nil || !info.IsDir() {
+		detail := "path is not a directory"
 		if err != nil {
-			h.Error = err.Error()
-		} else {
-			h.Error = "path is not a directory"
+			detail = err.Error()
+		}
+		slog.Warn("claude code projects directory unavailable", "path", i.path, "err", detail)
+		h.Error = errProjectsDirUnavailable
+		if i.cfg.ExposeDetails {
+			h.Error = detail
 		}
 		return h
 	}

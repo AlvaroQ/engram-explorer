@@ -82,7 +82,7 @@ func NavContext(r *http.Request) context.Context {
 }
 
 // NavContextWithGroups returns r's context enriched with nav prefs AND the
-// NavGroups obtained by calling the groups func. Used by render() when a
+// NavGroups obtained by calling the groups func. Used by Render() when a
 // NavGroups func is present on Deps.
 func NavContextWithGroups(r *http.Request, groupsFn func() []providers.NavGroup) context.Context {
 	ctx := context.WithValue(r.Context(), navPrefsContextKey, navPrefsForRequest(r))

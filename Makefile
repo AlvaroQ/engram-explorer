@@ -12,10 +12,15 @@ DIST_EMBED := internal/web/dist
 ## all: build the full single binary (default target)
 all: build
 
-## templ: generate Go code from .templ templates in internal/doctor and internal/ui
+# Pinned templ generator (must match the github.com/a-h/templ version in go.mod
+# and TEMPL_VERSION in .github/workflows/ci.yml).
+TEMPL_VERSION := v0.3.1001
+TEMPL := go run github.com/a-h/templ/cmd/templ@$(TEMPL_VERSION)
+
+## templ: generate Go code from .templ templates (run from the repo root so the
+##        generated file paths match the CI drift check)
 templ:
-	templ generate ./internal/doctor/...
-	templ generate ./internal/ui/...
+	$(TEMPL) generate
 
 ## frontend: compile the React island bundles, then the Tailwind CSS the
 ##           templ UI consumes (scans the .templ files; output embedded via the
@@ -42,9 +47,10 @@ build: templ frontend embed
 run: build
 	./$(BINARY)
 
-## dev: run the Go binary in watch/dev mode (frontend dev server handled separately via pnpm dev)
+## dev: run the Go binary in development mode (detailed errors, Vite dev origins trusted;
+##      frontend dev server handled separately via pnpm dev)
 dev:
-	go run -ldflags "-X main.version=dev" ./cmd/engram-explorer
+	ENGRAM_DASH_ENV=development go run -ldflags "-X main.version=dev" ./cmd/engram-explorer
 
 ## test: run all Go tests
 test:
@@ -54,9 +60,10 @@ test:
 seed-demo:
 	go run ./cmd/seed-demo --out $(or $(DEMO_OUT),./demo) --force
 
-## demo: seed the demo database and launch the binary against it
+## demo: seed the demo database and launch the binary against it in demo mode
+##       (read-only demo banner, writes rejected)
 demo: seed-demo
-	ENGRAM_DATA_DIR=$(or $(DEMO_OUT),./demo) go run ./cmd/engram-explorer
+	ENGRAM_DATA_DIR=$(or $(DEMO_OUT),./demo) go run ./cmd/engram-explorer --demo --demo-db=$(or $(DEMO_OUT),./demo)/engram.db
 
 ## clean: remove the compiled binary and the embedded dist copy.
 ##        The placeholder index.html is re-created so `go build` keeps working.

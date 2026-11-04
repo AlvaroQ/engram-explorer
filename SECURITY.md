@@ -51,22 +51,37 @@ safety backup next to the DB before merging.
   `PUT`, `PATCH`, `DELETE`) must be same-origin according to `Sec-Fetch-Site` / `Origin`, and
   `GET /api/db/export` refuses cross-site requests and navigations. Non-browser clients that send neither
   header (curl, scripts) are unaffected. Blocked requests get `403` (`HOST_NOT_ALLOWED` /
-  `CROSS_ORIGIN_REQUEST`).
-- Cloud sync is **read-only**: the dashboard shows sync diagnostics and proxies the daemon's GET telemetry endpoints (`/health`, `/sync/status`, `/stats`). It never enrolls, unenrolls or syncs a project and never spawns the `engram` CLI — do those with the `engram` CLI directly.
-- In production (`ENGRAM_DASH_ENV` unset) internal error details are never returned to the client.
+  `CROSS_ORIGIN_REQUEST`). The Vite dev server origins (`http://localhost:5173`, `http://127.0.0.1:5173`) are
+  trusted for CORS, CSRF and the export route only when `ENGRAM_DASH_ENV=development`.
+- Rate limits: JSON API write routes allow 120 requests/min (export 10/min, import 5/min) and unsafe requests
+  outside `/api/` (UI form posts, doctor actions) share one 120/min limiter, each per client IP, method and routed
+  pattern (path parameters share a bucket; `X-Forwarded-For` is ignored). Limited requests get `429` with
+  `Retry-After` and error code `RATE_LIMITED`; htmx does not swap 4xx responses, so a limited UI action leaves the
+  page unchanged.
+- Cloud sync is **read-only**: the dashboard shows sync diagnostics and proxies the daemon's GET telemetry endpoints (`/health`, `/sync/status`, `/stats`). It never enrolls, unenrolls or syncs a project and never spawns the `engram` CLI — do those with the `engram` CLI directly (`engram cloud enroll <project>`, `engram cloud unenroll <project>`).
+- Demo mode uses only an in-memory profile: it serves the bundled demo database, never reads or writes
+  `config.json`, and refuses every request that would change the data source. Claude Code sessions still come from `CLAUDE_PROJECTS_DIR` or `~/.claude/projects`.
+  Environment overrides (`ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR`, `ENGRAM_DAEMON_URL`) are never written to
+  disk.
+- In production (`ENGRAM_DASH_ENV` unset) internal error details are never returned to the client. HTML views
+  never show raw provider or daemon error text: Settings module errors go through the same safe error mapper,
+  and the sync daemon's `last_error` / `reason_message` texts are replaced by a generic localized message plus
+  the reason code.
 
 ## Content Security Policy
 
 Every response carries:
 
 ```text
-default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'
+default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'
 ```
 
 - **Scripts:** `script-src 'self'` only. The templates contain no inline `<script>` blocks or `on*=` handlers;
   their behaviours live in `/static/ui-actions.js` (event delegation on `data-*` attributes). htmx runs with
   `allowEval: false`, so `hx-on`, `hx-trigger` `[filters]` and `js:` values are never evaluated. A test scans
   every `.templ` file and fails on any of these constructs.
-- **Styles (deferred to Phase 2):** `style-src` still allows `'unsafe-inline'` for inline `style=""` attributes,
-  the layout's view-transition `<style>` block and the indicator styles htmx injects. Removing it needs those
-  moved into stylesheets (or nonces) and is tracked for Phase 2.
+- **Styles:** `style-src 'self'` only. Templates must not use `style=` attributes or `<style>` elements (a
+  test scans every `.templ` file and the rendered pages); rules live in `/static/styles.css` or Tailwind
+  classes. htmx is configured with `includeIndicatorStyles: false`, so it never injects a `<style>` element.
+  Scripts that need dynamic styling use the CSSOM (`element.style`), which CSP allows, never
+  `setAttribute('style', …)` or HTML strings.

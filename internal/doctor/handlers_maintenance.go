@@ -20,13 +20,13 @@ func handleMaintenancePage(d Deps) http.HandlerFunc {
 		lang := ui.LangForRequest(r)
 		// HTMX partial swap (e.g. hx-boost navigation) gets just the body;
 		// a direct browser load gets the full page shell. Mirrors the
-		// IsHTMX(r) pattern used by the other page handlers in this package.
-		if IsHTMX(r) {
-			render(w, r, maintenanceContent(lang))
+		// ui.IsHTMX(r) pattern used by the other page handlers in this package.
+		if ui.IsHTMX(r) {
+			ui.Render(w, r, maintenanceContent(lang))
 			return
 		}
 		theme := ui.ThemeForRequest(r)
 		sidebarState := ui.SidebarStateForRequest(r)
-		render(w, r, MaintenancePage(lang, theme, sidebarState))
+		ui.Render(w, r, MaintenancePage(lang, theme, sidebarState))
 	}
 }

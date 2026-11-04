@@ -2,7 +2,6 @@ package ccsessions_test
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -322,13 +321,12 @@ func TestRoutes_DoesNotPanic(t *testing.T) {
 	}
 	defer inst.Close(context.Background()) //nolint:errcheck
 
-	mux := http.NewServeMux()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("Routes panicked: %v", r)
 		}
 	}()
-	p.Routes(mux, inst, nil)
+	p.Routes(nil)
 }
 
 // ---------------------------------------------------------------------------

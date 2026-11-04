@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 )
 
@@ -31,10 +32,23 @@ func writeRawJSON(w http.ResponseWriter, status int, data []byte) {
 
 // decodeJSONBody decodes the request body into dst, reading at most
 // maxJSONBodyBytes. It writes the error response and returns false when the
-// body is too large (413 PAYLOAD_TOO_LARGE) or not valid JSON (400 BAD_INPUT).
+// body is too large (413 PAYLOAD_TOO_LARGE), not valid JSON, or carries any
+// data after the JSON value other than whitespace (400 BAD_INPUT).
 func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any, exposeDetails bool) bool {
 	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
-	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
+	dec := json.NewDecoder(r.Body)
+	err := dec.Decode(dst)
+	if err == nil {
+		// A second Decode must hit EOF: anything else is trailing data.
+		if extra := dec.Decode(&struct{}{}); !errors.Is(extra, io.EOF) {
+			err = errTrailingJSON
+			var tooLarge *http.MaxBytesError
+			if errors.As(extra, &tooLarge) {
+				err = extra
+			}
+		}
+	}
+	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
 			writeError(w, http.StatusRequestEntityTooLarge, "PAYLOAD_TOO_LARGE",
@@ -46,3 +60,5 @@ func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any, exposeDetai
 	}
 	return true
 }
+
+var errTrailingJSON = errors.New("unexpected data after JSON body")

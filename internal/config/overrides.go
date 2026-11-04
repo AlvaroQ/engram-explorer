@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 )
 
+// explorer-settings.json is the legacy path-override file. It is no longer a
+// live configuration source: EnsureConfig reads it once to seed a new
+// config.json, and the server never writes it.
 const overridesFileName = "explorer-settings.json"
 
 // Overrides holds user-set path overrides. Empty fields mean "no override".
@@ -32,6 +35,8 @@ func LoadOverrides(configHome string) Overrides {
 }
 
 // SaveOverrides atomically writes the overrides file (temp file + rename).
+// The server no longer calls it; it remains for tools and test fixtures that
+// produce a legacy file to migrate.
 func SaveOverrides(configHome string, o Overrides) error {
 	if err := os.MkdirAll(configHome, 0o755); err != nil {
 		return err

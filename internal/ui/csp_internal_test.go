@@ -22,7 +22,34 @@ var (
 	hxOnAttrRe      = regexp.MustCompile(`(?i)\s(data-)?hx-on`)
 	jsURLRe         = regexp.MustCompile(`(?i)javascript:`)
 	triggerFilterRe = regexp.MustCompile(`(?i)hx-trigger="[^"]*\[`)
+	styleElemRe     = regexp.MustCompile(`(?i)<style\b`)
+	styleAttrRe     = regexp.MustCompile(`(?i)\sstyle\s*=`)
+	goLineCommentRe = regexp.MustCompile(`(?m)^\s*//.*$`)
 )
+
+// InlineStyleViolations lists inline style sources in HTML (rendered pages or
+// templ sources) that a style-src without 'unsafe-inline' blocks: <style>
+// elements and style= attributes. HTML comments are ignored. Exported for the
+// external ui_test package.
+func InlineStyleViolations(html string) []string {
+	html = htmlCommentRe.ReplaceAllString(html, "")
+	var v []string
+	for _, m := range styleElemRe.FindAllString(html, -1) {
+		v = append(v, "inline style element "+m)
+	}
+	for _, tag := range htmlTagRe.FindAllString(html, -1) {
+		if styleAttrRe.MatchString(tag) {
+			v = append(v, "inline style attribute in "+tag)
+		}
+	}
+	return v
+}
+
+// TemplStyleViolations is InlineStyleViolations for a templ source file: Go
+// line comments are stripped first so documentation may mention style="...".
+func TemplStyleViolations(src string) []string {
+	return InlineStyleViolations(goLineCommentRe.ReplaceAllString(src, ""))
+}
 
 // InlineCodeViolations lists inline script code in rendered HTML: <script>
 // without src, on*= event handler attributes, hx-on attributes, javascript:
@@ -83,6 +110,32 @@ func TestInlineCodeViolations_Detects(t *testing.T) {
 		`<!-- <script>old()</script> -->`,
 	} {
 		if v := InlineCodeViolations(html); len(v) != 0 {
+			t.Errorf("checker false positive on %q: %v", html, v)
+		}
+	}
+}
+
+// TestInlineStyleViolations_Detects proves the style checker catches every
+// inline style source a style-src 'self' policy blocks.
+func TestInlineStyleViolations_Detects(t *testing.T) {
+	for _, html := range []string{
+		"<style>.a{color:red}</style>",
+		`<div class="card" style="margin-top: 1rem;">`,
+		"<div\n\tclass=\"x\"\n\tSTYLE='height:1px'>",
+		`<div style={ templ.SafeCSS("a:b") }>`,
+	} {
+		if len(TemplStyleViolations(html)) == 0 {
+			t.Errorf("checker missed inline style in %q", html)
+		}
+	}
+	for _, html := range []string{
+		`<link rel="stylesheet" href="/static/styles.css"/>`,
+		`<p>style="x" is text</p>`,
+		`<!-- <style>old</style> -->`,
+		"// set an explicit height (e.g. style=\"height:300px\")",
+		`<div class="card" data-swap-style="x">`,
+	} {
+		if v := TemplStyleViolations(html); len(v) != 0 {
 			t.Errorf("checker false positive on %q: %v", html, v)
 		}
 	}

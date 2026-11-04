@@ -138,3 +138,33 @@ func TestBodyLimit_MalformedJSON_Still400(t *testing.T) {
 		})
 	}
 }
+
+// Data after the JSON value is rejected (400, nothing stored); trailing
+// whitespace is still accepted.
+func TestBodyLimit_TrailingDataRejected(t *testing.T) {
+	for _, body := range []string{
+		`{"title":"x"}{"title":"y"}`,
+		`{"title":"x"} garbage`,
+		`{"title":"x"}]`,
+	} {
+		t.Run(body, func(t *testing.T) {
+			c := newWriteContainer(t)
+			handler := httpapi.NewServeMux(c)
+			rec := doRawJSON(t, handler, http.MethodPatch, "/api/observations/1", body)
+			assertErrorCode(t, rec, http.StatusBadRequest, "BAD_INPUT", "invalid JSON body")
+			if got := queryString(t, c, `SELECT title FROM observations WHERE id = 1`); got != "Test Obs" {
+				t.Errorf("title changed after rejected body: got %q", got)
+			}
+		})
+	}
+
+	c := newWriteContainer(t)
+	handler := httpapi.NewServeMux(c)
+	rec := doRawJSON(t, handler, http.MethodPatch, "/api/observations/1", "{\"title\":\"ok\"} \n\t")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("trailing whitespace: got %d, want 200 (body: %s)", rec.Code, rec.Body.String())
+	}
+	if got := queryString(t, c, `SELECT title FROM observations WHERE id = 1`); got != "ok" {
+		t.Errorf("title: got %q, want ok", got)
+	}
+}

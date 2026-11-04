@@ -39,18 +39,18 @@ go run ./cmd/engram-explorer  # run backend
 For island hot-reload during development:
 
 ```bash
-# Terminal 1 — Go server
-go run ./cmd/engram-explorer
+# Terminal 1 — Go server (development mode trusts the Vite origin on :5173)
+make dev   # ENGRAM_DASH_ENV=development go run ./cmd/engram-explorer
 
 # Terminal 2 — Vite dev server (proxies /api/* to :8787)
 pnpm -F @engram-explorer/frontend dev
 ```
 
-After editing `.templ` files, regenerate Go code:
+After editing `.templ` files, regenerate Go code (uses the templ version pinned in the Makefile, the same one
+CI checks for drift):
 
 ```bash
-templ generate ./internal/ui/...
-templ generate ./internal/doctor/...
+make templ
 ```
 
 Open <http://127.0.0.1:8787>. The `engram serve` daemon is optional — the dashboard reads the SQLite file directly and degrades gracefully when the daemon is offline.
@@ -62,6 +62,16 @@ Open <http://127.0.0.1:8787>. The `engram serve` daemon is optional — the dash
 - Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`).
 - Keep **one logical change per PR**.
 - **Do not** add AI attribution or `Co-Authored-By` trailers to commits.
+
+## Data-source providers
+
+Providers (`internal/providers`) register their own routes in `Routes(r providers.Router)`. It runs once at boot,
+and the host serves each route only while that provider is enabled (otherwise `503 MODULE_DISABLED`). Get the
+instance serving a request with `r.Live(req)` and never keep it beyond that request (the host pins it until
+the handler returns). Optional capabilities on the instance are
+`Writable` (write routes and the read-write handle), `Searcher` (`GET /api/observations/search`) and
+`StatsSource` (`GET /api/overview`); the host picks the first enabled instance that has the capability
+(`Registry.Find`). Never switch on provider IDs — a structural test fails on it.
 
 ## Read-only database and API shape
 

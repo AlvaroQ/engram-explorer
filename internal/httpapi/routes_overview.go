@@ -6,7 +6,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-func overviewRoutes(mux *http.ServeMux, c *Container) {
+func overviewRoutes(mux routeMux, c *Container) {
 	mux.HandleFunc("GET /api/overview", handleOverview(c))
 	mux.HandleFunc("GET /api/activity", handleActivity(c))
 }
@@ -25,7 +25,7 @@ func handleActivity(c *Container) http.HandlerFunc {
 				"invalid range: "+rng+". Allowed: 7d, 30d, 90d", "", c.Config.ExposeDetails)
 			return
 		}
-		resp, err := services.ActivityByProject(c.RoDB, rng)
+		resp, err := services.ActivityByProject(c.ro(r), rng)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
@@ -36,7 +36,13 @@ func handleActivity(c *Container) http.HandlerFunc {
 
 func handleOverview(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		resp, err := services.OverviewBuild(c.RoDB)
+		// Served by the live providers.StatsSource capability.
+		stats := c.statsSource(r)
+		if stats == nil {
+			c.writeModuleDisabled(w, r)
+			return
+		}
+		resp, err := stats.Stats(r.Context())
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return

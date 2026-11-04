@@ -77,7 +77,7 @@ templ ccSessionsTabContent(result services.CCSessionListResult, params services.
 // ccOverviewByAccount renders the combined total + per-account breakdown cards.
 // Only shown when there are multiple accounts (single-account installs skip it).
 templ ccOverviewByAccount(multi *services.CCStatsMultiResult, lang string) {
-	<div class="card" style="margin-top: 1.5rem;">
+	<div class="card card-gap-top-lg">
 		<div class="card-header">
 			<h2>{ T(lang, "ccOverview.byAccount.title") }</h2>
 		</div>

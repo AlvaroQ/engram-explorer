@@ -13,15 +13,15 @@ import (
 // handler so the refreshed table is always identical.
 func renderSyncProjects(w http.ResponseWriter, r *http.Request, d Deps) {
 	if d.RoDB == nil {
-		render(w, r, SyncProjectsPartial(services.SyncProjectsResponse{}))
+		ui.Render(w, r, SyncProjectsPartial(services.SyncProjectsResponse{}))
 		return
 	}
 	resp, err := services.SyncListProjects(d.RoDB)
 	if err != nil {
-		renderError(w, r, "Failed to load sync projects: ", err)
+		ui.RenderError(w, r, "Failed to load sync projects: ", err)
 		return
 	}
-	render(w, r, SyncProjectsPartial(resp))
+	ui.Render(w, r, SyncProjectsPartial(resp))
 }
 
 // handleSyncProjectsList serves GET /doctor/sync/projects.
@@ -61,16 +61,16 @@ func handleSyncIssues(d Deps) http.HandlerFunc {
 					},
 				}
 			}
-			render(w, r, SyncIssuesPartial(resp))
+			ui.Render(w, r, SyncIssuesPartial(resp))
 			return
 		}
 
 		resp, err := services.SyncComputeIssues(d.RoDB, daemonAvailable)
 		if err != nil {
-			renderError(w, r, "Failed to compute sync issues: ", err)
+			ui.RenderError(w, r, "Failed to compute sync issues: ", err)
 			return
 		}
-		render(w, r, SyncIssuesPartial(resp))
+		ui.Render(w, r, SyncIssuesPartial(resp))
 	}
 }
 
@@ -89,7 +89,7 @@ func handleSyncProjectDetail(d Deps) http.HandlerFunc {
 
 		detail, err := services.SyncGetProjectDetail(d.RoDB, project)
 		if err != nil {
-			renderError(w, r, "Failed to load project detail: ", err)
+			ui.RenderError(w, r, "Failed to load project detail: ", err)
 			return
 		}
 		if detail == nil {
@@ -97,12 +97,12 @@ func handleSyncProjectDetail(d Deps) http.HandlerFunc {
 			return
 		}
 
-		if IsHTMX(r) {
-			render(w, r, SyncProjectDetailPartial(detail))
+		if ui.IsHTMX(r) {
+			ui.Render(w, r, SyncProjectDetailPartial(detail, ui.LangForRequest(r)))
 		} else {
 			// Use the shared ui.Layout with activeNav="settings" so the Settings
 			// gear is highlighted (doctor layout is no longer used).
-			render(w, r, ui.Layout("Sync: "+project, "settings", ui.LangForRequest(r), ui.ThemeForRequest(r), ui.SidebarStateForRequest(r), SyncProjectDetailPartial(detail)))
+			ui.Render(w, r, ui.Layout("Sync: "+project, "settings", ui.LangForRequest(r), ui.ThemeForRequest(r), ui.SidebarStateForRequest(r), SyncProjectDetailPartial(detail, ui.LangForRequest(r))))
 		}
 	}
 }
@@ -116,7 +116,7 @@ func handleSyncDeleteProject(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		project := r.PathValue("project")
 		if _, err := services.DeleteProject(r.Context(), d.RWDB, project); err != nil {
-			renderError(w, r, "Delete failed: ", err)
+			ui.RenderError(w, r, "Delete failed: ", err)
 			return
 		}
 		renderSyncProjects(w, r, d)

@@ -19,6 +19,9 @@ type errorBody struct {
 	Details any    `json:"details,omitempty"`
 }
 
+// codeRateLimited is the error code of every 429 Too Many Requests answer.
+const codeRateLimited = "RATE_LIMITED"
+
 // writeError writes a JSON error envelope and sets the status code.
 // When exposeDetails is false, details is suppressed and message replaces any
 // internal details — prevents leaking SQLite paths or internal stack traces to
