@@ -243,11 +243,20 @@ func RequireRW(demoMode, writable bool, h http.HandlerFunc) http.HandlerFunc {
 }
 
 // RenderModuleDisabled answers 503 with a localized HTML message for a page
-// whose module is disabled. Shared by the HTTP layer for provider-owned routes.
-func RenderModuleDisabled(w http.ResponseWriter, r *http.Request) {
+// whose module is disabled: inside the full Layout on a normal navigation
+// (sidebar, demo banner and account switcher from d's NavGroups, Profiles and
+// DemoMode), as a bare fragment for htmx requests. Shared by the HTTP layer
+// for provider-owned routes.
+func RenderModuleDisabled(w http.ResponseWriter, r *http.Request, d Deps) {
+	lang := langForRequest(r)
+	var c templ.Component = ErrorPartial(T(lang, "common.moduleDisabled"))
+	if !IsHTMX(r) {
+		c = Layout(T(lang, "common.moduleDisabledTitle"), "", lang,
+			themeForRequest(r), sidebarStateForRequest(r), c)
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusServiceUnavailable)
-	_ = ErrorPartial(T(langForRequest(r), "common.moduleDisabled")).Render(NavContext(r), w)
+	renderDeps(w, r, d, c)
 }
 
 // handlerFactory builds a page handler from Deps.
@@ -264,7 +273,7 @@ func liveHandler(d Deps, available func(LiveHandles) bool, factory handlerFactor
 	return func(w http.ResponseWriter, r *http.Request) {
 		h := d.Live(r)
 		if available != nil && !available(h) {
-			RenderModuleDisabled(w, r)
+			RenderModuleDisabled(w, r, d)
 			return
 		}
 		dd := d

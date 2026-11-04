@@ -17,14 +17,24 @@ import (
 const codeModuleDisabled = "MODULE_DISABLED"
 
 // writeModuleDisabled answers 503: the MODULE_DISABLED JSON envelope under
-// /api/, the localized HTML message elsewhere.
+// /api/, the localized HTML page (or htmx fragment) elsewhere.
 func (c *Container) writeModuleDisabled(w http.ResponseWriter, r *http.Request) {
 	if isAPIPath(r.URL.Path) {
 		writeError(w, http.StatusServiceUnavailable, codeModuleDisabled,
 			"This module is disabled. Enable it in Settings → Modules.", nil, c.Config.ExposeDetails)
 		return
 	}
-	ui.RenderModuleDisabled(w, r)
+	ui.RenderModuleDisabled(w, r, c.uiShell())
+}
+
+// uiShell is the part of ui.Deps the disabled-module page needs for the
+// layout: the sidebar groups, the account switcher and the demo banner.
+func (c *Container) uiShell() ui.Deps {
+	d := ui.Deps{DemoMode: c.Config.DemoMode, Profiles: buildProfilesFn(c.ProfileStore)}
+	if c.Registry != nil {
+		d.NavGroups = c.Registry.NavGroups
+	}
+	return d
 }
 
 // gate serves h only while available reports true for the request.

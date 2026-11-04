@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
 )
 
@@ -141,6 +142,26 @@ func TestCSP_RenderedPagesHaveNoInlineStyles(t *testing.T) {
 				t.Errorf("%s", v)
 			}
 		})
+	}
+}
+
+// TestCSP_ModuleDisabledPageHasNoInlineStyles covers S4 + S18: the
+// disabled-module page (full layout on navigation, fragment for htmx) stays
+// within style-src 'self'.
+func TestCSP_ModuleDisabledPageHasNoInlineStyles(t *testing.T) {
+	mux := http.NewServeMux()
+	ui.Mount(mux, ui.Deps{
+		Config: config.Config{ClaudeProjectsDir: t.TempDir()},
+		Live:   func(*http.Request) ui.LiveHandles { return ui.LiveHandles{} },
+	})
+	for _, htmx := range []bool{false, true} {
+		w := cspGet(t, mux, "/observations", htmx)
+		if w.Code != http.StatusServiceUnavailable {
+			t.Fatalf("htmx=%v: status = %d, want 503", htmx, w.Code)
+		}
+		for _, v := range ui.InlineStyleViolations(w.Body.String()) {
+			t.Errorf("htmx=%v: %s", htmx, v)
+		}
 	}
 }
 
