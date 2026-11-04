@@ -64,7 +64,7 @@ templ projectDetailContent(data services.ProjectOverview, sync *services.SyncPro
 						<p>{ T(lang, "projectDetail.activity.description") }</p>
 					</div>
 				</div>
-				<div class="card-body" style="height:300px">
+				<div class="card-body chart-h-300">
 					@Island("project-activity-chart", toProjectActivityChartProps(data.Activity30d))
 				</div>
 			</div>
@@ -75,7 +75,7 @@ templ projectDetailContent(data services.ProjectOverview, sync *services.SyncPro
 						<p>{ T(lang, "projectDetail.byType.description") }</p>
 					</div>
 				</div>
-				<div class="card-body" style="height:280px">
+				<div class="card-body chart-h-280">
 					@Island("type-breakdown", TypeBreakdownIslandProps{ByType: toTypeBreakdownEntries(data.ByType)})
 				</div>
 			</div>

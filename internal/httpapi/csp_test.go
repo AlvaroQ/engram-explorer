@@ -29,8 +29,8 @@ func cspDirectives(t *testing.T, header string) map[string][]string {
 }
 
 // TestCSP_PageScriptSrcDisallowsInline checks the CSP on a full HTML page:
-// scripts are restricted to 'self' (no 'unsafe-inline', no 'unsafe-eval'),
-// while style-src still allows 'unsafe-inline' until Phase 2.
+// scripts and styles are restricted to 'self' (no 'unsafe-inline', no
+// 'unsafe-eval').
 func TestCSP_PageScriptSrcDisallowsInline(t *testing.T) {
 	c := newTestContainer(t)
 	handler := httpapi.NewServeMux(c)
@@ -50,9 +50,8 @@ func TestCSP_PageScriptSrcDisallowsInline(t *testing.T) {
 	if got := strings.Join(d["script-src"], " "); got != "'self'" {
 		t.Errorf("script-src = %q, want %q", got, "'self'")
 	}
-	style := strings.Join(d["style-src"], " ")
-	if !strings.Contains(style, "'unsafe-inline'") {
-		t.Errorf("style-src = %q, want it to keep 'unsafe-inline' (deferred to Phase 2)", style)
+	if got := strings.Join(d["style-src"], " "); got != "'self'" {
+		t.Errorf("style-src = %q, want %q (no 'unsafe-inline')", got, "'self'")
 	}
 	if got := strings.Join(d["default-src"], " "); got != "'self'" {
 		t.Errorf("default-src = %q, want %q", got, "'self'")

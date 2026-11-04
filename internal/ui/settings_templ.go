@@ -994,7 +994,7 @@ func settingsContent(d settingsData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 70, "</a><form method=\"post\" action=\"/api/db/import\" enctype=\"multipart/form-data\" data-submit-confirm=\"Import database? Only new memories are added — nothing is overwritten. A backup is taken first.\"><label class=\"btn btn-sm\" style=\"cursor:pointer;\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 70, "</a><form method=\"post\" action=\"/api/db/import\" enctype=\"multipart/form-data\" data-submit-confirm=\"Import database? Only new memories are added — nothing is overwritten. A backup is taken first.\"><label class=\"btn btn-sm\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1007,7 +1007,7 @@ func settingsContent(d settingsData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, " <input type=\"file\" name=\"file\" accept=\".db,.sqlite,.sqlite3,application/octet-stream\" style=\"display:none;\" data-auto-submit></label></form></div></section><!-- Claude Code --><section class=\"settings-group\"><h2 class=\"settings-group-title\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, " <input type=\"file\" name=\"file\" accept=\".db,.sqlite,.sqlite3,application/octet-stream\" class=\"file-input-hidden\" data-auto-submit></label></form></div></section><!-- Claude Code --><section class=\"settings-group\"><h2 class=\"settings-group-title\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

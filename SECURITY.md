@@ -63,13 +63,15 @@ safety backup next to the DB before merging.
 Every response carries:
 
 ```text
-default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'
+default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'
 ```
 
 - **Scripts:** `script-src 'self'` only. The templates contain no inline `<script>` blocks or `on*=` handlers;
   their behaviours live in `/static/ui-actions.js` (event delegation on `data-*` attributes). htmx runs with
   `allowEval: false`, so `hx-on`, `hx-trigger` `[filters]` and `js:` values are never evaluated. A test scans
   every `.templ` file and fails on any of these constructs.
-- **Styles (deferred to Phase 2):** `style-src` still allows `'unsafe-inline'` for inline `style=""` attributes,
-  the layout's view-transition `<style>` block and the indicator styles htmx injects. Removing it needs those
-  moved into stylesheets (or nonces) and is tracked for Phase 2.
+- **Styles:** `style-src 'self'` only. Templates must not use `style=` attributes or `<style>` elements (a
+  test scans every `.templ` file and the rendered pages); rules live in `/static/styles.css` or Tailwind
+  classes. htmx is configured with `includeIndicatorStyles: false`, so it never injects a `<style>` element.
+  Scripts that need dynamic styling use the CSSOM (`element.style`), which CSP allows, never
+  `setAttribute('style', …)` or HTML strings.

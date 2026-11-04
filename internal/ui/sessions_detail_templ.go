@@ -275,7 +275,7 @@ func sessionDetailContent(sess *services.SessionDetailResponse, lang string) tem
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</div></div></div><!-- Timeline card --><div class=\"card\" style=\"margin-top: 1rem;\"><div class=\"card-header\"><h2>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</div></div></div><!-- Timeline card --><div class=\"card card-gap-top\"><div class=\"card-header\"><h2>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

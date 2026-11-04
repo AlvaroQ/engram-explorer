@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -21,7 +23,57 @@ var (
 	docEventAttrRe     = regexp.MustCompile(`(?i)\son[a-z]+\s*=`)
 	docHxOnAttrRe      = regexp.MustCompile(`(?i)\s(data-)?hx-on`)
 	docTriggerFilterRe = regexp.MustCompile(`(?i)hx-trigger="[^"]*\[`)
+	docStyleElemRe     = regexp.MustCompile(`(?i)<style\b`)
+	docStyleAttrRe     = regexp.MustCompile(`(?i)\sstyle\s*=`)
+	docGoCommentRe     = regexp.MustCompile(`(?m)^\s*//.*$`)
 )
+
+// docInlineStyleViolations lists <style> elements and style= attributes, which
+// a style-src without 'unsafe-inline' blocks. Mirrors ui.InlineStyleViolations.
+func docInlineStyleViolations(html string) []string {
+	html = docHTMLCommentRe.ReplaceAllString(html, "")
+	var v []string
+	for _, m := range docStyleElemRe.FindAllString(html, -1) {
+		v = append(v, "inline style element "+m)
+	}
+	for _, tag := range docHTMLTagRe.FindAllString(html, -1) {
+		if docStyleAttrRe.MatchString(tag) {
+			v = append(v, "inline style attribute in "+tag)
+		}
+	}
+	return v
+}
+
+// TestDocInlineStyleViolations_Detects proves the style checker is meaningful.
+func TestDocInlineStyleViolations_Detects(t *testing.T) {
+	for _, bad := range []string{"<style>.a{}</style>", `<td style="width:1px">`} {
+		if len(docInlineStyleViolations(bad)) == 0 {
+			t.Errorf("checker missed inline style in %q", bad)
+		}
+	}
+	for _, good := range []string{`<link rel="stylesheet" href="/doctor/static/styles.css"/>`, "<!-- <style> -->"} {
+		if v := docInlineStyleViolations(good); len(v) != 0 {
+			t.Errorf("checker false positive on %q: %v", good, v)
+		}
+	}
+}
+
+// TestTemplSources_DoctorNoInlineStyles scans every internal/doctor/*.templ.
+func TestTemplSources_DoctorNoInlineStyles(t *testing.T) {
+	files, err := filepath.Glob("*.templ")
+	if err != nil || len(files) == 0 {
+		t.Fatalf("no .templ files found (err=%v); guard is not running", err)
+	}
+	for _, f := range files {
+		raw, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatalf("read %s: %v", f, err)
+		}
+		for _, v := range docInlineStyleViolations(docGoCommentRe.ReplaceAllString(string(raw), "")) {
+			t.Errorf("%s: %s", f, v)
+		}
+	}
+}
 
 func docInlineCodeViolations(html string) []string {
 	html = docHTMLCommentRe.ReplaceAllString(html, "")
@@ -83,6 +135,9 @@ func TestCSP_DoctorViewsHaveNoInlineScriptCode(t *testing.T) {
 			}
 			body := w.Body.String()
 			for _, v := range docInlineCodeViolations(body) {
+				t.Errorf("%s", v)
+			}
+			for _, v := range docInlineStyleViolations(body) {
 				t.Errorf("%s", v)
 			}
 			for s, n := range tc.want {

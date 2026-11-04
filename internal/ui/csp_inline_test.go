@@ -7,6 +7,8 @@ import (
 	"html"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -81,7 +83,7 @@ func TestCSP_RenderedPagesHaveNoInlineScriptCode(t *testing.T) {
 	}{
 		{"/", false, []string{`data-hide-target="demo-banner"`}},
 		{"/brain", false, []string{`data-hide-target="demo-banner"`}},
-		{"/observations", false, []string{`id="obs-detail"`, "data-show-on-swap"}},
+		{"/observations", false, []string{`id="obs-detail"`, "hidden data-show-on-swap"}},
 		{"/observations/1", true, []string{`data-hide-target="obs-detail"`}},
 		{"/settings", false, []string{"data-auto-submit", `data-submit-confirm="Import database?`}},
 		{"/sessions/list", true, []string{`data-remove-after-request="sessions-load-more-row"`}},
@@ -103,6 +105,58 @@ func TestCSP_RenderedPagesHaveNoInlineScriptCode(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestCSP_RenderedPagesHaveNoInlineStyles renders full pages (both layouts)
+// and partials. style-src is 'self' only, so none may carry a <style> element
+// or a style= attribute.
+func TestCSP_RenderedPagesHaveNoInlineStyles(t *testing.T) {
+	mux := newCSPMux(t)
+	cases := []struct {
+		path string
+		htmx bool
+	}{
+		{"/", false},
+		{"/brain", false},
+		{"/observations", false},
+		{"/observations/list", true},
+		{"/observations/1", true},
+		{"/settings", false},
+		{"/sessions", false},
+		{"/sessions/s-01", false},
+		{"/projects", false},
+		{"/projects/alpha", false},
+		{"/cc-overview", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.path, func(t *testing.T) {
+			w := cspGet(t, mux, tc.path, tc.htmx)
+			if w.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+			}
+			for _, v := range ui.InlineStyleViolations(w.Body.String()) {
+				t.Errorf("%s", v)
+			}
+		})
+	}
+}
+
+// TestTemplSources_NoInlineStyles scans every internal/ui/*.templ file, so a
+// new style attribute or <style> element fails even when no test renders it.
+func TestTemplSources_NoInlineStyles(t *testing.T) {
+	files, err := filepath.Glob("*.templ")
+	if err != nil || len(files) == 0 {
+		t.Fatalf("no .templ files found (err=%v); guard is not running", err)
+	}
+	for _, f := range files {
+		raw, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatalf("read %s: %v", f, err)
+		}
+		for _, v := range ui.TemplStyleViolations(string(raw)) {
+			t.Errorf("%s: %s", f, v)
+		}
 	}
 }
 
@@ -133,6 +187,11 @@ func TestCSP_LayoutsLoadUIActionsAndDisableEval(t *testing.T) {
 			if v, ok := cfg["allowEval"].(bool); !ok || v {
 				t.Errorf("htmx-config allowEval = %v, want false", cfg["allowEval"])
 			}
+			// htmx otherwise injects a <style> element for its indicator classes,
+			// which style-src 'self' blocks; styles.css carries those rules.
+			if v, ok := cfg["includeIndicatorStyles"].(bool); !ok || v {
+				t.Errorf("htmx-config includeIndicatorStyles = %v, want false", cfg["includeIndicatorStyles"])
+			}
 		})
 	}
 }
@@ -154,6 +213,11 @@ func TestCSP_UIActionsScriptServed(t *testing.T) {
 		if !strings.Contains(body, h) {
 			t.Errorf("ui-actions.js does not handle %s", h)
 		}
+	}
+	// data-show-on-swap panels start with the hidden attribute (no inline
+	// display:none under style-src 'self'), so the hook must clear it.
+	if !strings.Contains(body, "target.hidden = false") {
+		t.Error("ui-actions.js data-show-on-swap must clear the hidden attribute")
 	}
 }
 

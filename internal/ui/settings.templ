@@ -281,9 +281,9 @@ templ settingsContent(d settingsData) {
 					enctype="multipart/form-data"
 					data-submit-confirm="Import database? Only new memories are added — nothing is overwritten. A backup is taken first."
 				>
-					<label class="btn btn-sm" style="cursor:pointer;">
+					<label class="btn btn-sm">
 						{ T(d.Lang, "settings.db.import") }
-						<input type="file" name="file" accept=".db,.sqlite,.sqlite3,application/octet-stream" style="display:none;" data-auto-submit/>
+						<input type="file" name="file" accept=".db,.sqlite,.sqlite3,application/octet-stream" class="file-input-hidden" data-auto-submit/>
 					</label>
 				</form>
 			</div>

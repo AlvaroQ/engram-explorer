@@ -259,7 +259,7 @@ func projectDetailContent(data services.ProjectOverview, sync *services.SyncProj
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</p></div></div><div class=\"card-body\" style=\"height:300px\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</p></div></div><div class=\"card-body chart-h-300\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -293,7 +293,7 @@ func projectDetailContent(data services.ProjectOverview, sync *services.SyncProj
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</p></div></div><div class=\"card-body\" style=\"height:280px\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</p></div></div><div class=\"card-body chart-h-280\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

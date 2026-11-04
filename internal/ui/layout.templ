@@ -36,8 +36,10 @@ templ Layout(title, activeNav, lang, theme, sidebarState string, content templ.C
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<!-- htmx never evaluates attribute code (hx-on, trigger filters, js:):
-			     the CSP has no 'unsafe-eval' and behaviours live in ui-actions.js. -->
-			<meta name="htmx-config" content='{"allowEval":false}'/>
+			     the CSP has no 'unsafe-eval' and behaviours live in ui-actions.js.
+			     includeIndicatorStyles:false stops htmx injecting a <style> element
+			     (style-src is 'self'); styles.css carries the indicator rules. -->
+			<meta name="htmx-config" content='{"allowEval":false,"includeIndicatorStyles":false}'/>
 			<title>{ title } — Engram</title>
 			<link rel="stylesheet" href="/static/app.css"/>
 			<link rel="stylesheet" href="/static/styles.css"/>
@@ -46,29 +48,13 @@ templ Layout(title, activeNav, lang, theme, sidebarState string, content templ.C
 			<!-- Island loader: mounts React components declared with data-island.
 			     Only fetches island bundles when [data-island] elements are present. -->
 			<script type="module" src="/islands/loader.js"></script>
-			<!-- View Transitions API: smooth cross-page transitions via HTMX swap.
-			     Falls back gracefully when the API is unsupported. -->
-			<style>
-				@view-transition { navigation: auto; }
-				::view-transition-old(main-content),
-				::view-transition-new(main-content) {
-					animation-duration: 0.18s;
-					animation-timing-function: ease-out;
-				}
-				@media (prefers-reduced-motion: reduce) {
-					::view-transition-old(main-content),
-					::view-transition-new(main-content) {
-						animation: none;
-					}
-				}
-			</style>
 		</head>
 		<body>
 			<!-- Scrim for modal drawer on compact viewports -->
 			<div class="sidebar-scrim" id="sidebar-scrim" aria-hidden="true"></div>
 			<div class={ "app-shell", templ.KV("sidebar-collapsed", sidebarState == "collapsed") }>
 				@Sidebar(activeNav, lang, sidebarState)
-				<main class="main-content" id="main-content" style="view-transition-name: main-content;">
+				<main class="main-content" id="main-content">
 					if demoModeFromContext(ctx) {
 						@DemoBanner(lang)
 					}
@@ -90,7 +76,7 @@ templ LayoutFullBleed(title, activeNav, lang, theme, sidebarState string, conten
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
-			<meta name="htmx-config" content='{"allowEval":false}'/>
+			<meta name="htmx-config" content='{"allowEval":false,"includeIndicatorStyles":false}'/>
 			<title>{ title } — Engram</title>
 			<link rel="stylesheet" href="/static/app.css"/>
 			<link rel="stylesheet" href="/static/styles.css"/>

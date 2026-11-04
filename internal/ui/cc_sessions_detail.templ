@@ -58,7 +58,7 @@ templ ccsDetailContent(detail *services.CCSessionDetail, lang string) {
 			</div>
 		</div>
 		<!-- Conversation timeline -->
-		<div class="card cc-conv" style="margin-top: 1rem;">
+		<div class="card cc-conv card-gap-top">
 			<div class="card-header card-header-flex">
 				<div>
 					<h2>{ T(lang, "ccSessions.conversation") }: <span class="cc-list-count">{ T(lang, "ccSessions.conversationDesc", "count", fmt.Sprintf("%d", len(detail.Turns))) }</span></h2>

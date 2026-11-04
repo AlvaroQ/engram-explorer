@@ -74,10 +74,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the provider error through the safe error mapper, so raw error text cannot reach the page by construction,
   and Maintenance → Cloud project detail replaces the daemon's `last_error` text with a generic localized
   message (the reason code is still shown).
-- **Stricter Content Security Policy** — `script-src` no longer allows `'unsafe-inline'`: inline scripts,
-  event-handler attributes and `hx-on` moved to a static `ui-actions.js`, and htmx attribute evaluation is
-  disabled (`allowEval: false`). `style-src` still allows `'unsafe-inline'` (inline style attributes and htmx
-  indicator styles); removing it is planned for Phase 2.
+- **Stricter Content Security Policy** — the policy is now `script-src 'self'; style-src 'self'` with no
+  `'unsafe-inline'`: inline scripts, event-handler attributes and `hx-on` moved to a static `ui-actions.js`,
+  htmx attribute evaluation is disabled (`allowEval: false`), templates carry no `style` attributes or
+  `<style>` elements (view-transition and htmx indicator rules live in `/static/styles.css`), and htmx runs
+  with `includeIndicatorStyles: false`.
 
 ### Changed
 

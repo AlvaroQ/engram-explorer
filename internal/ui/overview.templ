@@ -46,7 +46,7 @@ templ overviewContent(data services.OverviewResponse, issues services.SyncIssues
 						<p>{ T(lang, "overview.activity.description") }</p>
 					</div>
 				</div>
-				<div class="card-body" style="height:300px">
+				<div class="card-body chart-h-300">
 					@Island("activity-by-project-chart", struct{}{})
 				</div>
 			</div>
@@ -58,7 +58,7 @@ templ overviewContent(data services.OverviewResponse, issues services.SyncIssues
 						<p>{ T(lang, "overview.byType.description") }</p>
 					</div>
 				</div>
-				<div class="card-body" style="height:280px">
+				<div class="card-body chart-h-280">
 					@Island("type-breakdown", TypeBreakdownIslandProps{ByType: toTypeBreakdownEntries(data.ByType)})
 				</div>
 			</div>
