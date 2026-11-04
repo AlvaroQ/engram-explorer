@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>Engram Explorer — Design system</title>
+<style>
+/* ===== Tokens: copied from design/system.md (apps/frontend/src/styles.css, internal/ui/static/styles.css) ===== */
+:root {
+  color-scheme: dark;
+  --bg: 249 22% 12%;
+  --surface: 247 23% 15%;
+  --surface-2: 248 25% 18%;
+  --border: 249 15% 28%;
+  --fg: 245 50% 91%;
+  --fg-muted: 248 15% 61%;
+  --accent: 343 76% 68%;
+  --ok: 189 43% 73%;
+  --warn: 35 88% 72%;
+  --fail: 343 35% 55%;
+  --brand-engram: 343 76% 68%;
+  --brand-cc: 18 72% 62%;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --elevation-1: 0 1px 2px hsl(222 47% 4% / .35), 0 1px 1px hsl(222 47% 4% / .25);
+  --elevation-2: 0 2px 6px hsl(222 47% 4% / .40), 0 1px 2px hsl(222 47% 4% / .30);
+  --elevation-3: 0 6px 16px hsl(222 47% 4% / .45), 0 2px 6px hsl(222 47% 4% / .35);
+  --state-hover: 0.08;
+  --state-active: 0.14;
+
+  /* Doctor module status palette (dark only), internal/doctor/static/styles.css:11-15 */
+  --doc-green: #9ccfd8;
+  --doc-amber: #f6c177;
+  --doc-red: #eb6f92;
+  --doc-blue: #c4a7e7;
+  --doc-gray: #6e6a86;
+}
+:root.light {
+  color-scheme: light;
+  --bg: 32 57% 95%;
+  --surface: 35 100% 98%;
+  --surface-2: 28 40% 92%;
+  --border: 10 9% 86%;
+  --fg: 248 19% 40%;
+  --fg-muted: 248 12% 52%;
+  --accent: 343 35% 55%;
+  --ok: 189 30% 48%;
+  --warn: 35 81% 56%;
+  --fail: 343 35% 55%;
+  --brand-engram: 343 35% 55%;
+  --brand-cc: 16 60% 50%;
+
+  --elevation-1: 0 1px 2px hsl(222 47% 30% / .08), 0 1px 1px hsl(222 47% 30% / .06);
+  --elevation-2: 0 2px 6px hsl(222 47% 30% / .10), 0 1px 2px hsl(222 47% 30% / .08);
+  --elevation-3: 0 8px 24px hsl(222 47% 30% / .12), 0 2px 8px hsl(222 47% 30% / .08);
+  --state-hover: 0.06;
+  --state-active: 0.10;
+}
+/* Fixed palette scopes so the swatch table shows dark and light side by side, whatever the active theme. */
+.pal-dark {
+  --bg: 249 22% 12%; --surface: 247 23% 15%; --surface-2: 248 25% 18%; --border: 249 15% 28%;
+  --fg: 245 50% 91%; --fg-muted: 248 15% 61%; --accent: 343 76% 68%; --ok: 189 43% 73%;
+  --warn: 35 88% 72%; --fail: 343 35% 55%; --brand-engram: 343 76% 68%; --brand-cc: 18 72% 62%;
+}
+.pal-light {
+  --bg: 32 57% 95%; --surface: 35 100% 98%; --surface-2: 28 40% 92%; --border: 10 9% 86%;
+  --fg: 248 19% 40%; --fg-muted: 248 12% 52%; --accent: 343 35% 55%; --ok: 189 30% 48%;
+  --warn: 35 81% 56%; --fail: 343 35% 55%; --brand-engram: 343 35% 55%; --brand-cc: 16 60% 50%;
+}
+
+/* ===== Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: hsl(var(--bg)); }
+body {
+  width: 1440px;
+  margin: 0 auto;
+  background: hsl(var(--bg));
+  color: hsl(var(--fg));
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; font-size: 12px; }
+a { color: hsl(var(--accent)); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid hsl(var(--accent)); outline-offset: 2px; }
+button { font: inherit; }
+
+/* ===== Artboard chrome (fg only, so chrome text stays AA in both themes) ===== */
+.sg-header {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-6);
+  padding: 28px 32px var(--space-6);
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--surface));
+}
+.sg-header h1 { font-size: 20px; font-weight: 600; margin-bottom: var(--space-1); }
+.sg-header p { font-size: 13px; max-width: 880px; }
+.sg-header .sources { margin-top: var(--space-2); display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.sg-actions { display: flex; align-items: center; gap: var(--space-3); flex-shrink: 0; }
+main { padding: 28px 32px var(--space-8); display: flex; flex-direction: column; gap: var(--space-8); }
+.sg-section > header { margin-bottom: var(--space-4); }
+.sg-eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.sg-section h2 { font-size: 20px; font-weight: 600; }
+.sg-section h3 { font-size: 14px; font-weight: 600; margin-bottom: var(--space-3); }
+.sg-section header p { font-size: 13px; margin-top: var(--space-1); max-width: 900px; }
+.sg-panel {
+  background: hsl(var(--surface)); border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-md); box-shadow: var(--elevation-1); overflow: hidden;
+}
+.sg-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); }
+.sg-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-6); }
+.sg-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.sg-note { font-size: 12px; }
+
+/* Swatch table */
+.swatch-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.swatch-table th, .swatch-table td { padding: 9px 14px; text-align: left; vertical-align: middle; border-bottom: 1px solid hsl(var(--border)); }
+.swatch-table thead th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.swatch-table tbody tr:last-child > * { border-bottom: none; }
+.swatch-table td.pal-dark, .swatch-table td.pal-light, .swatch-table th.pal-dark, .swatch-table th.pal-light {
+  background: hsl(var(--surface)); color: hsl(var(--fg)); border-bottom-color: hsl(var(--border));
+}
+.swatch-cell { display: flex; align-items: center; gap: var(--space-3); }
+.sw {
+  width: 56px; height: 32px; border-radius: var(--radius-sm); flex-shrink: 0;
+  background: hsl(var(--c)); border: 1px solid hsl(var(--border));
+}
+.sw-hex { background: var(--c); }
+.doc-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-4); padding: var(--space-5); background: hsl(var(--surface)); color: hsl(var(--fg)); }
+.doc-chip { display: flex; flex-direction: column; gap: var(--space-2); font-size: 13px; }
+.doc-chip .sw { width: 100%; height: 56px; }
+.doc-chip strong { font-weight: 600; }
+
+/* Type scale */
+.type-table { width: 100%; border-collapse: collapse; }
+.type-table th, .type-table td { padding: 14px var(--space-5); border-bottom: 1px solid hsl(var(--border)); text-align: left; vertical-align: middle; }
+.type-table tbody tr:last-child > * { border-bottom: none; }
+.type-table thead th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding-top: 9px; padding-bottom: 9px; }
+.type-table th[scope="row"] { width: 230px; font-size: 13px; font-weight: 600; }
+.type-table td.spec { width: 380px; }
+
+/* Spacing / radius / elevation */
+.space-list { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); }
+.space-row { display: grid; grid-template-columns: 110px 48px 1fr; align-items: center; gap: var(--space-3); font-size: 13px; }
+.space-bar { height: 16px; background: hsl(var(--accent)); border-radius: 2px; }
+.radius-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-4); padding: var(--space-5); }
+.radius-sample { display: flex; flex-direction: column; gap: var(--space-2); font-size: 13px; }
+.radius-box { height: 72px; background: hsl(var(--surface-2)); border: 1px solid hsl(var(--border)); }
+.elev-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-6); padding: var(--space-6); background: hsl(var(--bg)); }
+.elev-tile { background: hsl(var(--surface)); border: 1px solid hsl(var(--border)); border-radius: var(--radius-md); padding: var(--space-4) var(--space-5); font-size: 13px; min-height: 96px; }
+.elev-tile strong { display: block; font-weight: 600; margin-bottom: var(--space-1); }
+.state-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); padding: var(--space-5); }
+.state-chip { padding: 8px var(--space-3); border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; }
+.layout-list { padding: var(--space-4) var(--space-5); font-size: 13px; display: grid; grid-template-columns: 220px 1fr; row-gap: var(--space-2); column-gap: var(--space-4); }
+.layout-list dt { font-weight: 600; }
+
+/* ===== Components (rules from internal/ui/static/styles.css) ===== */
+.shell { display: flex; flex-direction: column; border: 1px solid hsl(var(--border)); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--elevation-2); }
+.shell-body { display: flex; min-height: 640px; }
+
+.demo-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  padding: 0.45rem 1rem;
+  background: hsl(var(--warn) / 0.15);
+  border-bottom: 1px solid hsl(var(--warn) / 0.3);
+  font-size: 0.8125rem; color: hsl(var(--fg));
+}
+.demo-banner-text { flex: 1; min-width: 0; }
+.demo-banner-dismiss {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 1.5rem; height: 1.5rem; border: none; background: transparent; cursor: pointer;
+  color: hsl(var(--fg-muted)); border-radius: 0.25rem; transition: background 0.12s;
+}
+.demo-banner-dismiss:hover { background: hsl(var(--surface-2)); color: hsl(var(--fg)); }
+
+.sidebar {
+  width: 236px; flex-shrink: 0; display: flex; flex-direction: column;
+  background: hsl(var(--surface)); border-right: 1px solid hsl(var(--border));
+  padding: var(--space-5) var(--space-3) var(--space-4);
+}
+.sidebar-brand {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+  padding: 0 var(--space-2) var(--space-5); margin-bottom: var(--space-1);
+  border-bottom: 1px solid hsl(var(--border) / 0.6);
+}
+.sidebar-brand-text { display: flex; flex-direction: column; gap: 2px; line-height: 1.2; min-width: 0; }
+.sidebar-brand-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: hsl(var(--fg)); }
+.sidebar-brand-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: hsl(var(--fg-muted)); }
+.sidebar-brand-settings {
+  display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+  border-radius: var(--radius-sm); flex-shrink: 0; color: hsl(var(--fg-muted));
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.sidebar-brand-settings:hover { background: hsl(var(--fg) / var(--state-hover)); color: hsl(var(--fg)); text-decoration: none; }
+.sidebar-nav-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; padding-top: var(--space-2); }
+.sidebar-nav { display: flex; flex-direction: column; gap: 2px; list-style: none; }
+.sidebar-group-label {
+  display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3);
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: hsl(var(--fg-muted));
+}
+.sidebar-group-label.first { margin-top: var(--space-1); }
+.sidebar-divider { height: 1px; background: hsl(var(--border) / 0.6); margin: var(--space-3) var(--space-3) 0; }
+.sidebar-divider + .sidebar-group-label { margin-top: var(--space-3); }
+.sidebar-group-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 3px hsl(var(--surface)); }
+.sidebar-group-engram .sidebar-group-dot { background: hsl(var(--brand-engram)); }
+.sidebar-group-claude .sidebar-group-dot { background: hsl(var(--brand-cc)); }
+.sidebar-nav a {
+  position: relative; display: flex; align-items: center; gap: var(--space-2);
+  padding: 8px var(--space-3); border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500; color: hsl(var(--fg-muted));
+  transition: background 0.15s ease, color 0.15s ease; text-decoration: none;
+}
+.sidebar-nav a:hover { background: hsl(var(--fg) / var(--state-hover)); color: hsl(var(--fg)); text-decoration: none; }
+.sidebar-nav a:focus-visible { outline: 2px solid hsl(var(--accent)); outline-offset: -2px; }
+.sidebar-nav a.active { background: hsl(var(--accent) / 0.14); color: hsl(var(--fg)); font-weight: 600; }
+.sidebar-nav a.active::before {
+  content: ""; position: absolute; left: 3px; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 16px; border-radius: 2px; background: hsl(var(--accent));
+}
+.sidebar-nav svg { width: 16px; height: 16px; flex-shrink: 0; }
+.sidebar-footer { padding: var(--space-3) var(--space-1) 0; border-top: 1px solid hsl(var(--border) / 0.6); }
+
+.status-pill {
+  display: inline-flex; align-items: center; gap: var(--space-2); padding: 5px var(--space-3);
+  border-radius: 999px; background: hsl(var(--surface-2)); border: 1px solid hsl(var(--border));
+  font-size: 11px; font-weight: 600; color: hsl(var(--fg-muted)); max-width: 100%;
+}
+.status-pill-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: hsl(var(--fg-muted)); }
+.status-pill--allOk { color: hsl(var(--ok)); border-color: transparent; }
+.status-pill--allOk .status-pill-dot { background: hsl(var(--ok)); box-shadow: 0 0 0 3px hsl(var(--ok) / 0.18); }
+.status-pill--dbError { color: hsl(var(--fail)); border-color: hsl(var(--fail) / 0.35); }
+.status-pill--dbError .status-pill-dot { background: hsl(var(--fail)); box-shadow: 0 0 0 3px hsl(var(--fail) / 0.18); }
+.status-pill--daemonOffline { color: hsl(var(--warn)); border-color: hsl(var(--warn) / 0.35); }
+.status-pill--daemonOffline .status-pill-dot { background: hsl(var(--warn)); box-shadow: 0 0 0 3px hsl(var(--warn) / 0.18); }
+@media (prefers-reduced-motion: no-preference) {
+  .status-pill--checking .status-pill-dot { animation: status-pulse 1.2s ease-in-out infinite; }
+}
+@keyframes status-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+.main-content { flex: 1; min-width: 0; background: hsl(var(--bg)); padding: 28px 32px; }
+.page-header { margin-bottom: 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.page-header h1 { font-size: 20px; font-weight: 600; color: hsl(var(--fg)); margin-bottom: 4px; }
+.page-header p { font-size: 13px; color: hsl(var(--fg-muted)); }
+
+.card {
+  background: hsl(var(--surface)); border: 1px solid hsl(var(--border)); border-radius: var(--radius-md);
+  overflow: hidden; margin-bottom: var(--space-4); box-shadow: var(--elevation-1);
+}
+.card-header { padding: var(--space-4) var(--space-5); border-bottom: 1px solid hsl(var(--border)); }
+.card-header h2, .card-header h3 { font-size: 14px; font-weight: 600; color: hsl(var(--fg)); margin-bottom: 2px; }
+.card-header p { font-size: 12px; color: hsl(var(--fg-muted)); }
+.card-header-flex { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.card-body { padding: var(--space-4) var(--space-5); font-size: 13px; }
+.card-body.p-0 { padding: 0; }
+.count-pill {
+  flex-shrink: 0; padding: 2px 10px; border-radius: 999px; background: hsl(var(--surface-2));
+  border: 1px solid hsl(var(--border)); font-size: 11px; font-weight: 600; color: hsl(var(--fg-muted)); white-space: nowrap;
+}
+
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-bottom: var(--space-4); }
+.kpi-grid > .card { margin-bottom: 0; }
+.kpi-grid > .card > .card-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: hsl(var(--fg-muted)); }
+.kpi-value { font-size: 24px; font-weight: 600; line-height: 1.1; color: hsl(var(--fg)); }
+.kpi-sync-caption { font-size: 10px; line-height: 1.3; color: hsl(var(--fg-muted)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi-caption-link { font-size: 12px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 6px;
+  font-size: 13px; font-weight: 500; cursor: pointer; text-decoration: none;
+  border: 1px solid hsl(var(--border)); background: hsl(var(--surface-2)); color: hsl(var(--fg));
+  transition: background 0.15s;
+}
+.btn:hover { background: hsl(var(--surface)); text-decoration: none; }
+.btn:focus-visible { outline: 2px solid hsl(var(--accent)); outline-offset: 2px; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-primary { background: hsl(var(--accent)); color: hsl(220, 25%, 98%); border-color: hsl(var(--accent)); }
+.btn-primary:hover { background: hsl(var(--accent)); opacity: 0.85; }
+.btn-secondary { background: hsl(var(--surface-2)); color: hsl(var(--fg-muted)); }
+.btn svg { width: 14px; height: 14px; }
+
+.badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+.badge-ok { background: hsl(var(--ok) / 0.14); color: hsl(var(--ok)); border: 1px solid hsl(var(--ok) / 0.35); }
+.badge-warn { background: hsl(var(--warn) / 0.14); color: hsl(var(--warn)); border: 1px solid hsl(var(--warn) / 0.35); }
+.badge-fail { background: hsl(var(--fail) / 0.14); color: hsl(var(--fail)); border: 1px solid hsl(var(--fail) / 0.35); }
+.badge-accent { background: hsl(var(--accent) / 0.14); color: hsl(var(--accent)); border: 1px solid hsl(var(--accent) / 0.35); }
+.badge-neutral { background: hsl(var(--surface-2)); color: hsl(var(--fg-muted)); border: 1px solid hsl(var(--border)); }
+
+.field { display: flex; flex-direction: column; gap: 6px; max-width: 420px; }
+.field label { font-size: 12px; font-weight: 600; color: hsl(var(--fg)); }
+.input {
+  width: 100%; background: hsl(var(--surface-2)); border: 1px solid hsl(var(--border)); border-radius: 6px;
+  color: hsl(var(--fg)); font-size: 13px; padding: 7px 11px; outline: none; transition: border-color 0.15s; font-family: inherit;
+}
+.input:focus { border-color: hsl(var(--accent)); }
+.input:focus-visible { outline: 2px solid hsl(var(--accent)); outline-offset: 2px; }
+.input::placeholder { color: hsl(var(--fg-muted)); }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table thead th {
+  padding: 9px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.06em; color: hsl(var(--fg-muted)); border-bottom: 1px solid hsl(var(--border));
+}
+.data-table tbody tr { border-bottom: 1px solid hsl(var(--border)); transition: background 0.1s; }
+.data-table tbody tr:last-child { border-bottom: none; }
+.data-table tbody tr:hover { background: hsl(var(--surface-2)); }
+.data-table td { padding: 9px 14px; color: hsl(var(--fg)); vertical-align: middle; }
+.data-table td.muted { color: hsl(var(--fg-muted)); font-size: 12px; }
+.data-table td.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; font-size: 12px; }
+
+.empty-state { padding: 40px; text-align: center; color: hsl(var(--fg-muted)); font-size: 13px; }
+.empty-state svg { width: 32px; height: 32px; margin: 0 auto var(--space-3); display: block; }
+.empty-state p { margin-bottom: var(--space-3); }
+
+.spec-label { font-size: 12px; font-weight: 600; margin-bottom: var(--space-2); }
+.spec-block { display: flex; flex-direction: column; gap: var(--space-2); }
+
+/* Contrast audit */
+.audit-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.audit-table th, .audit-table td { padding: 9px 14px; text-align: left; border-bottom: 1px solid hsl(var(--border)); }
+.audit-table thead th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.audit-table tbody tr:last-child > * { border-bottom: none; }
+.audit-table td.num { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; font-size: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="sg-header">
+  <div>
+    <p class="sg-eyebrow">Design system · synced 2026-11-04</p>
+    <h1>Engram Explorer design system</h1>
+    <p>Tokens and core components rendered from <code>design/system.md</code>. Dark is the default palette; <code>:root.light</code> switches it. Every color is a bare HSL triplet consumed as <code>hsl(var(--token))</code>.</p>
+    <div class="sources" aria-label="Token sources">
+      <span class="badge badge-neutral">apps/frontend/src/styles.css</span>
+      <span class="badge badge-neutral">apps/frontend/tailwind.config.ts</span>
+      <span class="badge badge-neutral">internal/ui/static/styles.css</span>
+      <span class="badge badge-neutral">internal/doctor/static/styles.css</span>
+    </div>
+  </div>
+  <div class="sg-actions">
+    <span class="sg-note" id="theme-state" aria-live="polite">Showing dark palette</span>
+    <button type="button" class="btn" id="theme-toggle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <span>Switch to light theme</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ================= Colors ================= -->
+  <section class="sg-section" aria-labelledby="colors-title">
+    <header>
+      <p class="sg-eyebrow">Tokens</p>
+      <h2 id="colors-title">Color</h2>
+      <p>Both palettes are shown side by side; each column is scoped to its own token values. Brand and status colors are reserved. Chart and graph series colors are not tokenized today.</p>
+    </header>
+    <div class="sg-panel">
+      <table class="swatch-table">
+        <thead>
+          <tr>
+            <th scope="col">Token</th>
+            <th scope="col" class="pal-dark">Dark (default)</th>
+            <th scope="col" class="pal-light">Light (<code>:root.light</code>)</th>
+            <th scope="col">Usage</th>
+            <th scope="col">Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row"><code>--bg</code></th>
+            <td class="pal-dark"><div class="swatch-cell"><span class="sw" style="--c: var(--bg)"></span><code>249 22% 12%</code></div></td>
+            <td class="pal-light"><div class="swatch-cell"><span class="sw" style="--c: var(--bg)"></span><code>32 57% 95%</code></div></td>
+            <td>Page background</td><td><code>apps/frontend/src/styles.css:7,21</code></td></tr>
+          <tr><th scope="row"><code>--surface</code></th>
+            <td class="pal-dark"><div class="swatch-cell"><span class="sw" style="--c: var(--surface)"></span><code>247 23% 15%</code></div></td>
+            <td class="pal-light"><div class="swatch-cell"><span class="sw" style="--c: var(--surface)"></span><code>35 100% 98%</code></div></td>
+            <td>Cards, sidebar</td><td><code>apps/frontend/src/styles.css:8,22</code></td></tr>
+          <tr><th scope="row"><code>--surface-2</code></th>
+            <td class="pal-dark"><div class="swatch-cell"><span class="sw" style="--c: var(--surface-2)"></span><code>248 25% 18%</code></div></td>
+            <td class="pal-light"><div class="swatch-cell"><span class="sw" style="--c: var(--surface-2)"></span><code>28 40% 92%</code></div></td>
+            <td>Inputs, pills, hover rows, menus</td><td><code>apps/frontend/src/styles.css:9,23</code></td></tr>
+          <tr><th scope="row"><code>--border</code></th>
+            <td class="pal-dark"><div class="swatch-cell"><span class="sw" style="--c: var(--border)"></span><code>249 15% 28%</code></div></td>
+            <td class="pal-light"><div class="swatch-cell"><span class="sw" style="--c: var(--border)"></span><code>10 9% 86%</code></div></td>
+            <td>Borders, dividers</td><td><code>apps/frontend/src/styles.css:10,24</code></td></tr>
+          <tr><th scope="row"><code>--fg</code></th>
+            <td class="pal-dark"><div class="swatch-cell"><span class="sw" style="--c: var(--fg)"></span><code>245 50% 91%</code></div></td>
+            <td class="pal-light"><div class="swatch-cell"><span class="sw" style="--c: var(--fg)"></span><code>248 19% 40%</code></div></td>
+            <td>Primary text</td><td><code>apps/frontend/src/styles.css:11,25</code></td></tr>
+          <tr><th scope="row"><code>--fg-muted</code></th>
+            <td class="pal-dark"><div class="swatch-cell"><span class="sw" style="--c: var(--fg-muted)"></span><code>248 15% 61%</code></div></td>
+            <td class="pal-light"><div class="swatch-cell"><span class="sw" style="--c: var(--fg-muted)"></span><code>248 12% 52%</code></div></td>
+            <td>Secondary text, labels</td><td><code>apps/frontend/src/styles.css:12,26</code></td></tr>
+          <tr><th scope="row"><code>--accent</code></th>
+            <td class="pal-dark"><div class="swatch-cell"><span class="sw" style="--c: var(--accent)"></span><code>343 76% 68%</code></div></td>
+            <td class="pal-light"><div class="swatch-cell"><span class="sw" style="--c: var(--accent)"></span><code>343 35% 55%</code></div></td>
+            <td>Links, active nav, primary button, focus ring</td><td><code>apps/frontend/src/styles.css:13,27</code></td></tr>
+          <tr><th scope="row"><code>--ok</code></th>
+            <td class="pal-dark"><div class="swatch-cell"><span class="sw" style="--c: var(--ok)"></span><code>189 43% 73%</code></div></td>
+            <td class="pal-light"><div class="swatch-cell"><span class="sw" style="--c: var(--ok)"></span><code>189 30% 48%</code></div></td>
+            <td>Success badges, healthy status</td><td><code>apps/frontend/src/styles.css:14,28</code></td></tr>
+          <tr><th scope="row"><code>--warn</code></th>
+            <td class="pal-dark"><div class="swatch-cell"><span class="sw" style="--c: var(--warn)"></span><code>35 88% 72%</code></div></td>
+            <td class="pal-light"><div class="swatch-cell"><span class="sw" style="--c: var(--warn)"></span><code>35 81% 56%</code></div></td>
+            <td>Warnings, demo banner, issue bar</td><td><code>apps/frontend/src/styles.css:15,29</code></td></tr>
+          <tr><th scope="row"><code>--fail</code></th>
+            <td class="pal-dark"><div class="swatch-cell"><span class="sw" style="--c: var(--fail)"></span><code>343 35% 55%</code></div></td>
+            <td class="pal-light"><div class="swatch-cell"><span class="sw" style="--c: var(--fail)"></span><code>343 35% 55%</code></div></td>
+            <td>Errors, broken sync</td><td><code>apps/frontend/src/styles.css:16,30</code></td></tr>
+          <tr><th scope="row"><code>--brand-engram</code></th>
+            <td class="pal-dark"><div class="swatch-cell"><span class="sw" style="--c: var(--brand-engram)"></span><code>343 76% 68%</code></div></td>
+            <td class="pal-light"><div class="swatch-cell"><span class="sw" style="--c: var(--brand-engram)"></span><code>343 35% 55%</code></div></td>
+            <td>Engram group dot</td><td><code>internal/ui/static/styles.css:20,34</code></td></tr>
+          <tr><th scope="row"><code>--brand-cc</code></th>
+            <td class="pal-dark"><div class="swatch-cell"><span class="sw" style="--c: var(--brand-cc)"></span><code>18 72% 62%</code></div></td>
+            <td class="pal-light"><div class="swatch-cell"><span class="sw" style="--c: var(--brand-cc)"></span><code>16 60% 50%</code></div></td>
+            <td>Claude Code group dot</td><td><code>internal/ui/static/styles.css:21,35</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="sg-note" style="margin-top: var(--space-3)">Only non-token color in the shell: <code>.btn-primary</code> text, <code>hsl(220, 25%, 98%)</code> (<code>internal/ui/static/styles.css</code>).</p>
+  </section>
+
+  <!-- ================= Doctor palette ================= -->
+  <section class="sg-section" aria-labelledby="doctor-title">
+    <header>
+      <p class="sg-eyebrow">Tokens · doctor module</p>
+      <h2 id="doctor-title">Doctor status palette</h2>
+      <p>Hex values, dark only (Rosé Pine derived), <code>internal/doctor/static/styles.css:11-15</code>. Shown on the dark surface it was designed for.</p>
+    </header>
+    <div class="sg-panel pal-dark">
+      <div class="doc-grid">
+        <div class="doc-chip"><span class="sw sw-hex" style="--c: var(--doc-green)"></span><strong><code>--doc-green</code></strong><span><code>#9ccfd8</code> · success</span></div>
+        <div class="doc-chip"><span class="sw sw-hex" style="--c: var(--doc-amber)"></span><strong><code>--doc-amber</code></strong><span><code>#f6c177</code> · warning</span></div>
+        <div class="doc-chip"><span class="sw sw-hex" style="--c: var(--doc-red)"></span><strong><code>--doc-red</code></strong><span><code>#eb6f92</code> · danger</span></div>
+        <div class="doc-chip"><span class="sw sw-hex" style="--c: var(--doc-blue)"></span><strong><code>--doc-blue</code></strong><span><code>#c4a7e7</code> · info</span></div>
+        <div class="doc-chip"><span class="sw sw-hex" style="--c: var(--doc-gray)"></span><strong><code>--doc-gray</code></strong><span><code>#6e6a86</code> · idle</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Typography ================= -->
+  <section class="sg-section" aria-labelledby="type-title">
+    <header>
+      <p class="sg-eyebrow">Tokens</p>
+      <h2 id="type-title">Typography</h2>
+      <p>System font stacks only; no web fonts are declared anywhere. Each row renders at its real size, weight and color.</p>
+    </header>
+    <div class="sg-panel">
+      <table class="type-table">
+        <thead><tr><th scope="col">Role</th><th scope="col">Value · source</th><th scope="col">Specimen</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Sans stack</th><td class="spec"><code>ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif</code><br><code>tailwind.config.ts:33</code></td>
+            <td style="font-size:14px">Engram Explorer surfaces memories across 9 projects</td></tr>
+          <tr><th scope="row">Mono stack</th><td class="spec"><code>ui-monospace, SFMono-Regular, Menlo, Monaco, monospace</code><br><code>tailwind.config.ts:34</code></td>
+            <td class="mono" style="font-size:13px">obs_01JBX4Q7 · sdd/doctor-routes/apply</td></tr>
+          <tr><th scope="row">Body</th><td class="spec"><code>14px / 1.5, antialiased</code><br><code>internal/ui/static/styles.css:95-98</code></td>
+            <td style="font-size:14px;line-height:1.5">Sessions group observations saved by an agent between start and end. Open one to see its prompts, tool calls and summaries.</td></tr>
+          <tr><th scope="row">Page title (h1)</th><td class="spec"><code>20px / 600</code> · <code>.page-header h1</code></td>
+            <td><span style="font-size:20px;font-weight:600">Observations</span></td></tr>
+          <tr><th scope="row">Page subtitle</th><td class="spec"><code>13px, --fg-muted</code> · <code>.page-header p</code></td>
+            <td><span style="font-size:13px;color:hsl(var(--fg-muted))">4,812 observations across 9 projects</span></td></tr>
+          <tr><th scope="row">Card title (h2)</th><td class="spec"><code>14px / 600</code> · <code>.card-header h2</code></td>
+            <td><span style="font-size:14px;font-weight:600">Recent observations</span></td></tr>
+          <tr><th scope="row">Card subtitle</th><td class="spec"><code>12px, --fg-muted</code> · <code>.card-header p</code></td>
+            <td><span style="font-size:12px;color:hsl(var(--fg-muted))">Last 24 hours, newest first</span></td></tr>
+          <tr><th scope="row">KPI value</th><td class="spec"><code>24px / 600 / 1.1</code> · <code>.kpi-value</code></td>
+            <td><span style="font-size:24px;font-weight:600;line-height:1.1">4,812</span></td></tr>
+          <tr><th scope="row">KPI label</th><td class="spec"><code>11px uppercase, 0.04em, --fg-muted</code> · <code>.kpi-label</code></td>
+            <td><span class="kpi-label">Observations</span></td></tr>
+          <tr><th scope="row">Section label</th><td class="spec"><code>10-11px / 600-700 uppercase, 0.06-0.09em, --fg-muted</code> · <code>.sidebar-group-label</code>, <code>.data-table thead th</code></td>
+            <td><div style="display:flex;gap:var(--space-6);align-items:center"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:hsl(var(--fg-muted))">Engram · 10px/700</span><span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:hsl(var(--fg-muted))">Project · 11px/600</span></div></td></tr>
+          <tr><th scope="row">Brand title</th><td class="spec"><code>16px / 700, -0.01em</code> · <code>.sidebar-brand-title</code></td>
+            <td><span class="sidebar-brand-title">Engram Explorer</span></td></tr>
+          <tr><th scope="row">Nav link</th><td class="spec"><code>13px / 500 (600 when active)</code> · <code>.sidebar-nav a</code></td>
+            <td><div style="display:flex;gap:var(--space-6)"><span style="font-size:13px;font-weight:500;color:hsl(var(--fg-muted))">Projects · 500</span><span style="font-size:13px;font-weight:600">Overview · 600 active</span></div></td></tr>
+          <tr><th scope="row">Badge, pill</th><td class="spec"><code>11px / 500-600</code> · <code>.badge</code>, <code>.count-pill</code>, <code>.status-pill</code></td>
+            <td><div class="sg-row"><span class="badge badge-accent">decision · 500</span><span class="count-pill">128 · 600</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= Spacing / Radius ================= -->
+  <section class="sg-section" aria-labelledby="space-title">
+    <header>
+      <p class="sg-eyebrow">Tokens</p>
+      <h2 id="space-title">Spacing and radius</h2>
+      <p>4px scale, <code>internal/ui/static/styles.css:46-53</code>. Radius from <code>styles.css:56-58</code> and <code>tailwind.config.ts:27-29</code>.</p>
+    </header>
+    <div class="sg-grid-2">
+      <div class="sg-panel">
+        <div class="card-header"><h3>Spacing scale</h3></div>
+        <div class="space-list">
+          <div class="space-row"><code>--space-1</code><code>4px</code><span class="space-bar" style="width: var(--space-1)"></span></div>
+          <div class="space-row"><code>--space-2</code><code>8px</code><span class="space-bar" style="width: var(--space-2)"></span></div>
+          <div class="space-row"><code>--space-3</code><code>12px</code><span class="space-bar" style="width: var(--space-3)"></span></div>
+          <div class="space-row"><code>--space-4</code><code>16px</code><span class="space-bar" style="width: var(--space-4)"></span></div>
+          <div class="space-row"><code>--space-5</code><code>20px</code><span class="space-bar" style="width: var(--space-5)"></span></div>
+          <div class="space-row"><code>--space-6</code><code>24px</code><span class="space-bar" style="width: var(--space-6)"></span></div>
+          <div class="space-row"><code>--space-8</code><code>32px</code><span class="space-bar" style="width: var(--space-8)"></span></div>
+        </div>
+        <dl class="layout-list" style="border-top: 1px solid hsl(var(--border))">
+          <dt>Sidebar width</dt><dd><code>236px</code></dd>
+          <dt>Main content padding</dt><dd><code>28px 32px</code></dd>
+          <dt>Card header / body</dt><dd><code>16px 20px</code></dd>
+          <dt>Table cell</dt><dd><code>9px 14px</code></dd>
+          <dt>KPI tile body</dt><dd><code>14px 16px</code></dd>
+          <dt>Page header margin-bottom</dt><dd><code>24px</code></dd>
+        </dl>
+      </div>
+      <div class="sg-panel">
+        <div class="card-header"><h3>Radius</h3></div>
+        <div class="radius-grid">
+          <div class="radius-sample"><span class="radius-box" style="border-radius: 4px"></span><strong>Badge</strong><code>4px</code></div>
+          <div class="radius-sample"><span class="radius-box" style="border-radius: var(--radius-sm)"></span><strong><code>--radius-sm</code></strong><code>6px · 0.375rem</code></div>
+          <div class="radius-sample"><span class="radius-box" style="border-radius: var(--radius-md)"></span><strong><code>--radius-md</code></strong><code>8px · 0.5rem</code></div>
+          <div class="radius-sample"><span class="radius-box" style="border-radius: var(--radius-lg)"></span><strong><code>--radius-lg</code></strong><code>12px · 0.75rem</code></div>
+          <div class="radius-sample"><span class="radius-box" style="border-radius: 999px"></span><strong>Pills</strong><code>999px</code></div>
+        </div>
+        <div class="card-header" style="border-top: 1px solid hsl(var(--border))"><h3>Motion</h3></div>
+        <dl class="layout-list">
+          <dt>Entrances</dt><dd><code>cubic-bezier(0.16, 1, 0.3, 1) 0.45s</code></dd>
+          <dt>Idle float</dt><dd><code>5s</code></dd>
+          <dt>Transitions</dt><dd><code>0.12-0.15s ease</code></dd>
+          <dt>Reduced motion</dt><dd>Every motion respects <code>prefers-reduced-motion</code></dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Elevation ================= -->
+  <section class="sg-section" aria-labelledby="elev-title">
+    <header>
+      <p class="sg-eyebrow">Tokens</p>
+      <h2 id="elev-title">Elevation and state layers</h2>
+      <p><code>internal/ui/static/styles.css:61-82</code>. Values follow the active theme; use the toggle to compare. Hover and active states are layers over existing tokens, never new colors.</p>
+    </header>
+    <div class="sg-panel">
+      <div class="elev-grid">
+        <div class="elev-tile" style="box-shadow: var(--elevation-1)"><strong><code>--elevation-1</code></strong>Cards, KPI tiles, settings groups</div>
+        <div class="elev-tile" style="box-shadow: var(--elevation-2)"><strong><code>--elevation-2</code></strong>Raised panels, app shell frame</div>
+        <div class="elev-tile" style="box-shadow: var(--elevation-3)"><strong><code>--elevation-3</code></strong>Menus and popovers</div>
+      </div>
+      <div class="state-grid" style="border-top: 1px solid hsl(var(--border))">
+        <div class="spec-block"><span class="spec-label">Rest</span><span class="state-chip">Observations</span></div>
+        <div class="spec-block"><span class="spec-label"><code>hsl(var(--fg) / var(--state-hover))</code></span><span class="state-chip" style="background: hsl(var(--fg) / var(--state-hover))">Observations · hover</span></div>
+        <div class="spec-block"><span class="spec-label"><code>hsl(var(--accent) / var(--state-active))</code></span><span class="state-chip" style="background: hsl(var(--accent) / var(--state-active))">Observations · active</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Components ================= -->
+  <section class="sg-section" aria-labelledby="components-title">
+    <header>
+      <p class="sg-eyebrow">Components</p>
+      <h2 id="components-title">App shell fragment</h2>
+      <p>Demo banner, sidebar with grouped navigation and status pill, page header, KPI tiles and a data table inside a card. Rules from <code>internal/ui/static/styles.css</code>.</p>
+    </header>
+
+    <div class="shell" id="shell">
+      <div class="demo-banner">
+        <span class="demo-banner-text"><strong>Demo mode.</strong> You are browsing a seeded sample database; changes are not saved.</span>
+        <button type="button" class="demo-banner-dismiss" aria-label="Dismiss demo banner">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="shell-body">
+        <nav class="sidebar" aria-label="Sidebar sample">
+          <div class="sidebar-brand">
+            <div class="sidebar-brand-text">
+              <span class="sidebar-brand-title">Engram Explorer</span>
+              <span class="sidebar-brand-label">Local workspace</span>
+            </div>
+            <a class="sidebar-brand-settings" href="#shell" aria-label="Settings">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+            </a>
+          </div>
+          <div class="sidebar-nav-wrap">
+            <div class="sidebar-group-label sidebar-group-engram first"><span class="sidebar-group-dot" aria-hidden="true"></span>Engram</div>
+            <ul class="sidebar-nav">
+              <li><a href="#shell" class="active" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Overview</a></li>
+              <li><a href="#shell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Projects</a></li>
+              <li><a href="#shell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Observations</a></li>
+              <li><a href="#shell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Sessions</a></li>
+              <li><a href="#shell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Doctor</a></li>
+            </ul>
+            <div class="sidebar-divider" aria-hidden="true"></div>
+            <div class="sidebar-group-label sidebar-group-claude"><span class="sidebar-group-dot" aria-hidden="true"></span>Claude Code</div>
+            <ul class="sidebar-nav">
+              <li><a href="#shell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>Usage</a></li>
+              <li><a href="#shell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Conversations</a></li>
+            </ul>
+          </div>
+          <div class="sidebar-footer">
+            <span class="status-pill status-pill--allOk"><span class="status-pill-dot" aria-hidden="true"></span><span>All systems OK</span></span>
+          </div>
+        </nav>
+
+        <div class="main-content">
+          <div class="page-header">
+            <div>
+              <h3 style="font-size:20px;font-weight:600;color:hsl(var(--fg));margin-bottom:4px">Overview</h3>
+              <p>4,812 observations across 9 projects · last sync 2 minutes ago</p>
+            </div>
+            <button type="button" class="btn btn-primary">Run doctor</button>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="card"><div class="card-body"><span class="kpi-label">Observations</span><span class="kpi-value">4,812</span><a class="kpi-caption-link" href="#shell">View all</a></div></div>
+            <div class="card"><div class="card-body"><span class="kpi-label">Sessions</span><span class="kpi-value">236</span><a class="kpi-caption-link" href="#shell">View sessions</a></div></div>
+            <div class="card"><div class="card-body"><span class="kpi-label">Projects</span><span class="kpi-value">9</span><a class="kpi-caption-link" href="#shell">Compare projects</a></div></div>
+            <div class="card"><div class="card-body"><span class="kpi-label">Cloud sync</span><span class="kpi-value">Up to date</span><span class="kpi-sync-caption">acked 4,790 · enqueued 22</span></div></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header card-header-flex">
+              <div>
+                <h3>Recent observations</h3>
+                <p>Last 24 hours, newest first</p>
+              </div>
+              <span class="count-pill">128 today</span>
+            </div>
+            <div class="card-body p-0">
+              <table class="data-table">
+                <thead><tr><th scope="col">Title</th><th scope="col">Project</th><th scope="col">Type</th><th scope="col">Sync</th><th scope="col">Created</th></tr></thead>
+                <tbody>
+                  <tr><td>Fixed cached 301 redirect on doctor routes</td><td>mobile-app</td><td><span class="badge badge-neutral">bugfix</span></td><td><span class="badge badge-ok">synced</span></td><td class="mono">2026-11-04 09:12</td></tr>
+                  <tr><td>Chose DuckDB for offline feature-store snapshots</td><td>ml-platform</td><td><span class="badge badge-accent">decision</span></td><td><span class="badge badge-warn">pending</span></td><td class="mono">2026-11-04 08:47</td></tr>
+                  <tr><td>Button focus ring now uses the accent token</td><td>design-system</td><td><span class="badge badge-neutral">pattern</span></td><td><span class="badge badge-fail">conflict</span></td><td class="mono">2026-11-03 18:05</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sg-section" aria-labelledby="specimens-title">
+    <header>
+      <p class="sg-eyebrow">Components</p>
+      <h2 id="specimens-title">Component specimens</h2>
+      <p>Buttons, badges, status pills, input, card and empty state at their real sizes. Tab through to see the 2px accent focus ring, offset 2px.</p>
+    </header>
+    <div class="sg-grid-3">
+      <div class="card">
+        <div class="card-header"><h3>Buttons</h3><p><code>.btn</code> 6px/14px, 13px/500, radius 6px</p></div>
+        <div class="card-body spec-block">
+          <div class="sg-row">
+            <button type="button" class="btn">Export JSON</button>
+            <button type="button" class="btn btn-primary">Run doctor</button>
+            <button type="button" class="btn btn-secondary">Cancel</button>
+          </div>
+          <div class="sg-row">
+            <button type="button" class="btn btn-sm">Copy ID</button>
+            <button type="button" class="btn btn-sm btn-primary">Sync now</button>
+            <button type="button" class="btn btn-sm btn-secondary">Dismiss</button>
+          </div>
+          <p class="sg-note" style="color:hsl(var(--fg))"><code>.btn</code> · <code>.btn-primary</code> · <code>.btn-secondary</code> · <code>.btn-sm</code></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Badges</h3><p>2px/7px, radius 4px, 11px/500; tints at 0.14 / 0.35</p></div>
+        <div class="card-body spec-block">
+          <div class="sg-row">
+            <span class="badge badge-ok">synced</span>
+            <span class="badge badge-warn">pending</span>
+            <span class="badge badge-fail">broken</span>
+            <span class="badge badge-accent">decision</span>
+            <span class="badge badge-neutral">bugfix</span>
+          </div>
+          <p class="sg-note" style="color:hsl(var(--fg))"><code>ok</code> · <code>warn</code> · <code>fail</code> · <code>accent</code> · <code>neutral</code></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Status pill</h3><p>999px, 11px/600, 8px dot</p></div>
+        <div class="card-body spec-block">
+          <div class="sg-row">
+            <span class="status-pill status-pill--allOk"><span class="status-pill-dot" aria-hidden="true"></span><span>All systems OK</span></span>
+            <span class="status-pill status-pill--daemonOffline"><span class="status-pill-dot" aria-hidden="true"></span><span>Daemon offline</span></span>
+          </div>
+          <div class="sg-row">
+            <span class="status-pill status-pill--dbError"><span class="status-pill-dot" aria-hidden="true"></span><span>Database error</span></span>
+            <span class="status-pill status-pill--checking"><span class="status-pill-dot" aria-hidden="true"></span><span>Checking…</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Input</h3><p><code>--surface-2</code>, 13px, padding 7/11, accent border on focus</p></div>
+        <div class="card-body">
+          <div class="field">
+            <label for="obs-search">Search observations</label>
+            <input id="obs-search" class="input" type="search" placeholder="Search titles, topics or content">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header card-header-flex">
+          <div><h3>Sync health</h3><p>ml-platform · cloud remote</p></div>
+          <span class="count-pill">22 queued</span>
+        </div>
+        <div class="card-body">
+          <p>22 observations are waiting for acknowledgement. The last successful push was at <span class="mono">09:10</span>; the daemon retries every 30 seconds.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Empty state</h3><p>40px padding, centered, 13px muted</p></div>
+        <div class="card-body p-0">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <p>No observations match these filters in design-system.</p>
+            <button type="button" class="btn btn-sm">Clear filters</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Contrast audit ================= -->
+  <section class="sg-section" aria-labelledby="audit-title">
+    <header>
+      <p class="sg-eyebrow">Accessibility</p>
+      <h2 id="audit-title">Contrast audit of the current tokens</h2>
+      <p>The components above render the project's tokens as they are. These text pairs measure below WCAG AA (4.5:1 for small text) on solid surfaces; tinted badge backgrounds lower them slightly. Fixes are not proposed here because they would change project tokens.</p>
+    </header>
+    <div class="sg-panel">
+      <table class="audit-table">
+        <thead><tr><th scope="col">Theme</th><th scope="col">Text on background</th><th scope="col">Ratio</th><th scope="col">Where it appears</th></tr></thead>
+        <tbody>
+          <tr><td>Dark</td><td><code>hsl(220, 25%, 98%)</code> on <code>--accent</code></td><td class="num">2.76:1</td><td><code>.btn-primary</code></td></tr>
+          <tr><td>Dark</td><td><code>--fail</code> on <code>--surface</code> / <code>--surface-2</code></td><td class="num">3.95 / 3.68:1</td><td><code>.badge-fail</code>, database error pill</td></tr>
+          <tr><td>Light</td><td><code>hsl(220, 25%, 98%)</code> on <code>--accent</code></td><td class="num">3.95:1</td><td><code>.btn-primary</code></td></tr>
+          <tr><td>Light</td><td><code>--fg-muted</code> on <code>--bg</code> / <code>--surface</code> / <code>--surface-2</code></td><td class="num">3.94 / 4.21 / 3.66:1</td><td>Subtitles, labels, placeholders, <code>.btn-secondary</code></td></tr>
+          <tr><td>Light</td><td><code>--accent</code> / <code>--fail</code> on <code>--surface</code></td><td class="num">4.02:1</td><td>Links, accent and fail badges</td></tr>
+          <tr><td>Light</td><td><code>--ok</code> on <code>--surface</code></td><td class="num">3.31:1</td><td><code>.badge-ok</code>, healthy pill</td></tr>
+          <tr><td>Light</td><td><code>--warn</code> on <code>--surface</code></td><td class="num">2.16:1</td><td><code>.badge-warn</code>, daemon offline pill</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var btn = document.getElementById('theme-toggle');
+  var label = btn.querySelector('span');
+  var state = document.getElementById('theme-state');
+  btn.addEventListener('click', function () {
+    var light = root.classList.toggle('light');
+    label.textContent = light ? 'Switch to dark theme' : 'Switch to light theme';
+    state.textContent = light ? 'Showing light palette' : 'Showing dark palette';
+  });
+})();
+</script>
+</body>
+</html>

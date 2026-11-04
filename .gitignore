@@ -79,3 +79,7 @@ engram-backup-*.db
 internal/web/dist/*
 !internal/web/dist/index.html
 *.test
+
+# Gentle Design canvas: per-user review comments and capture cache
+design/**/comments.json
+design/**/.screenshots/
