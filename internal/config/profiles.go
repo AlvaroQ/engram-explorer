@@ -80,6 +80,39 @@ type ProfileStore struct {
 	CCAccounts []CCAccount `json:"ccAccounts,omitempty"`
 }
 
+// cloneProfileStore returns a deep copy of st (maps and slices included).
+func cloneProfileStore(st ProfileStore) ProfileStore {
+	out := st
+	if st.Profiles != nil {
+		out.Profiles = make(map[string]Profile, len(st.Profiles))
+		for name, p := range st.Profiles {
+			out.Profiles[name] = cloneProfile(p)
+		}
+	}
+	out.CCAccounts = append([]CCAccount(nil), st.CCAccounts...)
+	return out
+}
+
+// cloneProfile returns a deep copy of p.
+func cloneProfile(p Profile) Profile {
+	out := p
+	if p.Providers != nil {
+		out.Providers = make(map[string]ProviderConfig, len(p.Providers))
+		for id, c := range p.Providers {
+			out.Providers[id] = c
+		}
+	}
+	return out
+}
+
+// SetProviderCfg sets the config of one provider, allocating the map if needed.
+func (p *Profile) SetProviderCfg(providerID string, c ProviderConfig) {
+	if p.Providers == nil {
+		p.Providers = make(map[string]ProviderConfig)
+	}
+	p.Providers[providerID] = c
+}
+
 // configFilePath returns the absolute path of config.json in configHome.
 func configFilePath(configHome string) string {
 	return filepath.Join(configHome, configFileName)
