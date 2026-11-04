@@ -136,8 +136,8 @@ func serve(h http.Handler, method, route, body string) *httptest.ResponseRecorde
 func TestCapabilities_ProviderRoutesServedWhileEnabled(t *testing.T) {
 	h, reg := newCapabilityHandler(t, providertest.FakeProviderOptions{
 		Routes: func(r providers.Router) {
-			r.HandleFunc("GET /api/notes/ping", func(w http.ResponseWriter, _ *http.Request) {
-				if r.Live() == nil {
+			r.HandleFunc("GET /api/notes/ping", func(w http.ResponseWriter, req *http.Request) {
+				if r.Live(req) == nil {
 					http.Error(w, "no live instance", http.StatusInternalServerError)
 					return
 				}

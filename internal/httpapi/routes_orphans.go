@@ -12,7 +12,7 @@ func orphansRoutes(mux routeMux, c *Container) {
 
 func handleOrphansList(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		resp, err := services.OrphansList(c.RoDB)
+		resp, err := services.OrphansList(c.ro(r))
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return

@@ -24,12 +24,13 @@ type Deps struct {
 	Paths  *config.RuntimePaths // live mutable paths; defaulted from Config in Mount
 
 	// Live, when non-nil, returns the read-only and read-write pools to use for
-	// one request (rw is nil when writes are not available). Mount calls it on
-	// every request and hands the handlers a copy of Deps carrying those
-	// pools, so a module enabled or disabled after Mount needs no remount and
-	// no handler keeps a closed pool. When nil, RoDB and RWDB are used as
-	// mounted (tests and the legacy direct-mount path).
-	Live func() (ro, rw sqlite.Querier)
+	// one request (rw is nil when writes are not available); they stay open
+	// until that request's handler returns. Mount calls it on every request
+	// and hands the handlers a copy of Deps carrying those pools, so a module
+	// enabled or disabled after Mount needs no remount and no handler keeps a
+	// closed pool. When nil, RoDB and RWDB are used as mounted (tests and the
+	// legacy direct-mount path).
+	Live func(r *http.Request) (ro, rw sqlite.Querier)
 
 	// DaemonPing is an optional override for the daemon availability check used
 	// by handleSyncIssues.  When non-nil it is called instead of making a real
@@ -66,7 +67,7 @@ func Mount(mux Registrar, d Deps) {
 		}
 		return func(w http.ResponseWriter, r *http.Request) {
 			dd := d
-			dd.RoDB, dd.RWDB = d.Live()
+			dd.RoDB, dd.RWDB = d.Live(r)
 			factory(dd)(w, r)
 		}
 	}

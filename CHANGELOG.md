@@ -18,6 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Module toggles and profile switches during requests** — a module disabled, re-opened or switched while
+  pages and API calls are in flight no longer fails them with `500` ("database is closed"): each request keeps
+  the data source it started with, and the old one is closed when those requests finish (at most 30 s later).
 - **Stale cloud locale strings** — removed leftover UI strings that claimed the `engram` CLI has no
   `cloud unenroll` and that the dashboard writes `sync_enrolled_projects` directly.
 - **Demo mode data-source lock** — demo mode rejects every change of data source (Engram database path, Claude Code

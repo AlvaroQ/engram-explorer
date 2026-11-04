@@ -329,10 +329,10 @@ type liveRouter struct {
 	live providers.Instance
 }
 
-func (r *liveRouter) Live() providers.Instance { return r.live }
+func (r *liveRouter) Live(*http.Request) providers.Instance { return r.live }
 
 // TestRoutes_ServesDoctorFromLiveInstance asserts Routes mounts the doctor
-// module and that each request reads the pools of the instance r.Live()
+// module and that each request reads the pools of the instance r.Live(req)
 // reports at that moment, not one captured at mount time.
 func TestRoutes_ServesDoctorFromLiveInstance(t *testing.T) {
 	path := seedEngramSchema(t)

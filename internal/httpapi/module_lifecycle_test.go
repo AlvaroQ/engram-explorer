@@ -10,7 +10,10 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/httpapi"
@@ -23,6 +26,13 @@ import (
 // and Claude Code providers, both detected and enabled as asked. The handler
 // is built ONCE; modules are switched with the real Settings toggle route.
 func newLifecycleFixture(t *testing.T, engramOn, ccOn bool) profileFixture {
+	t.Helper()
+	return newLifecycleFixtureWith(t, engramOn, ccOn, nil)
+}
+
+// newLifecycleFixtureWith is newLifecycleFixture plus the extra profiles
+// extra returns for the seeded database and Claude Code directory.
+func newLifecycleFixtureWith(t *testing.T, engramOn, ccOn bool, extra func(dbPath, ccDir string) map[string]config.Profile) profileFixture {
 	t.Helper()
 	home := t.TempDir()
 	dbPath := seedEngramDB(t)
@@ -44,6 +54,11 @@ func newLifecycleFixture(t *testing.T, engramOn, ccOn bool) profileFixture {
 			"cc-sessions": {Enabled: ccOn, Path: ccDir},
 		}}},
 		CCAccounts: []config.CCAccount{{ID: "default", Label: "Personal", Path: ccDir, Enabled: true}},
+	}
+	if extra != nil {
+		for name, p := range extra(dbPath, ccDir) {
+			data.Profiles[name] = p
+		}
 	}
 	reg.Boot(context.Background(), httpapi.AdaptProfile(data.Profiles["default"]))
 	c := httpapi.NewContainerWithRegistry(reg, cfg, logger)
@@ -141,4 +156,119 @@ func TestModuleLifecycle_ClaudeSessions(t *testing.T) {
 	f.wantOK(t, ccRoutes...)
 	f.toggle(t, "cc-sessions", false)
 	f.wantDisabled(t, ccRoutes...)
+}
+
+// S4: a module disabled while requests are in flight must never hand a
+// request a closed pool ("sql: database is closed" → 500).
+func TestModuleLifecycle_InFlightRequestsNeverHitClosedPool(t *testing.T) {
+	f := newLifecycleFixture(t, true, true)
+	done := make(chan struct{})
+	var bad atomic.Int64
+	var wg sync.WaitGroup
+	for i := 0; i < 6; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-done:
+					return
+				default:
+				}
+				for _, route := range []string{"/api/observations?limit=50", "/observations", "/doctor/orphans/list"} {
+					rec := httptest.NewRecorder()
+					f.h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, route, nil))
+					if rec.Code == http.StatusInternalServerError ||
+						(rec.Code == http.StatusOK && strings.Contains(rec.Body.String(), "inline-error")) {
+						bad.Add(1)
+					}
+				}
+			}
+		}()
+	}
+	for i := 0; i < 40; i++ {
+		f.toggle(t, "engram", false)
+		f.toggle(t, "engram", true)
+	}
+	close(done)
+	wg.Wait()
+	if n := bad.Load(); n > 0 {
+		t.Fatalf("%d requests failed on a closed pool during concurrent toggles", n)
+	}
+}
+
+// inFlightReaders runs 6 readers over the Engram API, UI and doctor routes
+// until the returned stop is called; stop reports how many requests failed on
+// a closed pool (500, or a 200 page carrying an inline error).
+func inFlightReaders(f profileFixture) (stop func() int64) {
+	done := make(chan struct{})
+	var bad atomic.Int64
+	var wg sync.WaitGroup
+	for i := 0; i < 6; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-done:
+					return
+				default:
+				}
+				for _, route := range []string{"/api/observations?limit=50", "/observations", "/doctor/orphans/list"} {
+					rec := httptest.NewRecorder()
+					f.h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, route, nil))
+					if rec.Code == http.StatusInternalServerError ||
+						(rec.Code == http.StatusOK && strings.Contains(rec.Body.String(), "inline-error")) {
+						bad.Add(1)
+					}
+				}
+			}
+		}()
+	}
+	return func() int64 {
+		close(done)
+		wg.Wait()
+		return bad.Load()
+	}
+}
+
+// S4: a profile switch closes the superseded Engram instance only after the
+// requests using it finish — switching to a profile with Engram on another
+// database and to one with Engram off.
+func TestModuleLifecycle_ProfileSwitchNeverHandsClosedPool(t *testing.T) {
+	f := newLifecycleFixtureWith(t, true, true, func(_, ccDir string) map[string]config.Profile {
+		cc := config.ProviderConfig{Enabled: true, Path: ccDir}
+		return map[string]config.Profile{
+			"work": {Providers: map[string]config.ProviderConfig{
+				"engram": {Enabled: true, Path: seedEngramDB(t)}, "cc-sessions": cc,
+			}},
+			"off": {Providers: map[string]config.ProviderConfig{
+				"engram": {Enabled: false}, "cc-sessions": cc,
+			}},
+		}
+	})
+	stop := inFlightReaders(f)
+	for i := 0; i < 40; i++ {
+		for _, name := range []string{"work", "off", "default"} {
+			if code := f.post(t, "/settings/profile/switch", url.Values{"name": {name}}); code != http.StatusSeeOther {
+				t.Fatalf("switch to %s: status %d, want 303", name, code)
+			}
+		}
+	}
+	if n := stop(); n > 0 {
+		t.Fatalf("%d requests failed on a closed pool during concurrent profile switches", n)
+	}
+}
+
+// S4: shutting down while requests are in flight lets them finish on open
+// pools; requests after the shutdown answer 503 MODULE_DISABLED.
+func TestModuleLifecycle_ShutdownWaitsForInFlightRequests(t *testing.T) {
+	f := newLifecycleFixture(t, true, true)
+	stop := inFlightReaders(f)
+	time.Sleep(20 * time.Millisecond)
+	f.c.Close()
+	if n := stop(); n > 0 {
+		t.Fatalf("%d in-flight requests failed on a pool closed by shutdown", n)
+	}
+	f.wantDisabled(t, "/api/observations", "/observations", "/doctor/orphans/list")
 }

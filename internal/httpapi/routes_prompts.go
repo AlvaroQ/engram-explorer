@@ -15,7 +15,7 @@ func handlePromptsList(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		project := r.URL.Query().Get("project")
 		limit := parseLimit(r.URL.Query(), 100, 1, 500)
-		items, err := services.PromptsList(c.RoDB, services.PromptsListParams{Project: project, Limit: limit})
+		items, err := services.PromptsList(c.ro(r), services.PromptsListParams{Project: project, Limit: limit})
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
@@ -35,7 +35,7 @@ func handlePromptsSearch(c *Container) http.HandlerFunc {
 			return
 		}
 		limit := parseLimit(r.URL.Query(), 50, 1, 200)
-		items, err := services.PromptsSearch(c.RoDB, rawQ, limit)
+		items, err := services.PromptsSearch(c.ro(r), rawQ, limit)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return

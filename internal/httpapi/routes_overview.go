@@ -25,7 +25,7 @@ func handleActivity(c *Container) http.HandlerFunc {
 				"invalid range: "+rng+". Allowed: 7d, 30d, 90d", "", c.Config.ExposeDetails)
 			return
 		}
-		resp, err := services.ActivityByProject(c.RoDB, rng)
+		resp, err := services.ActivityByProject(c.ro(r), rng)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
@@ -37,9 +37,9 @@ func handleActivity(c *Container) http.HandlerFunc {
 func handleOverview(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Served by the live providers.StatsSource capability.
-		stats := c.statsSource()
+		stats := c.statsSource(r)
 		if stats == nil {
-			writeModuleDisabled(w, r, c.Config.ExposeDetails)
+			c.writeModuleDisabled(w, r)
 			return
 		}
 		resp, err := stats.Stats(r.Context())

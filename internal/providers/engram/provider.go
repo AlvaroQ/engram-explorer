@@ -14,6 +14,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"net/http"
 	"os"
 
 	_ "modernc.org/sqlite" // register the "sqlite" driver
@@ -222,8 +223,9 @@ func (p *engramProvider) Open(ctx context.Context, cfg providers.ProviderConfig)
 
 // Routes registers the routes the Engram provider owns: the doctor module
 // (/doctor/*, /settings/maintenance). The host gates them by this provider's
-// state, and every request reads the pools of the live instance through
-// r.Live(), so a toggle or profile switch never leaves a route on a closed pool.
+// state, and every request reads the pools of the instance pinned for it
+// through r.Live(req), so a toggle or profile switch never leaves a route on a
+// closed pool.
 //
 // The Engram JSON API (/api/observations, ...) and the memory pages stay in
 // internal/httpapi and internal/ui (importing them here would be an import
@@ -232,8 +234,8 @@ func (p *engramProvider) Open(ctx context.Context, cfg providers.ProviderConfig)
 func (p *engramProvider) Routes(r providers.Router) {
 	doctor.Mount(r, doctor.Deps{
 		Config: p.cfg,
-		Live: func() (ro, rw sqlite.Querier) {
-			if ei, ok := r.Live().(*engramInstance); ok {
+		Live: func(req *http.Request) (ro, rw sqlite.Querier) {
+			if ei, ok := r.Live(req).(*engramInstance); ok {
 				return ei.handles()
 			}
 			return nil, nil

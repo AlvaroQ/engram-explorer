@@ -110,14 +110,15 @@ type Deps struct {
 	// profile in config.json. When nil, the toggle endpoint returns 503.
 	SetAdvancedView func(enabled bool) error
 
-	// Live, when non-nil, reports the data handles of the modules that are
-	// enabled right now. Mount calls it on every request and hands the
+	// Live, when non-nil, reports the data handles of the modules serving one
+	// request; they stay open until that request's handler returns. Mount
+	// calls it on every request and hands the
 	// handlers a copy of Deps carrying them, so enabling or disabling a module
 	// needs no remount and no handler keeps a closed pool. Memory pages
 	// answer 503 (RenderModuleDisabled) while RoDB is nil, Claude Code pages
 	// while Claude is false. When nil (tests, legacy path) RoDB/RWDB are used
 	// as mounted and no page is gated.
-	Live func() LiveHandles
+	Live func(r *http.Request) LiveHandles
 }
 
 // LiveHandles is the per-request module state returned by Deps.Live.
@@ -261,7 +262,7 @@ func liveHandler(d Deps, available func(LiveHandles) bool, factory handlerFactor
 		return factory(d)
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		h := d.Live()
+		h := d.Live(r)
 		if available != nil && !available(h) {
 			RenderModuleDisabled(w, r)
 			return

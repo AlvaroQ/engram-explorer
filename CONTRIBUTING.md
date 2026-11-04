@@ -67,7 +67,8 @@ Open <http://127.0.0.1:8787>. The `engram serve` daemon is optional — the dash
 
 Providers (`internal/providers`) register their own routes in `Routes(r providers.Router)`. It runs once at boot,
 and the host serves each route only while that provider is enabled (otherwise `503 MODULE_DISABLED`). Get the
-live instance per request with `r.Live()` and never keep it. Optional capabilities on the instance are
+instance serving a request with `r.Live(req)` and never keep it beyond that request (the host pins it until
+the handler returns). Optional capabilities on the instance are
 `Writable` (write routes and the read-write handle), `Searcher` (`GET /api/observations/search`) and
 `StatsSource` (`GET /api/overview`); the host picks the first enabled instance that has the capability
 (`Registry.Find`). Never switch on provider IDs — a structural test fails on it.

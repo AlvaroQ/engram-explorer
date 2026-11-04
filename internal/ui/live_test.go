@@ -18,7 +18,7 @@ func TestMount_LiveGatesModulePagesPerRequest(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{
 		Config: config.Config{ClaudeProjectsDir: t.TempDir()},
-		Live:   func() ui.LiveHandles { return live },
+		Live:   func(*http.Request) ui.LiveHandles { return live },
 	})
 	get := func(route, lang string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(http.MethodGet, route, nil)

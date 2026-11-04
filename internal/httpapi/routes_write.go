@@ -21,7 +21,7 @@ const (
 )
 
 // writeRoutes registers all write (mutating) routes on mux.
-// Every handler guards demo mode and c.RWDB != nil before proceeding, and is
+// Every handler guards demo mode and a writable store before proceeding, and is
 // wrapped in a per-client, per-route fixed-window rate limiter.
 func writeRoutes(mux routeMux, c *Container) {
 	writeRL := newRateLimiter(time.Minute, writeRateLimit)
@@ -65,8 +65,8 @@ func guardDemo(w http.ResponseWriter, c *Container) bool {
 
 // guardRWDB returns true and writes a 503 if the RW pool is unavailable: the
 // live store does not implement providers.Writable or reports false.
-func guardRWDB(w http.ResponseWriter, c *Container) bool {
-	if !c.writable() {
+func guardRWDB(w http.ResponseWriter, r *http.Request, c *Container) bool {
+	if !c.writable(r) {
 		writeError(w, http.StatusServiceUnavailable, "RW_UNAVAILABLE",
 			"The read-write database is not available. The server started with a read-only connection.",
 			nil, c.Config.ExposeDetails)
@@ -84,7 +84,7 @@ func handleObservationPatch(c *Container) http.HandlerFunc {
 		if guardDemo(w, c) {
 			return
 		}
-		if guardRWDB(w, c) {
+		if guardRWDB(w, r, c) {
 			return
 		}
 
@@ -106,7 +106,7 @@ func handleObservationPatch(c *Container) http.HandlerFunc {
 			return
 		}
 
-		result, err := services.UpdateObservation(r.Context(), c.RWDB, id, patch)
+		result, err := services.UpdateObservation(r.Context(), c.rw(r), id, patch)
 		if err != nil {
 			var we *services.WriteError
 			if errors.As(err, &we) && we.Code == "NOT_FOUND" {
@@ -193,7 +193,7 @@ func handleAssignProject(c *Container, entity services.EntityKind) http.HandlerF
 		if guardDemo(w, c) {
 			return
 		}
-		if guardRWDB(w, c) {
+		if guardRWDB(w, r, c) {
 			return
 		}
 
@@ -225,7 +225,7 @@ func handleAssignProject(c *Container, entity services.EntityKind) http.HandlerF
 			return
 		}
 
-		result, err := services.AssignProject(r.Context(), c.RWDB, entity, id, body.Project)
+		result, err := services.AssignProject(r.Context(), c.rw(r), entity, id, body.Project)
 		if err != nil {
 			var we *services.WriteError
 			if errors.As(err, &we) && we.Code == "NOT_FOUND" {
@@ -249,7 +249,7 @@ func handleDeleteEntity(c *Container, entity services.EntityKind) http.HandlerFu
 		if guardDemo(w, c) {
 			return
 		}
-		if guardRWDB(w, c) {
+		if guardRWDB(w, r, c) {
 			return
 		}
 
@@ -270,7 +270,7 @@ func handleDeleteEntity(c *Container, entity services.EntityKind) http.HandlerFu
 			id = n
 		}
 
-		result, err := services.DeleteEntity(r.Context(), c.RWDB, entity, id)
+		result, err := services.DeleteEntity(r.Context(), c.rw(r), entity, id)
 		if err != nil {
 			var we *services.WriteError
 			if errors.As(err, &we) {
@@ -308,7 +308,7 @@ func handleProjectRename(c *Container) http.HandlerFunc {
 		if guardDemo(w, c) {
 			return
 		}
-		if guardRWDB(w, c) {
+		if guardRWDB(w, r, c) {
 			return
 		}
 
@@ -330,7 +330,7 @@ func handleProjectRename(c *Container) http.HandlerFunc {
 			return
 		}
 
-		result, err := services.RenameProject(r.Context(), c.RWDB, services.RenameProjectParams{
+		result, err := services.RenameProject(r.Context(), c.rw(r), services.RenameProjectParams{
 			Source: source,
 			Target: body.Target,
 			Mode:   body.Mode,
@@ -382,7 +382,7 @@ func handleDBExport(c *Container) http.HandlerFunc {
 		if guardDemo(w, c) {
 			return
 		}
-		if guardRWDB(w, c) {
+		if guardRWDB(w, r, c) {
 			return
 		}
 
@@ -399,7 +399,7 @@ func handleDBExport(c *Container) http.HandlerFunc {
 			return
 		}
 
-		tmpPath, cleanup, err := services.ExportSnapshot(r.Context(), c.RWDB)
+		tmpPath, cleanup, err := services.ExportSnapshot(r.Context(), c.rw(r))
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "INTERNAL", "export failed", err.Error(), c.Config.ExposeDetails)
 			return
@@ -437,7 +437,7 @@ func handleDBImport(c *Container) http.HandlerFunc {
 		if guardDemo(w, c) {
 			return
 		}
-		if guardRWDB(w, c) {
+		if guardRWDB(w, r, c) {
 			return
 		}
 
@@ -493,7 +493,7 @@ func handleDBImport(c *Container) http.HandlerFunc {
 			return
 		}
 
-		result, err := services.ImportMerge(r.Context(), c.RWDB, tmpPath, dataDir)
+		result, err := services.ImportMerge(r.Context(), c.rw(r), tmpPath, dataDir)
 		if err != nil {
 			var die *services.DatabaseImportError
 			if errors.As(err, &die) {

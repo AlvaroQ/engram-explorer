@@ -17,7 +17,7 @@ import (
 // UI/doctor requests (withUnsafeUIRateLimit), which needs the bare router to
 // resolve the routed pattern before dispatch.
 func NewHandler(c *Container) http.Handler {
-	var handler = withUnsafeUIRateLimit(newRouter(c), newUIRateLimiter(), c.Config.ExposeDetails)
+	var handler = c.withLeases(withUnsafeUIRateLimit(newRouter(c), newUIRateLimiter(), c.Config.ExposeDetails))
 	handler = corsMiddleware(handler, trustedDevOrigins(c.Config.Env))
 	handler = requestLogger(c.Logger, handler)
 	handler = secureHeaders(handler)

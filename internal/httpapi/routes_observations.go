@@ -60,7 +60,7 @@ func handleObservationsList(c *Container) http.HandlerFunc {
 			Limit:          limit,
 		}
 
-		items, nextCursor, err := services.ObservationsList(c.RoDB, params)
+		items, nextCursor, err := services.ObservationsList(c.ro(r), params)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
@@ -80,7 +80,7 @@ func handleObservationsList(c *Container) http.HandlerFunc {
 
 func handleObservationsTypes(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		types, err := services.ObservationsListTypes(c.RoDB)
+		types, err := services.ObservationsListTypes(c.ro(r))
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
@@ -101,9 +101,9 @@ func handleObservationsSearch(c *Container) http.HandlerFunc {
 		}
 		limit := parseLimit(r.URL.Query(), 50, 1, 200)
 		// Served by the live providers.Searcher capability.
-		searcher := c.searcher()
+		searcher := c.searcher(r)
 		if searcher == nil {
-			writeModuleDisabled(w, r, c.Config.ExposeDetails)
+			c.writeModuleDisabled(w, r)
 			return
 		}
 		items, err := searcher.Search(r.Context(), rawQ, limit)
@@ -128,7 +128,7 @@ func handleObservationsGetByID(c *Container) http.HandlerFunc {
 			return
 		}
 
-		obs, revisions, err := services.ObservationsGetByID(c.RoDB, id)
+		obs, revisions, err := services.ObservationsGetByID(c.ro(r), id)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return

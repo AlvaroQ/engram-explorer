@@ -37,7 +37,7 @@ func handleSessionsList(c *Container) http.HandlerFunc {
 			Enrich:     parseBool(q.Get("enrich")),
 		}
 
-		result, err := services.SessionsList(c.RoDB, params)
+		result, err := services.SessionsList(c.ro(r), params)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
@@ -50,7 +50,7 @@ func handleSessionsList(c *Container) http.HandlerFunc {
 func handleSessionsGetDetail(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
-		detail, err := services.SessionsGetDetail(c.RoDB, id)
+		detail, err := services.SessionsGetDetail(c.ro(r), id)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
@@ -66,7 +66,7 @@ func handleSessionsGetDetail(c *Container) http.HandlerFunc {
 func handleSessionsGetEvents(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
-		detail, err := services.SessionsGetDetail(c.RoDB, id)
+		detail, err := services.SessionsGetDetail(c.ro(r), id)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return

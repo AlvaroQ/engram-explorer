@@ -54,7 +54,7 @@ type Provider interface {
 	// Routes registers the provider's own HTTP routes on r. The host calls it
 	// exactly once at boot for every registered provider, whatever its state;
 	// r serves each route only while the provider is Enabled and hands the
-	// live instance to handlers through r.Live() per request. Existing paths
+	// live instance to handlers through r.Live(req) per request. Existing paths
 	// are kept verbatim (no forced /api/{id}/ prefix in v1).
 	Routes(r Router)
 
@@ -77,10 +77,11 @@ type Router interface {
 	Handle(pattern string, h http.Handler)
 	HandleFunc(pattern string, h func(http.ResponseWriter, *http.Request))
 
-	// Live returns the provider's current instance, or nil when it is not
-	// Enabled. Call it per request and never keep the result: a toggle or a
-	// profile switch closes the old instance.
-	Live() Instance
+	// Live returns the provider instance serving req, or nil when the
+	// provider was not Enabled when req started. The instance stays open
+	// until req's handler returns, even if a toggle or a profile switch
+	// supersedes it meanwhile; never keep it beyond the request.
+	Live(req *http.Request) Instance
 }
 
 // Instance is the per-profile live activation of a provider — handles, pools,

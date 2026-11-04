@@ -37,7 +37,7 @@ var startTime = time.Now()
 // the original direct-mount code path is used unchanged.
 func NewServeMux(c *Container) http.Handler {
 	// Apply middleware stack (outermost = first to run).
-	var handler http.Handler = newRouter(c)
+	var handler = c.withLeases(newRouter(c))
 	handler = corsMiddleware(handler, trustedDevOrigins(c.Config.Env))
 	handler = requestLogger(c.Logger, handler)
 	handler = secureHeaders(handler)
@@ -124,7 +124,7 @@ func mountLegacyRoutes(mux *http.ServeMux, c *Container) {
 //     serves them only while that provider is Enabled;
 //   - the host route families (the Engram JSON API and the Claude Code stats)
 //     are gated on an Enabled instance with the matching capability, and read
-//     through c.RoDB/c.RWDB, which follow the live store (liveDB);
+//     the pools pinned for the request (c.ro / c.rw, see withLeases);
 //   - the UI shell resolves the module handles per request (ui.Deps.Live).
 func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 	reg := c.Registry
@@ -151,7 +151,7 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 	daemonRoutes(mux, c)
 
 	for _, p := range reg.Providers() {
-		p.Routes(newModuleRouter(mux, reg, p.ID(), c.Config.ExposeDetails))
+		p.Routes(newModuleRouter(mux, c, p.ID()))
 	}
 
 	// The UI shell renders with zero providers (onboarding zero-state); module

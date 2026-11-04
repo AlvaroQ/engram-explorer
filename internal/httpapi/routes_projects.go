@@ -14,7 +14,7 @@ func projectsRoutes(mux routeMux, c *Container) {
 
 func handleProjectsList(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		items, err := services.ProjectsList(c.RoDB)
+		items, err := services.ProjectsList(c.ro(r))
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
@@ -29,7 +29,7 @@ func handleProjectsList(c *Container) http.HandlerFunc {
 func handleProjectsGetOverview(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		project := r.PathValue("project")
-		overview, err := services.ProjectsGetOverview(c.RoDB, project)
+		overview, err := services.ProjectsGetOverview(c.ro(r), project)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
@@ -45,7 +45,7 @@ func handleProjectsGetOverview(c *Container) http.HandlerFunc {
 func handleTopicsList(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		project := r.URL.Query().Get("project")
-		items, err := services.TopicsList(c.RoDB, services.TopicsListParams{Project: project})
+		items, err := services.TopicsList(c.ro(r), services.TopicsListParams{Project: project})
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return

@@ -17,7 +17,7 @@ func syncRoutes(mux routeMux, c *Container) {
 
 func handleSyncProjectsList(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		result, err := services.SyncListProjects(c.RoDB)
+		result, err := services.SyncListProjects(c.ro(r))
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
@@ -29,7 +29,7 @@ func handleSyncProjectsList(c *Container) http.HandlerFunc {
 func handleSyncProjectDetail(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		project := r.PathValue("project")
-		detail, err := services.SyncGetProjectDetail(c.RoDB, project)
+		detail, err := services.SyncGetProjectDetail(c.ro(r), project)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
@@ -48,7 +48,7 @@ func handleSyncIssues(c *Container) http.HandlerFunc {
 		pingResult := dc.FetchJSON("/health")
 		daemonAvailable := pingResult.OK
 
-		result, err := services.SyncComputeIssues(c.RoDB, daemonAvailable)
+		result, err := services.SyncComputeIssues(c.ro(r), daemonAvailable)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return

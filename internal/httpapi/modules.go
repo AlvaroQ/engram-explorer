@@ -18,20 +18,20 @@ const codeModuleDisabled = "MODULE_DISABLED"
 
 // writeModuleDisabled answers 503: the MODULE_DISABLED JSON envelope under
 // /api/, the localized HTML message elsewhere.
-func writeModuleDisabled(w http.ResponseWriter, r *http.Request, exposeDetails bool) {
+func (c *Container) writeModuleDisabled(w http.ResponseWriter, r *http.Request) {
 	if isAPIPath(r.URL.Path) {
 		writeError(w, http.StatusServiceUnavailable, codeModuleDisabled,
-			"This module is disabled. Enable it in Settings → Modules.", nil, exposeDetails)
+			"This module is disabled. Enable it in Settings → Modules.", nil, c.Config.ExposeDetails)
 		return
 	}
 	ui.RenderModuleDisabled(w, r)
 }
 
-// gate serves h only while available reports true.
-func gate(available func() bool, exposeDetails bool, h http.Handler) http.Handler {
+// gate serves h only while available reports true for the request.
+func (c *Container) gate(available func(*http.Request) bool, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !available() {
-			writeModuleDisabled(w, r, exposeDetails)
+		if !available(r) {
+			c.writeModuleDisabled(w, r)
 			return
 		}
 		h.ServeHTTP(w, r)
@@ -42,28 +42,28 @@ func gate(available func() bool, exposeDetails bool, h http.Handler) http.Handle
 // instance matching the capability.
 type capabilityMux struct {
 	mux       *http.ServeMux
-	available func() bool
-	expose    bool
+	c         *Container
+	available func(*http.Request) bool
 }
 
 func (c *Container) capabilityMux(mux *http.ServeMux, match func(providers.Instance) bool) capabilityMux {
 	return capabilityMux{
 		mux:       mux,
-		available: func() bool { return c.Registry.Find(match) != nil },
-		expose:    c.Config.ExposeDetails,
+		c:         c,
+		available: func(r *http.Request) bool { return c.find(r, match) != nil },
 	}
 }
 
 func (m capabilityMux) Handle(pattern string, h http.Handler) {
-	m.mux.Handle(pattern, gate(m.available, m.expose, h))
+	m.mux.Handle(pattern, m.c.gate(m.available, h))
 }
 
 func (m capabilityMux) HandleFunc(pattern string, h func(http.ResponseWriter, *http.Request)) {
 	m.Handle(pattern, http.HandlerFunc(h))
 }
 
-// uiLive reports the module state for ui.Deps.Live.
-func (c *Container) uiLive() ui.LiveHandles {
-	ro, rw := c.storeHandles()
-	return ui.LiveHandles{RoDB: ro, RWDB: rw, Claude: c.Registry.Find(isTranscriptSource) != nil}
+// uiLive reports the module state of r for ui.Deps.Live.
+func (c *Container) uiLive(r *http.Request) ui.LiveHandles {
+	ro, rw := c.storeHandles(r)
+	return ui.LiveHandles{RoDB: ro, RWDB: rw, Claude: c.find(r, isTranscriptSource) != nil}
 }
