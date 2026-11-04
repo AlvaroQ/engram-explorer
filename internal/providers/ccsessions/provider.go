@@ -13,8 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log/slog"
-	"net/http"
 	"os"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
@@ -112,18 +110,12 @@ func (p *ccProvider) Open(ctx context.Context, cfg providers.ProviderConfig) (pr
 	}, nil
 }
 
-// Routes registers the Claude Code sessions HTTP routes on mux. It calls the
-// same route-group functions that server.go and ui.Mount call today, moved
-// verbatim (incremental adapter strategy).
-//
-// Like the Engram provider, the actual route wiring is a stub in WU-4 to avoid
-// the import cycle (providers/ccsessions cannot import internal/httpapi or
-// internal/ui). WU-5 (container wiring) will perform the real registration by
-// calling the existing ccSessionsRoutes and ui.Mount CC routes through the
-// container which already imports both packages.
-func (p *ccProvider) Routes(mux *http.ServeMux, inst providers.Instance, logger *slog.Logger) {
-	// Stub: route wiring deferred to WU-5 (container) to avoid import cycle.
-}
+// Routes registers the routes the Claude Code provider owns: none. Its pages
+// (/cc-overview, /cc-sessions/...) and GET /api/cc-sessions/stats read every
+// enabled CC account from the profile store, which only the host has, so the
+// host serves them and gates them on an enabled instance exposing
+// RuntimePaths (this provider's capability).
+func (p *ccProvider) Routes(providers.Router) {}
 
 // Nav returns the sidebar NavGroup for the CC sessions provider.
 // cc-sessions list is intentionally omitted from the primary nav (PR1 UX

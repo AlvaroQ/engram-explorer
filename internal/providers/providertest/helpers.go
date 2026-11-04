@@ -5,7 +5,6 @@ package providertest
 import (
 	"context"
 	"log/slog"
-	"net/http"
 	"sync"
 	"testing"
 
@@ -30,6 +29,13 @@ type FakeProviderOptions struct {
 	OpenErr error
 	// ValidateErr, if non-nil, is returned by Validate.
 	ValidateErr error
+	// Routes, if non-nil, is called by Routes with the host's router, so a
+	// test can register the provider's own routes.
+	Routes func(r providers.Router)
+	// Wrap, if non-nil, decorates every opened instance (for example with
+	// optional capabilities such as providers.Writable or providers.Searcher).
+	// Opened still records the undecorated *FakeInstance.
+	Wrap func(*FakeInstance) providers.Instance
 }
 
 // FakeProvider is a test-double Provider. It is safe for concurrent use and
@@ -81,6 +87,9 @@ func (f *FakeProvider) Open(_ context.Context, cfg providers.ProviderConfig) (pr
 	}
 	inst := &FakeInstance{providerID: f.opts.ID, path: cfg.Path}
 	f.opened = append(f.opened, inst)
+	if f.opts.Wrap != nil {
+		return f.opts.Wrap(inst), nil
+	}
 	return inst, nil
 }
 
@@ -91,7 +100,12 @@ func (f *FakeProvider) Opened() []*FakeInstance {
 	return append([]*FakeInstance(nil), f.opened...)
 }
 
-func (f *FakeProvider) Routes(_ *http.ServeMux, _ providers.Instance, _ *slog.Logger) {}
+// Routes calls the Routes option, if any, with the host's router.
+func (f *FakeProvider) Routes(r providers.Router) {
+	if f.opts.Routes != nil {
+		f.opts.Routes(r)
+	}
+}
 
 func (f *FakeProvider) Nav(_ providers.Instance) providers.NavGroup {
 	return providers.NavGroup{

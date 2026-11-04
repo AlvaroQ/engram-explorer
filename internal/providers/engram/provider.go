@@ -13,8 +13,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log/slog"
-	"net/http"
 	"os"
 
 	_ "modernc.org/sqlite" // register the "sqlite" driver
@@ -22,6 +20,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/doctor"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
+	"github.com/AlvaroQ/engram-explorer/internal/services"
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
 	"github.com/AlvaroQ/engram-explorer/internal/usererr"
@@ -220,19 +219,25 @@ func (p *engramProvider) Open(ctx context.Context, cfg providers.ProviderConfig)
 	}, nil
 }
 
-// Routes registers the Engram HTTP routes on mux. It calls the SAME
-// route-group functions that server.go calls today, moved verbatim
-// (incremental adapter strategy — no handler rewrites).
-func (p *engramProvider) Routes(mux *http.ServeMux, inst providers.Instance, logger *slog.Logger) {
-	// Routes is intentionally a no-op in WU-3 because the route-group functions
-	// (observationsRoutes, promptsRoutes, etc.) live in internal/httpapi which
-	// imports internal/providers — importing httpapi here would create an import
-	// cycle. The actual route wiring moves to WU-5 (container wiring) where the
-	// container owns both the registry and the route-group functions.
-	//
-	// This stub satisfies the Provider interface contract so the adapter can be
-	// registered and tested in isolation. WU-5 will pass the real route
-	// registration through the container.
+// Routes registers the routes the Engram provider owns: the doctor module
+// (/doctor/*, /settings/maintenance). The host gates them by this provider's
+// state, and every request reads the pools of the live instance through
+// r.Live(), so a toggle or profile switch never leaves a route on a closed pool.
+//
+// The Engram JSON API (/api/observations, ...) and the memory pages stay in
+// internal/httpapi and internal/ui (importing them here would be an import
+// cycle); the host serves them from the capabilities of the live instance
+// (Searcher, StatsSource, Writable and the SQLite pools).
+func (p *engramProvider) Routes(r providers.Router) {
+	doctor.Mount(r, doctor.Deps{
+		Config: p.cfg,
+		Live: func() (ro, rw sqlite.Querier) {
+			if ei, ok := r.Live().(*engramInstance); ok {
+				return ei.handles()
+			}
+			return nil, nil
+		},
+	})
 }
 
 // Nav returns the sidebar NavGroup for the Engram provider.
@@ -356,9 +361,30 @@ func (i *engramInstance) Close(ctx context.Context) error {
 	return firstErr
 }
 
-// Writable returns true — Engram is the only provider that accepts write
-// operations. This satisfies the providers.Writable optional capability.
-func (i *engramInstance) Writable() bool { return true }
+// Writable reports whether this instance holds a read-write pool (false in
+// read-only mode or when the database file is not writable). It satisfies the
+// providers.Writable capability the host uses to gate write routes.
+func (i *engramInstance) Writable() bool { return i.rwSwap != nil }
+
+// handles returns the read-only pool and, when Writable, the read-write pool.
+func (i *engramInstance) handles() (ro, rw sqlite.Querier) {
+	if i.Writable() {
+		return i.deps.RoDB, i.deps.RWDB
+	}
+	return i.deps.RoDB, nil
+}
+
+// Search runs the full-text observation search (providers.Searcher); it backs
+// GET /api/observations/search. The result is []services.ObservationWithSnippet.
+func (i *engramInstance) Search(_ context.Context, q string, limit int) (any, error) {
+	return services.ObservationsSearch(i.deps.RoDB, q, limit)
+}
+
+// Stats builds the dashboard overview (providers.StatsSource); it backs
+// GET /api/overview. The result is *services.OverviewResponse.
+func (i *engramInstance) Stats(_ context.Context) (any, error) {
+	return services.OverviewBuild(i.deps.RoDB)
+}
 
 // Deps returns the ui.Deps struct held by this instance. Used by WU-5
 // (container wiring) to mount routes without an import cycle.

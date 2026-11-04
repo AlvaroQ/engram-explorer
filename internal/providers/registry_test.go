@@ -664,3 +664,34 @@ func TestRegistry_ConcurrentSwitchAndReads(t *testing.T) {
 		<-done
 	}
 }
+
+// TestRegistry_FindAndProviders covers S5: Find resolves the first Enabled
+// instance (registry order) matching a capability and skips disabled ones;
+// Providers lists every registered provider whatever its state.
+func TestRegistry_FindAndProviders(t *testing.T) {
+	a := providertest.NewFakeProvider(providertest.FakeProviderOptions{ID: "a", DetectAvailable: true})
+	b := providertest.NewFakeProvider(providertest.FakeProviderOptions{ID: "b", DetectAvailable: true})
+	reg := providertest.NewRegistry(t, providertest.NewFakeProfile(map[string]providers.ProviderConfig{
+		"a": {Enabled: true, Path: "/a"},
+		"b": {Enabled: true, Path: "/b"},
+	}), a, b)
+	isB := func(i providers.Instance) bool { return i.Health(context.Background()).ID == "b" }
+	any := func(providers.Instance) bool { return true }
+
+	if got := reg.Find(any); got == nil || got.Health(context.Background()).ID != "a" {
+		t.Fatalf("Find(any): got %v, want the instance of a (registry order)", got)
+	}
+	if got := reg.Find(isB); got == nil || got.Health(context.Background()).ID != "b" {
+		t.Fatalf("Find(isB): got %v, want the instance of b", got)
+	}
+	if err := reg.Disable(context.Background(), "b"); err != nil {
+		t.Fatal(err)
+	}
+	if got := reg.Find(isB); got != nil {
+		t.Errorf("Find(isB) after disabling b: got %v, want nil", got)
+	}
+	ps := reg.Providers()
+	if len(ps) != 2 || ps[0].ID() != "a" || ps[1].ID() != "b" {
+		t.Errorf("Providers: got %d providers, want a and b in order", len(ps))
+	}
+}

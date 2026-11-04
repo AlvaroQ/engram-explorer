@@ -267,6 +267,37 @@ func (r *Registry) Instance(providerID string) Instance {
 	return e.inst
 }
 
+// Find returns the first Enabled instance, in registry order, for which match
+// returns true, or nil when there is none. The host uses it to resolve a
+// capability (an optional interface) per request; match runs under the
+// registry read lock and must only inspect the instance (a type assertion).
+// The returned Instance belongs to the registry — callers must not close it.
+func (r *Registry) Find(match func(Instance) bool) Instance {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	for _, id := range r.order {
+		e := r.entries[id]
+		if e.state == Enabled && e.inst != nil && match(e.inst) {
+			return e.inst
+		}
+	}
+	return nil
+}
+
+// Providers returns every registered provider in registry order, whatever its
+// state. The host calls Provider.Routes once for each at boot.
+func (r *Registry) Providers() []Provider {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	out := make([]Provider, 0, len(r.order))
+	for _, id := range r.order {
+		out = append(out, r.entries[id].p)
+	}
+	return out
+}
+
 // Shutdown closes all active (Enabled) provider instances. It is called on
 // server shutdown or test cleanup to release DB handles, file locks, etc.
 // Errors are logged but do not prevent other providers from being closed.
