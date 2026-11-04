@@ -419,17 +419,6 @@ func (i *engramInstance) Stats(_ context.Context) (any, error) {
 // (container wiring) to mount routes without an import cycle.
 func (i *engramInstance) Deps() ui.Deps { return i.deps }
 
-// DoctorDeps returns a doctor.Deps struct built from this instance's fields.
-// Used by WU-5 (container wiring) to mount doctor routes.
-func (i *engramInstance) DoctorDeps() doctor.Deps {
-	return doctor.Deps{
-		RoDB:   i.deps.RoDB,
-		RWDB:   i.deps.RWDB,
-		Config: i.deps.Config,
-		Paths:  i.deps.Paths,
-	}
-}
-
 // ContainerDeps satisfies the httpapi.engramDepsAccessor interface. It returns
 // the DB queriers and RuntimePaths that httpapi.Container populates its own
 // fields from when operating in registry-backed mode (WU-5+). This keeps
@@ -437,22 +426,4 @@ func (i *engramInstance) DoctorDeps() doctor.Deps {
 // working without modification.
 func (i *engramInstance) ContainerDeps() (roDB sqlite.Querier, rwDB sqlite.Querier, paths *config.RuntimePaths) {
 	return i.deps.RoDB, i.deps.RWDB, i.deps.Paths
-}
-
-// ---------------------------------------------------------------------------
-// Package-level accessor helpers for WU-5 (container wiring)
-// ---------------------------------------------------------------------------
-
-// EngramDeps extracts the ui.Deps and doctor.Deps from a providers.Instance
-// that is an active Engram instance. Returns (ui.Deps, doctor.Deps, true) on
-// success, or zero values and false if inst is not an Engram instance.
-//
-// This helper lets httpapi/server.go wire Engram routes without importing the
-// unexported engramInstance type directly.
-func EngramDeps(inst providers.Instance) (ui.Deps, doctor.Deps, bool) {
-	ei, ok := inst.(*engramInstance)
-	if !ok {
-		return ui.Deps{}, doctor.Deps{}, false
-	}
-	return ei.Deps(), ei.DoctorDeps(), true
 }

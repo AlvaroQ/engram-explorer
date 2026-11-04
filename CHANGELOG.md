@@ -154,6 +154,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   shell helpers (`ui.Render`, `ui.RenderError`, `ui.IsHTMX`, `ui.RequireRW`, `ui.ErrorPartial`,
   `ui.EmptyState`) instead of keeping copies.
 - Unused Pico CSS stylesheet from the doctor module.
+- Unused locale strings `projects.toast.enrollSuccess`, `projects.toast.enrollError` and `settings.row.cloudEnroll`,
+  and the unused helpers `engram.EngramDeps`, the Engram instance's `DoctorDeps` and `ccsessions.CCRuntimePaths`
+  (internal).
 - `scripts/update-engram.*`, a personal helper unrelated to this project.
 
 ## [0.2.0] - 2026-06-12

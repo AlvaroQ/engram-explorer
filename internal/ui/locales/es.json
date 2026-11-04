@@ -596,8 +596,6 @@
       "lastSyncTitle": "Último cambio de sync_state: {{time}}"
     },
     "toast": {
-      "enrollSuccess": "{{project}} inscrito en cloud. El daemon empezará a sincronizar en los próximos minutos.",
-      "enrollError": "No se pudo inscribir {{project}}: {{error}}",
       "syncStarted": "Sincronizando {{project}}…",
       "syncSuccess": "{{project}} sincronizado.",
       "syncError": "Falló la sincronización de {{project}}: {{error}}"
@@ -789,7 +787,6 @@
       "path": "Ruta",
       "status": "Estado",
       "url": "URL",
-      "cloudEnroll": "cloud enroll",
       "dashboard": "Panel",
       "node": "Node",
       "uptime": "Uptime"

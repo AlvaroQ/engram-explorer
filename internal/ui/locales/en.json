@@ -596,8 +596,6 @@
       "progressTitle": "{{acked}} of {{enq}} acked ({{percent}}%)"
     },
     "toast": {
-      "enrollSuccess": "{{project}} enrolled in cloud. The daemon will start syncing within minutes.",
-      "enrollError": "Could not enroll {{project}}: {{error}}",
       "syncStarted": "Syncing {{project}}…",
       "syncSuccess": "{{project}} synced.",
       "syncError": "Sync failed for {{project}}: {{error}}"
@@ -789,7 +787,6 @@
       "path": "Path",
       "status": "Status",
       "url": "URL",
-      "cloudEnroll": "cloud enroll",
       "dashboard": "Dashboard",
       "node": "Node",
       "uptime": "Uptime"
