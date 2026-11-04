@@ -130,7 +130,8 @@ func TestCSP_RenderedPagesHaveNoInlineStyles(t *testing.T) {
 		{"/sessions/s-01", false},
 		{"/projects", false},
 		{"/projects/alpha", false},
-		{"/cc-overview", false},
+		{"/agent-sessions", false},
+		{"/agent-sessions/list", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.path, func(t *testing.T) {

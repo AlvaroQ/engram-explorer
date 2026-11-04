@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AlvaroQ/engram-explorer/internal/agentsessions"
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 	"github.com/a-h/templ"
 )
@@ -163,9 +164,14 @@ func TestCSPComponents_UseDataHooks(t *testing.T) {
 			[]string{`data-remove-after-request="sessions-load-more-row"`},
 		},
 		{
-			"cc sessions load more",
-			ccsLoadMoreRow("c1", services.CCSessionListParams{}, "en"),
-			[]string{`data-remove-after-request="cc-sessions-load-more-row"`},
+			"agent session detail",
+			AgentSessionDetailPartial(&agentsessions.Detail{Turns: []agentsessions.Turn{{Role: "assistant", Blocks: []agentsessions.Block{
+				{Kind: agentsessions.BlockReasoning, Text: "r"},
+				{Kind: agentsessions.BlockToolCall, ToolName: "Read", Input: "{}", Output: "x", Paired: true},
+				{Kind: agentsessions.BlockToolResult, CallID: "c9", Output: "y"},
+				{Kind: agentsessions.BlockText, Text: "<ide_opened_file>a.go</ide_opened_file> hi"},
+			}}}}, "en"),
+			[]string{`data-cc-block="thinking"`, `data-cc-toggle="tool"`, `data-cc-block="attachment"`, `/static/cc-conv-filter.js`},
 		},
 		{
 			"project combine card",

@@ -129,7 +129,7 @@ func errorCode(w *httptest.ResponseRecorder) string {
 
 var (
 	engramRoutes = []string{"/api/observations", "/api/overview", "/observations", "/doctor/orphans/list", "/settings/maintenance"}
-	ccRoutes     = []string{"/api/cc-sessions/stats", "/cc-overview"}
+	ccRoutes     = []string{"/api/cc-sessions/stats", "/api/agent-sessions/stats", "/agent-sessions", "/agent-sessions/list"}
 )
 
 // TestModuleLifecycle_EngramEnabledLater covers S4: Engram disabled at boot;

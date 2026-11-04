@@ -125,19 +125,10 @@ func (p *ccProvider) Open(ctx context.Context, cfg providers.ProviderConfig) (pr
 	}, nil
 }
 
-// Nav returns the sidebar NavGroup for the CC sessions provider.
-// cc-sessions list is intentionally omitted from the primary nav (PR1 UX
-// simplification). The list page remains accessible via direct URL; the
-// overview is the primary entry point.
-func (p *ccProvider) Nav(inst providers.Instance) providers.NavGroup {
-	return providers.NavGroup{
-		ID:       "cc-sessions",
-		LabelKey: "nav.ccsessions",
-		Featured: false,
-		Links: []providers.NavLink{
-			{Href: "/cc-overview", Key: "cc-overview", LabelKey: "nav.ccsessionsOverview", Icon: "overview"},
-		},
-	}
+// Nav contributes the shared "Agent sessions" sidebar group (the registry
+// merges it with the other agent-session providers').
+func (p *ccProvider) Nav(providers.Instance) providers.NavGroup {
+	return providers.AgentSessionsNav()
 }
 
 // Validate checks a candidate config before activation (Tier-1 manual path

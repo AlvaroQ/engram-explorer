@@ -10,9 +10,9 @@
     "brain": "Grafo de conocimiento",
     "syncHealth": "Salud del Sync",
     "orphans": "Huérfanos",
-    "ccsessions": "Claude Code",
-    "ccsessionsList": "Sesiones de Claude Code",
-    "ccsessionsOverview": "Resumen"
+    "agentSessions": "Sesiones de agentes",
+    "agentSessionsOverview": "Resumen",
+    "agentSessionsList": "Sesiones"
   },
   "common": {
     "errorGeneric": "Algo salió mal. Revisa el registro del servidor para más detalles.",
@@ -42,14 +42,11 @@
     "brand": "Explorer",
     "subtitle": "Panel local",
     "groupEngram": "Engram",
-    "groupClaudeCode": "Claude Code",
     "overview": "Resumen",
     "knowledge": "Grafo de conocimiento",
     "projects": "Proyectos",
     "observations": "Memoria",
     "sessions": "Sesiones",
-    "ccOverview": "Claude Code",
-    "ccSessions": "Sesiones de Claude Code",
     "syncHealth": "Salud del Sync",
     "prompts": "Prompts",
     "topics": "Temas",
@@ -753,8 +750,6 @@
     "runtime": "Runtime",
     "navTitle": "Secciones del menú",
     "navHeaderDesc": "Mostrá u ocultá secciones enteras del menú lateral.",
-    "navEngram": "Engram",
-    "navClaude": "Claude Code",
     "navDescription": "Alterná la visibilidad de esta sección en el menú lateral.",
     "navShow": "Mostrar",
     "navHide": "Ocultar",
@@ -802,63 +797,111 @@
       "notInCli": "no está en este CLI"
     }
   },
-  "ccSessions": {
-    "title": "Claude Code",
-    "description": "Transcripts en vivo desde",
-    "filterProject": "Proyecto",
-    "attachment": "Adjuntó un fichero",
-    "filter": {
-      "compact": "Compactar",
-      "thinking": "Thinking",
-      "tools": "Herramientas",
-      "attachments": "Adjuntos",
-      "account": "Cuenta",
-      "allAccounts": "Todas las cuentas"
-    },
-    "listTitle": "Sesiones",
-    "listLoaded": "{{count}} cargadas",
-    "noMatch": "No se encontraron sesiones de Claude Code.",
-    "notFound": "Sesión no encontrada.",
+  "agentSessions": {
+    "title": "Sesiones de agentes",
+    "description": "Uso de tokens y coste de tus sesiones locales de agentes de programación.",
     "session": "Sesión",
-    "counts": "Conteos",
-    "conversation": "Conversación",
-    "conversationDesc": "{{count}} turnos",
-    "noTurns": "No se encontraron turnos de conversación.",
-    "col": {
-      "prompt": "Primer prompt",
+    "attachment": "Archivo adjunto",
+    "agents": {
+      "claude-code": "Claude Code",
+      "codex": "Codex"
+    },
+    "tabs": {
+      "overview": "Resumen",
+      "sessions": "Sesiones"
+    },
+    "tokenNote": "Los tokens se cuentan en grupos disjuntos: entrada sin caché, lectura de caché, escritura de caché y salida. El razonamiento forma parte de la salida.",
+    "sourceError": "No se pudo leer {{source}} ({{agent}}); sus sesiones no se muestran.",
+    "list": {
+      "title": "Sesiones",
+      "count": "{{count}} de {{total}}",
+      "noMatch": "Ninguna sesión coincide con estos filtros.",
+      "page": "Página {{page}} de {{pages}}",
+      "prev": "Anterior",
+      "next": "Siguiente"
+    },
+    "filter": {
+      "agent": "Agente",
+      "allAgents": "Todos los agentes",
+      "source": "Origen",
+      "allSources": "Todos los orígenes",
       "project": "Proyecto",
+      "model": "Modelo",
+      "query": "Buscar",
+      "queryPlaceholder": "Prompt, proyecto, rama o ID",
+      "from": "Desde",
+      "to": "Hasta",
+      "sort": "Ordenar por",
+      "order": "Orden",
+      "apply": "Aplicar",
+      "reset": "Restablecer",
+      "compact": "Compacto",
+      "reasoning": "Razonamiento",
+      "tools": "Herramientas",
+      "attachments": "Adjuntos"
+    },
+    "sort": {
+      "ended": "Última actividad",
       "started": "Inicio",
-      "ended": "Modificación",
-      "branch": "Rama",
-      "version": "Versión CC",
+      "cost": "Coste",
+      "tokens": "Tokens",
       "size": "Tamaño",
+      "project": "Proyecto"
+    },
+    "order": {
+      "desc": "Descendente",
+      "asc": "Ascendente"
+    },
+    "col": {
+      "ended": "Última actividad",
+      "prompt": "Primer prompt",
+      "agent": "Agente",
       "tokens": "Tokens",
       "cost": "Coste",
-      "account": "Cuenta"
+      "size": "Tamaño",
+      "project": "Proyecto",
+      "branch": "Rama"
     },
     "fields": {
       "project": "Proyecto",
       "cwd": "Directorio",
       "branch": "Rama",
-      "version": "Versión CC",
+      "version": "Versión del agente",
+      "agent": "Agente",
+      "source": "Origen",
       "started": "Inicio",
-      "ended": "Última modificación",
+      "ended": "Última actividad",
       "size": "Tamaño del archivo",
       "turns": "Turnos",
-      "userTurns": "Turnos de usuario",
+      "userTurns": "Turnos del usuario",
       "assistantTurns": "Turnos del asistente",
       "tokens": "Tokens totales",
       "cost": "Coste estimado"
     },
     "usage": {
       "input": "Entrada",
-      "output": "Salida",
+      "cacheRead": "Lectura de caché",
       "cacheWrite": "Escritura de caché",
-      "cacheRead": "Lectura de caché"
+      "output": "Salida",
+      "reasoning": "Razonamiento (parte de la salida)"
+    },
+    "conversation": "Conversación",
+    "conversationDesc": "{{count}} turnos",
+    "noTurns": "No se encontraron turnos de conversación.",
+    "blocks": {
+      "reasoning": "Razonamiento",
+      "toolCall": "Llamada a herramienta",
+      "toolResult": "Resultado de herramienta",
+      "input": "Entrada",
+      "output": "Salida",
+      "error": "Error",
+      "noOutput": "Sin salida registrada",
+      "noCall": "Sin llamada asociada"
     },
     "charts": {
       "title": "Resumen de uso",
-      "description": "Tokens y coste de todas las sesiones de Claude Code.",
+      "description": "Tokens y coste de todas las sesiones de agentes.",
+      "costByAgent": "Coste por agente",
       "costByProject": "Coste por proyecto",
       "tokensByModel": "Tokens por modelo",
       "overTime": "Uso en el tiempo",
@@ -867,23 +910,11 @@
       "tokens": "Tokens totales",
       "cost": "Coste estimado",
       "loading": "Cargando…",
-      "empty": "No se encontraron sesiones de Claude Code.",
+      "empty": "No se encontraron sesiones de agentes.",
       "error": "No se pudieron cargar las estadísticas de uso.",
       "others": "Otros",
       "untitled": "(sin título)",
-      "costEstimateNote": "El coste excluye turnos con modelos sin precio — el gasto real puede ser mayor."
-    }
-  },
-  "ccOverview": {
-    "title": "Claude Code",
-    "description": "Tokens y coste de todas tus sesiones de Claude Code.",
-    "byAccount": {
-      "title": "Desglose por cuenta",
-      "total": "Todas las cuentas"
-    },
-    "tabs": {
-      "overview": "Resumen",
-      "sessions": "Sesiones"
+      "costEstimateNote": "El coste excluye turnos con modelos sin precio: el gasto real puede ser mayor."
     }
   },
   "placeholder": {

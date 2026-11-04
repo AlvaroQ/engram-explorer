@@ -353,8 +353,8 @@ func TestNav_ReturnsGroup(t *testing.T) {
 	defer inst.Close(context.Background()) //nolint:errcheck
 
 	nav := p.Nav(inst)
-	if nav.ID != "cc-sessions" {
-		t.Errorf("Nav.ID: got %q, want %q", nav.ID, "cc-sessions")
+	if nav.ID != providers.AgentSessionsNavID {
+		t.Errorf("Nav.ID: got %q, want the shared %q group", nav.ID, providers.AgentSessionsNavID)
 	}
 	if nav.Featured {
 		t.Error("Nav.Featured: expected false for CC sessions provider")

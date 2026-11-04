@@ -31,7 +31,7 @@ func TestDoctorPages_RenderTheSameSidebarAsUIPages(t *testing.T) {
 	if want == "" {
 		t.Fatal("GET /settings: no sidebar")
 	}
-	if !strings.Contains(want, `class="account-switcher"`) || strings.Contains(want, `href="/cc-overview"`) {
+	if !strings.Contains(want, `class="account-switcher"`) || strings.Contains(want, `href="/agent-sessions"`) {
 		t.Fatalf("reference sidebar is not the registry-driven one:\n%s", want)
 	}
 

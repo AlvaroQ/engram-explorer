@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"net/http"
 
+	"github.com/AlvaroQ/engram-explorer/internal/agentsessions"
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
@@ -19,17 +20,7 @@ type sqliteStore interface {
 	ContainerDeps() (roDB sqlite.Querier, rwDB sqlite.Querier, paths *config.RuntimePaths)
 }
 
-// transcriptSource is implemented by instances that serve Claude Code
-// transcripts (the cc-sessions provider).
-type transcriptSource interface {
-	RuntimePaths() *config.RuntimePaths
-}
-
 func isSQLiteStore(i providers.Instance) bool { _, ok := i.(sqliteStore); return ok }
-func isTranscriptSource(i providers.Instance) bool {
-	_, ok := i.(transcriptSource)
-	return ok
-}
 
 // ---------------------------------------------------------------------------
 // Per-request resolution
@@ -72,6 +63,33 @@ func (c *Container) find(r *http.Request, match func(providers.Instance) bool) p
 		return l.Find(match)
 	}
 	return c.Registry.Find(match)
+}
+
+// findAll resolves every instance matching a capability for r: from the
+// lease of r when it has one, otherwise from the registry as it is now.
+func (c *Container) findAll(r *http.Request, match func(providers.Instance) bool) []providers.Instance {
+	if l := leaseFrom(r); l != nil {
+		return l.FindAll(match)
+	}
+	return c.Registry.FindAll(match)
+}
+
+func isAgentSessionSource(i providers.Instance) bool {
+	_, ok := i.(providers.AgentSessionSource)
+	return ok
+}
+
+// agentSessionSources returns the sources of every live AgentSessionSource
+// for r, in registry order (nil for legacy containers).
+func (c *Container) agentSessionSources(r *http.Request) []agentsessions.Source {
+	if c.Registry == nil {
+		return nil
+	}
+	var out []agentsessions.Source
+	for _, inst := range c.findAll(r, isAgentSessionSource) {
+		out = append(out, inst.(providers.AgentSessionSource).AgentSessionSources()...)
+	}
+	return out
 }
 
 // storeHandles returns the pools of the SQLite store serving r (nil r: the

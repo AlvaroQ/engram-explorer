@@ -8,9 +8,9 @@ import (
 	"io/fs"
 	"net/http"
 
+	"github.com/AlvaroQ/engram-explorer/internal/agentsessions"
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
-	"github.com/AlvaroQ/engram-explorer/internal/services"
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 	"github.com/a-h/templ"
 )
@@ -79,12 +79,6 @@ type Deps struct {
 	// path), the overview is always shown.
 	ActiveCount func() int
 
-	// CCAccountSources, when non-nil, returns the list of enabled CC account
-	// sources (each source wraps a CCProjectsReader for one ~/.claude directory).
-	// When nil the CC handlers fall back to a single DiskProjectsReader using
-	// d.Paths.ClaudeDir(), preserving backward compatibility with legacy/test paths.
-	CCAccountSources func() []services.CCAccountSource
-
 	// CCAccounts, when non-nil, returns all CC accounts (enabled and disabled)
 	// as CCAccountInfo view-models for the Settings → CC Accounts section.
 	CCAccounts func() []CCAccountInfo
@@ -109,22 +103,29 @@ type Deps struct {
 	// profile in config.json. When nil, the toggle endpoint returns 503.
 	SetAdvancedView func(enabled bool) error
 
+	// AgentSessions are the agent-session sources serving the request (set
+	// per request from Live; tests set it directly).
+	AgentSessions []agentsessions.Source
+
 	// Live, when non-nil, reports the data handles of the modules serving one
 	// request; they stay open until that request's handler returns. Mount
 	// calls it on every request and hands the
 	// handlers a copy of Deps carrying them, so enabling or disabling a module
 	// needs no remount and no handler keeps a closed pool. Memory pages
-	// answer 503 (RenderModuleDisabled) while RoDB is nil, Claude Code pages
-	// while Claude is false. When nil (tests, legacy path) RoDB/RWDB are used
+	// answer 503 (RenderModuleDisabled) while RoDB is nil, agent-session
+	// pages while AgentSessions is empty. When nil (tests, legacy path) RoDB/RWDB are used
 	// as mounted and no page is gated.
 	Live func(r *http.Request) LiveHandles
 }
 
 // LiveHandles is the per-request module state returned by Deps.Live.
 type LiveHandles struct {
-	RoDB   sqlite.Querier // read-only pool; nil when the Engram module is not enabled
-	RWDB   sqlite.Querier // read-write pool; nil when writes are not available
-	Claude bool           // the Claude Code sessions module is enabled
+	RoDB sqlite.Querier // read-only pool; nil when the Engram module is not enabled
+	RWDB sqlite.Querier // read-write pool; nil when writes are not available
+	// AgentSessions are the sources of every live instance with the
+	// providers.AgentSessionSource capability (registry order). The
+	// agent-session pages answer 503 while it is empty.
+	AgentSessions []agentsessions.Source
 }
 
 // ---------------------------------------------------------------------------
@@ -268,12 +269,13 @@ func liveHandler(d Deps, available func(LiveHandles) bool, factory handlerFactor
 		}
 		dd := d
 		dd.RoDB, dd.RWDB = h.RoDB, h.RWDB
+		dd.AgentSessions = h.AgentSessions
 		factory(dd)(w, r)
 	}
 }
 
-func engramEnabled(h LiveHandles) bool { return h.RoDB != nil }
-func claudeEnabled(h LiveHandles) bool { return h.Claude }
+func engramEnabled(h LiveHandles) bool        { return h.RoDB != nil }
+func agentSessionsEnabled(h LiveHandles) bool { return len(h.AgentSessions) > 0 }
 
 // requireRW applies RequireRW with the read-write pool of d.
 func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
@@ -287,11 +289,11 @@ func Mount(mux *http.ServeMux, d Deps) {
 	if d.Paths == nil {
 		d.Paths = config.NewRuntimePaths(d.Config.EngramDbPath, d.Config.ClaudeProjectsDir)
 	}
-	// shell pages work with any module state; memory and claude pages answer
-	// 503 while their module is disabled (see Deps.Live).
+	// shell pages work with any module state; memory and agent-session pages
+	// answer 503 while their module is disabled (see Deps.Live).
 	shell := func(f handlerFactory) http.HandlerFunc { return liveHandler(d, nil, f) }
 	memory := func(f handlerFactory) http.HandlerFunc { return liveHandler(d, engramEnabled, f) }
-	claude := func(f handlerFactory) http.HandlerFunc { return liveHandler(d, claudeEnabled, f) }
+	agents := func(f handlerFactory) http.HandlerFunc { return liveHandler(d, agentSessionsEnabled, f) }
 
 	// Static assets (/static/*).
 	staticSub, err := fs.Sub(StaticFS, "static")
@@ -320,18 +322,18 @@ func Mount(mux *http.ServeMux, d Deps) {
 	mux.HandleFunc("GET /sessions", memory(handleSessionsListPage))
 	mux.HandleFunc("GET /sessions/list", memory(handleSessionsListPartial))
 
-	// Claude Code route — Overview tab (charts) and Sessions tab (?tab=sessions).
-	mux.HandleFunc("GET /cc-overview", claude(handleCCOverviewPage))
+	// Agent sessions (Claude Code, Codex, ...): the cross-agent overview and
+	// list, served from every live AgentSessionSource. Each provider mounts
+	// the detail route of its own sources (/agent-sessions/<source>/<key>).
+	mux.HandleFunc("GET /agent-sessions", agents(handleAgentSessionsOverview))
+	mux.HandleFunc("GET /agent-sessions/list", agents(handleAgentSessionsList))
 
-	// GET /cc-sessions redirects to the Sessions tab on the CC page (PR8).
-	// /cc-sessions/list (HTMX load-more partial) and /cc-sessions/{project}/{id}
-	// (detail) are kept intact — Go 1.22 exact-path matching ensures they win
-	// over the shorter /cc-sessions pattern.
-	mux.HandleFunc("GET /cc-sessions", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/cc-overview?tab=sessions", http.StatusMovedPermanently)
-	})
-	mux.HandleFunc("GET /cc-sessions/list", claude(handleCCSessionsListPartial))
-	mux.HandleFunc("GET /cc-sessions/{project}/{id}", claude(handleCCSessionDetailPage))
+	// Legacy Claude Code URLs answer 301 to the neutral pages (the old detail
+	// /cc-sessions/{project}/{id} is redirected by the Claude provider, which
+	// knows its accounts).
+	mux.HandleFunc("GET /cc-overview", redirectCCOverview)
+	mux.HandleFunc("GET /cc-sessions", redirectCCList)
+	mux.HandleFunc("GET /cc-sessions/list", redirectCCList)
 
 	// Session detail route.
 	mux.HandleFunc("GET /sessions/{id}", memory(handleSessionDetailPage))

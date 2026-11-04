@@ -93,5 +93,5 @@ func (m capabilityMux) HandleFunc(pattern string, h func(http.ResponseWriter, *h
 // uiLive reports the module state of r for ui.Deps.Live.
 func (c *Container) uiLive(r *http.Request) ui.LiveHandles {
 	ro, rw := c.storeHandles(r)
-	return ui.LiveHandles{RoDB: ro, RWDB: rw, Claude: c.find(r, isTranscriptSource) != nil}
+	return ui.LiveHandles{RoDB: ro, RWDB: rw, AgentSessions: c.agentSessionSources(r)}
 }

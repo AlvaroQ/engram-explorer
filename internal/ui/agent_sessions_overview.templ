@@ -1,0 +1,53 @@
+package ui
+
+// asTabBar renders the Overview / Sessions tabs of the agent-session pages.
+// active is "overview" or "list".
+templ asTabBar(active, lang string) {
+	<nav class="flex gap-1 border-b border-border mb-4" aria-label={ T(lang, "agentSessions.title") }>
+		<a
+			href="/agent-sessions"
+			class={ "px-4 py-2 text-sm font-medium rounded-t-md border border-transparent -mb-px", templ.KV("border-border border-b-bg text-fg bg-surface", active == "overview"), templ.KV("text-fg-muted hover:text-fg", active != "overview") }
+			if active == "overview" {
+				aria-current="page"
+			}
+		>{ T(lang, "agentSessions.tabs.overview") }</a>
+		<a
+			href="/agent-sessions/list"
+			class={ "px-4 py-2 text-sm font-medium rounded-t-md border border-transparent -mb-px", templ.KV("border-border border-b-bg text-fg bg-surface", active == "list"), templ.KV("text-fg-muted hover:text-fg", active != "list") }
+			if active == "list" {
+				aria-current="page"
+			}
+		>{ T(lang, "agentSessions.tabs.sessions") }</a>
+	</nav>
+}
+
+// AgentSessionsOverviewPage renders the cross-agent usage overview.
+templ AgentSessionsOverviewPage(lang, theme, sidebarState string) {
+	@Layout(T(lang, "agentSessions.title"), "agent-sessions", lang, theme, sidebarState, asOverviewContent(lang))
+}
+
+// AgentSessionsOverviewPartial renders the overview body for HTMX swaps.
+templ AgentSessionsOverviewPartial(lang string) {
+	@asOverviewContent(lang)
+}
+
+// asOverviewContent: totals, per agent / project / model / day charts and the
+// top sessions, all drawn by the island from /api/agent-sessions/stats.
+templ asOverviewContent(lang string) {
+	<div>
+		@asTabBar("overview", lang)
+		<div class="page-header">
+			<h1>{ T(lang, "agentSessions.title") }</h1>
+			<p>{ T(lang, "agentSessions.description") }</p>
+		</div>
+		<div class="card">
+			<div class="card-header">
+				<h2>{ T(lang, "agentSessions.charts.title") }</h2>
+				<p>{ T(lang, "agentSessions.charts.description") }</p>
+			</div>
+			<div class="card-body">
+				@Island("agent-usage-charts", agentUsageChartsProps(lang))
+			</div>
+		</div>
+	</div>
+}

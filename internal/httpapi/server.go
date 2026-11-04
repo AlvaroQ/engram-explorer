@@ -13,7 +13,6 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/daemon"
 	"github.com/AlvaroQ/engram-explorer/internal/doctor"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
-	"github.com/AlvaroQ/engram-explorer/internal/services"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
 	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
@@ -82,7 +81,6 @@ func mountLegacyRoutes(mux *http.ServeMux, c *Container) {
 	promptsRoutes(mux, c)
 	projectsRoutes(mux, c)
 	overviewRoutes(mux, c)
-	ccSessionsRoutes(mux, c)
 	orphansRoutes(mux, c)
 	daemonRoutes(mux, c)
 
@@ -121,9 +119,9 @@ func mountLegacyRoutes(mux *http.ServeMux, c *Container) {
 //
 //   - each provider's own routes come from Provider.Routes, on a router that
 //     serves them only while that provider is Enabled;
-//   - the host route families (the Engram JSON API and the Claude Code stats)
-//     are gated on an Enabled instance with the matching capability, and read
-//     the pools pinned for the request (c.ro / c.rw, see withLeases);
+//   - the host route families (the Engram JSON API and the agent-session
+//     stats) are gated on an Enabled instance with the matching capability,
+//     and read the instances pinned for the request (see withLeases);
 //   - the UI shell resolves the module handles per request (ui.Deps.Live).
 func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 	reg := c.Registry
@@ -144,7 +142,8 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 	graphRoutes(memory, c)
 	writeRoutes(memory, c)
 
-	ccSessionsRoutes(c.capabilityMux(mux, isTranscriptSource), c)
+	// The cross-agent stats API, served from every live AgentSessionSource.
+	agentSessionsRoutes(c.capabilityMux(mux, isAgentSessionSource), c)
 
 	// Daemon routes are independent of provider state.
 	daemonRoutes(mux, c)
@@ -172,8 +171,6 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 		DeleteProfile:      buildDeleteProfileFn(store),
 		// WU-10: wire ActiveCount for onboarding zero-state branching.
 		ActiveCount: reg.ActiveCount,
-		// WU-11: wire CC account sources for multi-account read path.
-		CCAccountSources: buildCCAccountSourcesFn(store, c.Paths.ClaudeDir(), c.Config.ConfigHome),
 		// Slice 2b: CC accounts management callbacks.
 		CCAccounts:      buildCCAccountsFn(store),
 		AddCCAccount:    buildAddCCAccountFn(reg, store),
@@ -526,47 +523,6 @@ func buildDeleteProfileFn(store *config.Store) func(name string) error {
 			delete(st.Profiles, name)
 			return nil
 		})
-	}
-}
-
-// ---------------------------------------------------------------------------
-// WU-11: CC account sources — multi-account read path
-// ---------------------------------------------------------------------------
-
-// buildCCAccountSourcesFn returns a closure that builds []services.CCAccountSource
-// from the enabled CC accounts in the store (CLAUDE_PROJECTS_DIR, when set,
-// replaces the path of the "default" account in memory). It never writes:
-// config.OpenStore seeds the default account once at boot.
-//
-// Guard nil store: if the store is nil (legacy/no-registry paths that build Deps
-// without a store), falls back to a single source using defaultClaudeDir.
-// The configHome parameter is unused: the store knows where it persists.
-func buildCCAccountSourcesFn(store *config.Store, defaultClaudeDir, _ string) func() []services.CCAccountSource {
-	fallback := []services.CCAccountSource{{
-		ID:     "default",
-		Label:  "Personal",
-		Reader: services.DiskProjectsReader{BaseDir: defaultClaudeDir},
-	}}
-	return func() []services.CCAccountSource {
-		if store == nil {
-			return fallback
-		}
-		var out []services.CCAccountSource
-		for _, acc := range store.EffectiveCCAccounts() {
-			if !acc.Enabled {
-				continue
-			}
-			out = append(out, services.CCAccountSource{
-				ID:     acc.ID,
-				Label:  acc.Label,
-				Reader: services.DiskProjectsReader{BaseDir: acc.Path},
-			})
-		}
-		if len(out) == 0 {
-			// No account or all disabled — fall back so the UI still shows something.
-			return fallback
-		}
-		return out
 	}
 }
 

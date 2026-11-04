@@ -295,6 +295,18 @@ func NewContainerWithRegistry(reg *providers.Registry, cfg config.Config, logger
 	return c
 }
 
+// transcriptSource is implemented by instances that serve Claude Code
+// transcripts (the cc-sessions provider); boot seeds the Settings projects
+// directory from it.
+type transcriptSource interface {
+	RuntimePaths() *config.RuntimePaths
+}
+
+func isTranscriptSource(i providers.Instance) bool {
+	_, ok := i.(transcriptSource)
+	return ok
+}
+
 // populateFromRegistry seeds the container's live paths from the instances
 // enabled at boot: the database path of the SQLite store and the projects
 // directory of the transcript source.

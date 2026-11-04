@@ -3,7 +3,7 @@ package ui
 import (
 	"testing"
 
-	"github.com/AlvaroQ/engram-explorer/internal/services"
+	"github.com/AlvaroQ/engram-explorer/internal/agentsessions"
 )
 
 // ---------------------------------------------------------------------------
@@ -144,15 +144,15 @@ func TestCCSSplitMarkers_EmptyString(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// ccsTurnPreview — marker stripping in preview
+// asTurnPreview — marker stripping in preview
 // ---------------------------------------------------------------------------
 
-func TestCCSTurnPreview_StripMarkers(t *testing.T) {
-	turn := services.CCTurn{
-		Role: "user",
-		Text: "<local-command-caveat>caveat</local-command-caveat>\n<command-name>/model</command-name>\nreal prompt text",
+func TestASTurnPreview_StripMarkers(t *testing.T) {
+	turn := agentsessions.Turn{
+		Role:   "user",
+		Blocks: []agentsessions.Block{{Kind: agentsessions.BlockText, Text: "<local-command-caveat>caveat</local-command-caveat>\n<command-name>/model</command-name>\nreal prompt text"}},
 	}
-	preview := ccsTurnPreview(turn)
+	preview := asTurnPreview(turn)
 	if preview == "" {
 		t.Fatal("preview must not be empty")
 	}
@@ -170,12 +170,12 @@ func TestCCSTurnPreview_StripMarkers(t *testing.T) {
 	}
 }
 
-func TestCCSTurnPreview_OnlyMarkers(t *testing.T) {
-	turn := services.CCTurn{
-		Role: "user",
-		Text: "<ide_opened_file>some file content</ide_opened_file>",
+func TestASTurnPreview_OnlyMarkers(t *testing.T) {
+	turn := agentsessions.Turn{
+		Role:   "user",
+		Blocks: []agentsessions.Block{{Kind: agentsessions.BlockText, Text: "<ide_opened_file>some file content</ide_opened_file>"}},
 	}
-	preview := ccsTurnPreview(turn)
+	preview := asTurnPreview(turn)
 	// When only markers present, must show attachment label, not raw tags.
 	if containsRawTag(preview) {
 		t.Errorf("preview of marker-only turn contains raw tag: %q", preview)
@@ -185,12 +185,12 @@ func TestCCSTurnPreview_OnlyMarkers(t *testing.T) {
 	}
 }
 
-func TestCCSTurnPreview_PlainText(t *testing.T) {
-	turn := services.CCTurn{
-		Role: "user",
-		Text: "a simple prompt without any markers",
+func TestASTurnPreview_PlainText(t *testing.T) {
+	turn := agentsessions.Turn{
+		Role:   "user",
+		Blocks: []agentsessions.Block{{Kind: agentsessions.BlockText, Text: "a simple prompt without any markers"}},
 	}
-	preview := ccsTurnPreview(turn)
+	preview := asTurnPreview(turn)
 	if preview != "a simple prompt without any markers" {
 		t.Errorf("plain-text turn preview: want full text, got %q", preview)
 	}
