@@ -1,0 +1,153 @@
+package ui
+
+import (
+	"fmt"
+
+	"github.com/AlvaroQ/engram-explorer/internal/agentsessions"
+)
+
+// AgentSessionDetailPage renders the full page for one agent session.
+templ AgentSessionDetailPage(d *agentsessions.Detail, lang, theme, sidebarState string) {
+	@Layout(T(lang, "agentSessions.session")+" — "+d.Session.ID, "agent-sessions-list", lang, theme, sidebarState, asDetailContent(d, lang))
+}
+
+// AgentSessionDetailPartial renders only the content for HTMX swaps.
+templ AgentSessionDetailPartial(d *agentsessions.Detail, lang string) {
+	@asDetailContent(d, lang)
+}
+
+// asDetailContent is the shared body of the detail page (full and partial).
+templ asDetailContent(d *agentsessions.Detail, lang string) {
+	<div>
+		<div class="page-header">
+			<div class="page-header-back">
+				<a href="/agent-sessions/list">← { T(lang, "common.back") }</a>
+			</div>
+			if title := asFirstUserPrompt(d.Turns); title != "" {
+				<h1 class="cc-detail-title">{ title }</h1>
+			} else {
+				<h1>{ T(lang, "common.untitled") }</h1>
+			}
+			<p class="muted mono cc-detail-id">{ d.Session.ID }</p>
+		</div>
+		<div class="card">
+			<div class="card-body">
+				<div class="cc-detail-cols">
+					<div class="cc-detail-col">
+						@ccsDetailField(T(lang, "agentSessions.fields.agent"), asAgentLabel(lang, d.Session.Agent))
+						@ccsDetailField(T(lang, "agentSessions.fields.project"), d.Session.Project)
+						@ccsDetailField(T(lang, "agentSessions.fields.cwd"), d.Session.CWD)
+						@ccsDetailField(T(lang, "agentSessions.fields.branch"), d.Session.GitBranch)
+						@ccsDetailField(T(lang, "agentSessions.fields.version"), d.Session.AgentVersion)
+					</div>
+					<div class="cc-detail-col">
+						@ccsDetailField(T(lang, "agentSessions.fields.source"), d.Session.Source)
+						@ccsDetailField(T(lang, "agentSessions.fields.started"), ccsFormatTime(d.Session.StartedAt))
+						@ccsDetailField(T(lang, "agentSessions.fields.ended"), ccsFormatTime(d.Session.EndedAt))
+						@ccsDetailField(T(lang, "agentSessions.fields.size"), ccsFormatSize(d.Session.SizeBytes))
+						@ccsDetailField(T(lang, "agentSessions.fields.turns"), fmt.Sprintf("%d", len(d.Turns)))
+					</div>
+					<div class="cc-detail-col">
+						@ccsDetailField(T(lang, "agentSessions.fields.userTurns"), fmt.Sprintf("%d", asCountRole(d.Turns, "user")))
+						@ccsDetailField(T(lang, "agentSessions.fields.assistantTurns"), fmt.Sprintf("%d", asCountRole(d.Turns, "assistant")))
+						<div class="cc-detail-field" title={ asUsageBreakdown(d.Session.Usage, lang) }>
+							<span class="cc-detail-label">{ T(lang, "agentSessions.fields.tokens") }</span>
+							<span class="cc-detail-val">{ ccsFormatTokens(d.Session.Usage.Total()) }</span>
+						</div>
+						@ccsDetailField(T(lang, "agentSessions.fields.cost"), asFormatCost(d.Session.Usage))
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="card cc-conv card-gap-top">
+			<div class="card-header card-header-flex">
+				<div>
+					<h2>{ T(lang, "agentSessions.conversation") }: <span class="cc-list-count">{ T(lang, "agentSessions.conversationDesc", "count", fmt.Sprintf("%d", len(d.Turns))) }</span></h2>
+				</div>
+				if len(d.Turns) > 0 {
+					@ccsConvToolbar(lang)
+				}
+			</div>
+			<div class="card-body">
+				@asTurns(d.Turns, lang)
+			</div>
+		</div>
+		if len(d.Turns) > 0 {
+			<script src="/static/cc-conv-filter.js" defer></script>
+		}
+	</div>
+}
+
+// asTurns renders the conversation timeline.
+templ asTurns(turns []agentsessions.Turn, lang string) {
+	if len(turns) == 0 {
+		<p class="muted">{ T(lang, "agentSessions.noTurns") }</p>
+	} else {
+		<div class="timeline">
+			for i, turn := range turns {
+				<details class={ "timeline-event", "timeline-event--" + turn.Role }>
+					<summary class="timeline-event-summary">
+						<span class={ ccsTurnBadgeClass(turn.Role) }>{ turn.Role }</span>
+						<span class="timeline-event-at muted mono">{ asClock(turn) }</span>
+						<span class="timeline-event-title">{ asTurnPreview(turn) }</span>
+						<span class="timeline-event-index muted">{ fmt.Sprintf("#%d", i+1) }</span>
+					</summary>
+					<div class="timeline-event-body cc-blocks">
+						for _, b := range turn.Blocks {
+							@asBlock(b, lang)
+						}
+					</div>
+				</details>
+			}
+		</div>
+	}
+}
+
+// asBlock renders one block: text (with marker chips), reasoning (collapsed),
+// a tool call with its paired output, or an unpaired tool result.
+templ asBlock(b agentsessions.Block, lang string) {
+	switch b.Kind {
+		case agentsessions.BlockReasoning:
+			<details class="cc-tool-block cc-thinking" data-cc-block="thinking">
+				<summary class="cc-tool-summary">
+					<span class="badge badge-neutral">{ T(lang, "agentSessions.blocks.reasoning") }</span>
+				</summary>
+				<pre class="event-content cc-tool-input">{ b.Text }</pre>
+			</details>
+		case agentsessions.BlockToolCall:
+			<details class="cc-tool-block" data-cc-block="tool">
+				<summary class="cc-tool-summary">
+					<span class="badge badge-neutral">{ T(lang, "agentSessions.blocks.toolCall") }</span>
+					<span class="mono text-xs">{ b.ToolName }</span>
+					if b.CallID != "" {
+						<span class="muted mono text-xs">{ b.CallID }</span>
+					}
+					if b.IsError {
+						<span class="badge badge-fail">{ T(lang, "agentSessions.blocks.error") }</span>
+					}
+					if !b.Paired {
+						<span class="badge badge-warn" data-unpaired="call">{ T(lang, "agentSessions.blocks.noOutput") }</span>
+					}
+				</summary>
+				<p class="cc-tool-label muted text-xs">{ T(lang, "agentSessions.blocks.input") }</p>
+				<pre class="event-content cc-tool-input">{ asTruncate(b.Input, 2000) }</pre>
+				if b.Paired {
+					<p class="cc-tool-label muted text-xs">{ T(lang, "agentSessions.blocks.output") }</p>
+					<pre class="event-content cc-tool-input" data-tool-output>{ asTruncate(b.Output, 4000) }</pre>
+				}
+			</details>
+		case agentsessions.BlockToolResult:
+			<details class="cc-tool-block" data-cc-block="tool">
+				<summary class="cc-tool-summary">
+					<span class="badge badge-neutral">{ T(lang, "agentSessions.blocks.toolResult") }</span>
+					if b.CallID != "" {
+						<span class="muted mono text-xs">{ b.CallID }</span>
+					}
+					<span class="badge badge-warn" data-unpaired="result">{ T(lang, "agentSessions.blocks.noCall") }</span>
+				</summary>
+				<pre class="event-content cc-tool-input">{ asTruncate(b.Output, 4000) }</pre>
+			</details>
+		default:
+			@ccsRenderTextSegments(b.Text)
+	}
+}

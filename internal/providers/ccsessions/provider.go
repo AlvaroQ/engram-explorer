@@ -125,13 +125,6 @@ func (p *ccProvider) Open(ctx context.Context, cfg providers.ProviderConfig) (pr
 	}, nil
 }
 
-// Routes registers the routes the Claude Code provider owns: none. Its pages
-// (/cc-overview, /cc-sessions/...) and GET /api/cc-sessions/stats read every
-// enabled CC account from the profile store, which only the host has, so the
-// host serves them and gates them on an enabled instance exposing
-// RuntimePaths (this provider's capability).
-func (p *ccProvider) Routes(providers.Router) {}
-
 // Nav returns the sidebar NavGroup for the CC sessions provider.
 // cc-sessions list is intentionally omitted from the primary nav (PR1 UX
 // simplification). The list page remains accessible via direct URL; the
