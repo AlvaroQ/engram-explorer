@@ -3,6 +3,7 @@ package doctor
 import (
 	"fmt"
 	"github.com/AlvaroQ/engram-explorer/internal/services"
+	"github.com/AlvaroQ/engram-explorer/internal/ui"
 )
 
 // SyncShell renders only the sync shell content fragment — no Layout.
@@ -80,7 +81,7 @@ templ SyncProjectsPartial(resp services.SyncProjectsResponse) {
 			</div>
 		}
 		if len(resp.Projects) == 0 {
-			@EmptyState("No sync projects found.")
+			@ui.EmptyState("No sync projects found.")
 		} else {
 			<table class="sync-projects-table">
 				<thead>
@@ -276,7 +277,7 @@ templ SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) {
 		<div class="pending-mutations">
 			<h3>Pending Mutations <span class="badge">{ fmt.Sprintf("%d", len(detail.Pending)) }</span></h3>
 			if len(detail.Pending) == 0 {
-				@EmptyState("No pending mutations.")
+				@ui.EmptyState("No pending mutations.")
 			} else {
 				<table class="mutations-table">
 					<thead>

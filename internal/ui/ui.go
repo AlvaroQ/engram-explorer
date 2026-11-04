@@ -196,28 +196,36 @@ func renderDeps(w http.ResponseWriter, r *http.Request, d Deps, c templ.Componen
 	_ = c.Render(ctx, w)
 }
 
-// render writes a templ component to the response with text/html content type.
+// Render writes a templ component to the response with text/html content type.
 // The context carries the sidebar section-visibility prefs so the shared
-// Sidebar can honour them.
-// Deprecated: use renderDeps when a Deps is available (passes NavGroups).
-func render(w http.ResponseWriter, r *http.Request, c templ.Component) {
+// Sidebar can honour them. Shared by the doctor package; inside ui prefer
+// renderDeps when a Deps is available (it also passes NavGroups).
+func Render(w http.ResponseWriter, r *http.Request, c templ.Component) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = c.Render(NavContext(r), w)
 }
 
-// requireRW wraps a write handler with a read-only guard.
-func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
+// RequireRW wraps a write handler with a read-only guard shared by the ui and
+// doctor packages. It blocks the write in demo mode (the bundled sample DB
+// must stay pristine) and when no read-write pool is available (read-only
+// mode), answering with an ErrorPartial (status 200 so HTMX swaps it).
+func RequireRW(demoMode, writable bool, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if d.DemoMode {
-			render(w, r, ErrorPartial("Write operations are disabled in demo mode."))
+		if demoMode {
+			Render(w, r, ErrorPartial("Write operations are disabled in demo mode."))
 			return
 		}
-		if d.RWDB == nil {
-			render(w, r, ErrorPartial("Write operations are not available in read-only mode."))
+		if !writable {
+			Render(w, r, ErrorPartial("Write operations are not available in read-only mode."))
 			return
 		}
 		h(w, r)
 	}
+}
+
+// requireRW applies RequireRW with the demo flag and read-write pool of d.
+func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
+	return RequireRW(d.DemoMode, d.RWDB != nil, h)
 }
 
 // Mount registers all UI routes at the root of mux.

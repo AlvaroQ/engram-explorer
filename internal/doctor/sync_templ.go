@@ -11,6 +11,7 @@ import templruntime "github.com/a-h/templ/runtime"
 import (
 	"fmt"
 	"github.com/AlvaroQ/engram-explorer/internal/services"
+	"github.com/AlvaroQ/engram-explorer/internal/ui"
 )
 
 // SyncShell renders only the sync shell content fragment — no Layout.
@@ -115,7 +116,7 @@ func SyncProjectsPartial(resp services.SyncProjectsResponse) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(resp.GlobalTarget.TargetKey)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 68, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 69, Col: 78}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -133,7 +134,7 @@ func SyncProjectsPartial(resp services.SyncProjectsResponse) templ.Component {
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(*resp.GlobalTarget.Lifecycle)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 70, Col: 79}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 71, Col: 79}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -152,7 +153,7 @@ func SyncProjectsPartial(resp services.SyncProjectsResponse) templ.Component {
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", *resp.GlobalTarget.LastEnqueuedSeq))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 73, Col: 112}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 74, Col: 112}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -171,7 +172,7 @@ func SyncProjectsPartial(resp services.SyncProjectsResponse) templ.Component {
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", *resp.GlobalTarget.LastAckedSeq))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 76, Col: 106}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 77, Col: 106}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
@@ -189,7 +190,7 @@ func SyncProjectsPartial(resp services.SyncProjectsResponse) templ.Component {
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", resp.GlobalTarget.PendingMutations))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 78, Col: 111}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 79, Col: 111}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -201,7 +202,7 @@ func SyncProjectsPartial(resp services.SyncProjectsResponse) templ.Component {
 			}
 		}
 		if len(resp.Projects) == 0 {
-			templ_7745c5c3_Err = EmptyState("No sync projects found.").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = ui.EmptyState("No sync projects found.").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -218,7 +219,7 @@ func SyncProjectsPartial(resp services.SyncProjectsResponse) templ.Component {
 				var templ_7745c5c3_Var9 templ.SafeURL
 				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(syncProjectURL(p.Project, "")))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 103, Col: 58}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 104, Col: 58}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 				if templ_7745c5c3_Err != nil {
@@ -231,7 +232,7 @@ func SyncProjectsPartial(resp services.SyncProjectsResponse) templ.Component {
 				var templ_7745c5c3_Var10 string
 				templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(p.Project)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 103, Col: 72}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 104, Col: 72}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 				if templ_7745c5c3_Err != nil {
@@ -244,7 +245,7 @@ func SyncProjectsPartial(resp services.SyncProjectsResponse) templ.Component {
 				var templ_7745c5c3_Var11 string
 				templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", p.ObsCount))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 105, Col: 42}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 106, Col: 42}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 				if templ_7745c5c3_Err != nil {
@@ -258,7 +259,7 @@ func SyncProjectsPartial(resp services.SyncProjectsResponse) templ.Component {
 					var templ_7745c5c3_Var12 string
 					templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(*p.LastActivity)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 108, Col: 26}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 109, Col: 26}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 					if templ_7745c5c3_Err != nil {
@@ -295,7 +296,7 @@ func SyncProjectsPartial(resp services.SyncProjectsResponse) templ.Component {
 				var templ_7745c5c3_Var13 string
 				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", p.PendingMutations))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 121, Col: 50}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 122, Col: 50}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {
@@ -309,7 +310,7 @@ func SyncProjectsPartial(resp services.SyncProjectsResponse) templ.Component {
 					var templ_7745c5c3_Var14 string
 					templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", *p.LastAckedSeq))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 124, Col: 45}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 125, Col: 45}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 					if templ_7745c5c3_Err != nil {
@@ -324,7 +325,7 @@ func SyncProjectsPartial(resp services.SyncProjectsResponse) templ.Component {
 					var templ_7745c5c3_Var15 string
 					templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", *p.LastEnqueuedSeq))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 129, Col: 48}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 130, Col: 48}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 					if templ_7745c5c3_Err != nil {
@@ -346,7 +347,7 @@ func SyncProjectsPartial(resp services.SyncProjectsResponse) templ.Component {
 				var templ_7745c5c3_Var16 templ.SafeURL
 				templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(syncProjectURL(p.Project, "")))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 134, Col: 58}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 135, Col: 58}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 				if templ_7745c5c3_Err != nil {
@@ -401,7 +402,7 @@ func syncProjectActions(p services.SyncProjectRow) templ.Component {
 			var templ_7745c5c3_Var18 string
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(syncProjectURL(p.Project, "delete"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 153, Col: 48}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 154, Col: 48}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
@@ -414,7 +415,7 @@ func syncProjectActions(p services.SyncProjectRow) templ.Component {
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(syncDeleteConfirm(p))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 156, Col: 36}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 157, Col: 36}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {
@@ -479,7 +480,7 @@ func SyncIssuesPartial(resp services.SyncIssuesResponse) templ.Component {
 		var templ_7745c5c3_Var23 string
 		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", len(resp.Issues)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 168, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 169, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 		if templ_7745c5c3_Err != nil {
@@ -547,7 +548,7 @@ func SyncIssuesPartial(resp services.SyncIssuesResponse) templ.Component {
 				var templ_7745c5c3_Var28 string
 				templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(string(issue.Severity))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 176, Col: 97}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 177, Col: 97}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 				if templ_7745c5c3_Err != nil {
@@ -560,7 +561,7 @@ func SyncIssuesPartial(resp services.SyncIssuesResponse) templ.Component {
 				var templ_7745c5c3_Var29 string
 				templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(issue.Code)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 177, Col: 44}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 178, Col: 44}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 				if templ_7745c5c3_Err != nil {
@@ -573,7 +574,7 @@ func SyncIssuesPartial(resp services.SyncIssuesResponse) templ.Component {
 				var templ_7745c5c3_Var30 string
 				templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(issue.Message)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 178, Col: 48}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 179, Col: 48}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 				if templ_7745c5c3_Err != nil {
@@ -591,7 +592,7 @@ func SyncIssuesPartial(resp services.SyncIssuesResponse) templ.Component {
 					var templ_7745c5c3_Var31 string
 					templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(*issue.Hint)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 180, Col: 50}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 181, Col: 50}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 					if templ_7745c5c3_Err != nil {
@@ -610,7 +611,7 @@ func SyncIssuesPartial(resp services.SyncIssuesResponse) templ.Component {
 					var templ_7745c5c3_Var32 string
 					templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(*issue.Project)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 183, Col: 59}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 184, Col: 59}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 					if templ_7745c5c3_Err != nil {
@@ -633,7 +634,7 @@ func SyncIssuesPartial(resp services.SyncIssuesResponse) templ.Component {
 			var templ_7745c5c3_Var33 string
 			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(resp.GeneratedAt)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 188, Col: 58}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 189, Col: 58}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 			if templ_7745c5c3_Err != nil {
@@ -698,7 +699,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs("sync-detail-" + slug)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 197, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 198, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 		if templ_7745c5c3_Err != nil {
@@ -711,7 +712,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 		var templ_7745c5c3_Var38 string
 		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(detail.Summary.Project)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 199, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 200, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 		if templ_7745c5c3_Err != nil {
@@ -733,7 +734,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 			var templ_7745c5c3_Var39 string
 			templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(*detail.Summary.Lifecycle)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 206, Col: 46}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 207, Col: 46}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 			if templ_7745c5c3_Err != nil {
@@ -771,7 +772,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 			var templ_7745c5c3_Var40 string
 			templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(*detail.Summary.EnrolledAt)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 217, Col: 49}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 218, Col: 49}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 			if templ_7745c5c3_Err != nil {
@@ -790,7 +791,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 			var templ_7745c5c3_Var41 string
 			templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", *detail.Summary.LastEnqueuedSeq))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 226, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 227, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 			if templ_7745c5c3_Err != nil {
@@ -810,7 +811,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 			var templ_7745c5c3_Var42 string
 			templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", *detail.Summary.LastAckedSeq))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 234, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 235, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 			if templ_7745c5c3_Err != nil {
@@ -830,7 +831,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 			var templ_7745c5c3_Var43 string
 			templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", *detail.Summary.LastPulledSeq))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 242, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 243, Col: 57}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 			if templ_7745c5c3_Err != nil {
@@ -849,7 +850,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 		var templ_7745c5c3_Var44 string
 		templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", detail.Summary.ObsCount))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 252, Col: 74}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 253, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 		if templ_7745c5c3_Err != nil {
@@ -862,7 +863,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 		var templ_7745c5c3_Var45 string
 		templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", detail.Summary.SessionsCount))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 253, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 254, Col: 75}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 		if templ_7745c5c3_Err != nil {
@@ -875,7 +876,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 		var templ_7745c5c3_Var46 string
 		templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", detail.Summary.PromptsCount))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 254, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 255, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 		if templ_7745c5c3_Err != nil {
@@ -888,7 +889,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 		var templ_7745c5c3_Var47 string
 		templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", detail.Summary.PendingMutations))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 255, Col: 87}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 256, Col: 87}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 		if templ_7745c5c3_Err != nil {
@@ -911,7 +912,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 				var templ_7745c5c3_Var48 string
 				templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(*detail.Summary.LastError)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 263, Col: 35}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 264, Col: 35}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 				if templ_7745c5c3_Err != nil {
@@ -930,7 +931,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 				var templ_7745c5c3_Var49 string
 				templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(*detail.Summary.ReasonCode)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 266, Col: 49}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 267, Col: 49}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 				if templ_7745c5c3_Err != nil {
@@ -949,7 +950,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 				var templ_7745c5c3_Var50 string
 				templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(*detail.Summary.ReasonMessage)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 269, Col: 47}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 270, Col: 47}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 				if templ_7745c5c3_Err != nil {
@@ -968,7 +969,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 				var templ_7745c5c3_Var51 string
 				templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", *detail.Summary.ConsecutiveFailures))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 272, Col: 86}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 273, Col: 86}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
 				if templ_7745c5c3_Err != nil {
@@ -991,7 +992,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 		var templ_7745c5c3_Var52 string
 		templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", len(detail.Pending)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 277, Col: 85}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 278, Col: 85}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 		if templ_7745c5c3_Err != nil {
@@ -1002,7 +1003,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 			return templ_7745c5c3_Err
 		}
 		if len(detail.Pending) == 0 {
-			templ_7745c5c3_Err = EmptyState("No pending mutations.").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = ui.EmptyState("No pending mutations.").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1019,7 +1020,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 				var templ_7745c5c3_Var53 string
 				templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", m.Seq))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 294, Col: 38}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 295, Col: 38}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
 				if templ_7745c5c3_Err != nil {
@@ -1032,7 +1033,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 				var templ_7745c5c3_Var54 string
 				templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.JoinStringErrs(m.Entity)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 295, Col: 22}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 296, Col: 22}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var54))
 				if templ_7745c5c3_Err != nil {
@@ -1045,7 +1046,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 				var templ_7745c5c3_Var55 string
 				templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinStringErrs(m.Op)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 296, Col: 18}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 297, Col: 18}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var55))
 				if templ_7745c5c3_Err != nil {
@@ -1059,7 +1060,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 					var templ_7745c5c3_Var56 string
 					templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(*m.EntityKey)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 299, Col: 24}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 300, Col: 24}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 					if templ_7745c5c3_Err != nil {
@@ -1074,7 +1075,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 					var templ_7745c5c3_Var57 string
 					templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.JoinStringErrs(*m.OccurredAt)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 304, Col: 25}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 305, Col: 25}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var57))
 					if templ_7745c5c3_Err != nil {
@@ -1108,7 +1109,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 				var templ_7745c5c3_Var58 string
 				templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.JoinStringErrs(*detail.UpgradeState.Stage)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 318, Col: 52}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 319, Col: 52}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var58))
 				if templ_7745c5c3_Err != nil {
@@ -1127,7 +1128,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 				var templ_7745c5c3_Var59 string
 				templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.JoinStringErrs(*detail.UpgradeState.RepairClass)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 321, Col: 65}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 322, Col: 65}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var59))
 				if templ_7745c5c3_Err != nil {
@@ -1146,7 +1147,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 				var templ_7745c5c3_Var60 string
 				templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.JoinStringErrs(*detail.UpgradeState.UpdatedAt)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 324, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 325, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var60))
 				if templ_7745c5c3_Err != nil {
@@ -1169,7 +1170,7 @@ func SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) templ.
 				var templ_7745c5c3_Var61 string
 				templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.JoinStringErrs(prettyJSON(detail.UpgradeState.Findings))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 330, Col: 53}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 331, Col: 53}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var61))
 				if templ_7745c5c3_Err != nil {
@@ -1253,7 +1254,7 @@ func syncStatusBadge(status services.SyncStatus) templ.Component {
 			var templ_7745c5c3_Var63 string
 			templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.JoinStringErrs(string(status))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 357, Col: 39}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/doctor/sync.templ`, Line: 358, Col: 39}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var63))
 			if templ_7745c5c3_Err != nil {

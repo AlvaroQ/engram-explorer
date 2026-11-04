@@ -18,12 +18,12 @@ func handlePromptsPage(d Deps) http.HandlerFunc {
 
 		items, searchItems, err := loadPrompts(d, q)
 		if err != nil {
-			renderError(w, r, "Failed to load prompts: ", err)
+			RenderError(w, r, "Failed to load prompts: ", err)
 			return
 		}
 
 		if IsHTMX(r) {
-			render(w, r, PromptsPartial(items, searchItems, q, lang))
+			Render(w, r, PromptsPartial(items, searchItems, q, lang))
 		} else {
 			renderDeps(w, r, d, PromptsPage(items, searchItems, q, lang, theme, sidebarStateForRequest(r)))
 		}
@@ -39,11 +39,11 @@ func handlePromptsListPartial(d Deps) http.HandlerFunc {
 
 		items, searchItems, err := loadPrompts(d, q)
 		if err != nil {
-			renderError(w, r, "Failed to load prompts: ", err)
+			RenderError(w, r, "Failed to load prompts: ", err)
 			return
 		}
 
-		render(w, r, PromptsListPartialContent(items, searchItems, q, lang))
+		Render(w, r, PromptsListPartialContent(items, searchItems, q, lang))
 	}
 }
 

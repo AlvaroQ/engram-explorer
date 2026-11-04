@@ -58,7 +58,7 @@ func handleProjectDetailPage(d Deps) http.HandlerFunc {
 
 		overview, err := services.ProjectsGetOverview(d.RoDB, project)
 		if err != nil {
-			renderError(w, r, "Failed to load project: ", err)
+			RenderError(w, r, "Failed to load project: ", err)
 			return
 		}
 		if overview == nil {
@@ -74,7 +74,7 @@ func handleProjectDetailPage(d Deps) http.HandlerFunc {
 		others := otherProjectNames(d, project)
 
 		if IsHTMX(r) {
-			render(w, r, ProjectDetailPartial(*overview, syncRow, lang, others))
+			Render(w, r, ProjectDetailPartial(*overview, syncRow, lang, others))
 		} else {
 			renderDeps(w, r, d, ProjectDetailPage(*overview, syncRow, lang, theme, sidebarState, others))
 		}
@@ -111,12 +111,12 @@ func handleProjectMergePost(d Deps) http.HandlerFunc {
 		lang := langForRequest(r)
 
 		if err := r.ParseForm(); err != nil {
-			renderError(w, r, "Bad request: ", err)
+			RenderError(w, r, "Bad request: ", err)
 			return
 		}
 		target := r.FormValue("target")
 		if target == "" {
-			render(w, r, ErrorPartial(T(lang, "projectDetail.combine.error.targetNotFound")))
+			Render(w, r, ErrorPartial(T(lang, "projectDetail.combine.error.targetNotFound")))
 			return
 		}
 
@@ -128,10 +128,10 @@ func handleProjectMergePost(d Deps) http.HandlerFunc {
 		if err != nil {
 			var we *services.WriteError
 			if errors.As(err, &we) {
-				render(w, r, ErrorPartial(mergeErrorMessage(lang, we)))
+				Render(w, r, ErrorPartial(mergeErrorMessage(lang, we)))
 				return
 			}
-			renderError(w, r, "", err)
+			RenderError(w, r, "", err)
 			return
 		}
 

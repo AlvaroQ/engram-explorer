@@ -49,11 +49,11 @@ func handleCCOverviewPage(d Deps) http.HandlerFunc {
 			sources := ccsAccountSources(d)
 			result, err := services.CCSessionsListMulti(sources, params)
 			if err != nil {
-				renderError(w, r, "Failed to load Claude Code sessions: ", err)
+				RenderError(w, r, "Failed to load Claude Code sessions: ", err)
 				return
 			}
 			if IsHTMX(r) {
-				render(w, r, CCSessionsTabPartial(result, params, lang))
+				Render(w, r, CCSessionsTabPartial(result, params, lang))
 			} else {
 				renderDeps(w, r, d, CCSessionsTabPage(result, params, lang, theme, sidebarState))
 			}
@@ -68,7 +68,7 @@ func handleCCOverviewPage(d Deps) http.HandlerFunc {
 			if len(sources) > 1 {
 				m, err := services.CCSessionsStatsMulti(sources)
 				if err != nil {
-					renderError(w, r, "Failed to load Claude Code stats: ", err)
+					RenderError(w, r, "Failed to load Claude Code stats: ", err)
 					return
 				}
 				multi = m
@@ -94,12 +94,12 @@ func handleCCSessionsListPage(d Deps) http.HandlerFunc {
 		sources := ccsAccountSources(d)
 		result, err := services.CCSessionsListMulti(sources, params)
 		if err != nil {
-			renderError(w, r, "Failed to load Claude Code sessions: ", err)
+			RenderError(w, r, "Failed to load Claude Code sessions: ", err)
 			return
 		}
 
 		if IsHTMX(r) {
-			render(w, r, CCSListPartial(result, params, lang))
+			Render(w, r, CCSListPartial(result, params, lang))
 		} else {
 			renderDeps(w, r, d, CCSListPage(result, params, lang, theme, sidebarState))
 		}
@@ -116,14 +116,14 @@ func handleCCSessionsListPartial(d Deps) http.HandlerFunc {
 		sources := ccsAccountSources(d)
 		result, err := services.CCSessionsListMulti(sources, params)
 		if err != nil {
-			renderError(w, r, "Failed to load Claude Code sessions: ", err)
+			RenderError(w, r, "Failed to load Claude Code sessions: ", err)
 			return
 		}
 
 		if r.URL.Query().Get("append") == "true" {
-			render(w, r, CCSRowsPartial(result, params, lang))
+			Render(w, r, CCSRowsPartial(result, params, lang))
 		} else {
-			render(w, r, CCSListBodyPartial(result, params, lang))
+			Render(w, r, CCSListBodyPartial(result, params, lang))
 		}
 	}
 }
@@ -175,7 +175,7 @@ func handleCCSessionDetailPage(d Deps) http.HandlerFunc {
 
 		detail, err := services.CCSessionGetDetail(reader, projectFolder, id)
 		if err != nil {
-			renderError(w, r, "Failed to load session: ", err)
+			RenderError(w, r, "Failed to load session: ", err)
 			return
 		}
 		if detail == nil {
@@ -184,7 +184,7 @@ func handleCCSessionDetailPage(d Deps) http.HandlerFunc {
 		}
 
 		if IsHTMX(r) {
-			render(w, r, CCSDetailPartial(detail, lang))
+			Render(w, r, CCSDetailPartial(detail, lang))
 		} else {
 			renderDeps(w, r, d, CCSDetailPage(detail, lang, theme, sidebarState))
 		}

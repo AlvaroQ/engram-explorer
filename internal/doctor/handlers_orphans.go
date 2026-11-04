@@ -34,7 +34,7 @@ func writeEntityParseError(w http.ResponseWriter, r *http.Request, err error) {
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
-	render(w, r, ErrorPartial(msg))
+	ui.Render(w, r, ui.ErrorPartial(msg))
 }
 
 // parseEntityAndID extracts the {entity} and {id} path values and returns the
@@ -64,10 +64,10 @@ func handleOrphansListPartial(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data, projects, err := loadOrphansData(r.Context(), d)
 		if err != nil {
-			renderError(w, r, "Failed to load orphans: ", err)
+			ui.RenderError(w, r, "Failed to load orphans: ", err)
 			return
 		}
-		render(w, r, OrphansList(data, projects))
+		ui.Render(w, r, OrphansList(data, projects))
 	}
 }
 
@@ -79,21 +79,21 @@ func handleOrphanObservationDetail(d Deps) http.HandlerFunc {
 		idStr := r.PathValue("id")
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
-			render(w, r, ErrorPartial(fmt.Sprintf("invalid observation id %q", idStr)))
+			ui.Render(w, r, ui.ErrorPartial(fmt.Sprintf("invalid observation id %q", idStr)))
 			return
 		}
 		if d.RoDB == nil {
-			render(w, r, ErrorPartial("Database is not available."))
+			ui.Render(w, r, ui.ErrorPartial("Database is not available."))
 			return
 		}
 
 		detail, err := services.LoadOrphanObservationDetail(d.RoDB, id)
 		if err != nil {
-			renderError(w, r, "Failed to load observation: ", err)
+			ui.RenderError(w, r, "Failed to load observation: ", err)
 			return
 		}
 		if detail == nil {
-			render(w, r, ErrorPartial(fmt.Sprintf("Observation %d not found.", id)))
+			ui.Render(w, r, ui.ErrorPartial(fmt.Sprintf("Observation %d not found.", id)))
 			return
 		}
 
@@ -101,7 +101,7 @@ func handleOrphanObservationDetail(d Deps) http.HandlerFunc {
 		if err != nil {
 			projects = []services.ProjectStats{}
 		}
-		render(w, r, OrphanObservationDetailDialog(detail, projects))
+		ui.Render(w, r, OrphanObservationDetailDialog(detail, projects))
 	}
 }
 
@@ -116,12 +116,12 @@ func handleOrphansAssign(d Deps) http.HandlerFunc {
 		}
 
 		if err := r.ParseForm(); err != nil {
-			renderError(w, r, "Invalid form data: ", err)
+			ui.RenderError(w, r, "Invalid form data: ", err)
 			return
 		}
 		project := r.FormValue("project")
 		if project == "" {
-			render(w, r, ErrorPartial("project field is required"))
+			ui.Render(w, r, ui.ErrorPartial("project field is required"))
 			return
 		}
 
@@ -162,17 +162,17 @@ func respondOrphans(w http.ResponseWriter, r *http.Request, d Deps, errMsg strin
 	data, projects, loadErr := loadOrphansData(r.Context(), d)
 	if loadErr != nil || data == nil {
 		if errMsg != "" {
-			render(w, r, ErrorPartial(errMsg))
+			ui.Render(w, r, ui.ErrorPartial(errMsg))
 		} else {
-			renderError(w, r, "Reload failed: ", loadErr)
+			ui.RenderError(w, r, "Reload failed: ", loadErr)
 		}
 		return
 	}
 	if errMsg != "" {
-		render(w, r, OrphansListWithError(data, projects, errMsg))
+		ui.Render(w, r, OrphansListWithError(data, projects, errMsg))
 		return
 	}
-	render(w, r, OrphansList(data, projects))
+	ui.Render(w, r, OrphansList(data, projects))
 }
 
 // loadOrphansData fetches both the orphans list and the projects list from RoDB.

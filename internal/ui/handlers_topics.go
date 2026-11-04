@@ -17,12 +17,12 @@ func handleTopicsPage(d Deps) http.HandlerFunc {
 
 		topics, err := loadTopics(r, d, q)
 		if err != nil {
-			renderError(w, r, "Failed to load topics: ", err)
+			RenderError(w, r, "Failed to load topics: ", err)
 			return
 		}
 
 		if IsHTMX(r) {
-			render(w, r, TopicsPartial(topics, q, lang))
+			Render(w, r, TopicsPartial(topics, q, lang))
 		} else {
 			renderDeps(w, r, d, TopicsPage(topics, q, lang, theme, sidebarStateForRequest(r)))
 		}
@@ -38,11 +38,11 @@ func handleTopicsListPartial(d Deps) http.HandlerFunc {
 
 		topics, err := loadTopics(r, d, q)
 		if err != nil {
-			renderError(w, r, "Failed to load topics: ", err)
+			RenderError(w, r, "Failed to load topics: ", err)
 			return
 		}
 
-		render(w, r, TopicsTable(topics, lang))
+		Render(w, r, TopicsTable(topics, lang))
 	}
 }
 

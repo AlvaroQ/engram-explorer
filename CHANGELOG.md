@@ -88,6 +88,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 
+- `doctor.IsHTMX`, `doctor.ErrorPartial` and `doctor.EmptyState` (internal): the doctor module reuses the UI
+  shell helpers (`ui.Render`, `ui.RenderError`, `ui.IsHTMX`, `ui.RequireRW`, `ui.ErrorPartial`,
+  `ui.EmptyState`) instead of keeping copies.
+- `doctor.IsHTMX`, `doctor.ErrorPartial` and `doctor.EmptyState` (internal): the doctor module reuses the UI
+  shell helpers (`ui.Render`, `ui.RenderError`, `ui.IsHTMX`, `ui.RequireRW`, `ui.ErrorPartial`,
+  `ui.EmptyState`) instead of keeping copies.
 - Unused Pico CSS stylesheet from the doctor module.
 - `scripts/update-engram.*`, a personal helper unrelated to this project.
 

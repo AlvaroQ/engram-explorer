@@ -65,14 +65,14 @@ func handleProjectsPage(d Deps) http.HandlerFunc {
 
 		data, err := loadProjects(d)
 		if err != nil {
-			renderError(w, r, "Failed to load projects: ", err)
+			RenderError(w, r, "Failed to load projects: ", err)
 			return
 		}
 
 		filtered := filterProjects(data.Stats, q)
 
 		if IsHTMX(r) {
-			render(w, r, ProjectsListPartial(filtered, data.Sync, q, lang))
+			Render(w, r, ProjectsListPartial(filtered, data.Sync, q, lang))
 		} else {
 			renderDeps(w, r, d, ProjectsListPage(filtered, data.Sync, q, lang, theme, sidebarState))
 		}
@@ -88,11 +88,11 @@ func handleProjectsListPartial(d Deps) http.HandlerFunc {
 
 		data, err := loadProjects(d)
 		if err != nil {
-			renderError(w, r, "Failed to load projects: ", err)
+			RenderError(w, r, "Failed to load projects: ", err)
 			return
 		}
 
 		filtered := filterProjects(data.Stats, q)
-		render(w, r, ProjectsTablePartial(filtered, data.Sync, q, lang))
+		Render(w, r, ProjectsTablePartial(filtered, data.Sync, q, lang))
 	}
 }

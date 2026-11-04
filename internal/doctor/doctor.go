@@ -11,7 +11,6 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
-	"github.com/a-h/templ"
 )
 
 // Deps carries the concrete dependencies required by the doctor module.
@@ -31,44 +30,10 @@ type Deps struct {
 	DaemonPing func() bool
 }
 
-// IsHTMX reports whether the request was issued by HTMX (i.e. the HX-Request
-// header is present and set to "true").
-func IsHTMX(r *http.Request) bool {
-	return r.Header.Get("HX-Request") == "true"
-}
-
-// render writes a templ component to the response.  It always sets the
-// Content-Type header to text/html; charset=utf-8.
-func render(w http.ResponseWriter, r *http.Request, c templ.Component) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	// Carry the sidebar section-visibility prefs (shared ui.Sidebar reads them).
-	_ = c.Render(ui.NavContext(r), w)
-}
-
-// renderError renders an ErrorPartial with the message chosen by
-// ui.ErrorMessage: user-safe errors verbatim, anything else as the localized
-// generic message with the detail logged.
-func renderError(w http.ResponseWriter, r *http.Request, prefix string, err error) {
-	render(w, r, ErrorPartial(ui.ErrorMessage(r, prefix, err)))
-}
-
-// requireRW wraps a write handler with a read-only guard. It blocks the write
-// in demo mode (the bundled sample DB must stay pristine) and when RWDB is nil
-// (read-only mode), so every write route shares a single source of truth for
-// the writability check.
-func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if d.Config.DemoMode {
-			render(w, r, ErrorPartial("Write operations are disabled in demo mode."))
-			return
-		}
-		if d.RWDB == nil {
-			render(w, r, ErrorPartial("Write operations are not available in read-only mode."))
-			return
-		}
-		h(w, r)
-	}
-}
+// HTML shell helpers (HTMX detection, rendering, error partials and the
+// write guard) come from the ui package, so doctor and the main UI share one
+// render path: ui.IsHTMX, ui.Render, ui.RenderError, ui.ErrorPartial and
+// ui.RequireRW.
 
 // Mount registers all /doctor/* routes on mux.
 // Call this inside httpapi.NewServeMux after the API routes.
@@ -77,6 +42,10 @@ func Mount(mux *http.ServeMux, d Deps) {
 	// Deps without Paths keep working.
 	if d.Paths == nil {
 		d.Paths = config.NewRuntimePaths(d.Config.EngramDbPath, d.Config.ClaudeProjectsDir)
+	}
+	// writeGuard blocks write routes in demo mode and in read-only mode.
+	writeGuard := func(h http.HandlerFunc) http.HandlerFunc {
+		return ui.RequireRW(d.Config.DemoMode, d.RWDB != nil, h)
 	}
 
 	// Static assets (/doctor/static/*).
@@ -124,10 +93,10 @@ func Mount(mux *http.ServeMux, d Deps) {
 	mux.HandleFunc("GET /doctor/orphans/observations/{id}/detail", handleOrphanObservationDetail(d))
 
 	// POST /doctor/orphans/{entity}/{id}/project — assign entity to a project.
-	mux.HandleFunc("POST /doctor/orphans/{entity}/{id}/project", requireRW(d, handleOrphansAssign(d)))
+	mux.HandleFunc("POST /doctor/orphans/{entity}/{id}/project", writeGuard(handleOrphansAssign(d)))
 
 	// DELETE /doctor/orphans/{entity}/{id} — delete orphaned entity.
-	mux.HandleFunc("DELETE /doctor/orphans/{entity}/{id}", requireRW(d, handleOrphansDelete(d)))
+	mux.HandleFunc("DELETE /doctor/orphans/{entity}/{id}", writeGuard(handleOrphansDelete(d)))
 
 	// -----------------------------------------------------------------------
 	// Sync routes (Slice 2)
@@ -156,5 +125,5 @@ func Mount(mux *http.ServeMux, d Deps) {
 
 	// POST /doctor/sync/{project}/delete — permanently delete an unenrolled,
 	// observation-free project (removes its sessions and prompts).
-	mux.HandleFunc("POST /doctor/sync/{project}/delete", requireRW(d, handleSyncDeleteProject(d)))
+	mux.HandleFunc("POST /doctor/sync/{project}/delete", writeGuard(handleSyncDeleteProject(d)))
 }
