@@ -199,49 +199,71 @@ export interface ActivityResponse {
   rows: Array<{ day: string; project: string; count: number }>;
 }
 
-// --- Claude Code session analytics (/api/cc-sessions/stats) ---
-export interface CCUsageDTO {
+// --- Agent session analytics (/api/agent-sessions/stats) ---
+// Token buckets are disjoint: input (uncached) + cache_read + cache_write +
+// output = total. Reasoning is a subset of output, reported apart and never
+// added to the total.
+export interface AgentUsageDTO {
   input_tokens: number;
-  output_tokens: number;
-  cache_write_5m_tokens: number;
-  cache_write_1h_tokens: number;
   cache_read_tokens: number;
-  total_tokens: number;
+  cache_write_tokens: number;
+  output_tokens: number;
+  reasoning_tokens: number;
   cost_usd: number;
   unknown_model: boolean;
+  /** Agent-specific refinements, e.g. Claude's cache_write_5m / cache_write_1h. */
+  breakdown?: Record<string, number>;
 }
-export interface CCProjectStat {
-  project: string;
+export interface AgentGroupStat {
+  key: string;
   sessions: number;
-  usage: CCUsageDTO;
+  usage: AgentUsageDTO;
 }
-export interface CCModelStat {
-  model: string;
-  sessions: number;
-  usage: CCUsageDTO;
-}
-export interface CCDayStat {
+export interface AgentDayStat {
   day: string;
   sessions: number;
-  usage: CCUsageDTO;
+  usage: AgentUsageDTO;
+  by_agent: Record<string, AgentUsageDTO>;
 }
-export interface CCTopSessionStat {
+export interface AgentTopSession {
+  source: string;
+  agent: string;
+  key: string;
   id: string;
-  project_folder: string;
   project: string;
   first_prompt: string;
   started_at: string;
-  usage: CCUsageDTO;
+  usage: AgentUsageDTO;
 }
-export interface CCStatsResponse {
+export interface AgentSourceError {
+  source: string;
+  agent: string;
+}
+export interface AgentStatsResponse {
   generated_at: string;
   sessions: number;
   has_unknown_model: boolean;
-  totals: CCUsageDTO;
-  by_project: CCProjectStat[];
-  by_model: CCModelStat[];
-  over_time: CCDayStat[];
-  top_sessions: CCTopSessionStat[];
+  totals: AgentUsageDTO;
+  by_agent: AgentGroupStat[];
+  by_project: AgentGroupStat[];
+  by_model: AgentGroupStat[];
+  over_time: AgentDayStat[];
+  top_sessions: AgentTopSession[];
+  errors?: AgentSourceError[];
+}
+
+/** Total tokens of a usage: the four disjoint buckets (reasoning excluded). */
+export function agentUsageTotal(u: AgentUsageDTO): number {
+  return u.input_tokens + u.cache_read_tokens + u.cache_write_tokens + u.output_tokens;
+}
+
+/**
+ * URL of a session detail page: /agent-sessions/<source>/<key>, each
+ * '/'-separated segment path-escaped (mirrors Go agentsessions.DetailPath).
+ */
+export function agentSessionDetailPath(source: string, key: string): string {
+  const segs = [...source.split('/'), ...key.split('/')];
+  return `/agent-sessions/${segs.map((s) => encodeURIComponent(s)).join('/')}`;
 }
 
 export interface ObservationListParams {
@@ -478,7 +500,7 @@ export const api = {
   listProjects: () => request<{ items: ProjectStats[] }>('/api/projects'),
   activityByProject: (range: ActivityRange) =>
     request<ActivityResponse>(`/api/activity?range=${range}`),
-  ccSessionsStats: () => request<CCStatsResponse>('/api/cc-sessions/stats'),
+  agentSessionsStats: () => request<AgentStatsResponse>('/api/agent-sessions/stats'),
   listObservations: (params: ObservationListParams) =>
     request<ObservationListResponse>(`/api/observations?${buildSearch(params)}`),
   getObservation: (id: number) =>
