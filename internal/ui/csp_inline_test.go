@@ -3,10 +3,12 @@ package ui_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -136,6 +138,92 @@ func TestCSP_RenderedPagesHaveNoInlineStyles(t *testing.T) {
 				t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
 			}
 			for _, v := range ui.InlineStyleViolations(w.Body.String()) {
+				t.Errorf("%s", v)
+			}
+		})
+	}
+}
+
+// newSettingsCSPMux mounts the UI with every Settings callback wired, so the
+// Accounts tab (profile rows), the Modules rows in each state and the Claude
+// Code account rows render. Not in demo mode, so the error branches render.
+func newSettingsCSPMux(t *testing.T) *http.ServeMux {
+	t.Helper()
+	db := openTestDB(t)
+	fail := errors.New("boom")
+	mux := http.NewServeMux()
+	ui.Mount(mux, ui.Deps{
+		RoDB: db,
+		RWDB: db,
+		Profiles: func() []ui.ProfileInfo {
+			return []ui.ProfileInfo{{Name: "default", Active: true}, {Name: "work"}}
+		},
+		ActiveProfile: func() string { return "default" },
+		SwitchProfile: func(string) error { return fail },
+		CreateProfile: func(string) error { return fail },
+		DeleteProfile: func(string) error { return fail },
+		Modules: func() []ui.ModuleInfo {
+			return []ui.ModuleInfo{
+				{ID: "engram", DisplayName: "Engram", State: ui.ModuleEnabled, Path: "/data/engram.db"},
+				{ID: "cc-sessions", DisplayName: "Claude Code", State: ui.ModuleDisabled},
+				{ID: "detected", DisplayName: "Detected", State: ui.ModuleDetected},
+				{ID: "errored", DisplayName: "Errored", State: ui.ModuleErrored, Cause: fail},
+				{ID: "registered", DisplayName: "Registered", State: ui.ModuleRegistered},
+				{ID: "tier2", DisplayName: "Tier 2", Tier: ui.ModuleTier2, State: ui.ModuleDetected},
+			}
+		},
+		ToggleModule:       func(string, bool) error { return fail },
+		ValidateModulePath: func(context.Context, string, string) error { return fail },
+		CCAccounts: func() []ui.CCAccountInfo {
+			return []ui.CCAccountInfo{
+				{ID: "default", Label: "Personal", Path: "/home/u/.claude", Enabled: true},
+				{ID: "work", Label: "Work", Path: "/home/u/.claude-work"},
+			}
+		},
+		AddCCAccount:    func(string, string) error { return fail },
+		UpdateCCAccount: func(string, string, string, bool) error { return fail },
+		RemoveCCAccount: func(string) error { return fail },
+	})
+	return mux
+}
+
+// TestCSP_SettingsTabsHaveNoInlineStyles renders every Settings tab (full
+// page and HTMX partial) with all rows populated, plus the error re-renders
+// of each settings form, and rejects any <style> element or style= attribute.
+func TestCSP_SettingsTabsHaveNoInlineStyles(t *testing.T) {
+	mux := newSettingsCSPMux(t)
+	cases := []struct {
+		method, path string
+		form         url.Values
+		htmx         bool
+		want         string
+	}{
+		{http.MethodGet, "/settings", nil, false, `id="settings-cc-accounts"`},
+		{http.MethodGet, "/settings", nil, true, `id="settings-cc-accounts"`},
+		{http.MethodGet, "/settings/accounts", nil, false, `id="settings-accounts"`},
+		{http.MethodGet, "/settings/accounts", nil, true, `id="settings-accounts"`},
+		{http.MethodPost, "/settings/profile/switch", url.Values{"name": {"work"}}, true, "error-hint"},
+		{http.MethodPost, "/settings/profile/create", url.Values{"name": {"x"}}, false, "error-hint"},
+		{http.MethodPost, "/settings/engram-db", url.Values{"path": {""}}, true, "error-hint"},
+		{http.MethodPost, "/settings/claude-dir", url.Values{"path": {""}}, true, "error-hint"},
+		{http.MethodPost, "/settings/modules/detected/path", url.Values{"path": {"/x"}}, true, "error-hint"},
+		{http.MethodPost, "/settings/modules/engram/toggle", url.Values{"enabled": {"false"}}, true, "error-hint"},
+		{http.MethodPost, "/settings/cc-accounts", url.Values{"label": {""}}, true, "error-hint"},
+	}
+	for _, tc := range cases {
+		t.Run(fmt.Sprintf("%s %s htmx=%v", tc.method, tc.path, tc.htmx), func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.form.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			if tc.htmx {
+				req.Header.Set("HX-Request", "true")
+			}
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			body := w.Body.String()
+			if w.Code != http.StatusOK || !strings.Contains(body, tc.want) {
+				t.Fatalf("status = %d, want 200 rendering %s; body: %.300s", w.Code, tc.want, body)
+			}
+			for _, v := range ui.InlineStyleViolations(body) {
 				t.Errorf("%s", v)
 			}
 		})
