@@ -39,6 +39,17 @@ var startTime = time.Now()
 // When c.Registry is nil (legacy direct-mount mode, used by existing tests),
 // the original direct-mount code path is used unchanged.
 func NewServeMux(c *Container) http.Handler {
+	// Apply middleware stack (outermost = first to run).
+	var handler http.Handler = newRouter(c)
+	handler = corsMiddleware(handler, trustedDevOrigins(c.Config.Env))
+	handler = requestLogger(c.Logger, handler)
+	handler = secureHeaders(handler)
+
+	return handler
+}
+
+// newRouter builds the ServeMux and mounts every route (no middleware).
+func newRouter(c *Container) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// --- Phase 1 routes ---
@@ -67,13 +78,7 @@ func NewServeMux(c *Container) http.Handler {
 		})
 	})
 
-	// Apply middleware stack (outermost = first to run).
-	var handler http.Handler = mux
-	handler = corsMiddleware(handler, trustedDevOrigins(c.Config.Env))
-	handler = requestLogger(c.Logger, handler)
-	handler = secureHeaders(handler)
-
-	return handler
+	return mux
 }
 
 // mountLegacyRoutes registers all routes in the original direct-mount style.
