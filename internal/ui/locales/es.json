@@ -597,8 +597,6 @@
     "toast": {
       "enrollSuccess": "{{project}} inscrito en cloud. El daemon empezará a sincronizar en los próximos minutos.",
       "enrollError": "No se pudo inscribir {{project}}: {{error}}",
-      "unenrollSuccess": "{{project}} dado de baja del cloud.",
-      "unenrollError": "No se pudo dar de baja {{project}}: {{error}}",
       "syncStarted": "Sincronizando {{project}}…",
       "syncSuccess": "{{project}} sincronizado.",
       "syncError": "Falló la sincronización de {{project}}: {{error}}"
@@ -753,7 +751,6 @@
     "cloudCli": "Capacidades del CLI cloud",
     "cloudCliDesc": "Detectado a partir de `engram cloud --help`",
     "cloudCliError": "No se pudieron detectar las capacidades del CLI.",
-    "cloudCliTip": "Nota: el CLI no expone `cloud unenroll` (verificado hasta v1.15.1). El panel lo gestiona escribiendo directo a `sync_enrolled_projects`.",
     "runtime": "Runtime",
     "navTitle": "Secciones del menú",
     "navHeaderDesc": "Mostrá u ocultá secciones enteras del menú lateral.",
@@ -792,7 +789,6 @@
       "status": "Estado",
       "url": "URL",
       "cloudEnroll": "cloud enroll",
-      "cloudUnenroll": "cloud unenroll",
       "dashboard": "Panel",
       "node": "Node",
       "uptime": "Uptime"

@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Stale cloud locale strings** — removed leftover UI strings that claimed the `engram` CLI has no
+  `cloud unenroll` and that the dashboard writes `sync_enrolled_projects` directly.
 - **Demo mode data-source lock** — demo mode rejects every change of data source (Engram database path, Claude Code
   directory, module enable/disable and path, profile create/switch/delete, Claude Code accounts) with "Write
   operations are disabled in demo mode.", so a demo instance can never be repointed at a real database. Theme,
