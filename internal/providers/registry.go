@@ -75,7 +75,8 @@ func NewRegistry(log *slog.Logger) *Registry {
 
 // Register adds a provider to the registry. The order of registration determines
 // render order within the same Featured tier (featured providers are always
-// sorted before non-featured ones regardless of registration order).
+// sorted before non-featured ones regardless of registration order). A
+// provider implementing LoggerSetter receives the registry logger.
 // Register panics if a provider with the same ID is registered twice.
 func (r *Registry) Register(p Provider) {
 	r.mu.Lock()
@@ -86,6 +87,9 @@ func (r *Registry) Register(p Provider) {
 		panic(fmt.Sprintf("providers: duplicate provider ID %q", id))
 	}
 	r.entries[id] = &activeEntry{p: p, state: Registered}
+	if ls, ok := p.(LoggerSetter); ok && r.log != nil {
+		ls.SetLogger(r.log)
+	}
 
 	// Insert into order: featured providers go first.
 	if p.Featured() {

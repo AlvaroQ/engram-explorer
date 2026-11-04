@@ -113,6 +113,7 @@ func checkRODSN(path string) string {
 // engramProvider is the singleton descriptor for the Engram data source.
 type engramProvider struct {
 	cfg config.Config // base app config (DaemonBaseURL, DaemonTimeoutMs, etc.)
+	log *slog.Logger  // registry logger (SetLogger); nil logs nothing
 }
 
 // NewProvider returns the Engram Provider adapter, configured from the base
@@ -121,6 +122,10 @@ type engramProvider struct {
 func NewProvider(cfg config.Config) providers.Provider {
 	return &engramProvider{cfg: cfg}
 }
+
+// SetLogger receives the registry logger (providers.LoggerSetter); instances
+// opened afterwards log their health transitions through it.
+func (p *engramProvider) SetLogger(log *slog.Logger) { p.log = log }
 
 // ID returns the stable machine identifier used as the registry key, config
 // map key, and URL slug.
@@ -218,6 +223,7 @@ func (p *engramProvider) Open(ctx context.Context, cfg providers.ProviderConfig)
 		roSwap: roSwap,
 		rwSwap: rwSwap,
 		path:   path,
+		health: providers.NewHealthLog(p.log),
 	}, nil
 }
 
@@ -283,18 +289,32 @@ type engramInstance struct {
 	roSwap *sqlite.SwapDB
 	rwSwap *sqlite.SwapDB // nil in read-only mode
 	path   string
+	health *providers.HealthLog
 }
 
 // Health returns per-provider health using SchemaValid — not bare SELECT 1.
 // This is what fixes the false-positive: an empty/schemaless DB now reports
-// ok=false.
-func (i *engramInstance) Health(ctx context.Context) providers.ProviderHealth {
+// ok=false. Failures are logged through the registry logger once per
+// transition (see providers.HealthLog), not on every polled call.
+func (i *engramInstance) Health(ctx context.Context) (h providers.ProviderHealth) {
 	// The path comes from the live RuntimePaths: a Settings DB switch
 	// (ReloadEngramDB) swaps the pools of this instance and updates it.
-	h := providers.ProviderHealth{
+	h = providers.ProviderHealth{
 		ID:   "engram",
 		Path: i.livePath(),
 	}
+	var detail error // internal cause, logged but never shown in production
+	defer func() {
+		if h.OK {
+			i.health.Healthy("engram database healthy again", "path", h.Path)
+			return
+		}
+		args := []any{"path", h.Path, "reason", h.Error}
+		if detail != nil {
+			args = append(args, "err", detail)
+		}
+		i.health.Failing("engram health check failed", args...)
+	}()
 
 	roDB := i.deps.RoDB
 	if roDB == nil {
@@ -326,8 +346,8 @@ func (i *engramInstance) Health(ctx context.Context) providers.ProviderHealth {
 	if !h.OK {
 		if err != nil {
 			// The driver error can name the file; production shows a generic
-			// message and logs the detail.
-			slog.Warn("engram health query failed", "path", h.Path, "err", err)
+			// message and logs the detail (deferred above).
+			detail = err
 			h.Error = "database unavailable"
 			if i.deps.Config.ExposeDetails {
 				h.Error = err.Error()

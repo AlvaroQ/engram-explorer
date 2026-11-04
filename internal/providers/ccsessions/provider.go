@@ -28,12 +28,17 @@ import (
 // ccProvider is the singleton descriptor for the Claude Code sessions data source.
 type ccProvider struct {
 	cfg config.Config
+	log *slog.Logger // registry logger (SetLogger); nil logs nothing
 }
 
 // NewProvider returns the Claude Code sessions Provider adapter.
 func NewProvider(cfg config.Config) providers.Provider {
 	return &ccProvider{cfg: cfg}
 }
+
+// SetLogger receives the registry logger (providers.LoggerSetter); instances
+// opened afterwards log their health transitions through it.
+func (p *ccProvider) SetLogger(log *slog.Logger) { p.log = log }
 
 // ID returns the stable machine identifier.
 func (p *ccProvider) ID() string { return "cc-sessions" }
@@ -108,6 +113,7 @@ func (p *ccProvider) Open(ctx context.Context, cfg providers.ProviderConfig) (pr
 		cfg:          appCfg,
 		runtimePaths: runtimePaths,
 		path:         path,
+		health:       providers.NewHealthLog(p.log),
 	}, nil
 }
 
@@ -200,12 +206,14 @@ type ccInstance struct {
 	cfg          config.Config
 	runtimePaths *config.RuntimePaths
 	path         string
+	health       *providers.HealthLog
 }
 
 // Health returns per-provider health for /api/health aggregation. For CC
 // sessions the health check is whether the projects directory still exists.
 // The error is generic in production (the OS error text names the path and
-// goes to the log); development (ExposeDetails) shows the detail.
+// goes to the log, once per transition — see providers.HealthLog);
+// development (ExposeDetails) shows the detail.
 func (i *ccInstance) Health(ctx context.Context) providers.ProviderHealth {
 	h := providers.ProviderHealth{
 		ID:   "cc-sessions",
@@ -218,7 +226,7 @@ func (i *ccInstance) Health(ctx context.Context) providers.ProviderHealth {
 		if err != nil {
 			detail = err.Error()
 		}
-		slog.Warn("claude code projects directory unavailable", "path", i.path, "err", detail)
+		i.health.Failing("claude code projects directory unavailable", "path", i.path, "err", detail)
 		h.Error = errProjectsDirUnavailable
 		if i.cfg.ExposeDetails {
 			h.Error = detail
@@ -227,6 +235,7 @@ func (i *ccInstance) Health(ctx context.Context) providers.ProviderHealth {
 	}
 
 	h.OK = true
+	i.health.Healthy("claude code projects directory available again", "path", i.path)
 	return h
 }
 
