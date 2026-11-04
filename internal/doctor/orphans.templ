@@ -237,11 +237,14 @@ templ OrphansListWithError(data *services.OrphansResponse, projects []services.P
 // observation content, and embeds the same assign-to-project dropdown and delete
 // action used in the row so the user can act without leaving the dialog.
 // Assigning/deleting refreshes #orphans-list (outerHTML), which removes the
-// dialog along with the rest of the list markup. The close button clears the
-// host directly. All strings stay in English to match the doctor view.
+// dialog along with the rest of the list markup. The backdrop and close button
+// clear the host via data-clear-target (/static/ui-actions.js). All strings stay in English to match the doctor view.
 templ OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects []services.ProjectStats) {
-	<dialog class="orphan-dialog" open aria-modal="true" aria-labelledby="orphan-dialog-title">
-		<div class="orphan-dialog-backdrop" onclick="document.getElementById('orphan-dialog-host').innerHTML=''" aria-hidden="true"></div>
+	<!-- Esc-to-close: native <dialog open> (attribute, not showModal) does not
+	     handle Esc; data-escape-clear-target makes /static/ui-actions.js clear
+	     the host on Escape while this dialog is in the DOM. -->
+	<dialog class="orphan-dialog" open aria-modal="true" aria-labelledby="orphan-dialog-title" data-escape-clear-target="orphan-dialog-host">
+		<div class="orphan-dialog-backdrop" data-clear-target="orphan-dialog-host" aria-hidden="true"></div>
 		<article class="orphan-dialog-card">
 			<header class="orphan-dialog-header">
 				<h3 id="orphan-dialog-title">
@@ -255,7 +258,7 @@ templ OrphanObservationDetailDialog(d *services.OrphanObservationDetail, project
 					type="button"
 					class="orphan-dialog-close"
 					aria-label="Close"
-					onclick="document.getElementById('orphan-dialog-host').innerHTML=''"
+					data-clear-target="orphan-dialog-host"
 				>&times;</button>
 			</header>
 			<div class="orphan-dialog-body">
@@ -359,18 +362,4 @@ templ OrphanObservationDetailDialog(d *services.OrphanObservationDetail, project
 			</footer>
 		</article>
 	</dialog>
-	<!-- Esc-to-close: native <dialog open> (attribute, not showModal) does not
-	     handle Esc, so register a one-shot listener that clears the host. -->
-	<script>
-		(function () {
-			function onKey(e) {
-				if (e.key === "Escape") {
-					var host = document.getElementById("orphan-dialog-host");
-					if (host) host.innerHTML = "";
-					document.removeEventListener("keydown", onKey);
-				}
-			}
-			document.addEventListener("keydown", onKey);
-		})();
-	</script>
 }

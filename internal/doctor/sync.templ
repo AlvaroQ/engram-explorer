@@ -14,7 +14,9 @@ templ SyncShell() {
 
 // syncShellContent is the shared inner content for the sync page shell.
 // It contains two deferred-load regions: projects table and issues banner.
-// Polling pauses while the tab is hidden to avoid pointless background traffic.
+// Polling pauses while the tab is hidden to avoid pointless background traffic:
+// data-poll-visible-only is handled by /static/ui-actions.js (htmx runs with
+// allowEval:false, so hx-trigger [filters] cannot be used).
 templ syncShellContent() {
 	<div id="sync-shell">
 		<!--
@@ -33,7 +35,8 @@ templ syncShellContent() {
 				id="sync-issues"
 				class="issues-body"
 				hx-get="/doctor/sync/issues"
-				hx-trigger="load, every 15s [document.visibilityState=='visible']"
+				hx-trigger="load, every 15s"
+				data-poll-visible-only
 				hx-target="#sync-issues"
 				hx-swap="innerHTML"
 			>
@@ -43,7 +46,8 @@ templ syncShellContent() {
 		<div
 			id="sync-projects"
 			hx-get="/doctor/sync/projects"
-			hx-trigger="load, every 15s [document.visibilityState=='visible']"
+			hx-trigger="load, every 15s"
+			data-poll-visible-only
 			hx-target="#sync-projects"
 			hx-swap="innerHTML"
 		>
