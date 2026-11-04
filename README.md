@@ -238,7 +238,7 @@ Both are **Tier-1**: if not found at their default paths the UI keeps them visib
 
 - **Create:** Settings → Accounts → name it → **Create** → configure providers in Settings → Modules.
 - **Switch:** click **Switch** next to the profile (or use the sidebar account switcher when ≥2 profiles exist). Switches are **hot-swap** — no restart; in-flight requests complete against the previous profile first.
-- **Default profile:** created automatically on first run, seeded from env vars and the legacy `~/.engram/explorer-settings.json` if present, so existing users see no change after upgrading.
+- **Default profile:** created on first run from the legacy `~/.engram/explorer-settings.json` if present, otherwise from the built-in defaults. Environment variables are applied on top at startup and are not written into it.
 - **Persistence:** active profile name and all settings live in `~/.engram/config.json` and are restored on restart.
 
 If a profile references a path that no longer exists, that provider is marked **unavailable** with an inline warning; other providers still load normally.

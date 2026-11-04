@@ -147,7 +147,11 @@ func TestLoadOverrides_MissingFileIsEmpty(t *testing.T) {
 	}
 }
 
-func TestLoad_FileOverridePrecedence(t *testing.T) {
+// TestLoad_IgnoresLegacySettingsFile: config.Load resolves env > built-in
+// default only. The legacy explorer-settings.json is no longer a live source
+// (it only seeds a new config.json, see EnsureConfig); env values are recorded
+// in EnvOverrides so they can be applied without being persisted.
+func TestLoad_IgnoresLegacySettingsFile(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
@@ -164,29 +168,37 @@ func TestLoad_FileOverridePrecedence(t *testing.T) {
 		t.Fatalf("SaveOverrides: %v", err)
 	}
 
-	// With no env vars set, the saved override takes precedence over defaults.
+	// With no env vars set, Load returns the built-in defaults.
 	cfg, err := config.Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.EngramDbPath != customDB {
-		t.Errorf("EngramDbPath: got %q, want override %q", cfg.EngramDbPath, customDB)
+	defDB := filepath.Join(configHome, "engram.db")
+	if cfg.EngramDbPath != defDB || cfg.Defaults.EngramDbPath != defDB {
+		t.Errorf("EngramDbPath: got %q (default %q), want %q", cfg.EngramDbPath, cfg.Defaults.EngramDbPath, defDB)
 	}
-	if cfg.EngramDataDir != filepath.Dir(customDB) {
-		t.Errorf("EngramDataDir: got %q, want %q", cfg.EngramDataDir, filepath.Dir(customDB))
+	if want := filepath.Join(home, ".claude", "projects"); cfg.ClaudeProjectsDir != want {
+		t.Errorf("ClaudeProjectsDir: got %q, want default %q", cfg.ClaudeProjectsDir, want)
 	}
-	if cfg.ClaudeProjectsDir != customClaude {
-		t.Errorf("ClaudeProjectsDir: got %q, want override %q", cfg.ClaudeProjectsDir, customClaude)
+	if cfg.EnvOverrides != (config.PathSettings{}) {
+		t.Errorf("EnvOverrides: got %+v, want none", cfg.EnvOverrides)
 	}
 
-	// The env var wins over the saved override.
+	// An env var wins over the default and is recorded as an override.
 	envDir := filepath.Join(home, "envdir")
 	t.Setenv("ENGRAM_DATA_DIR", envDir)
 	cfg2, err := config.Load()
 	if err != nil {
 		t.Fatalf("Load (env): %v", err)
 	}
-	if want := filepath.Join(envDir, "engram.db"); cfg2.EngramDbPath != want {
-		t.Errorf("env should win: got %q, want %q", cfg2.EngramDbPath, want)
+	want := filepath.Join(envDir, "engram.db")
+	if cfg2.EngramDbPath != want || cfg2.EnvOverrides.EngramDbPath != want {
+		t.Errorf("env should win: got %q (override %q), want %q", cfg2.EngramDbPath, cfg2.EnvOverrides.EngramDbPath, want)
+	}
+	if cfg2.Defaults.EngramDbPath != defDB {
+		t.Errorf("Defaults.EngramDbPath: got %q, want %q", cfg2.Defaults.EngramDbPath, defDB)
+	}
+	if cfg2.ConfigHome != envDir {
+		t.Errorf("ConfigHome: got %q, want ENGRAM_DATA_DIR %q", cfg2.ConfigHome, envDir)
 	}
 }
