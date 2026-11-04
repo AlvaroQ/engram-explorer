@@ -160,11 +160,13 @@ type ModuleInfo struct {
 	Tier        ModuleTier
 	State       ModuleState
 	Path        string // current path from config; may be empty
-	Err         string // display message when State == ModuleErrored (set from Cause by the settings handler)
-	// Cause is the provider error. The settings handler turns it into Err via
-	// ErrorMessage: usererr messages are shown, anything else is logged and
-	// replaced by the generic message.
+	// Cause is the provider error. It is never rendered as-is: the settings
+	// handler turns it into errMsg via ErrorMessage (usererr messages are
+	// shown, anything else is logged and replaced by the generic message).
 	Cause error
+	// errMsg is the display message for the row. Unexported so callers outside
+	// the package cannot put raw error text on the page; only Cause feeds it.
+	errMsg string
 }
 
 // ---------------------------------------------------------------------------

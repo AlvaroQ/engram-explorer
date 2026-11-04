@@ -98,11 +98,11 @@ func handleSyncProjectDetail(d Deps) http.HandlerFunc {
 		}
 
 		if ui.IsHTMX(r) {
-			ui.Render(w, r, SyncProjectDetailPartial(detail))
+			ui.Render(w, r, SyncProjectDetailPartial(detail, ui.LangForRequest(r)))
 		} else {
 			// Use the shared ui.Layout with activeNav="settings" so the Settings
 			// gear is highlighted (doctor layout is no longer used).
-			ui.Render(w, r, ui.Layout("Sync: "+project, "settings", ui.LangForRequest(r), ui.ThemeForRequest(r), ui.SidebarStateForRequest(r), SyncProjectDetailPartial(detail)))
+			ui.Render(w, r, ui.Layout("Sync: "+project, "settings", ui.LangForRequest(r), ui.ThemeForRequest(r), ui.SidebarStateForRequest(r), SyncProjectDetailPartial(detail, ui.LangForRequest(r))))
 		}
 	}
 }

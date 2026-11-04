@@ -70,6 +70,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **No internal errors in HTML** — UI and doctor pages no longer show raw error text (SQLite errors,
   filesystem paths), including the Settings daemon and module hints. Messages written for the user are still
   shown; any other error shows a generic localized message and the detail goes to the server log.
+- **No raw module or sync errors in HTML** — the Settings module row error is unexported and only built from
+  the provider error through the safe error mapper, so raw error text cannot reach the page by construction,
+  and Maintenance → Cloud project detail replaces the daemon's `last_error` text with a generic localized
+  message (the reason code is still shown).
 - **Stricter Content Security Policy** — `script-src` no longer allows `'unsafe-inline'`: inline scripts,
   event-handler attributes and `hx-on` moved to a static `ui-actions.js`, and htmx attribute evaluation is
   disabled (`allowEval: false`). `style-src` still allows `'unsafe-inline'` (inline style attributes and htmx

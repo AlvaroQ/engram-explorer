@@ -682,7 +682,8 @@
     },
     "cloud": {
       "title": "Cloud backup",
-      "description": "Read-only sync diagnostics. Enroll, unenroll and sync projects with the engram CLI."
+      "description": "Read-only sync diagnostics. Enroll, unenroll and sync projects with the engram CLI.",
+      "lastErrorGeneric": "The sync daemon recorded an error for this project. Check the Engram daemon log for details."
     }
   },
   "settings": {

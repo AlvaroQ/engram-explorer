@@ -109,3 +109,49 @@ func TestErrorLeak_DomainErrorsStayVisible(t *testing.T) {
 		t.Errorf("unknown entity must stay a visible 400; got %d: %s", w.Code, w.Body.String())
 	}
 }
+
+// TestErrorLeak_SyncDetailHidesLastError covers the sync_state.last_error
+// column: it is free text written by the daemon (it can carry hosts, paths or
+// tokens), so the project detail shows a fixed localized message plus the
+// machine-readable reason code instead of the raw text.
+func TestErrorLeak_SyncDetailHidesLastError(t *testing.T) {
+	db := openSyncTestDB(t)
+	const proj = "leaky-proj"
+	seedObservationForProject(t, db, proj)
+	seedEnrolledProject(t, db, proj)
+	secret := "dial tcp 10.0.0.5:443: Authorization: Bearer sk-live-SECRET-TOKEN"
+	seedSyncState(t, db, "cloud:"+proj, "failed", &secret)
+	if _, err := db.Exec(`UPDATE sync_state SET reason_code = 'AUTH_FAILED' WHERE target_key = ?`, "cloud:"+proj); err != nil {
+		t.Fatalf("set reason_code: %v", err)
+	}
+	mux := http.NewServeMux()
+	doctor.Mount(mux, doctor.Deps{RoDB: db})
+
+	for _, lang := range []string{"en", "es"} {
+		t.Run(lang, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/doctor/sync/"+proj, nil)
+			req.Header.Set("HX-Request", "true")
+			req.AddCookie(&http.Cookie{Name: "lang", Value: lang})
+			w := serve(mux, req)
+			if w.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+			}
+			body := w.Body.String()
+			for _, leak := range []string{"sk-live-SECRET-TOKEN", "10.0.0.5", "dial tcp"} {
+				if strings.Contains(body, leak) {
+					t.Errorf("sync detail leaks last_error text %q", leak)
+				}
+			}
+			want := map[string]string{
+				"en": "The sync daemon recorded an error for this project.",
+				"es": "El daemon de sincronización registró un error para este proyecto.",
+			}[lang]
+			if !strings.Contains(body, want) {
+				t.Errorf("missing generic last-error message %q; body: %.600s", want, body)
+			}
+			if !strings.Contains(body, "AUTH_FAILED") {
+				t.Error("reason code must still be shown")
+			}
+		})
+	}
+}

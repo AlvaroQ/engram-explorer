@@ -682,7 +682,8 @@
     },
     "cloud": {
       "title": "Copia de seguridad en la nube",
-      "description": "Diagnóstico de sincronización de solo lectura. Inscribe, desinscribe y sincroniza proyectos con el CLI de engram."
+      "description": "Diagnóstico de sincronización de solo lectura. Inscribe, desinscribe y sincroniza proyectos con el CLI de engram.",
+      "lastErrorGeneric": "El daemon de sincronización registró un error para este proyecto. Consulta el registro del daemon de Engram para ver los detalles."
     }
   },
   "settings": {

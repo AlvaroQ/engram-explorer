@@ -192,8 +192,10 @@ templ SyncIssuesPartial(resp services.SyncIssuesResponse) {
 
 // SyncProjectDetailPartial renders the read-only project detail fragment.
 // Includes status/sequence/counts cards, optional error card, pending
-// mutations table, and optional upgrade-state card.
-templ SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) {
+// mutations table, and optional upgrade-state card. The daemon-written
+// last_error text is never rendered (it can carry hosts, paths or tokens):
+// the error card shows a fixed localized message plus the reason code.
+templ SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse, lang string) {
 	{{ slug := projectSlug(detail.Summary.Project) }}
 	<div class={ "sync-detail-" + slug } id={ "sync-detail-" + slug }>
 		<div class="detail-header">
@@ -261,7 +263,7 @@ templ SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) {
 			<div class="error-card">
 				<h4>Last Error</h4>
 				if detail.Summary.LastError != nil {
-					<p>{ *detail.Summary.LastError }</p>
+					<p>{ ui.T(lang, "maintenance.cloud.lastErrorGeneric") }</p>
 				}
 				if detail.Summary.ReasonCode != nil {
 					<p>Reason code: { *detail.Summary.ReasonCode }</p>

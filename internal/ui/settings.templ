@@ -500,8 +500,8 @@ templ moduleRow(lang string, m ModuleInfo, pathError string) {
 				<span class="info-value mono">{ m.Path }</span>
 			</div>
 		}
-		if m.Err != "" {
-			<p class="error-hint">{ m.Err }</p>
+		if m.errMsg != "" {
+			<p class="error-hint">{ m.errMsg }</p>
 		}
 		<!-- Tier-1 manual path entry: show when provider is not enabled -->
 		if m.Tier == ModuleTier1 && m.State != ModuleEnabled {
