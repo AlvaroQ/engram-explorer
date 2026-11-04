@@ -91,6 +91,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Single saved configuration** — `config.json` is the only file the explorer writes: Settings database and
+  Claude directory changes are saved in the active profile (a Claude directory change now survives a
+  restart), and `explorer-settings.json` is read once to create `config.json` and never written again.
 - **Go toolchain** — releases build with Go 1.26.10 (`toolchain` directive in `go.mod`); the minimum
   supported Go version stays at 1.25. Go 1.25.0 shipped standard library vulnerabilities reachable from the
   HTTP server.

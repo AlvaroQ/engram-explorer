@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"io"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -89,8 +90,9 @@ func TestReloadEngramDB_RegistryPath(t *testing.T) {
 }
 
 // TestReloadEngramDB_HotSwap verifies that repointing the database swaps the
-// live read pool, persists the override, and that an invalid path is rejected
-// without disturbing the current connection.
+// live read pool, saves the path into the active profile of config.json (never
+// into the legacy explorer-settings.json), and that an invalid path is
+// rejected without disturbing the current connection.
 func TestReloadEngramDB_HotSwap(t *testing.T) {
 	pathA := makeEngramDB(t, "a")
 	pathB := makeEngramDB(t, "b")
@@ -106,6 +108,13 @@ func TestReloadEngramDB_HotSwap(t *testing.T) {
 		t.Fatalf("NewContainer: %v", err)
 	}
 	c.CloseGrace = 0 // close superseded pools synchronously so temp files unlock
+	c.ProfileStore = config.NewStore(cfg.ConfigHome, config.ProfileStore{
+		Version:       1,
+		ActiveProfile: "default",
+		Profiles: map[string]config.Profile{
+			"default": {Providers: map[string]config.ProviderConfig{"engram": {Enabled: true, Path: pathA}}},
+		},
+	})
 	t.Cleanup(c.Close)
 
 	read := func() string {
@@ -138,8 +147,15 @@ func TestReloadEngramDB_HotSwap(t *testing.T) {
 		t.Fatalf("after failed reload: got %q, want b (unchanged)", got)
 	}
 
-	// The override was persisted under the config home.
-	if ov := config.LoadOverrides(cfg.ConfigHome); ov.EngramDbPath != pathB {
-		t.Errorf("persisted override: got %q, want %q", ov.EngramDbPath, pathB)
+	// The path was persisted into the active profile in config.json only.
+	saved, err := config.LoadProfileStore(cfg.ConfigHome)
+	if err != nil {
+		t.Fatalf("LoadProfileStore: %v", err)
+	}
+	if got := saved.Profiles["default"].ProviderCfg("engram").Path; got != pathB {
+		t.Errorf("persisted engram path: got %q, want %q", got, pathB)
+	}
+	if _, err := os.Stat(config.OverridesPath(cfg.ConfigHome)); !os.IsNotExist(err) {
+		t.Errorf("explorer-settings.json must not be written (stat err %v)", err)
 	}
 }

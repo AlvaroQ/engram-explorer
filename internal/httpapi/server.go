@@ -427,7 +427,9 @@ func buildToggleModuleFn(reg *providers.Registry, store *config.Store) func(id s
 		return store.UpdateActive(func(_ string, p *config.Profile) error {
 			pc := p.ProviderCfg(id)
 			if enabled {
-				cfg := providerConfigFrom(pc)
+				// Open with the effective config (env overrides applied); only
+				// the enabled flag is persisted.
+				cfg := providerConfigFrom(store.Effective(*p).ProviderCfg(id))
 				cfg.Enabled = true
 				if err := reg.Enable(context.Background(), id, cfg); err != nil {
 					return err
@@ -595,11 +597,9 @@ func buildDeleteProfileFn(store *config.Store) func(name string) error {
 // ---------------------------------------------------------------------------
 
 // buildCCAccountSourcesFn returns a closure that builds []services.CCAccountSource
-// from the enabled CC accounts in the store.
-//
-// Lazy seed: if the store has no CC accounts yet (users who existed before this
-// feature was added), a single "Personal" account is seeded pointing at
-// defaultClaudeDir and persisted once (through the store's lock).
+// from the enabled CC accounts in the store (CLAUDE_PROJECTS_DIR, when set,
+// replaces the path of the "default" account in memory). It never writes:
+// config.OpenStore seeds the default account once at boot.
 //
 // Guard nil store: if the store is nil (legacy/no-registry paths that build Deps
 // without a store), falls back to a single source using defaultClaudeDir.
@@ -614,10 +614,8 @@ func buildCCAccountSourcesFn(store *config.Store, defaultClaudeDir, _ string) fu
 		if store == nil {
 			return fallback
 		}
-		// Best-effort persist; if it fails the read falls back below.
-		_ = store.SeedDefaultCCAccount(defaultClaudeDir)
 		var out []services.CCAccountSource
-		for _, acc := range store.CCAccounts() {
+		for _, acc := range store.EffectiveCCAccounts() {
 			if !acc.Enabled {
 				continue
 			}
@@ -628,7 +626,7 @@ func buildCCAccountSourcesFn(store *config.Store, defaultClaudeDir, _ string) fu
 			})
 		}
 		if len(out) == 0 {
-			// All accounts disabled — fall back so the UI still shows something.
+			// No account or all disabled — fall back so the UI still shows something.
 			return fallback
 		}
 		return out

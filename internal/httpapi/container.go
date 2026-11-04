@@ -99,7 +99,8 @@ func NewContainer(cfg config.Config, logger *slog.Logger) (*Container, error) {
 }
 
 // ReloadEngramDB validates newPath, opens fresh pools, swaps them in live, and
-// persists the override. The previous pools are closed after a short grace so
+// saves the path into the active profile of config.json (through the Store,
+// so an ephemeral demo store saves nothing). The previous pools are closed after a short grace so
 // in-flight queries can drain. On any validation/open error the current DB is
 // left untouched. Live reads of the path go through c.Paths; c.Config is the
 // immutable startup snapshot and is not mutated here.
@@ -145,17 +146,10 @@ func (c *Container) ReloadEngramDB(newPath string) error {
 	}
 
 	c.Paths.SetEngramDB(newPath)
-	if err := config.SaveOverrides(c.Config.ConfigHome, config.Overrides{
-		EngramDbPath:      newPath,
-		ClaudeProjectsDir: c.Paths.ClaudeDir(),
-	}); err != nil {
-		c.Logger.Warn("failed to persist path override", "err", err)
-	}
 
-	// On the registry path the active profile (config.json) is the source of
-	// truth used to open the Engram provider at boot, so the override file alone
-	// would not survive a restart. Persist the new path into the active profile
-	// too, keeping the live swap and the next boot in agreement.
+	// config.json is the only persisted configuration source (the legacy
+	// explorer-settings.json is no longer written). Containers built without a
+	// store (legacy tests) apply the change live only.
 	if c.ProfileStore != nil {
 		err := c.ProfileStore.UpdateActive(func(_ string, p *config.Profile) error {
 			ec := p.ProviderCfg("engram")
@@ -195,6 +189,8 @@ func (c *Container) ReloadEngramDB(newPath string) error {
 // SetClaudeDir validates and applies a new Claude Code projects directory. There
 // is no persistent connection to swap — transcripts are scanned per request — so
 // the change takes effect immediately for every reader of c.Paths.ClaudeDir().
+// The directory is saved as the cc-sessions path of the active profile in
+// config.json (through the Store; never when the store is ephemeral).
 //
 // newDir must pass ccsessions.ValidateProjectsDir — the same check the Settings
 // Modules path applies. Returned errors are user-facing.
@@ -204,17 +200,20 @@ func (c *Container) SetClaudeDir(newDir string) error {
 		return err
 	}
 
-	// Hold c.mu so the override write is serialised with ReloadEngramDB (both
-	// persist the same file).
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.Paths.SetClaudeDir(newDir)
-	if err := config.SaveOverrides(c.Config.ConfigHome, config.Overrides{
-		EngramDbPath:      c.Paths.EngramDB(),
-		ClaudeProjectsDir: newDir,
-	}); err != nil {
-		c.Logger.Warn("failed to persist path override", "err", err)
+	if c.ProfileStore != nil {
+		err := c.ProfileStore.UpdateActive(func(_ string, p *config.Profile) error {
+			cc := p.ProviderCfg("cc-sessions")
+			cc.Path = newDir
+			p.SetProviderCfg("cc-sessions", cc)
+			return nil
+		})
+		if err != nil {
+			c.Logger.Warn("failed to persist claude projects dir to active profile", "err", err)
+		}
 	}
 	return nil
 }
