@@ -73,12 +73,16 @@ engram serve   # creates ~/.engram/engram.db on first run
 No Engram, no real data needed — seed a realistic demo dataset and explore every view. Requires [building from source](#-build-from-source):
 
 ```bash
-make demo   # seeds ./demo (engram.db + sample Claude Code sessions) and runs read-only against it
+make demo   # seeds ./demo (engram.db + sample Claude Code and Codex sessions) and runs read-only against it
 ```
 
-`make demo` is a normal run with three environment variables — `ENGRAM_DATA_DIR=./demo`,
-`CLAUDE_PROJECTS_DIR=./demo/claude` and `ENGRAM_DASH_READONLY=true` — so it never reads `~/.engram` or
-`~/.claude/projects`, Engram write actions answer `503`, and Settings changes are saved in `./demo/config.json`.
+`make demo` is a normal run with four environment variables — `ENGRAM_DATA_DIR=./demo`,
+`CLAUDE_PROJECTS_DIR=./demo/claude`, `CODEX_HOME=./demo/codex` and `ENGRAM_DASH_READONLY=true`. The seeder
+writes sample Claude Code transcripts under `./demo/claude` and sample Codex rollouts under `./demo/codex`.
+Engram write actions answer `503`, and Settings changes are saved in `./demo/config.json`. That file may still
+record the default `~/.claude/projects` and `~/.codex` paths: the `CLAUDE_PROJECTS_DIR` and `CODEX_HOME`
+overrides are what keep the demo away from your real sessions (and `ENGRAM_DATA_DIR` from `~/.engram`), so
+running the binary against `./demo` without them reads your real `~/.claude/projects` and `~/.codex`.
 
 ---
 
@@ -148,8 +152,8 @@ git clone https://github.com/AlvaroQ/engram-explorer.git
 cd engram-explorer
 
 make build                                  # frontend → embed → go build
-go run ./cmd/seed-demo --out ./demo --force # engram.db + sample Claude Code sessions in ./demo
-ENGRAM_DATA_DIR=./demo CLAUDE_PROJECTS_DIR=./demo/claude ENGRAM_DASH_READONLY=true ./engram-explorer
+go run ./cmd/seed-demo --out ./demo --force # engram.db + sample Claude Code and Codex sessions in ./demo
+ENGRAM_DATA_DIR=./demo CLAUDE_PROJECTS_DIR=./demo/claude CODEX_HOME=./demo/codex ENGRAM_DASH_READONLY=true ./engram-explorer
 # open http://127.0.0.1:8787   (`make demo` does the last two steps with `go run`)
 ```
 
@@ -233,7 +237,7 @@ All three are **Tier-1**: if not found at their default paths the UI keeps them 
 
 **Disabled modules:** routes are mounted once at startup and follow the module's live state. While a module is disabled its API routes answer `503` with code `MODULE_DISABLED` and its pages show "This module is disabled. Enable it in Settings → Modules."; enabling it serves them again without a restart. A request that is already running when a module is disabled or the profile changes finishes on the data source it started with.
 
-**Limits:** that grace is bounded. A superseded data source waits at most **30 s** (the drain timeout) for the requests still using it, then it is closed and a request still running on it fails. The HTTP server's write timeout is also **30 s**, so no response can take longer than that in any case — a database import that needs more time fails either way.
+**Limits:** that grace is bounded. A superseded data source waits at most **30 s** (the drain timeout) for the requests still using it, then it is closed and a request still running on it fails. The HTTP server's write timeout is also **30 s**, but it only stops the response: the handler is not cancelled, so a database import that needs more time can still complete on the server while the client sees a connection error. Reload to check the result before retrying.
 
 **Agent sessions (Claude Code + Codex).** Both session modules feed one set of vendor-neutral pages, under a
 single "Agent sessions" sidebar group:

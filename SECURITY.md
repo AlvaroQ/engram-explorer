@@ -60,9 +60,12 @@ safety backup next to the DB before merging.
   page unchanged.
 - Cloud sync is **read-only**: the dashboard shows sync diagnostics and proxies the daemon's GET telemetry endpoints (`/health`, `/sync/status`, `/stats`). It never enrolls, unenrolls or syncs a project and never spawns the `engram` CLI — do those with the `engram` CLI directly (`engram cloud enroll <project>`, `engram cloud unenroll <project>`).
 - There is no demo mode: `make demo` is a normal read-only run (`ENGRAM_DASH_READONLY=true`) against the
-  seeded `./demo` dataset (`ENGRAM_DATA_DIR=./demo`, `CLAUDE_PROJECTS_DIR=./demo/claude`), so it never reads
-  `~/.engram` or `~/.claude/projects`. Read-only mode blocks Engram writes only; Settings changes persist in
-  `./demo/config.json`. The removed `--demo` / `--demo-db` flags and `ENGRAM_DEMO` / `ENGRAM_DEMO_DB` variables
+  seeded `./demo` dataset (`ENGRAM_DATA_DIR=./demo`, `CLAUDE_PROJECTS_DIR=./demo/claude`,
+  `CODEX_HOME=./demo/codex`; the seeder writes sample Claude Code transcripts and Codex rollouts there), so it
+  never reads `~/.engram`, `~/.claude/projects` or `~/.codex`. Read-only mode blocks Engram writes only;
+  Settings changes persist in `./demo/config.json`, which may still record the default `~/.claude/projects` and
+  `~/.codex` paths — the `CLAUDE_PROJECTS_DIR` and `CODEX_HOME` overrides are what keep the demo away from
+  your real sessions, so do not run against `./demo` without them. The removed `--demo` / `--demo-db` flags and `ENGRAM_DEMO` / `ENGRAM_DEMO_DB` variables
   make the binary refuse to start instead of silently serving your real data.
   Environment overrides (`ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR`, `CODEX_HOME`, `ENGRAM_DAEMON_URL`) are never
   written to disk.

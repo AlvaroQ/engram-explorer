@@ -39,8 +39,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Module toggles and profile switches during requests** — a module disabled, re-opened or switched while
   pages and API calls are in flight no longer fails them with `500` ("database is closed"): each request keeps
   the data source it started with, and the old one is closed when those requests finish (at most 30 s later). A
-  request still running after that 30 s drain timeout has its data source closed under it and fails; the HTTP
-  write timeout is also 30 s, so no response could outlast it anyway (see "Limits" in the README).
+  request still running after that 30 s drain timeout has its data source closed under it and fails. The HTTP
+  write timeout (also 30 s) only stops the response, not the handler: a longer import can still complete on
+  the server while the client sees an error (see "Limits" in the README).
 - **Failed module re-open kept the old data source open** — when re-opening a module fails (it becomes `errored`),
   its previous database or directory handle is now closed once the requests using it finish, instead of staying
   open until the server stops. Disabling an `errored` module closes anything it still held.
@@ -180,13 +181,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **BREAKING: demo mode** — `--demo`, `--demo-db`, `ENGRAM_DEMO`, `ENGRAM_DEMO_DB`, the demo banner and the
   `403 DEMO_MODE` answer are gone. The binary now refuses to start when one of those flags or variables is set
   (instead of serving your real data) and names the replacement. `make demo` seeds `./demo` — `engram.db` plus
-  sample Claude Code sessions in `./demo/claude` — and runs the normal binary with `ENGRAM_DATA_DIR=./demo`,
-  `CLAUDE_PROJECTS_DIR=./demo/claude` and `ENGRAM_DASH_READONLY=true`: write routes answer
+  sample Claude Code sessions in `./demo/claude` and sample Codex rollouts in `./demo/codex` — and runs the normal
+  binary with `ENGRAM_DATA_DIR=./demo`, `CLAUDE_PROJECTS_DIR=./demo/claude`, `CODEX_HOME=./demo/codex` and
+  `ENGRAM_DASH_READONLY=true`: write routes answer
   `503 RW_UNAVAILABLE`, Settings changes persist in `./demo/config.json`, and `~/.claude/projects` is no longer
   read by the demo. Scripts that ran `engram-explorer --demo` must switch to `make demo` or those variables.
-- `doctor.IsHTMX`, `doctor.ErrorPartial` and `doctor.EmptyState` (internal): the doctor module reuses the UI
-  shell helpers (`ui.Render`, `ui.RenderError`, `ui.IsHTMX`, `ui.RequireRW`, `ui.ErrorPartial`,
-  `ui.EmptyState`) instead of keeping copies.
 - `doctor.IsHTMX`, `doctor.ErrorPartial` and `doctor.EmptyState` (internal): the doctor module reuses the UI
   shell helpers (`ui.Render`, `ui.RenderError`, `ui.IsHTMX`, `ui.RequireRW`, `ui.ErrorPartial`,
   `ui.EmptyState`) instead of keeping copies.
