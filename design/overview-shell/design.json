@@ -1,0 +1,48 @@
+{
+  "title": "Home / Overview with app shell",
+  "brief": "Redesign of the Engram Explorer home screen and app shell for a professional, eye-catching local-first dashboard that shows an AI agent's long-term memory (Engram) and the user's AI coding sessions across vendors (Claude Code, Codex). Dark theme by default, light supported. All directions use only the synced tokens in design/system.md; the chart and project-lobe series colors are a proposed palette (--series-1..8), not yet tokenized, and are labelled as such inside each artboard. Brain first (02) is the chosen visual base; 04-06 are scroll-behaviour variants built on top of it.",
+  "artboards": [
+    {
+      "file": "01-command-center.html",
+      "title": "Command center",
+      "tradeoff": "Dense 12-column bento grid: every number above the fold and fast to scan; more to take in at first glance and the brain is one tile among others",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "02-brain-first.html",
+      "title": "Brain first",
+      "tradeoff": "Full-bleed knowledge-graph hero with glass KPI cards and a 64px icon rail: strongest first impression and brand; less data above the fold and heavier rendering",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "03-editorial-timeline.html",
+      "title": "Editorial timeline",
+      "tradeoff": "Calm typographic layout around one unified timeline of memories and agent sessions: elegant and very readable; slower to spot operational problems and less spectacle",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "04-scroll-collapse.html",
+      "title": "Scroll A: collapsing hero",
+      "tradeoff": "Hero stays sticky and shrinks into a 72px bar with the search docked and a pinned KPI strip: title, search and KPIs always at hand; the graph becomes decorative once collapsed and KPI captions and links are hidden until you scroll back up",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "05-scroll-parallax.html",
+      "title": "Scroll B: parallax depth + staggered reveal",
+      "tradeoff": "Hero moves at 0.4x with depth-layered nodes and sections reveal on entry: strongest sense of depth and a lively first scroll; more scroll code to keep correct and the hero is lost once scrolled past",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "06-scroll-zoom-thread.html",
+      "title": "Scroll C: zoom into memory + synapse thread",
+      "tradeoff": "Camera zooms into the most active project while the hero fades, and a synapse thread grows down the left gutter lighting one node per section: the most narrative and distinctive; heaviest to render and the hero controls fade away after 420px",
+      "width": 1440,
+      "height": 900
+    }
+  ]
+}
