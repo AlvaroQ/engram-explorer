@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -141,8 +142,17 @@ func run(args []string, stdout io.Writer) error {
 	fmt.Fprintf(stdout, "  Windows/pwsh: $env:ENGRAM_DATA_DIR=\"%s\"; $env:CLAUDE_PROJECTS_DIR=\"%s\"; $env:CODEX_HOME=\"%s\"; $env:ENGRAM_DASH_READONLY=\"true\"; .\\engram-explorer.exe\n",
 		absOut, claudeDir, codexDir)
 	fmt.Fprintln(stdout)
-	fmt.Fprintln(stdout, "Then open http://127.0.0.1:8787 in your browser.")
+	fmt.Fprintf(stdout, "Then open http://127.0.0.1:%d in your browser.\n", dashboardPort())
 	return nil
+}
+
+// dashboardPort mirrors how config.Load reads the listen port: DASHBOARD_PORT
+// when it parses as an integer, otherwise the default 8787.
+func dashboardPort() int {
+	if n, err := strconv.Atoi(os.Getenv("DASHBOARD_PORT")); err == nil {
+		return n
+	}
+	return 8787
 }
 
 // rowCounts holds the number of rows inserted per table.

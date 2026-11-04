@@ -153,6 +153,32 @@ func TestRun_SampleSessionsAreIdempotent(t *testing.T) {
 	}
 }
 
+// TestRun_HintUsesDashboardPort: the closing hint points at the port the
+// binary will listen on — DASHBOARD_PORT when set to an integer, otherwise
+// (unset or not a number, as config.Load treats it) the default 8787.
+func TestRun_HintUsesDashboardPort(t *testing.T) {
+	cases := []struct {
+		name, env, want string
+	}{
+		{"unset", "", "Then open http://127.0.0.1:8787 in your browser."},
+		{"custom", "9191", "Then open http://127.0.0.1:9191 in your browser."},
+		{"not a number", "abc", "Then open http://127.0.0.1:8787 in your browser."},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			pinClock(t)
+			t.Setenv("DASHBOARD_PORT", tc.env)
+			var out strings.Builder
+			if err := run([]string{"--out", filepath.Join(t.TempDir(), "demo")}, &out); err != nil {
+				t.Fatalf("run: %v", err)
+			}
+			if !strings.Contains(out.String(), tc.want+"\n") {
+				t.Errorf("DASHBOARD_PORT=%q: output lacks %q:\n%s", tc.env, tc.want, out.String())
+			}
+		})
+	}
+}
+
 // TestRun_RefusesEngramHome: the seeder never writes inside ~/.engram.
 func TestRun_RefusesEngramHome(t *testing.T) {
 	home := pinClock(t)
