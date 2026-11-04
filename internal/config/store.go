@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -125,7 +126,8 @@ func (s *Store) UpdateActive(fn func(name string, p *Profile) error) error {
 // (with environment overrides applied, see Effective) and must bring the live providers in line with it (Registry.SwitchProfile);
 // it runs under the write lock, so no other profile change interleaves. When
 // apply fails nothing changes. When the save fails, apply is called again with
-// the previous profile to restore the live providers and the error is returned.
+// the previous profile to restore the live providers and the error is returned
+// (joined with the restore error if that fails too).
 func (s *Store) SwitchActive(name string, apply func(next Profile) error) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -144,7 +146,11 @@ func (s *Store) SwitchActive(name string, apply func(next Profile) error) error 
 	})
 	if err != nil {
 		if prev, ok := s.data.Profiles[prevName]; ok {
-			_ = apply(s.Effective(prev))
+			if rerr := apply(s.Effective(prev)); rerr != nil {
+				// The live providers may now follow the unsaved profile while
+				// the store still names the previous one: report both.
+				return errors.Join(err, fmt.Errorf("restore profile %q: %w", prevName, rerr))
+			}
 		}
 		return err
 	}

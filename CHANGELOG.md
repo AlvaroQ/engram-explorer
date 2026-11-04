@@ -27,7 +27,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `config.json` existed; they now win over the saved profile at startup and are never written to disk.
 - **Profile store races** — concurrent Settings requests no longer race on the profile store (`config.Store`
   guards it with a lock), and module toggles after a profile switch are saved into the new active profile
-  instead of the previous one.
+  instead of the previous one. If saving a profile switch fails and restoring the previous profile fails too, both
+  errors are reported.
 - **Profile switch lifecycle** — switching profiles closes the providers the new profile disables and opens the
   ones it enables (it used to leave disabled providers open and never open newly enabled ones); a failed open
   rolls the switch back without leaking instances.

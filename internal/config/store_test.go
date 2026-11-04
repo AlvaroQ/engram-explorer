@@ -156,3 +156,33 @@ func TestStore_ConcurrentAccess(t *testing.T) {
 		t.Errorf("accounts after add/remove pairs: got %d, want 1", n)
 	}
 }
+
+// TestStore_SwitchActiveRestoreFailureReported: when the save fails and
+// restoring the previous profile fails too, both errors are returned so the
+// caller knows the live providers may not match the stored active profile.
+func TestStore_SwitchActiveRestoreFailureReported(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "not-a-dir")
+	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s := config.NewStore(file, twoProfiles()) // every save fails
+
+	restoreErr := errors.New("restore failed: provider busy")
+	calls := 0
+	err := s.SwitchActive("work", func(config.Profile) error {
+		calls++
+		if calls == 2 {
+			return restoreErr
+		}
+		return nil
+	})
+	if err == nil {
+		t.Fatal("SwitchActive: expected an error")
+	}
+	if !errors.Is(err, restoreErr) {
+		t.Errorf("error %q does not report the failed restore", err)
+	}
+	if got := s.ActiveProfileName(); got != "default" {
+		t.Errorf("active profile: got %q, want default", got)
+	}
+}
