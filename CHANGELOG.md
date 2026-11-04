@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **`make demo`** — the target now starts the server in demo mode (`--demo` with the seeded database), so the
+  demo banner is shown and writes are rejected.
 - **Fresh clone build** — `go build ./...` compiles on a fresh clone again: the `internal/web/dist`
   placeholder is committed (it was excluded by the generic `dist/` ignore rule).
 - **Settings DB hot-swap** — changing the Engram database path from Settings now swaps the pool on the
@@ -68,6 +70,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Release gating** — the release workflow only publishes after the full CI suite passes for the tag.
 - **Version format** — `make build` reports the version without the leading `v` (e.g. `0.2.0`), matching
   GoReleaser builds.
+- **Pinned templ generator** — `make templ` (and `make build`) runs `templ@v0.3.1001` via `go run`, the same
+  version CI uses for its drift check, instead of whatever `templ` binary is on `PATH`.
 
 ### Removed
 

@@ -46,11 +46,11 @@ go run ./cmd/engram-explorer
 pnpm -F @engram-explorer/frontend dev
 ```
 
-After editing `.templ` files, regenerate Go code:
+After editing `.templ` files, regenerate Go code (uses the templ version pinned in the Makefile, the same one
+CI checks for drift):
 
 ```bash
-templ generate ./internal/ui/...
-templ generate ./internal/doctor/...
+make templ
 ```
 
 Open <http://127.0.0.1:8787>. The `engram serve` daemon is optional — the dashboard reads the SQLite file directly and degrades gracefully when the daemon is offline.
