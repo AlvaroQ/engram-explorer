@@ -54,7 +54,7 @@ type Container struct {
 //
 // The read-write pool (RWDB) is OPTIONAL and powers only the explicit,
 // user-confirmed write routes (observation edits, project reassignment,
-// deletes, project rename, db import/export, and the local cloud unenroll).
+// deletes, project rename, db import/export). Cloud sync is read-only.
 // It is left nil — disabling every write route via guardRWDB — when either:
 //   - ENGRAM_DASH_READONLY is set (the operator opted into a pure read-only
 //     viewer), or

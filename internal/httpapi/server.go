@@ -95,8 +95,8 @@ func mountLegacyRoutes(mux *http.ServeMux, c *Container) {
 	// --- Phase 3 write routes ---
 	writeRoutes(mux, c)
 
-	// --- Phase 4 cloud CLI routes ---
-	cloudRoutes(mux, c)
+	// Cloud is read-only: no enroll/unenroll/sync routes. Sync diagnostics
+	// (syncRoutes) and the GET daemon proxy (daemonRoutes) cover it.
 
 	// --- Doctor diagnostics module (templ+HTMX) ---
 	doctor.Mount(mux, doctor.Deps{
@@ -164,7 +164,6 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 				syncRoutes(mux, c)
 				graphRoutes(mux, c)
 				writeRoutes(mux, c)
-				cloudRoutes(mux, c)
 
 				doctor.Mount(mux, ddeps)
 

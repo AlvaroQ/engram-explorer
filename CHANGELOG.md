@@ -38,6 +38,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   configured `DASHBOARD_HOST`); unsafe methods must be same-origin (`Sec-Fetch-Site` / `Origin`), and
   `GET /api/db/export` refuses cross-site requests and navigations. Blocked requests get `403` with
   `HOST_NOT_ALLOWED` or `CROSS_ORIGIN_REQUEST`. Security headers now also apply to the embedded bundles.
+- **Cloud is read-only** — the dashboard no longer enrolls, unenrolls or syncs projects and never spawns the
+  `engram` CLI. Removed `POST /api/cloud/{enroll,unenroll,sync,sync-all}`, `GET /api/cloud/capabilities`,
+  `POST /doctor/sync/{project}/{enroll,unenroll,sync}`, `POST /projects/{project}/{enroll,unenroll}` and
+  `POST /partials/sync-cloud`, with their buttons. Sync diagnostics and the daemon GET proxy remain; use the
+  `engram` CLI to enroll or sync. This also closes the gap where cloud actions ignored `ENGRAM_DASH_READONLY`.
 
 ### Changed
 

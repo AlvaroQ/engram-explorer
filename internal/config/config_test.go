@@ -49,9 +49,6 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.EngramDbPath != filepath.Join(wantDataDir, "engram.db") {
 		t.Errorf("EngramDbPath: got %q", cfg.EngramDbPath)
 	}
-	if cfg.AuditLogPath != filepath.Join(wantDataDir, "logs", "cloud-mutations.jsonl") {
-		t.Errorf("AuditLogPath: got %q", cfg.AuditLogPath)
-	}
 }
 
 func TestLoad_ExposeDetailsDefaultFalse(t *testing.T) {

@@ -35,16 +35,6 @@
     "primaryNav": "Primary",
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar",
-    "sync": {
-      "cloud": "Sync cloud",
-      "syncing": "Syncing…",
-      "tooltip": "Sync all enrolled projects to engram cloud",
-      "ariaLabel": "Sync all enrolled projects to engram cloud",
-      "noEnrolled": "No enrolled projects to sync.",
-      "ok": "Synced {{ok}}/{{total}} projects.",
-      "partial": "Synced {{ok}}/{{total}} — {{failed}} failed.",
-      "failed": "Sync failed: {{message}}"
-    },
     "status": {
       "checking": "checking…",
       "backendUnreachable": "backend unreachable",
@@ -481,17 +471,7 @@
         "enrolledBadge": "enrolled",
         "notEnrolled": "not enrolled",
         "detail": "Detail"
-      },
-      "actions": {
-        "enroll": "Enroll",
-        "unenroll": "Unenroll",
-        "unenrollUnsupported": "Unenroll unavailable (no writable database adapter configured).",
-        "enrollUnsupported": "engram cloud enroll is not supported by the installed CLI"
-      },
-      "confirmEnroll": "Enroll {{project}}?",
-      "confirmUnenroll": "Unenroll {{project}}?",
-      "confirmEnrollDesc": "This will run `engram cloud enroll {{project}}` as a subprocess. Future observations will sync to the cloud.",
-      "confirmUnenrollDesc": "This removes {{project}} from `sync_enrolled_projects` and clears the orphan `sync_state` row and any unacked pending mutations for the project. Observations already uploaded to the cloud are NOT deleted, and acked mutation history is preserved. To resume syncing, enroll it again."
+      }
     },
     "syncProject": {
       "notFound": "Project not found.",
@@ -570,15 +550,6 @@
       "degraded": "degraded",
       "degradedTitle": "Daemon reported an error: {{error}}",
       "progressTitle": "{{acked}} of {{enq}} acked ({{percent}}%)"
-    },
-    "toast": {
-      "enrollSuccess": "{{project}} enrolled in cloud. The daemon will start syncing within minutes.",
-      "enrollError": "Could not enroll {{project}}: {{error}}",
-      "unenrollSuccess": "{{project}} unenrolled from cloud.",
-      "unenrollError": "Could not unenroll {{project}}: {{error}}",
-      "syncStarted": "Syncing {{project}}…",
-      "syncSuccess": "{{project}} synced.",
-      "syncError": "Sync failed for {{project}}: {{error}}"
     }
   },
   "projectDetail": {
@@ -650,10 +621,6 @@
     "languageDescription": "Choose the interface language",
     "database": "Database",
     "daemon": "Engram daemon",
-    "cloudCli": "Cloud CLI capabilities",
-    "cloudCliDesc": "Detected from `engram cloud --help`",
-    "cloudCliError": "Could not detect CLI capabilities.",
-    "cloudCliTip": "Note: the CLI does not expose `cloud unenroll` (verified up to v1.15.1). The dashboard handles it by writing directly to `sync_enrolled_projects`.",
     "runtime": "Runtime",
     "db": {
       "description": "Export a backup or import (merge) another database.",
@@ -673,8 +640,6 @@
       "path": "Path",
       "status": "Status",
       "url": "URL",
-      "cloudEnroll": "cloud enroll",
-      "cloudUnenroll": "cloud unenroll",
       "dashboard": "Dashboard",
       "node": "Node",
       "uptime": "Uptime"

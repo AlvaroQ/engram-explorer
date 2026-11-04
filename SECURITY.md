@@ -21,13 +21,14 @@ Engram Explorer opens your local `engram.db` with **two** SQLite handles:
 - **Write path (opt-out):** a single-connection read-write pool powers a small
   set of **explicit, user-confirmed** mutations — editing an observation,
   reassigning an item's project, deleting an observation/session/prompt,
-  renaming/merging a project, importing/exporting a database snapshot, and the
-  local cloud `unenroll`. Every write route is guarded; if the writable handle
-  is unavailable the route returns `503`.
+  renaming/merging a project, and importing/exporting a database snapshot.
+  Every write route is guarded; if the writable handle is unavailable the
+  route returns `503`.
 
 > **Read-only mode.** Set `ENGRAM_DASH_READONLY=true` to run as a pure viewer:
 > the read-write pool is never opened and every mutating route returns `503`.
 > Use this when pointing the dashboard at a database you must not modify.
+> Cloud sync is read-only in every mode, so no cloud operation bypasses it.
 
 ### Concurrency with the daemon
 
@@ -51,6 +52,5 @@ safety backup next to the DB before merging.
   `GET /api/db/export` refuses cross-site requests and navigations. Non-browser clients that send neither
   header (curl, scripts) are unaffected. Blocked requests get `403` (`HOST_NOT_ALLOWED` /
   `CROSS_ORIGIN_REQUEST`).
-- Cloud `enroll` / `sync` are delegated to the official `engram` CLI as a subprocess (args passed as a slice, project names whitelisted) — the dashboard never writes to cloud storage directly. The one local SQL exception is `unenroll`, which removes the local enrollment/state rows for that project.
-- Cloud mutation endpoints are rate-limited and require explicit user confirmation.
+- Cloud sync is **read-only**: the dashboard shows sync diagnostics and proxies the daemon's GET telemetry endpoints (`/health`, `/sync/status`, `/stats`). It never enrolls, unenrolls or syncs a project and never spawns the `engram` CLI — do those with the `engram` CLI directly.
 - In production (`ENGRAM_DASH_ENV` unset) internal error details are never returned to the client.

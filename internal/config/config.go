@@ -22,7 +22,6 @@ type Config struct {
 	// Data paths
 	EngramDataDir string
 	EngramDbPath  string
-	AuditLogPath  string
 
 	// ConfigHome is the directory where explorer-settings.json (path overrides)
 	// is stored. Defaults to the same directory as EngramDataDir (~/.engram).
@@ -164,7 +163,6 @@ func Load() (Config, error) {
 		Port:              envInt("DASHBOARD_PORT", 8787),
 		EngramDataDir:     dataDir,
 		EngramDbPath:      dbPath,
-		AuditLogPath:      filepath.Join(dataDir, "logs", "cloud-mutations.jsonl"),
 		ConfigHome:        configHome,
 		DaemonBaseURL:     envString("ENGRAM_DAEMON_URL", fmt.Sprintf("http://127.0.0.1:%d", engramPort)),
 		DaemonTimeoutMs:   envInt("ENGRAM_DAEMON_TIMEOUT_MS", 1500),
