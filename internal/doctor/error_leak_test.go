@@ -121,7 +121,8 @@ func TestErrorLeak_SyncDetailHidesLastError(t *testing.T) {
 	seedEnrolledProject(t, db, proj)
 	secret := "dial tcp 10.0.0.5:443: Authorization: Bearer sk-live-SECRET-TOKEN"
 	seedSyncState(t, db, "cloud:"+proj, "failed", &secret)
-	if _, err := db.Exec(`UPDATE sync_state SET reason_code = 'AUTH_FAILED' WHERE target_key = ?`, "cloud:"+proj); err != nil {
+	reasonSecret := "token rejected for user@corp.example at /home/alice/.engram"
+	if _, err := db.Exec(`UPDATE sync_state SET reason_code = 'AUTH_FAILED', reason_message = ? WHERE target_key = ?`, reasonSecret, "cloud:"+proj); err != nil {
 		t.Fatalf("set reason_code: %v", err)
 	}
 	mux := http.NewServeMux()
@@ -137,9 +138,9 @@ func TestErrorLeak_SyncDetailHidesLastError(t *testing.T) {
 				t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
 			}
 			body := w.Body.String()
-			for _, leak := range []string{"sk-live-SECRET-TOKEN", "10.0.0.5", "dial tcp"} {
+			for _, leak := range []string{"sk-live-SECRET-TOKEN", "10.0.0.5", "dial tcp", "user@corp.example", "/home/alice"} {
 				if strings.Contains(body, leak) {
-					t.Errorf("sync detail leaks last_error text %q", leak)
+					t.Errorf("sync detail leaks daemon error text %q", leak)
 				}
 			}
 			want := map[string]string{

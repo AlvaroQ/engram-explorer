@@ -73,7 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **No raw module or sync errors in HTML** — the Settings module row error is unexported and only built from
   the provider error through the safe error mapper, so raw error text cannot reach the page by construction,
   and Maintenance → Cloud project detail replaces the daemon's `last_error` text with a generic localized
-  message (the reason code is still shown).
+  message and no longer shows its `reason_message` (the reason code is still shown).
 - **Stricter Content Security Policy** — the policy is now `script-src 'self'; style-src 'self'` with no
   `'unsafe-inline'`: inline scripts, event-handler attributes and `hx-on` moved to a static `ui-actions.js`,
   htmx attribute evaluation is disabled (`allowEval: false`), templates carry no `style` attributes or

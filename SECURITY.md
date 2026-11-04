@@ -56,7 +56,8 @@ safety backup next to the DB before merging.
 - Cloud sync is **read-only**: the dashboard shows sync diagnostics and proxies the daemon's GET telemetry endpoints (`/health`, `/sync/status`, `/stats`). It never enrolls, unenrolls or syncs a project and never spawns the `engram` CLI — do those with the `engram` CLI directly (`engram cloud enroll <project>`, `engram cloud unenroll <project>`).
 - In production (`ENGRAM_DASH_ENV` unset) internal error details are never returned to the client. HTML views
   never show raw provider or daemon error text: Settings module errors go through the same safe error mapper,
-  and the sync daemon's `last_error` is replaced by a generic localized message plus its reason code.
+  and the sync daemon's `last_error` / `reason_message` texts are replaced by a generic localized message plus
+  the reason code.
 
 ## Content Security Policy
 
