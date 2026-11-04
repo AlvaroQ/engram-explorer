@@ -7,7 +7,9 @@ import (
 )
 
 // moduleRouter is the providers.Router handed to Provider.Routes: it gates
-// the provider's own routes on that provider being Enabled.
+// the provider's own routes on that provider being Enabled, and serves them
+// with the UI shell data in the request context (see Container.withShell) so
+// provider pages render the same sidebar as the host pages.
 type moduleRouter struct {
 	capabilityMux
 	live func(*http.Request) providers.Instance
@@ -30,6 +32,16 @@ func newModuleRouter(mux *http.ServeMux, c *Container, id string) moduleRouter {
 		},
 		live: live,
 	}
+}
+
+// Handle registers h, gated on the provider and served with the shell context.
+func (m moduleRouter) Handle(pattern string, h http.Handler) {
+	m.capabilityMux.Handle(pattern, m.c.withShell(h))
+}
+
+// HandleFunc is Handle for a handler function.
+func (m moduleRouter) HandleFunc(pattern string, h func(http.ResponseWriter, *http.Request)) {
+	m.Handle(pattern, http.HandlerFunc(h))
 }
 
 // Live returns the instance pinned for r (see withLeases).

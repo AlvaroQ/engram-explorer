@@ -37,6 +37,24 @@ func (c *Container) uiShell() ui.Deps {
 	return d
 }
 
+// withShell serves h with the uiShell data (sidebar NavGroups and profiles)
+// in the request context. ui.Render builds on the request context, so a page
+// a provider renders with it (the doctor pages) gets the same registry-driven
+// sidebar and account switcher as the pages the ui package renders itself.
+func (c *Container) withShell(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		d := c.uiShell()
+		ctx := r.Context()
+		if d.NavGroups != nil {
+			ctx = ui.WithNavGroups(ctx, d.NavGroups())
+		}
+		if d.Profiles != nil {
+			ctx = ui.WithProfiles(ctx, d.Profiles())
+		}
+		h.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 // gate serves h only while available reports true for the request.
 func (c *Container) gate(available func(*http.Request) bool, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
