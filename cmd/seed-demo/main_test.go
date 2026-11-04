@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -115,33 +116,40 @@ func TestRun_WritesSampleClaudeSessions(t *testing.T) {
 }
 
 // TestRun_SampleSessionsAreIdempotent: re-running with --force rewrites the
-// same transcripts byte for byte (same files, same mtimes); without --force
-// the seeder refuses and leaves them untouched.
+// same Claude transcripts and Codex rollouts byte for byte (same files, same
+// mtimes); without --force the seeder refuses and leaves them untouched.
 func TestRun_SampleSessionsAreIdempotent(t *testing.T) {
 	pinClock(t)
 	out := filepath.Join(t.TempDir(), "demo")
 	if err := run([]string{"--out", out}, io.Discard); err != nil {
 		t.Fatalf("first run: %v", err)
 	}
-	claude := filepath.Join(out, "claude")
-	first := snapshotTree(t, claude)
-	if len(first) == 0 {
-		t.Fatal("no transcripts written")
+	for _, sub := range []string{"claude", "codex"} {
+		if len(snapshotTree(t, filepath.Join(out, sub))) == 0 {
+			t.Fatalf("no sample sessions written under %s", sub)
+		}
 	}
+	snap := func() map[string]string {
+		return map[string]string{
+			"claude": fmt.Sprint(snapshotTree(t, filepath.Join(out, "claude"))),
+			"codex":  fmt.Sprint(snapshotTree(t, filepath.Join(out, "codex"))),
+		}
+	}
+	first := snap()
 
 	if err := run([]string{"--out", out, "--force"}, io.Discard); err != nil {
 		t.Fatalf("forced run: %v", err)
 	}
-	if again := snapshotTree(t, claude); !reflect.DeepEqual(first, again) {
-		t.Errorf("forced re-run changed the transcripts")
+	if again := snap(); !reflect.DeepEqual(first, again) {
+		t.Errorf("forced re-run changed the sample sessions")
 	}
 
 	err := run([]string{"--out", out}, io.Discard)
 	if err == nil || !strings.Contains(err.Error(), "already exists") {
 		t.Fatalf("run without --force = %v, want an 'already exists' error", err)
 	}
-	if again := snapshotTree(t, claude); !reflect.DeepEqual(first, again) {
-		t.Errorf("refused run changed the transcripts")
+	if again := snap(); !reflect.DeepEqual(first, again) {
+		t.Errorf("refused run changed the sample sessions")
 	}
 }
 

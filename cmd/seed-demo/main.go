@@ -1,7 +1,8 @@
 // Command seed-demo creates a self-contained demo dataset so newcomers can
-// try the engram-explorer dashboard without having Engram or Claude Code
-// installed: an Engram database (<out>/engram.db) and sample Claude Code
-// transcripts (<out>/claude/<project-folder>/<uuid>.jsonl).
+// try the engram-explorer dashboard without having Engram, Claude Code or
+// Codex installed: an Engram database (<out>/engram.db), sample Claude Code
+// transcripts (<out>/claude/<project-folder>/<uuid>.jsonl) and sample Codex
+// CLI rollouts (<out>/codex/sessions/YYYY/MM/DD/rollout-<ts>-<uuid>.jsonl).
 //
 // Usage:
 //
@@ -126,10 +127,19 @@ func run(args []string, stdout io.Writer) error {
 		return fmt.Errorf("write sample Claude Code sessions: %w", err)
 	}
 	fmt.Fprintf(stdout, "  claude sessions:  %d (in %s)\n", nCC, claudeDir)
+
+	codexDir := filepath.Join(absOut, "codex")
+	nCX, err := writeCodexSessions(codexDir)
+	if err != nil {
+		return fmt.Errorf("write sample Codex sessions: %w", err)
+	}
+	fmt.Fprintf(stdout, "  codex sessions:   %d (in %s)\n", nCX, codexDir)
 	fmt.Fprintln(stdout)
 	fmt.Fprintln(stdout, "Run the dashboard read-only against the demo dataset (or just `make demo`):")
-	fmt.Fprintf(stdout, "  Linux/macOS: ENGRAM_DATA_DIR=%s CLAUDE_PROJECTS_DIR=%s ENGRAM_DASH_READONLY=true ./engram-explorer\n", *outDir, filepath.Join(*outDir, "claude"))
-	fmt.Fprintf(stdout, "  Windows/pwsh: $env:ENGRAM_DATA_DIR=\"%s\"; $env:CLAUDE_PROJECTS_DIR=\"%s\"; $env:ENGRAM_DASH_READONLY=\"true\"; .\\engram-explorer.exe\n", absOut, claudeDir)
+	fmt.Fprintf(stdout, "  Linux/macOS: ENGRAM_DATA_DIR=%s CLAUDE_PROJECTS_DIR=%s CODEX_HOME=%s ENGRAM_DASH_READONLY=true ./engram-explorer\n",
+		*outDir, filepath.Join(*outDir, "claude"), filepath.Join(*outDir, "codex"))
+	fmt.Fprintf(stdout, "  Windows/pwsh: $env:ENGRAM_DATA_DIR=\"%s\"; $env:CLAUDE_PROJECTS_DIR=\"%s\"; $env:CODEX_HOME=\"%s\"; $env:ENGRAM_DASH_READONLY=\"true\"; .\\engram-explorer.exe\n",
+		absOut, claudeDir, codexDir)
 	fmt.Fprintln(stdout)
 	fmt.Fprintln(stdout, "Then open http://127.0.0.1:8787 in your browser.")
 	return nil
