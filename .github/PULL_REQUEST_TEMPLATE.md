@@ -20,6 +20,8 @@ Closes #
 ## Checklist
 
 - [ ] `go build ./...`, `go vet ./...`, and `go test ./...` pass
+- [ ] `pnpm typecheck`, `pnpm format:check`, and `pnpm test` pass
+- [ ] Regenerated output is committed when touching `.templ` files (`templ generate`) or styles (`pnpm -F @engram-explorer/frontend build:ui-css`) — CI fails on drift
 - [ ] [Conventional Commit](https://www.conventionalcommits.org/) messages (`feat:`, `fix:`, `docs:`, …)
 - [ ] One logical change per PR
 - [ ] Updated docs / README if behavior changed

@@ -2,6 +2,8 @@
 
 Thanks for your interest in improving **engram-explorer** — a local-first dashboard for the [Engram](https://github.com/Gentleman-Programming/engram) memory database.
 
+By participating in this project you agree to abide by its [Code of Conduct](./CODE_OF_CONDUCT.md).
+
 ## Prerequisites
 
 - **Go 1.25+** (the backend + single binary; matches the `go` directive in `go.mod`)
@@ -56,6 +58,7 @@ Open <http://127.0.0.1:8787>. The `engram serve` daemon is optional — the dash
 ## Before opening a PR
 
 - `go build ./...`, `go vet ./...`, and `go test ./...` must all pass.
+- `pnpm typecheck`, `pnpm format:check`, and `pnpm test` must all pass (CI runs them too).
 - Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`).
 - Keep **one logical change per PR**.
 - **Do not** add AI attribution or `Co-Authored-By` trailers to commits.

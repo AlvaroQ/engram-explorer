@@ -73,9 +73,11 @@ engram serve   # creates ~/.engram/engram.db on first run
 No Engram, no real data needed — seed a realistic demo database and explore every view. Requires [building from source](#-build-from-source):
 
 ```bash
-go run ./cmd/seed-demo                       # generates ./demo/engram.db
-ENGRAM_DATA_DIR=./demo ./engram-explorer     # run against the demo data
+go run ./cmd/seed-demo        # generates ./demo/engram.db
+./engram-explorer --demo      # run against the demo data (write actions disabled)
 ```
+
+See [Command-line flags](#command-line-flags) for `--demo-db=<path>` and the matching env vars.
 
 ---
 
@@ -143,9 +145,9 @@ The official plugin ecosystem talks to the daemon over HTTP at `127.0.0.1:7437`.
 git clone https://github.com/AlvaroQ/engram-explorer.git
 cd engram-explorer
 
-make build                                # frontend → embed → go build
-go run ./cmd/seed-demo                     # seed a realistic demo DB
-ENGRAM_DATA_DIR=./demo ./engram-explorer   # run against demo data
+make build                   # frontend → embed → go build
+go run ./cmd/seed-demo       # seed a realistic demo DB in ./demo/engram.db
+./engram-explorer --demo     # run against demo data in demo mode
 # open http://127.0.0.1:8787
 ```
 
@@ -245,6 +247,16 @@ If a profile references a path that no longer exists, that provider is marked **
 
 ## ⚙️ Configuration
 
+### Command-line flags
+
+| Flag                         | Purpose                                                                                                                                                                                                                                                      |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--demo`                     | Run against the demo database in **demo mode**: a demo banner is shown and write actions are disabled (API write endpoints return `403 DEMO_MODE`). Same as `ENGRAM_DEMO=1`.                                                                                 |
+| `--demo-db=<path>`           | Demo database to use with `--demo`. Same as `ENGRAM_DEMO_DB`. Without it, `demo/engram.db` is looked up next to the executable, then in the working directory; if none exists the binary exits with `demo database not found … run: go run ./cmd/seed-demo`. |
+| `--version`, `-v`, `version` | Print `engram-explorer <version>` and exit.                                                                                                                                                                                                                  |
+
+The demo database is not shipped with release binaries — generate it with `go run ./cmd/seed-demo` (or `make seed-demo`).
+
 ### Environment variables
 
 | Env var                    | Default                 | Purpose                                                                            |
@@ -259,6 +271,8 @@ If a profile references a path that no longer exists, that provider is marked **
 | `LOG_LEVEL`                | `info` / `debug` in dev | Logging verbosity: `debug`, `info`, `warn`, `error`                                |
 | `ENGRAM_DASH_ENV`          | `production`            | Set to `development` to expose internal error details in API responses             |
 | `ENGRAM_DASH_READONLY`     | `false`                 | Set to `true` to disable all mutating routes (returns `503`)                       |
+| `ENGRAM_DEMO`              | unset                   | `1`, `true`, `yes`, or `on` enables demo mode (same as `--demo`)                   |
+| `ENGRAM_DEMO_DB`           | `demo/engram.db`        | Demo database path used in demo mode (same as `--demo-db=<path>`)                  |
 
 ### config.json (persistent settings)
 
@@ -293,7 +307,7 @@ For a strict viewer with **no** write capability, start with `ENGRAM_DASH_READON
 
 The dashboard shows the **onboarding screen** instead of crashing. From there you can activate Engram or Claude Code Sessions. If you have Engram but it isn't auto-detected: go to **Settings → Modules** and enter the path to `engram.db`, or set `ENGRAM_DATA_DIR=/path/to/dir` before starting.
 
-To get a real DB: `brew install gentleman-programming/tap/engram && engram serve`. To try demo data: `go run ./cmd/seed-demo`, then `ENGRAM_DATA_DIR=./demo ./engram-explorer`.
+To get a real DB: `brew install gentleman-programming/tap/engram && engram serve`. To try demo data: `go run ./cmd/seed-demo`, then `./engram-explorer --demo`.
 
 </details>
 
@@ -384,6 +398,12 @@ engram-explorer/
 ```
 
 </details>
+
+---
+
+## 🤝 Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md). This project follows the [Contributor Covenant Code of Conduct](./CODE_OF_CONDUCT.md).
 
 ---
 
