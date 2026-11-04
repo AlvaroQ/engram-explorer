@@ -48,6 +48,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Write route rate limits** — every write route is rate limited per client IP and route pattern (no longer
   by raw path alone, and `X-Forwarded-For` is ignored): database import 5/min, export 10/min, other write
   routes 120/min. Expired buckets are pruned.
+- **Settings path validation** — changing the Engram database path or the Claude projects directory in
+  Settings now validates the target first (an SQLite file with the Engram `observations` and `sessions`
+  tables; a directory with project folders, the same checks the providers apply). On rejection the active
+  database/directory and saved settings stay unchanged, and the message only echoes the typed path.
 
 ### Changed
 

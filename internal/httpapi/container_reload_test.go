@@ -88,30 +88,12 @@ func TestReloadEngramDB_RegistryPath(t *testing.T) {
 	}
 }
 
-// makeReloadDB seeds a sqlite file whose marker table holds v.
-func makeReloadDB(t *testing.T, v string) string {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "engram.db")
-	db, err := sql.Open("sqlite", "file:"+path)
-	if err != nil {
-		t.Fatalf("open: %v", err)
-	}
-	if _, err := db.Exec("CREATE TABLE marker (v TEXT)"); err != nil {
-		t.Fatalf("create: %v", err)
-	}
-	if _, err := db.Exec("INSERT INTO marker VALUES (?)", v); err != nil {
-		t.Fatalf("insert: %v", err)
-	}
-	db.Close()
-	return path
-}
-
 // TestReloadEngramDB_HotSwap verifies that repointing the database swaps the
 // live read pool, persists the override, and that an invalid path is rejected
 // without disturbing the current connection.
 func TestReloadEngramDB_HotSwap(t *testing.T) {
-	pathA := makeReloadDB(t, "a")
-	pathB := makeReloadDB(t, "b")
+	pathA := makeEngramDB(t, "a")
+	pathB := makeEngramDB(t, "b")
 
 	cfg := config.Config{
 		EngramDbPath:  pathA,
