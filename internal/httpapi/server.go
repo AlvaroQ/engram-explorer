@@ -17,6 +17,7 @@ import (
 	engramprovider "github.com/AlvaroQ/engram-explorer/internal/providers/engram"
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 // startTime is recorded once so uptime_s can be computed in the health handler.
@@ -566,7 +567,7 @@ func buildSwitchProfileFn(reg *providers.Registry, store *config.ProfileStore, a
 		}
 		nextProfile, ok := store.Profiles[name]
 		if !ok {
-			return fmt.Errorf("profile %q not found", name)
+			return usererr.New(fmt.Sprintf("profile %q not found", name))
 		}
 
 		// Attempt hot-swap via registry.SwitchProfile (open-before-close, abort-on-error).
@@ -593,7 +594,7 @@ func buildCreateProfileFn(store *config.ProfileStore, configHome string) func(na
 			return fmt.Errorf("profile store not available")
 		}
 		if _, exists := store.Profiles[name]; exists {
-			return fmt.Errorf("profile already exists: %q", name)
+			return usererr.New(fmt.Sprintf("profile already exists: %q", name))
 		}
 		if store.Profiles == nil {
 			store.Profiles = make(map[string]config.Profile)
@@ -613,13 +614,13 @@ func buildDeleteProfileFn(store *config.ProfileStore, activeProfileName *string,
 			return fmt.Errorf("profile store not available")
 		}
 		if activeProfileName != nil && *activeProfileName == name {
-			return fmt.Errorf("cannot delete active profile %q; switch to another profile first", name)
+			return usererr.New(fmt.Sprintf("cannot delete active profile %q; switch to another profile first", name))
 		}
 		if len(store.Profiles) <= 1 {
-			return fmt.Errorf("cannot delete the last remaining profile")
+			return usererr.New("cannot delete the last remaining profile")
 		}
 		if _, exists := store.Profiles[name]; !exists {
-			return fmt.Errorf("profile %q not found", name)
+			return usererr.New(fmt.Sprintf("profile %q not found", name))
 		}
 		delete(store.Profiles, name)
 		return config.SaveProfileStore(configHome, store)

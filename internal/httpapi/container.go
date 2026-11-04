@@ -13,6 +13,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/providers/ccsessions"
 	engramprovider "github.com/AlvaroQ/engram-explorer/internal/providers/engram"
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 // Container holds all shared dependencies for the HTTP server.
@@ -117,7 +118,7 @@ func (c *Container) ReloadEngramDB(newPath string) error {
 	newRo, err := sqlite.OpenReadOnly(newPath)
 	if err != nil {
 		c.Logger.Warn("cannot open engram database read-only", "path", newPath, "err", err)
-		return fmt.Errorf("cannot open database: %s", newPath)
+		return usererr.New(fmt.Sprintf("cannot open database: %s", newPath))
 	}
 
 	var newRw *sql.DB
@@ -126,7 +127,7 @@ func (c *Container) ReloadEngramDB(newPath string) error {
 		if err != nil {
 			newRo.Close()
 			c.Logger.Warn("cannot open engram database read-write", "path", newPath, "err", err)
-			return fmt.Errorf("database is not writable: %s", newPath)
+			return usererr.New(fmt.Sprintf("database is not writable: %s", newPath))
 		}
 	}
 

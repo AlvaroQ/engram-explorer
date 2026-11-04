@@ -24,6 +24,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 // ---------------------------------------------------------------------------
@@ -52,43 +53,43 @@ const sqliteMagic = "SQLite format 3\x00"
 // read-only, and passes SchemaValid. It is the single check shared by the
 // provider's Validate (Settings Modules path) and the Settings DB switcher.
 //
-// Error messages are user-facing: they name only the path the caller supplied
-// and never wrap the underlying OS or SQLite error text.
+// Error messages are user-facing (usererr): they name only the path the caller
+// supplied and never wrap the underlying OS or SQLite error text.
 func ValidateDBFile(path string) error {
 	if path == "" {
-		return errors.New("database path is required")
+		return usererr.New("database path is required")
 	}
 	info, err := os.Stat(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("database file not found: %s", path)
+		return usererr.New(fmt.Sprintf("database file not found: %s", path))
 	}
 	if err != nil {
-		return fmt.Errorf("cannot access database file: %s", path)
+		return usererr.New(fmt.Sprintf("cannot access database file: %s", path))
 	}
 	if !info.Mode().IsRegular() {
-		return fmt.Errorf("not a regular file: %s", path)
+		return usererr.New(fmt.Sprintf("not a regular file: %s", path))
 	}
 
 	f, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("cannot read database file: %s", path)
+		return usererr.New(fmt.Sprintf("cannot read database file: %s", path))
 	}
 	header := make([]byte, len(sqliteMagic))
 	_, err = io.ReadFull(f, header)
 	f.Close()
 	if err != nil || string(header) != sqliteMagic {
-		return fmt.Errorf("not an SQLite database: %s", path)
+		return usererr.New(fmt.Sprintf("not an SQLite database: %s", path))
 	}
 
 	// Same busy_timeout-aware read-only DSN as Detect, resilient against WAL
 	// checkpoint pressure from the Engram daemon.
 	db, err := sql.Open("sqlite", checkRODSN(path))
 	if err != nil {
-		return fmt.Errorf("cannot open database: %s", path)
+		return usererr.New(fmt.Sprintf("cannot open database: %s", path))
 	}
 	defer db.Close()
 	if !SchemaValid(db) {
-		return fmt.Errorf("not an Engram database (missing observations or sessions tables): %s", path)
+		return usererr.New(fmt.Sprintf("not an Engram database (missing observations or sessions tables): %s", path))
 	}
 	return nil
 }

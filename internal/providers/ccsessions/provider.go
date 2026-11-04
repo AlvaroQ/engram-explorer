@@ -19,6 +19,7 @@ import (
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 // ---------------------------------------------------------------------------
@@ -160,27 +161,27 @@ func (p *ccProvider) Validate(ctx context.Context, cfg providers.ProviderConfig)
 // dir switcher: the path must be an existing directory holding at least one
 // project subfolder.
 //
-// Error messages are user-facing: they name only the path the caller supplied
-// and never wrap the underlying OS error text.
+// Error messages are user-facing (usererr): they name only the path the caller
+// supplied and never wrap the underlying OS error text.
 func ValidateProjectsDir(path string) error {
 	if path == "" {
-		return errors.New("projects directory path is required")
+		return usererr.New("projects directory path is required")
 	}
 
 	info, err := os.Stat(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("projects directory not found: %s", path)
+		return usererr.New(fmt.Sprintf("projects directory not found: %s", path))
 	}
 	if err != nil {
-		return fmt.Errorf("cannot access projects directory: %s", path)
+		return usererr.New(fmt.Sprintf("cannot access projects directory: %s", path))
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("not a directory: %s", path)
+		return usererr.New(fmt.Sprintf("not a directory: %s", path))
 	}
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		return fmt.Errorf("cannot read projects directory: %s", path)
+		return usererr.New(fmt.Sprintf("cannot read projects directory: %s", path))
 	}
 	for _, e := range entries {
 		if e.IsDir() {
@@ -188,7 +189,7 @@ func ValidateProjectsDir(path string) error {
 		}
 	}
 
-	return fmt.Errorf("no project folders found in %s — directory appears empty", path)
+	return usererr.New(fmt.Sprintf("no project folders found in %s — directory appears empty", path))
 }
 
 // ---------------------------------------------------------------------------

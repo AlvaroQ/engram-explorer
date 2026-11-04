@@ -14,6 +14,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
 	"github.com/AlvaroQ/engram-explorer/internal/providers/engram"
+	"github.com/AlvaroQ/engram-explorer/internal/usererr"
 )
 
 // ---------------------------------------------------------------------------
@@ -517,6 +518,12 @@ func TestValidateDBFile_RejectsNonEngramFiles(t *testing.T) {
 			verr := p.Validate(context.Background(), providers.ProviderConfig{Path: tc.path})
 			if verr == nil || verr.Error() != "engram: "+err.Error() {
 				t.Errorf("Validate = %v, want %q", verr, "engram: "+err.Error())
+			}
+			// The message is marked user-safe so HTML handlers show it verbatim.
+			for _, e := range []error{err, verr} {
+				if msg, ok := usererr.Message(e); !ok || msg != err.Error() {
+					t.Errorf("usererr.Message(%v) = %q, %v; want %q, true", e, msg, ok, err.Error())
+				}
 			}
 		})
 	}
