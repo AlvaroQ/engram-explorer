@@ -75,6 +75,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   by raw path alone, and `X-Forwarded-For` is ignored): database import 5/min, export 10/min, other write
   routes 120/min. Expired buckets are pruned. Rate-limited requests answer `429` with error code `RATE_LIMITED`
   (was `BAD_INPUT`) and a `Retry-After` header.
+- **UI and doctor rate limit** — form posts and doctor actions (`POST`/`PUT`/`PATCH`/`DELETE` outside `/api/`) share a
+  limiter of 120 requests per minute per client, method and route pattern (path parameters share one budget). API
+  write routes keep their own limits and are not limited twice.
 - **Settings path validation** — changing the Engram database path or the Claude projects directory in
   Settings now validates the target first (an SQLite file with the Engram `observations` and `sessions`
   tables; a directory with project folders, the same checks the providers apply). On rejection the active

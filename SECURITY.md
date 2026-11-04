@@ -53,6 +53,11 @@ safety backup next to the DB before merging.
   header (curl, scripts) are unaffected. Blocked requests get `403` (`HOST_NOT_ALLOWED` /
   `CROSS_ORIGIN_REQUEST`). The Vite dev server origins (`http://localhost:5173`, `http://127.0.0.1:5173`) are
   trusted for CORS, CSRF and the export route only when `ENGRAM_DASH_ENV=development`.
+- Rate limits: JSON API write routes allow 120 requests/min (export 10/min, import 5/min) and unsafe requests
+  outside `/api/` (UI form posts, doctor actions) share one 120/min limiter, each per client IP, method and routed
+  pattern (path parameters share a bucket; `X-Forwarded-For` is ignored). Limited requests get `429` with
+  `Retry-After` and error code `RATE_LIMITED`; htmx does not swap 4xx responses, so a limited UI action leaves the
+  page unchanged.
 - Cloud sync is **read-only**: the dashboard shows sync diagnostics and proxies the daemon's GET telemetry endpoints (`/health`, `/sync/status`, `/stats`). It never enrolls, unenrolls or syncs a project and never spawns the `engram` CLI — do those with the `engram` CLI directly (`engram cloud enroll <project>`, `engram cloud unenroll <project>`).
 - Demo mode uses only an in-memory profile: it serves the bundled demo database and never reads or writes
   `config.json`. Claude Code sessions still come from `CLAUDE_PROJECTS_DIR` or `~/.claude/projects`.

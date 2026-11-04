@@ -12,9 +12,16 @@ import (
 )
 
 // NewHandler returns the complete production handler: the request guard in
-// front of the embedded island bundles and the API/UI mux.
+// front of the embedded island bundles and the API/UI router. The router gets
+// the same middleware stack as NewServeMux, plus the shared limiter for unsafe
+// UI/doctor requests (withUnsafeUIRateLimit), which needs the bare router to
+// resolve the routed pattern before dispatch.
 func NewHandler(c *Container) http.Handler {
-	return Guard(web.Handler(NewServeMux(c)), c.Config.Host, trustedDevOrigins(c.Config.Env), c.Logger)
+	var handler = withUnsafeUIRateLimit(newRouter(c), newUIRateLimiter(), c.Config.ExposeDetails)
+	handler = corsMiddleware(handler, trustedDevOrigins(c.Config.Env))
+	handler = requestLogger(c.Logger, handler)
+	handler = secureHeaders(handler)
+	return Guard(web.Handler(handler), c.Config.Host, trustedDevOrigins(c.Config.Env), c.Logger)
 }
 
 // sameOriginOnlyGETs are safe-method routes that must not be triggered by
