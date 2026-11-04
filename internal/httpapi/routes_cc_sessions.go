@@ -7,7 +7,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-func ccSessionsRoutes(mux *http.ServeMux, c *Container) {
+func ccSessionsRoutes(mux routeMux, c *Container) {
 	cache := &ccMultiStatsCache{}
 	mux.HandleFunc("GET /api/cc-sessions/stats", handleCCSessionsStats(c, cache))
 }

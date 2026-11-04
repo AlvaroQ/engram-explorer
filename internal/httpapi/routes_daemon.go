@@ -6,7 +6,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/daemon"
 )
 
-func daemonRoutes(mux *http.ServeMux, c *Container) {
+func daemonRoutes(mux routeMux, c *Container) {
 	dc := daemon.New(c.Config.DaemonBaseURL, c.Config.DaemonTimeoutMs)
 	mux.HandleFunc("GET /api/daemon/health", handleDaemonProxy(c, dc, "/health"))
 	mux.HandleFunc("GET /api/daemon/sync-status", handleDaemonProxy(c, dc, "/sync/status"))

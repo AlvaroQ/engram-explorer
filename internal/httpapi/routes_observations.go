@@ -13,7 +13,7 @@ import (
 // registered BEFORE /api/observations/{id} so that the static paths take
 // precedence. Go 1.22+ ServeMux matches most-specific path first, but explicit
 // order avoids any ambiguity.
-func observationsRoutes(mux *http.ServeMux, c *Container) {
+func observationsRoutes(mux routeMux, c *Container) {
 	mux.HandleFunc("GET /api/observations", handleObservationsList(c))
 	mux.HandleFunc("GET /api/observations/types", handleObservationsTypes(c))
 	mux.HandleFunc("GET /api/observations/search", handleObservationsSearch(c))

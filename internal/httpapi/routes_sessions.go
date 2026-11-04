@@ -6,7 +6,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-func sessionsRoutes(mux *http.ServeMux, c *Container) {
+func sessionsRoutes(mux routeMux, c *Container) {
 	mux.HandleFunc("GET /api/sessions", handleSessionsList(c))
 	mux.HandleFunc("GET /api/sessions/{id}", handleSessionsGetDetail(c))
 	mux.HandleFunc("GET /api/sessions/{id}/events", handleSessionsGetEvents(c))

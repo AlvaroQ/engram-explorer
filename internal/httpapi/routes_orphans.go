@@ -6,7 +6,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-func orphansRoutes(mux *http.ServeMux, c *Container) {
+func orphansRoutes(mux routeMux, c *Container) {
 	mux.HandleFunc("GET /api/orphans", handleOrphansList(c))
 }
 

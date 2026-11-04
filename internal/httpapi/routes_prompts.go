@@ -6,7 +6,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-func promptsRoutes(mux *http.ServeMux, c *Container) {
+func promptsRoutes(mux routeMux, c *Container) {
 	mux.HandleFunc("GET /api/prompts", handlePromptsList(c))
 	mux.HandleFunc("GET /api/prompts/search", handlePromptsSearch(c))
 }

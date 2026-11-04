@@ -6,7 +6,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-func graphRoutes(mux *http.ServeMux, c *Container) {
+func graphRoutes(mux routeMux, c *Container) {
 	mux.HandleFunc("GET /api/graph", handleGraphBuild(c))
 }
 

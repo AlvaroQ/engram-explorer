@@ -7,7 +7,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-func syncRoutes(mux *http.ServeMux, c *Container) {
+func syncRoutes(mux routeMux, c *Container) {
 	mux.HandleFunc("GET /api/sync/projects", handleSyncProjectsList(c))
 	// /api/sync/issues must be registered before /api/sync/{project} to avoid
 	// "issues" being captured as a project name.

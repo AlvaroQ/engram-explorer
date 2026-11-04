@@ -6,7 +6,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-func overviewRoutes(mux *http.ServeMux, c *Container) {
+func overviewRoutes(mux routeMux, c *Container) {
 	mux.HandleFunc("GET /api/overview", handleOverview(c))
 	mux.HandleFunc("GET /api/activity", handleActivity(c))
 }

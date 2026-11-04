@@ -23,7 +23,7 @@ const (
 // writeRoutes registers all write (mutating) routes on mux.
 // Every handler guards demo mode and c.RWDB != nil before proceeding, and is
 // wrapped in a per-client, per-route fixed-window rate limiter.
-func writeRoutes(mux *http.ServeMux, c *Container) {
+func writeRoutes(mux routeMux, c *Container) {
 	writeRL := newRateLimiter(time.Minute, writeRateLimit)
 	exportRL := newRateLimiter(time.Minute, exportRateLimit)
 	importRL := newRateLimiter(time.Minute, importRateLimit)
