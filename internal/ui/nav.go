@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
 )
@@ -35,8 +36,8 @@ type navPrefsKeyType struct{}
 
 var navPrefsContextKey = navPrefsKeyType{}
 
-// navPrefs holds per-provider show/hide prefs. True means visible (default).
-// Keys are provider IDs (e.g. "engram", "cc-sessions").
+// navPrefs holds per-group show/hide prefs. True means visible (default).
+// Keys are NavGroup IDs.
 type navPrefs struct {
 	shown map[string]bool
 }
@@ -54,17 +55,20 @@ func (p navPrefs) isShown(providerID string) bool {
 	return v
 }
 
-// navPrefsForRequest reads per-provider section-visibility cookies.
-// Cookie name format: nav_{providerID}; value "0" means hidden.
-// Supported provider IDs: "engram", "cc-sessions" (and any future providers).
+// navPrefsForRequest reads the per-group section-visibility cookies:
+// nav_{groupID}; value "0" means hidden, anything else (or none) shown.
 func navPrefsForRequest(r *http.Request) navPrefs {
-	return navPrefs{
-		shown: map[string]bool{
-			"engram":      !cookieHidden(r, "nav_engram"),
-			"cc-sessions": !cookieHidden(r, "nav_cc-sessions"),
-		},
+	shown := map[string]bool{}
+	for _, c := range r.Cookies() {
+		if id, ok := strings.CutPrefix(c.Name, navCookiePrefix); ok && id != "" {
+			shown[id] = c.Value != "0"
+		}
 	}
+	return navPrefs{shown: shown}
 }
+
+// navCookiePrefix prefixes the group ID in a section-visibility cookie name.
+const navCookiePrefix = "nav_"
 
 func cookieHidden(r *http.Request, name string) bool {
 	c, err := r.Cookie(name)
@@ -126,11 +130,7 @@ func navPrefsFromContext(ctx context.Context) navPrefs {
 	if v, ok := ctx.Value(navPrefsContextKey).(navPrefs); ok {
 		return v
 	}
-	// Default: all providers visible.
-	return navPrefs{shown: map[string]bool{
-		"engram":      true,
-		"cc-sessions": true,
-	}}
+	return navPrefs{} // every group visible
 }
 
 // navShowGroup returns true when the provider group with the given ID should be
@@ -139,8 +139,28 @@ func navShowGroup(ctx context.Context, providerID string) bool {
 	return navPrefsFromContext(ctx).isShown(providerID)
 }
 
-// navShowEngram / navShowClaude are kept for backward compat during the
-// transition: legacy templ files that call these helpers directly still work.
-// They are NOT removed in WU-7 to avoid breaking unrelated templ files.
-func navShowEngram(ctx context.Context) bool { return navShowGroup(ctx, "engram") }
-func navShowClaude(ctx context.Context) bool { return navShowGroup(ctx, "cc-sessions") }
+// sidebarGroups returns the NavGroups in ctx, or legacyNavGroups when the
+// page was rendered without a registry (tests, legacy container).
+func sidebarGroups(ctx context.Context) []providers.NavGroup {
+	if groups := navGroupsFromContext(ctx); len(groups) > 0 {
+		return groups
+	}
+	return legacyNavGroups()
+}
+
+// legacyNavGroups is the sidebar of a UI mounted without a registry: the
+// Engram memory pages and the agent-session pages.
+func legacyNavGroups() []providers.NavGroup {
+	return []providers.NavGroup{
+		{
+			ID: "engram", LabelKey: "sidebar.groupEngram", Featured: true, Icon: "/static/engram.png",
+			Links: []providers.NavLink{
+				{Href: "/", Key: "overview", LabelKey: "sidebar.overview", Icon: "overview"},
+				{Href: "/brain", Key: "brain", LabelKey: "sidebar.knowledge", Icon: "brain"},
+				{Href: "/observations", Key: "observations", LabelKey: "sidebar.observations", Icon: "observations"},
+				{Href: "/projects", Key: "projects", LabelKey: "sidebar.projects", Icon: "projects"},
+			},
+		},
+		providers.AgentSessionsNav(),
+	}
+}

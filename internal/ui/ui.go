@@ -357,7 +357,7 @@ func Mount(mux *http.ServeMux, d Deps) {
 	mux.HandleFunc("GET /settings", shell(handleSettingsPage))
 	mux.HandleFunc("POST /settings/engram-db", shell(handleEngramDBPost))
 	mux.HandleFunc("POST /settings/claude-dir", shell(handleClaudeDirPost))
-	mux.HandleFunc("POST /settings/nav-visibility", handleNavVisibilityPost())
+	mux.HandleFunc("POST /settings/nav-visibility", handleNavVisibilityPost(d))
 	mux.HandleFunc("POST /theme", handleThemePost())
 	mux.HandleFunc("POST /lang", handleLangPost())
 

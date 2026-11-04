@@ -109,13 +109,13 @@ type settingsData struct {
 	DaemonURL       string
 	DaemonOk        bool
 	DaemonError     string
-	// ShowNavGroups maps provider ID to visibility (true=shown).
-	// Keys: "engram", "cc-sessions". Replaces the old ShowEngram/ShowClaude booleans.
-	ShowNavGroups map[string]bool
-	UptimeS       int
-	Lang          string
-	Theme         string
-	SidebarState  string
+	// NavSections lists the sidebar groups (from the registry NavGroups) with
+	// their visibility.
+	NavSections  []navSection
+	UptimeS      int
+	Lang         string
+	Theme        string
+	SidebarState string
 
 	// WU-8: Modules section data.
 	// Modules is the list of registered providers for the Settings → Modules page.
@@ -217,19 +217,15 @@ templ settingsContent(d settingsData) {
 		<section class="settings-group">
 			<h2 class="settings-group-title">{ T(d.Lang, "settings.navTitle") }</h2>
 			<p class="settings-group-desc">{ T(d.Lang, "settings.navHeaderDesc") }</p>
-			<div class="preference-row">
-				<div class="preference-label">
-					<p class="preference-name">{ T(d.Lang, "settings.navEngram") }</p>
-					<p class="preference-desc">{ T(d.Lang, "settings.navDescription") }</p>
+			for _, sec := range d.NavSections {
+				<div class="preference-row">
+					<div class="preference-label">
+						<p class="preference-name">{ T(d.Lang, sec.LabelKey) }</p>
+						<p class="preference-desc">{ T(d.Lang, "settings.navDescription") }</p>
+					</div>
+					@navVisibilityControls(d.Lang, sec.ID, sec.Shown)
 				</div>
-				@navVisibilityControls(d.Lang, "engram", d.ShowNavGroups["engram"])
-			</div>
-			<div class="preference-row">
-				<div class="preference-label">
-					<p class="preference-name">{ T(d.Lang, "settings.navClaude") }</p>
-				</div>
-				@navVisibilityControls(d.Lang, "cc-sessions", d.ShowNavGroups["cc-sessions"])
-			</div>
+			}
 		</section>
 
 		<!-- Sistema (Engram database) -->
@@ -593,7 +589,7 @@ templ ccAccountRow(lang string, acc CCAccountInfo, isLast bool) {
 }
 
 // navVisibilityControls renders Show/Hide toggle buttons for a sidebar section
-// (section is "engram" or "claude"). The active state is highlighted.
+// (section is a NavGroup ID). The active state is highlighted.
 templ navVisibilityControls(lang, section string, shown bool) {
 	<div class="preference-controls">
 		<form method="post" action="/settings/nav-visibility">

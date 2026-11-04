@@ -56,8 +56,8 @@ func TestSidebar_HidesSectionPerCookie(t *testing.T) {
 	if strings.Contains(body, "sidebar-group-engram") {
 		t.Error("Engram group should be hidden when nav_engram=0")
 	}
-	if !strings.Contains(body, "sidebar-group-claude") {
-		t.Error("Claude Code group should remain visible")
+	if !strings.Contains(body, "sidebar-group-agent-sessions") {
+		t.Error("Agent sessions group should remain visible")
 	}
 }
 
@@ -121,8 +121,8 @@ func TestSidebar_DataDriven_HidesGroupPerCookie(t *testing.T) {
 		Links: []providers.NavLink{{Href: "/", Key: "overview", LabelKey: "sidebar.overview"}},
 	}
 	ccGroup := providers.NavGroup{
-		ID: "cc-sessions", LabelKey: "sidebar.groupClaudeCode", Featured: false,
-		Links: []providers.NavLink{{Href: "/cc-sessions", Key: "cc-sessions", LabelKey: "sidebar.ccSessions"}},
+		ID: "cc-sessions", LabelKey: "nav.agentSessions", Featured: false,
+		Links: []providers.NavLink{{Href: "/cc-sessions", Key: "cc-sessions", LabelKey: "nav.agentSessionsList"}},
 	}
 	ui.Mount(mux, ui.Deps{
 		RoDB: openTestDB(t),
@@ -153,8 +153,8 @@ func TestSidebar_DataDriven_HidesGroupPerCookie(t *testing.T) {
 func TestSidebar_DataDriven_EngramFirstWhenFeatured(t *testing.T) {
 	mux := http.NewServeMux()
 	ccGroup := providers.NavGroup{
-		ID: "cc-sessions", LabelKey: "sidebar.groupClaudeCode", Featured: false,
-		Links: []providers.NavLink{{Href: "/cc-sessions", Key: "cc-sessions", LabelKey: "sidebar.ccSessions"}},
+		ID: "cc-sessions", LabelKey: "nav.agentSessions", Featured: false,
+		Links: []providers.NavLink{{Href: "/cc-sessions", Key: "cc-sessions", LabelKey: "nav.agentSessionsList"}},
 	}
 	engramGroup := providers.NavGroup{
 		ID: "engram", LabelKey: "sidebar.groupEngram", Featured: true,
@@ -188,14 +188,14 @@ func TestSidebar_DataDriven_EngramFirstWhenFeatured(t *testing.T) {
 	}
 }
 
-// TestNavVisibilityPost_CCSessions_SetsCookie verifies that POST
-// /settings/nav-visibility with section=cc-sessions sets the nav_cc-sessions
-// cookie (provider-ID-keyed cookie name after WU-7).
-func TestNavVisibilityPost_CCSessions_SetsCookie(t *testing.T) {
+// TestNavVisibilityPost_AgentSessions_SetsCookie verifies that POST
+// /settings/nav-visibility with section=agent-sessions (a NavGroup ID) sets
+// the nav_agent-sessions cookie.
+func TestNavVisibilityPost_AgentSessions_SetsCookie(t *testing.T) {
 	mux := http.NewServeMux()
 	ui.Mount(mux, ui.Deps{RoDB: openTestDB(t)})
 
-	form := url.Values{"section": {"cc-sessions"}, "value": {"hide"}}
+	form := url.Values{"section": {"agent-sessions"}, "value": {"hide"}}
 	req := httptest.NewRequest(http.MethodPost, "/settings/nav-visibility", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
@@ -206,11 +206,11 @@ func TestNavVisibilityPost_CCSessions_SetsCookie(t *testing.T) {
 	}
 	found := false
 	for _, c := range w.Result().Cookies() {
-		if c.Name == "nav_cc-sessions" && c.Value == "0" {
+		if c.Name == "nav_agent-sessions" && c.Value == "0" {
 			found = true
 		}
 	}
 	if !found {
-		t.Error("expected nav_cc-sessions=0 cookie to be set for section=cc-sessions")
+		t.Error("expected nav_agent-sessions=0 cookie to be set for section=agent-sessions")
 	}
 }
