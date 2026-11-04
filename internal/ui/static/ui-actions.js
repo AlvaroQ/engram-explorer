@@ -84,12 +84,16 @@
         if (sel) {
           form.setAttribute(
             'hx-confirm',
-            'Combine "' + source + '" into "' + sel.value + '"? This moves all its memories and cannot be undone.'
+            'Combine "' +
+              source +
+              '" into "' +
+              sel.value +
+              '"? This moves all its memories and cannot be undone.',
           );
         }
       }
     },
-    true
+    true,
   );
 
   document.addEventListener('htmx:afterSwap', function (e) {
