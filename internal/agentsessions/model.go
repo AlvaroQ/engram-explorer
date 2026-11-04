@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -171,4 +172,22 @@ func ProjectName(cwd string) string {
 		return s[i+1:]
 	}
 	return s
+}
+
+// RoutePrefix is the URL prefix of the agent-session pages.
+const RoutePrefix = "/agent-sessions"
+
+// DetailPath is the URL of a session detail page:
+// RoutePrefix/<source ID>/<key>, each '/'-separated segment path-escaped.
+// Hosts link sessions to it; the provider of the source mounts the route.
+func DetailPath(source, key string) string {
+	var b strings.Builder
+	b.WriteString(RoutePrefix)
+	for _, part := range []string{source, key} {
+		for _, seg := range strings.Split(part, "/") {
+			b.WriteByte('/')
+			b.WriteString(url.PathEscape(seg))
+		}
+	}
+	return b.String()
 }

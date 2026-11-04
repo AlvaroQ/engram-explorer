@@ -204,20 +204,44 @@ func (r *Registry) SwitchProfile(ctx context.Context, next Profile) error {
 }
 
 // NavGroups returns the sidebar nav groups for all enabled providers in
-// registry order.
+// registry order. Groups sharing an ID (e.g. AgentSessionsNavID) are merged
+// into the first one: its links are followed by the links of the later ones
+// whose Key it does not already have.
 func (r *Registry) NavGroups() []NavGroup {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	var groups []NavGroup
+	at := map[string]int{}
 	for _, id := range r.order {
 		e := r.entries[id]
 		if e.state != Enabled {
 			continue
 		}
-		groups = append(groups, e.p.Nav(e.h.inst))
+		g := e.p.Nav(e.h.inst)
+		i, seen := at[g.ID]
+		if !seen {
+			at[g.ID] = len(groups)
+			g.Links = append([]NavLink(nil), g.Links...)
+			groups = append(groups, g)
+			continue
+		}
+		for _, l := range g.Links {
+			if !hasLinkKey(groups[i].Links, l.Key) {
+				groups[i].Links = append(groups[i].Links, l)
+			}
+		}
 	}
 	return groups
+}
+
+func hasLinkKey(links []NavLink, key string) bool {
+	for _, l := range links {
+		if l.Key == key {
+			return true
+		}
+	}
+	return false
 }
 
 // AggregateHealth returns per-provider health for all registered providers.
@@ -295,6 +319,25 @@ func (r *Registry) Find(match func(Instance) bool) Instance {
 		}
 	}
 	return nil
+}
+
+// FindAll returns every Enabled instance, in registry order, for which match
+// returns true (nil when none). It is Find for capabilities that several
+// providers serve at once (e.g. AgentSessionSource); match runs under the
+// registry read lock. The instances belong to the registry — callers must
+// not close them.
+func (r *Registry) FindAll(match func(Instance) bool) []Instance {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var out []Instance
+	for _, id := range r.order {
+		e := r.entries[id]
+		if e.state == Enabled && e.h != nil && match(e.h.inst) {
+			out = append(out, e.h.inst)
+		}
+	}
+	return out
 }
 
 // Providers returns every registered provider in registry order, whatever its

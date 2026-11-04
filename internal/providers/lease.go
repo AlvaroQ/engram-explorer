@@ -185,3 +185,19 @@ func (l *Lease) Find(match func(Instance) bool) Instance {
 	}
 	return nil
 }
+
+// FindAll returns every pinned instance, in registry order, for which match
+// returns true, or nil (the Lease counterpart of Registry.FindAll). It never
+// sees an instance enabled after the lease was acquired.
+func (l *Lease) FindAll(match func(Instance) bool) []Instance {
+	if l == nil {
+		return nil
+	}
+	var out []Instance
+	for _, h := range l.pins {
+		if match(h.inst) {
+			out = append(out, h.inst)
+		}
+	}
+	return out
+}

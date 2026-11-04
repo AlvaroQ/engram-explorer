@@ -258,6 +258,7 @@ func (p *engramProvider) Nav(inst providers.Instance) providers.NavGroup {
 		ID:       "engram",
 		LabelKey: "nav.engram",
 		Featured: true,
+		Icon:     "/static/engram.png",
 		Links: []providers.NavLink{
 			{Href: "/brain", Key: "brain", LabelKey: "nav.brain", Icon: "brain"},
 			{Href: "/", Key: "overview", LabelKey: "nav.overview", Icon: "overview"},
