@@ -1,7 +1,8 @@
 package ui_test
 
-// Tests for POST /partials/sync-cloud — the sync-all endpoint that powers the
-// Maintenance > Cloud section's CloudSyncAllControl component.
+// Cloud is read-only: the UI shows enrollment status but never enrolls,
+// unenrolls or syncs a project (that is done with the engram CLI directly).
+// These tests pin the removed routes and the kept read-only rendering.
 
 import (
 	"net/http"
@@ -12,73 +13,78 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
 )
 
-// TestSyncCloudPostNoEnrolled verifies POST /partials/sync-cloud with a DB that
-// has no enrolled projects returns a 200 HTML fragment that contains the
-// #cloud-sync-all container id (not the old #sidebar-sync).
-func TestSyncCloudPostNoEnrolled(t *testing.T) {
-	db := openTestDB(t)
+// TestCloudMutationRoutes_Removed verifies POST /projects/{project}/enroll,
+// /projects/{project}/unenroll and /partials/sync-cloud are not registered
+// (404/405) even with a writable DB, and leave the enrollment table unchanged.
+func TestCloudMutationRoutes_Removed(t *testing.T) {
+	t.Setenv("PATH", t.TempDir()) // never spawn a real engram CLI
+	db := openProjectsDB(t)
+	if _, err := db.Exec(`INSERT INTO observations (type, title, project, created_at, revision_count) VALUES ('manual','t','x','2025-01-01',1)`); err != nil {
+		t.Fatalf("seed obs: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO sync_enrolled_projects (project, enrolled_at) VALUES ('x', '2025-01-01')`); err != nil {
+		t.Fatalf("seed enrolled: %v", err)
+	}
 
 	mux := http.NewServeMux()
-	ui.Mount(mux, ui.Deps{RoDB: db})
+	ui.Mount(mux, ui.Deps{RoDB: db, RWDB: db})
 
-	req := httptest.NewRequest(http.MethodPost, "/partials/sync-cloud", nil)
+	for _, path := range []string{"/projects/x/enroll", "/projects/x/unenroll", "/partials/sync-cloud"} {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, path, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			if w.Code != http.StatusNotFound && w.Code != http.StatusMethodNotAllowed {
+				t.Errorf("POST %s: got %d, want 404 or 405 (body: %.200s)", path, w.Code, w.Body.String())
+			}
+			var n int
+			if err := db.QueryRow(`SELECT COUNT(*) FROM sync_enrolled_projects WHERE project = 'x'`).Scan(&n); err != nil {
+				t.Fatalf("count enrolled: %v", err)
+			}
+			if n != 1 {
+				t.Errorf("POST %s: sync_enrolled_projects rows = %d, want 1 (unchanged)", path, n)
+			}
+		})
+	}
+}
+
+// TestProjectsTable_ReadOnlyEnrollment verifies GET /projects/list keeps the
+// read-only enrollment badges but renders no enroll / unenroll buttons.
+func TestProjectsTable_ReadOnlyEnrollment(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	db := openProjectsDB(t)
+	for _, p := range []string{"enrolled-proj", "loose-proj"} {
+		if _, err := db.Exec(`INSERT INTO observations (type, title, project, created_at, revision_count) VALUES ('manual','t',?,'2025-01-01',1)`, p); err != nil {
+			t.Fatalf("seed obs %s: %v", p, err)
+		}
+	}
+	if _, err := db.Exec(`INSERT INTO sync_enrolled_projects (project, enrolled_at) VALUES ('enrolled-proj', '2025-01-01')`); err != nil {
+		t.Fatalf("seed enrolled: %v", err)
+	}
+
+	mux := http.NewServeMux()
+	ui.Mount(mux, ui.Deps{RoDB: db, RWDB: db})
+
+	req := httptest.NewRequest(http.MethodGet, "/projects/list", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d; body: %s", w.Code, w.Body.String())
 	}
-	ct := w.Header().Get("Content-Type")
-	if !strings.HasPrefix(ct, "text/html") {
-		t.Errorf("expected text/html content-type, got %q", ct)
-	}
 	body := w.Body.String()
-
-	// The POST response must use the new container id (#cloud-sync-all), not
-	// the old sidebar id (#sidebar-sync). This is the swap-cycle contract:
-	// the idle control and the result fragment share the same id so outerHTML
-	// swaps re-render correctly.
-	if !strings.Contains(body, `id="cloud-sync-all"`) {
-		t.Errorf("POST /partials/sync-cloud response must contain id=\"cloud-sync-all\"; body: %.300s", body)
+	for _, p := range []string{"enrolled-proj", "loose-proj"} {
+		for _, action := range []string{"enroll", "unenroll"} {
+			if url := "/projects/" + p + "/" + action; strings.Contains(body, url) {
+				t.Errorf("projects table must not offer %s", url)
+			}
+		}
 	}
-	if strings.Contains(body, `id="sidebar-sync"`) {
-		t.Errorf("POST /partials/sync-cloud response must NOT contain old id=\"sidebar-sync\"; body: %.300s", body)
+	if !strings.Contains(body, "badge-neutral") {
+		t.Errorf("projects table must keep the not-enrolled badge; body: %.400s", body)
 	}
-
-	// The re-trigger button must point back to the same endpoint and target.
-	if !strings.Contains(body, `hx-post="/partials/sync-cloud"`) {
-		t.Errorf("result fragment must retain hx-post=\"/partials/sync-cloud\" for re-trigger; body: %.300s", body)
-	}
-	if !strings.Contains(body, `hx-target="#cloud-sync-all"`) {
-		t.Errorf("result fragment must retain hx-target=\"#cloud-sync-all\" for re-trigger; body: %.300s", body)
-	}
-
-	// With no enrolled projects the result state should be noEnrolled.
-	if !strings.Contains(body, "noEnrolled") {
-		t.Logf("note: noEnrolled class not found (state variant may differ); body: %.300s", body)
-	}
-
-	// Must be a fragment — no full HTML shell.
-	if strings.Contains(body, "<html") {
-		t.Error("POST /partials/sync-cloud must return a fragment, not a full page")
-	}
-}
-
-// TestSyncCloudPostNilDB verifies POST /partials/sync-cloud degrades gracefully
-// when RoDB is nil: returns 200 HTML fragment with the #cloud-sync-all container.
-func TestSyncCloudPostNilDB(t *testing.T) {
-	mux := http.NewServeMux()
-	ui.Mount(mux, ui.Deps{RoDB: nil})
-
-	req := httptest.NewRequest(http.MethodPost, "/partials/sync-cloud", nil)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200 (graceful degrade), got %d; body: %s", w.Code, w.Body.String())
-	}
-	body := w.Body.String()
-	if !strings.Contains(body, `id="cloud-sync-all"`) {
-		t.Errorf("degraded response must still contain id=\"cloud-sync-all\"; body: %.300s", body)
+	if strings.Count(body, "<tr") < 3 {
+		t.Errorf("projects table must list both projects; body: %.400s", body)
 	}
 }

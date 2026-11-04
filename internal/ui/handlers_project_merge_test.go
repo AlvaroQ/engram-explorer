@@ -70,7 +70,7 @@ func openMergeDB(t *testing.T) *http.ServeMux {
 	seedObs("beta")
 
 	mux := http.NewServeMux()
-	ui.MountWithCloud(mux, ui.Deps{RoDB: db, RWDB: db}, &fakeCloud{})
+	ui.Mount(mux, ui.Deps{RoDB: db, RWDB: db})
 	return mux
 }
 
@@ -125,7 +125,7 @@ func TestProjectMergePost_DemoMode(t *testing.T) {
 
 	mux := http.NewServeMux()
 	// DemoMode=true, RWDB still provided — requireRW must block on DemoMode first.
-	ui.MountWithCloud(mux, ui.Deps{RoDB: db, RWDB: db, DemoMode: true}, &fakeCloud{})
+	ui.Mount(mux, ui.Deps{RoDB: db, RWDB: db, DemoMode: true})
 
 	body := url.Values{"target": {"beta"}}.Encode()
 	req := httptest.NewRequest(http.MethodPost, "/projects/alpha/merge", strings.NewReader(body))
@@ -152,7 +152,7 @@ func TestProjectMergePost_ReadOnlyMode(t *testing.T) {
 
 	mux := http.NewServeMux()
 	// RWDB=nil → read-only mode.
-	ui.MountWithCloud(mux, ui.Deps{RoDB: db, RWDB: nil}, &fakeCloud{})
+	ui.Mount(mux, ui.Deps{RoDB: db, RWDB: nil})
 
 	body := url.Values{"target": {"beta"}}.Encode()
 	req := httptest.NewRequest(http.MethodPost, "/projects/alpha/merge", strings.NewReader(body))
@@ -220,7 +220,7 @@ func TestProjectDetailPage_CombineFormPresent(t *testing.T) {
 	}
 
 	mux := http.NewServeMux()
-	ui.MountWithCloud(mux, ui.Deps{RoDB: db, RWDB: db}, &fakeCloud{})
+	ui.Mount(mux, ui.Deps{RoDB: db, RWDB: db})
 
 	req := httptest.NewRequest(http.MethodGet, "/projects/alpha", nil)
 	w := httptest.NewRecorder()

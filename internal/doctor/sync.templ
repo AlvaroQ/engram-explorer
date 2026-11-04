@@ -53,9 +53,9 @@ templ syncShellContent() {
 }
 
 // SyncProjectsPartial renders the sync projects table fragment.
-// caps gates the Enroll/Unenroll buttons (parity with the React capabilities
-// check): when a capability is unavailable the button is shown disabled.
-templ SyncProjectsPartial(resp services.SyncProjectsResponse, caps services.CloudCapabilities) {
+// Cloud is read-only: enrollment is shown as a status badge only; enrolling,
+// unenrolling and syncing are done with the engram CLI directly.
+templ SyncProjectsPartial(resp services.SyncProjectsResponse) {
 	<div id="sync-projects-content">
 		if resp.GlobalTarget != nil {
 			<div class="global-target-card">
@@ -126,7 +126,7 @@ templ SyncProjectsPartial(resp services.SyncProjectsResponse, caps services.Clou
 								}
 							</td>
 							<td class="actions">
-								@syncProjectActions(p, caps)
+								@syncProjectActions(p)
 								<a href={ templ.URL(syncProjectURL(p.Project, "")) } class="btn-link">Detail</a>
 							</td>
 						</tr>
@@ -137,36 +137,9 @@ templ SyncProjectsPartial(resp services.SyncProjectsResponse, caps services.Clou
 	</div>
 }
 
-// syncProjectActions renders the Enroll / Unenroll buttons for one project row,
-// gated by capabilities. The manual "Sync Now" action lives on the project
-// detail page (where its #sync-detail target exists), not in this table.
-templ syncProjectActions(p services.SyncProjectRow, caps services.CloudCapabilities) {
-	if !p.Enrolled {
-		if caps.Enroll {
-			<button
-				hx-post={ syncProjectURL(p.Project, "enroll") }
-				hx-target="#sync-projects"
-				hx-swap="innerHTML"
-				hx-confirm={ "Enroll project " + p.Project + " in cloud sync?" }
-				class="btn-action"
-			>Enroll</button>
-		} else {
-			<button class="btn-action" disabled title="Enroll is not supported by the installed engram CLI">Enroll</button>
-		}
-	}
-	if p.Enrolled {
-		if caps.Unenroll {
-			<button
-				hx-post={ syncProjectURL(p.Project, "unenroll") }
-				hx-target="#sync-projects"
-				hx-swap="innerHTML"
-				hx-confirm={ "Unenroll project " + p.Project + "? This will stop cloud sync." }
-				class="btn-danger"
-			>Unenroll</button>
-		} else {
-			<button class="btn-danger" disabled title="Unenroll is not supported by the installed engram CLI">Unenroll</button>
-		}
-	}
+// syncProjectActions renders the per-row maintenance actions. Cloud is
+// read-only, so the only action is deleting a stray local project.
+templ syncProjectActions(p services.SyncProjectRow) {
 	// Delete is offered only for unenrolled, observation-free projects (e.g. a
 	// stray "repo" with sessions/prompts but no captured knowledge). Enrolled or
 	// non-empty projects never show the button — the server enforces the same
@@ -212,20 +185,14 @@ templ SyncIssuesPartial(resp services.SyncIssuesResponse) {
 	}
 }
 
-// SyncProjectDetailPartial renders the project detail fragment.
-// Includes status/sequence/counts cards, the manual "Sync Now" action, optional
-// error card, pending mutations table, and optional upgrade-state card.
+// SyncProjectDetailPartial renders the read-only project detail fragment.
+// Includes status/sequence/counts cards, optional error card, pending
+// mutations table, and optional upgrade-state card.
 templ SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse) {
 	{{ slug := projectSlug(detail.Summary.Project) }}
 	<div class={ "sync-detail-" + slug } id={ "sync-detail-" + slug }>
 		<div class="detail-header">
 			<h2>Project: { detail.Summary.Project }</h2>
-			<button
-				hx-post={ syncProjectURL(detail.Summary.Project, "sync") }
-				hx-target={ "#sync-detail-" + slug }
-				hx-swap="outerHTML"
-				class="btn-action"
-			>Sync Now</button>
 		</div>
 		<div class="detail-cards">
 			<div class="detail-card">

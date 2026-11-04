@@ -54,16 +54,6 @@
     "primaryNav": "Navegación principal",
     "collapse": "Contraer menú",
     "expand": "Expandir menú",
-    "sync": {
-      "cloud": "Sincronizar nube",
-      "syncing": "Sincronizando…",
-      "tooltip": "Sincronizar todos los proyectos inscritos a la nube de engram",
-      "ariaLabel": "Sincronizar todos los proyectos inscritos a la nube de engram",
-      "noEnrolled": "No hay proyectos inscritos para sincronizar.",
-      "ok": "Sincronizados {{ok}}/{{total}} proyectos.",
-      "partial": "Sincronizados {{ok}}/{{total}} — {{failed}} fallaron.",
-      "failed": "Falló la sincronización: {{message}}"
-    },
     "status": {
       "checking": "comprobando…",
       "backendUnreachable": "backend inalcanzable",
@@ -519,21 +509,10 @@
         "status": "Estado",
         "pending": "Pendientes",
         "cloudSeq": "Cloud seq",
-        "actions": "Acciones",
         "enrolledBadge": "inscrito",
         "notEnrolled": "no inscrito",
         "detail": "Detalle"
-      },
-      "actions": {
-        "enroll": "Inscribir",
-        "unenroll": "Desinscribir",
-        "unenrollUnsupported": "Desinscripción no disponible (no se ha configurado un adaptador de escritura).",
-        "enrollUnsupported": "El CLI instalado no soporta engram cloud enroll"
-      },
-      "confirmEnroll": "¿Inscribir {{project}}?",
-      "confirmUnenroll": "¿Desinscribir {{project}}?",
-      "confirmEnrollDesc": "Esto ejecutará `engram cloud enroll {{project}}` como subproceso. Las observaciones futuras se sincronizarán a la nube.",
-      "confirmUnenrollDesc": "Esto eliminará {{project}} de `sync_enrolled_projects` y limpiará el `sync_state` huérfano y las mutaciones pendientes (no acked) asociadas. Las observaciones ya subidas al cloud NO se borran ni los registros históricos de mutaciones acked. Para reactivar la sincronización, vuelve a inscribirlo."
+      }
     },
     "syncProject": {
       "notFound": "Proyecto no encontrado.",
@@ -702,12 +681,7 @@
     },
     "cloud": {
       "title": "Copia de seguridad en la nube",
-      "syncAll": {
-        "label": "Sincronizar todos",
-        "tooltip": "Sincronizar todos los proyectos inscritos a la nube de engram",
-        "ariaLabel": "Sincronizar todos los proyectos inscritos a la nube de engram",
-        "description": "Inicia una sincronización en la nube para cada proyecto inscrito."
-      }
+      "description": "Diagnóstico de sincronización de solo lectura. Inscribe, desinscribe y sincroniza proyectos con el CLI de engram."
     }
   },
   "settings": {
