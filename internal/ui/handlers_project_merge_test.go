@@ -116,33 +116,6 @@ func TestProjectMergePost_HTMXSuccess(t *testing.T) {
 	}
 }
 
-// TestProjectMergePost_DemoMode verifies that demo mode blocks the merge.
-func TestProjectMergePost_DemoMode(t *testing.T) {
-	db := openTestDB(t)
-	if _, err := db.ExecContext(context.Background(), mergeSchema); err != nil {
-		t.Fatalf("merge schema: %v", err)
-	}
-
-	mux := http.NewServeMux()
-	// DemoMode=true, RWDB still provided — requireRW must block on DemoMode first.
-	ui.Mount(mux, ui.Deps{RoDB: db, RWDB: db, DemoMode: true})
-
-	body := url.Values{"target": {"beta"}}.Encode()
-	req := httptest.NewRequest(http.MethodPost, "/projects/alpha/merge", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("HX-Request", "true")
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-
-	// Must not redirect; must contain an error message.
-	if w.Code == http.StatusSeeOther {
-		t.Fatal("demo mode must not redirect")
-	}
-	if !strings.Contains(w.Body.String(), "demo") && !strings.Contains(w.Body.String(), "Write") {
-		t.Errorf("demo-mode response must mention demo/write restriction; body: %s", w.Body.String())
-	}
-}
-
 // TestProjectMergePost_ReadOnlyMode verifies that a nil RWDB blocks the merge.
 func TestProjectMergePost_ReadOnlyMode(t *testing.T) {
 	db := openTestDB(t)

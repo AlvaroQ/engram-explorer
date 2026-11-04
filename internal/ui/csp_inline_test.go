@@ -59,7 +59,7 @@ func newCSPMux(t *testing.T) *http.ServeMux {
 		}
 	}
 	mux := http.NewServeMux()
-	ui.Mount(mux, ui.Deps{RoDB: db, RWDB: db, DemoMode: true})
+	ui.Mount(mux, ui.Deps{RoDB: db, RWDB: db})
 	return mux
 }
 
@@ -84,8 +84,8 @@ func TestCSP_RenderedPagesHaveNoInlineScriptCode(t *testing.T) {
 		htmx bool
 		want []string
 	}{
-		{"/", false, []string{`data-hide-target="demo-banner"`}},
-		{"/brain", false, []string{`data-hide-target="demo-banner"`}},
+		{"/", false, []string{`<script src="/static/ui-actions.js" defer></script>`}},
+		{"/brain", false, []string{`<script src="/static/ui-actions.js" defer></script>`}},
 		{"/observations", false, []string{`id="obs-detail"`, "hidden data-show-on-swap"}},
 		{"/observations/1", true, []string{`data-hide-target="obs-detail"`}},
 		{"/settings", false, []string{"data-auto-submit", `data-submit-confirm="Import database?`}},

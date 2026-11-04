@@ -28,9 +28,9 @@ func (c *Container) writeModuleDisabled(w http.ResponseWriter, r *http.Request) 
 }
 
 // uiShell is the part of ui.Deps the disabled-module page needs for the
-// layout: the sidebar groups, the account switcher and the demo banner.
+// layout: the sidebar groups and the account switcher.
 func (c *Container) uiShell() ui.Deps {
-	d := ui.Deps{DemoMode: c.Config.DemoMode, Profiles: buildProfilesFn(c.ProfileStore)}
+	d := ui.Deps{Profiles: buildProfilesFn(c.ProfileStore)}
 	if c.Registry != nil {
 		d.NavGroups = c.Registry.NavGroups
 	}

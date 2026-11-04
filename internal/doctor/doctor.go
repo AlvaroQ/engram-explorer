@@ -71,11 +71,11 @@ func Mount(mux Registrar, d Deps) {
 			factory(dd)(w, r)
 		}
 	}
-	// writeGuard blocks write routes in demo mode and in read-only mode; the
-	// read-write pool is checked per request.
+	// writeGuard blocks write routes in read-only mode; the read-write pool is
+	// checked per request.
 	writeGuard := func(factory func(Deps) http.HandlerFunc) http.HandlerFunc {
 		return live(func(dd Deps) http.HandlerFunc {
-			return ui.RequireRW(dd.Config.DemoMode, dd.RWDB != nil, factory(dd))
+			return ui.RequireRW(dd.RWDB != nil, factory(dd))
 		})
 	}
 

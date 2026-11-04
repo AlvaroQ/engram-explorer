@@ -111,7 +111,6 @@ func mountLegacyRoutes(mux *http.ServeMux, c *Container) {
 		RWDB:           c.RWDB,
 		Config:         c.Config,
 		Paths:          c.Paths,
-		DemoMode:       c.Config.DemoMode,
 		ReloadEngramDB: c.ReloadEngramDB,
 		SetClaudeDir:   c.SetClaudeDir,
 	})
@@ -159,7 +158,6 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 	ui.Mount(mux, ui.Deps{
 		Config:             c.Config,
 		Paths:              c.Paths,
-		DemoMode:           c.Config.DemoMode,
 		Live:               c.uiLive,
 		ReloadEngramDB:     c.ReloadEngramDB,
 		SetClaudeDir:       c.SetClaudeDir,

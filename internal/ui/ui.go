@@ -18,11 +18,10 @@ import (
 // Deps carries the concrete dependencies required by the ui module.
 // It mirrors doctor.Deps intentionally — no Container, no import cycle.
 type Deps struct {
-	RoDB     sqlite.Querier       // read-only pool; may be nil in tests
-	RWDB     sqlite.Querier       // read-write pool; nil in read-only mode
-	Config   config.Config        // full runtime configuration (immutable snapshot)
-	Paths    *config.RuntimePaths // live mutable paths; defaulted from Config in Mount
-	DemoMode bool                 // when true, show demo banner and block write endpoints
+	RoDB   sqlite.Querier       // read-only pool; may be nil in tests
+	RWDB   sqlite.Querier       // read-write pool; nil in read-only mode
+	Config config.Config        // full runtime configuration (immutable snapshot)
+	Paths  *config.RuntimePaths // live mutable paths; defaulted from Config in Mount
 
 	// Path-edit callbacks, wired from the HTTP container in production and nil in
 	// tests. ReloadEngramDB hot-swaps the SQLite pools; SetClaudeDir updates the
@@ -204,14 +203,10 @@ func IsHTMX(r *http.Request) bool {
 
 // renderDeps writes a templ component to the response with text/html content
 // type. It enriches the context with nav prefs, NavGroups from the registry
-// for the data-driven sidebar, Profiles for the account switcher, and the
-// demo-mode flag for the demo banner.
+// for the data-driven sidebar and Profiles for the account switcher.
 func renderDeps(w http.ResponseWriter, r *http.Request, d Deps, c templ.Component) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	ctx := NavContextWithGroupsAndProfiles(r, d.NavGroups, d.Profiles)
-	if d.DemoMode {
-		ctx = WithDemoMode(ctx, true)
-	}
 	_ = c.Render(ctx, w)
 }
 
@@ -225,15 +220,10 @@ func Render(w http.ResponseWriter, r *http.Request, c templ.Component) {
 }
 
 // RequireRW wraps a write handler with a read-only guard shared by the ui and
-// doctor packages. It blocks the write in demo mode (the bundled sample DB
-// must stay pristine) and when no read-write pool is available (read-only
-// mode), answering with an ErrorPartial (status 200 so HTMX swaps it).
-func RequireRW(demoMode, writable bool, h http.HandlerFunc) http.HandlerFunc {
+// doctor packages. It blocks the write when no read-write pool is available
+// (read-only mode), answering with an ErrorPartial (status 200 so HTMX swaps it).
+func RequireRW(writable bool, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if demoMode {
-			Render(w, r, ErrorPartial("Write operations are disabled in demo mode."))
-			return
-		}
 		if !writable {
 			Render(w, r, ErrorPartial("Write operations are not available in read-only mode."))
 			return
@@ -244,8 +234,8 @@ func RequireRW(demoMode, writable bool, h http.HandlerFunc) http.HandlerFunc {
 
 // RenderModuleDisabled answers 503 with a localized HTML message for a page
 // whose module is disabled: inside the full Layout on a normal navigation
-// (sidebar, demo banner and account switcher from d's NavGroups, Profiles and
-// DemoMode), as a bare fragment for htmx requests. Shared by the HTTP layer
+// (sidebar and account switcher from d's NavGroups and Profiles), as a bare
+// fragment for htmx requests. Shared by the HTTP layer
 // for provider-owned routes.
 func RenderModuleDisabled(w http.ResponseWriter, r *http.Request, d Deps) {
 	lang := langForRequest(r)
@@ -285,18 +275,9 @@ func liveHandler(d Deps, available func(LiveHandles) bool, factory handlerFactor
 func engramEnabled(h LiveHandles) bool { return h.RoDB != nil }
 func claudeEnabled(h LiveHandles) bool { return h.Claude }
 
-// requireRW applies RequireRW with the demo flag and read-write pool of d.
+// requireRW applies RequireRW with the read-write pool of d.
 func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
-	return RequireRW(d.DemoMode, d.RWDB != nil, h)
-}
-
-// demoBlocked rejects a data-source change in demo mode with the same
-// ErrorPartial as any other demo write: the demo must keep serving the bundled
-// sample database, so it can never be repointed at another database,
-// directory, module, profile or Claude Code account. Display preferences
-// (theme, language, sidebar, advanced view) do not go through it.
-func demoBlocked(d Deps, h http.HandlerFunc) http.HandlerFunc {
-	return RequireRW(d.DemoMode, true, h)
+	return RequireRW(d.RWDB != nil, h)
 }
 
 // Mount registers all UI routes at the root of mux.
@@ -309,7 +290,6 @@ func Mount(mux *http.ServeMux, d Deps) {
 	// shell pages work with any module state; memory and claude pages answer
 	// 503 while their module is disabled (see Deps.Live).
 	shell := func(f handlerFactory) http.HandlerFunc { return liveHandler(d, nil, f) }
-	dataSource := func(f handlerFactory) http.HandlerFunc { return demoBlocked(d, shell(f)) }
 	memory := func(f handlerFactory) http.HandlerFunc { return liveHandler(d, engramEnabled, f) }
 	claude := func(f handlerFactory) http.HandlerFunc { return liveHandler(d, claudeEnabled, f) }
 
@@ -375,8 +355,8 @@ func Mount(mux *http.ServeMux, d Deps) {
 
 	// Settings routes.
 	mux.HandleFunc("GET /settings", shell(handleSettingsPage))
-	mux.HandleFunc("POST /settings/engram-db", dataSource(handleEngramDBPost))
-	mux.HandleFunc("POST /settings/claude-dir", dataSource(handleClaudeDirPost))
+	mux.HandleFunc("POST /settings/engram-db", shell(handleEngramDBPost))
+	mux.HandleFunc("POST /settings/claude-dir", shell(handleClaudeDirPost))
 	mux.HandleFunc("POST /settings/nav-visibility", handleNavVisibilityPost())
 	mux.HandleFunc("POST /theme", handleThemePost())
 	mux.HandleFunc("POST /lang", handleLangPost())
@@ -385,19 +365,19 @@ func Mount(mux *http.ServeMux, d Deps) {
 	mux.HandleFunc("POST /settings/advanced-view", shell(handleAdvancedViewPost))
 
 	// Settings → Modules routes (WU-8).
-	mux.HandleFunc("POST /settings/modules/{id}/toggle", dataSource(handleModulesTogglePost))
-	mux.HandleFunc("POST /settings/modules/{id}/path", dataSource(handleModulesPathPost))
+	mux.HandleFunc("POST /settings/modules/{id}/toggle", shell(handleModulesTogglePost))
+	mux.HandleFunc("POST /settings/modules/{id}/path", shell(handleModulesPathPost))
 
 	// Settings → Accounts routes (WU-9).
 	mux.HandleFunc("GET /settings/accounts", shell(handleAccountsPage))
-	mux.HandleFunc("POST /settings/profile/switch", dataSource(handleProfileSwitchPost))
-	mux.HandleFunc("POST /settings/profile/create", dataSource(handleProfileCreatePost))
-	mux.HandleFunc("POST /settings/profile/delete", dataSource(handleProfileDeletePost))
+	mux.HandleFunc("POST /settings/profile/switch", shell(handleProfileSwitchPost))
+	mux.HandleFunc("POST /settings/profile/create", shell(handleProfileCreatePost))
+	mux.HandleFunc("POST /settings/profile/delete", shell(handleProfileDeletePost))
 
 	// Settings → CC Accounts routes (Slice 2b).
-	mux.HandleFunc("POST /settings/cc-accounts", dataSource(handleCCAccountAddPost))
-	mux.HandleFunc("POST /settings/cc-accounts/{id}/remove", dataSource(handleCCAccountRemovePost))
-	mux.HandleFunc("POST /settings/cc-accounts/{id}/toggle", dataSource(handleCCAccountTogglePost))
+	mux.HandleFunc("POST /settings/cc-accounts", shell(handleCCAccountAddPost))
+	mux.HandleFunc("POST /settings/cc-accounts/{id}/remove", shell(handleCCAccountRemovePost))
+	mux.HandleFunc("POST /settings/cc-accounts/{id}/toggle", shell(handleCCAccountTogglePost))
 
 	// Observations routes.
 	// /list and /{id} must be registered before the wildcard so Go 1.22 exact

@@ -152,7 +152,6 @@ func TestCSPComponents_UseDataHooks(t *testing.T) {
 		c    templ.Component
 		want []string
 	}{
-		{"demo banner", DemoBanner("en"), []string{`data-hide-target="demo-banner"`}},
 		{
 			"observation detail close",
 			ObservationDetailPartial(&services.ObservationRow{ID: 1, Type: "decision", Title: &title}, nil, "Heading", "en"),
