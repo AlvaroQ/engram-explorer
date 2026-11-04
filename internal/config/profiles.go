@@ -190,6 +190,7 @@ func EnsureConfig(configHome string, resolved Config) (*ProfileStore, error) {
 	base := Config{
 		EngramDbPath:      firstNonEmpty(legacy.EngramDbPath, resolved.Defaults.EngramDbPath, resolved.EngramDbPath),
 		ClaudeProjectsDir: firstNonEmpty(legacy.ClaudeProjectsDir, resolved.Defaults.ClaudeProjectsDir, resolved.ClaudeProjectsDir),
+		CodexHome:         firstNonEmpty(resolved.Defaults.CodexHome, resolved.CodexHome),
 	}
 	seed := &ProfileStore{
 		Version:       1,
@@ -227,6 +228,12 @@ func profileFromResolved(cfg Config) Profile {
 		providers["cc-sessions"] = ProviderConfig{
 			Enabled: true,
 			Path:    cfg.ClaudeProjectsDir,
+		}
+	}
+	if cfg.CodexHome != "" {
+		providers[codexProviderID] = ProviderConfig{
+			Enabled: true,
+			Path:    cfg.CodexHome,
 		}
 	}
 

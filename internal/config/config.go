@@ -2,12 +2,12 @@
 //
 // Configuration sources and precedence (highest first):
 //
-//  1. Environment variables (ENGRAM_DATA_DIR, CLAUDE_PROJECTS_DIR,
+//  1. Environment variables (ENGRAM_DATA_DIR, CLAUDE_PROJECTS_DIR, CODEX_HOME,
 //     ENGRAM_DAEMON_URL): in-memory overrides applied to the active profile at
 //     boot. They are NEVER written to disk.
 //  2. config.json in ConfigHome (ProfileStore): the ONLY persisted source.
 //     Every change made from the UI is saved here, through Store.
-//  3. Built-in defaults (~/.engram/engram.db, ~/.claude/projects,
+//  3. Built-in defaults (~/.engram/engram.db, ~/.claude/projects, ~/.codex,
 //     http://127.0.0.1:$ENGRAM_PORT).
 //
 // The legacy explorer-settings.json is read once, only to seed config.json
@@ -21,7 +21,12 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/AlvaroQ/engram-explorer/internal/agentsessions/codex"
 )
+
+// codexProviderID is the provider ID of the Codex sessions provider.
+const codexProviderID = "codex-sessions"
 
 // Config holds all runtime configuration for the engram-explorer backend.
 type Config struct {
@@ -74,6 +79,11 @@ type Config struct {
 	// and each *.jsonl file within is a session transcript.
 	// Override with CLAUDE_PROJECTS_DIR env var.
 	ClaudeProjectsDir string
+
+	// CodexHome is the Codex CLI home (~/.codex by default); the Codex
+	// provider reads the rollouts under <CodexHome>/sessions. Override with
+	// the CODEX_HOME env var.
+	CodexHome string
 }
 
 // PathSettings groups the data-source settings that a profile can also hold.
@@ -81,6 +91,7 @@ type Config struct {
 type PathSettings struct {
 	EngramDbPath      string // ENGRAM_DATA_DIR/engram.db
 	ClaudeProjectsDir string // CLAUDE_PROJECTS_DIR
+	CodexHome         string // CODEX_HOME
 	DaemonBaseURL     string // ENGRAM_DAEMON_URL
 }
 
@@ -139,6 +150,7 @@ func Load() (Config, error) {
 	defaults := PathSettings{
 		EngramDbPath:      filepath.Join(home, ".engram", "engram.db"),
 		ClaudeProjectsDir: filepath.Join(home, ".claude", "projects"),
+		CodexHome:         codex.DefaultHome(nil, home),
 		DaemonBaseURL:     fmt.Sprintf("http://127.0.0.1:%d", engramPort),
 	}
 
@@ -150,6 +162,7 @@ func Load() (Config, error) {
 		overrides.EngramDbPath = filepath.Join(dir, "engram.db")
 	}
 	overrides.ClaudeProjectsDir = os.Getenv("CLAUDE_PROJECTS_DIR")
+	overrides.CodexHome = strings.TrimSpace(os.Getenv("CODEX_HOME"))
 	overrides.DaemonBaseURL = os.Getenv("ENGRAM_DAEMON_URL")
 
 	dbPath := firstNonEmpty(overrides.EngramDbPath, defaults.EngramDbPath)
@@ -181,6 +194,7 @@ func Load() (Config, error) {
 		ExposeDetails:     env == "development",
 		ReadOnly:          envBool("ENGRAM_DASH_READONLY", false),
 		ClaudeProjectsDir: firstNonEmpty(overrides.ClaudeProjectsDir, defaults.ClaudeProjectsDir),
+		CodexHome:         firstNonEmpty(overrides.CodexHome, defaults.CodexHome),
 		AllowRemote:       envBool("DASHBOARD_ALLOW_REMOTE", false),
 	}
 	if !cfg.AllowRemote && !IsLoopbackHost(cfg.Host) {
@@ -206,6 +220,9 @@ func (c Config) WithProfile(p Profile) Config {
 	}
 	if dir := p.ProviderCfg("cc-sessions").Path; dir != "" {
 		c.ClaudeProjectsDir = dir
+	}
+	if dir := p.ProviderCfg(codexProviderID).Path; dir != "" {
+		c.CodexHome = dir
 	}
 	return c
 }

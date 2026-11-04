@@ -16,6 +16,7 @@ func OpenStore(resolved Config) (*Store, error) {
 	}
 	s := NewStore(resolved.ConfigHome, *data)
 	s.env = resolved.EnvOverrides
+	s.defaults = resolved.Defaults
 	if len(data.CCAccounts) == 0 {
 		dir := data.Profiles[data.ActiveProfile].ProviderCfg("cc-sessions").Path
 		if err := s.SeedDefaultCCAccount(firstNonEmpty(dir, resolved.Defaults.ClaudeProjectsDir, resolved.ClaudeProjectsDir)); err != nil {
@@ -39,8 +40,9 @@ func NewMemoryStore(cfg Config) *Store {
 	return NewEphemeralStore(data)
 }
 
-// Effective returns a copy of p with the environment overrides applied: a
-// set ENGRAM_DATA_DIR / CLAUDE_PROJECTS_DIR replaces the provider path (and
+// Effective returns a copy of p with the built-in Codex home filled in (see
+// below) and the environment overrides applied: a
+// set ENGRAM_DATA_DIR / CLAUDE_PROJECTS_DIR / CODEX_HOME replaces the provider path (and
 // enables a provider the profile does not configure at all; an explicit
 // "enabled": false is respected), and ENGRAM_DAEMON_URL replaces the daemon URL.
 func (s *Store) Effective(p Profile) Profile {
@@ -59,8 +61,17 @@ func (s *Store) Effective(p Profile) Profile {
 		}
 		out.SetProviderCfg(id, pc)
 	}
+	// A profile that predates the Codex provider (or left its path empty)
+	// runs on the built-in Codex home, enabled unless it says otherwise.
+	if home := s.defaults.CodexHome; home != "" {
+		if pc, exists := out.Providers[codexProviderID]; pc.Path == "" {
+			pc.Path, pc.Enabled = home, pc.Enabled || !exists
+			out.SetProviderCfg(codexProviderID, pc)
+		}
+	}
 	override("engram", s.env.EngramDbPath, s.env.DaemonBaseURL)
 	override("cc-sessions", s.env.ClaudeProjectsDir, "")
+	override(codexProviderID, s.env.CodexHome, "")
 	return out
 }
 

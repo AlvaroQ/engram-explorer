@@ -30,6 +30,7 @@ type Store struct {
 	configHome string
 	ephemeral  bool
 	env        PathSettings // immutable after construction
+	defaults   PathSettings // built-in defaults (OpenStore); immutable
 }
 
 // NewStore returns a Store persisted to config.json in configHome, holding a
