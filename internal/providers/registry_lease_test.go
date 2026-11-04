@@ -139,3 +139,39 @@ func TestRegistryLease_ShutdownDrainTimeoutIsBounded(t *testing.T) {
 		t.Fatal("Shutdown did not force-close the instance after the drain timeout")
 	}
 }
+
+// TestRegistryLease_MultipleLeasesAndToggleDrainTimeout: Disable never blocks
+// on a drain, the instance stays open until every lease is released, and a
+// leaked lease is closed under by the drain timeout without a double close on
+// the late release.
+func TestRegistryLease_MultipleLeasesAndToggleDrainTimeout(t *testing.T) {
+	reg, fp := leaseFixture(t)
+	old := fp.Opened()[0]
+	a, b := reg.Acquire(), reg.Acquire()
+	start := time.Now()
+	if err := reg.Disable(context.Background(), "fake"); err != nil {
+		t.Fatal(err)
+	}
+	if time.Since(start) > 100*time.Millisecond {
+		t.Fatal("Disable waited for leases to drain")
+	}
+	a.Release()
+	time.Sleep(20 * time.Millisecond)
+	if old.Closed() {
+		t.Fatal("closed while a second lease is still held")
+	}
+	b.Release()
+	waitClosed(t, old)
+
+	reg.SetDrainTimeout(30 * time.Millisecond)
+	if err := reg.Enable(context.Background(), "fake", providers.ProviderConfig{Enabled: true, Path: "/b"}); err != nil {
+		t.Fatal(err)
+	}
+	leaked := reg.Acquire() // never released before the timeout
+	cur := fp.Opened()[1]
+	if err := reg.Disable(context.Background(), "fake"); err != nil {
+		t.Fatal(err)
+	}
+	waitClosed(t, cur) // closed by the drain timeout
+	leaked.Release()   // a late release must not panic (no double close)
+}
