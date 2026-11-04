@@ -64,8 +64,16 @@ safety backup next to the DB before merging.
   `~/.engram` or `~/.claude/projects`. Read-only mode blocks Engram writes only; Settings changes persist in
   `./demo/config.json`. The removed `--demo` / `--demo-db` flags and `ENGRAM_DEMO` / `ENGRAM_DEMO_DB` variables
   make the binary refuse to start instead of silently serving your real data.
-  Environment overrides (`ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR`, `ENGRAM_DAEMON_URL`) are never written to
-  disk.
+  Environment overrides (`ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR`, `CODEX_HOME`, `ENGRAM_DAEMON_URL`) are never
+  written to disk.
+- Agent sessions are **read-only**. The Claude Code and Codex modules only read session files: Claude Code
+  transcripts under each account's projects directory and Codex rollouts under `$CODEX_HOME/sessions`
+  (default `~/.codex/sessions`) — never Codex's configuration, credentials or history files. They never write,
+  move or delete anything there and never execute a program (no `codex` or `claude` CLI). Session keys taken
+  from the URL are validated (clean relative paths only, no `..`, no absolute paths, no backslashes or NUL; a
+  Codex key must also be a rollout the listing found) and an invalid key answers `404`. Symlinks are not
+  followed when walking the Codex sessions directory, and a detail page only opens regular files.
+  `CODEX_HOME` is an in-memory override and is never written to disk.
 - In production (`ENGRAM_DASH_ENV` unset) internal error details are never returned to the client. HTML views
   never show raw provider or daemon error text: Settings module errors go through the same safe error mapper,
   and the sync daemon's `last_error` / `reason_message` texts are replaced by a generic localized message plus

@@ -10,6 +10,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Codex sessions provider** — a new `codex-sessions` module ("Codex") reads the local Codex CLI rollouts under
+  `$CODEX_HOME/sessions` (default `~/.codex/sessions`), read-only. Token counts are normalized to disjoint
+  buckets (cached tokens are a subset of Codex's `input_tokens`), usage is deduplicated by `response_id` (or by
+  cumulative `token_count` totals), tool calls are paired with their output by `call_id`, and resumed or forked
+  sessions do not double-count replayed usage. Models without a published OpenAI price count as unknown (cost 0,
+  flagged with `~`). New installs get the module enabled at `~/.codex`; existing `config.json` files are not
+  rewritten — the module runs on the built-in home until a path is saved in Settings → Modules.
+- **Agent sessions** — Claude Code and Codex sessions share one vendor-neutral model and one set of pages:
+  `/agent-sessions` (usage overview: totals, cost per agent / project / day, tokens per model, most expensive
+  sessions), `/agent-sessions/list` (filters by agent, source, project, model, text and date range; sort and
+  pages; one notice per source that cannot be read) and a detail page per session
+  (`/agent-sessions/claude-code/<account>/<project>/<id>`, `/agent-sessions/codex/<rollout path>`) that shows
+  text, collapsed reasoning, each tool call with its output and unpaired calls or outputs marked.
+  `GET /api/agent-sessions/stats` returns the neutral aggregate (input, cache read, cache write and output
+  tokens, reasoning apart, cost, unknown-model flag, per agent), cached by a source fingerprint. Enabling both
+  modules shows a single "Agent sessions" sidebar group.
 - **CI hardening** — CI now also runs on `develop`, uses least-privilege permissions and SHA-pinned actions,
   runs `go test -race` and `govulncheck`, and fails when generated templ code or the Tailwind CSS bundle is
   stale. Dependabot keeps Go modules, npm packages and GitHub Actions up to date.
@@ -126,6 +142,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Claude Code URLs moved** — `/cc-overview` now answers `301` to `/agent-sessions`; `/cc-sessions`,
+  `/cc-sessions/list` and `/cc-overview?tab=sessions` answer `301` to `/agent-sessions/list?agent=claude-code`
+  (the project filter is kept and `account=<id>` becomes `source=claude-code/<id>`); `/cc-sessions/<project>/<id>`
+  answers `301` to `/agent-sessions/claude-code/<account>/<project>/<id>`. The sidebar section visibility cookie
+  for these pages is now `nav_agent-sessions` (a previously hidden Claude Code section shows again once).
+- **Provider capabilities (agent sessions)** — session providers expose `AgentSessionSource`; the host resolves
+  every live one per request (`Registry.FindAll` / `Lease.FindAll`), and each provider mounts the detail route of
+  its own sources. The UI no longer switches on provider IDs either (sidebar icons, section toggles and Settings
+  rows come from the registry's nav groups).
 - **Provider capabilities** — provider wiring goes through capability interfaces (`Provider.Routes` with a host
   `Router`, `Writable`, `Searcher`, `StatsSource`) instead of a switch on provider IDs: search
   (`GET /api/observations/search`) and overview stats (`GET /api/overview`) are served through `Searcher` and
@@ -143,6 +168,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   GoReleaser builds.
 - **Pinned templ generator** — `make templ` (and `make build`) runs `templ@v0.3.1001` via `go run`, the same
   version CI uses for its drift check, instead of whatever `templ` binary is on `PATH`.
+
+### Deprecated
+
+- **`GET /api/cc-sessions/stats`** — still answers with its previous JSON shape over the Claude Code accounts only,
+  now with `Deprecation: true` and `Link: </api/agent-sessions/stats>; rel="successor-version"` headers. Use
+  `GET /api/agent-sessions/stats`; the old endpoint will be removed in a future release.
 
 ### Removed
 
