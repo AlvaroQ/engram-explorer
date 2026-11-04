@@ -13,8 +13,6 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/daemon"
 	"github.com/AlvaroQ/engram-explorer/internal/doctor"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
-	"github.com/AlvaroQ/engram-explorer/internal/providers/ccsessions"
-	engramprovider "github.com/AlvaroQ/engram-explorer/internal/providers/engram"
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
 	"github.com/AlvaroQ/engram-explorer/internal/usererr"
@@ -30,11 +28,10 @@ var startTime = time.Now()
 //  3. CORS (dev only, allow-list)
 //  4. Route dispatch (rate limiters applied per-route in mux registration)
 //
-// When c.Registry is non-nil (registry-backed container from WU-5+), routes
-// are mounted by looping over enabled providers. Provider-specific routes
-// (Engram SQLite, CC sessions) are wired only when the corresponding provider
-// is active; if no providers are active, only the health endpoint and the UI
-// shell are registered — the server starts successfully with zero providers.
+// When c.Registry is non-nil (registry-backed container), every route is
+// mounted once whatever the state of the providers, and each request resolves
+// the live instance it needs (see modules.go): a module enabled later is
+// served without a restart and a disabled one answers 503 MODULE_DISABLED.
 //
 // When c.Registry is nil (legacy direct-mount mode, used by existing tests),
 // the original direct-mount code path is used unchanged.
@@ -56,10 +53,6 @@ func newRouter(c *Container) *http.ServeMux {
 	mux.HandleFunc("GET /api/health", healthHandler(c))
 
 	if c.Registry != nil {
-		// Registry-backed path (WU-5+): mount per-provider routes by looping
-		// over enabled instances. Each provider's Routes() stub is a no-op;
-		// the real wiring happens here by type-asserting the instance to access
-		// provider-specific deps (Engram Deps/DoctorDeps, CC RuntimePaths).
 		mountRegistryRoutes(mux, c)
 	} else {
 		// Legacy direct-mount path: preserved verbatim so all existing tests
@@ -124,134 +117,71 @@ func mountLegacyRoutes(mux *http.ServeMux, c *Container) {
 	})
 }
 
-// mountRegistryRoutes registers routes for all enabled providers in the
-// registry. Engram-specific routes (observations, prompts, sessions, write,
-// sync, doctor, etc.) are mounted only when the Engram provider is active.
-// CC-sessions routes are mounted only when the CC provider is active.
-// The UI shell (GET /, settings, etc.) and daemon routes are always registered.
+// mountRegistryRoutes mounts every route once, for every registered provider
+// whatever its state. Nothing here switches on a provider ID:
+//
+//   - the doctor module is gated on the SQLite store like the memory API;
+//   - the host route families (the Engram JSON API and the Claude Code stats)
+//     are gated on an Enabled instance with the matching capability, and read
+//     through c.RoDB/c.RWDB, which follow the live store (liveDB);
+//   - the UI shell resolves the module handles per request (ui.Deps.Live).
 func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 	reg := c.Registry
-	engramMounted := false
-
 	// Every profile callback below goes through c.ProfileStore, which owns the
 	// active profile name and guards all access with a lock. Nothing captures
 	// the active profile by value, so after a switch every read and write
 	// targets the new active profile.
 	store := c.ProfileStore
 
-	for _, entry := range reg.Entries() {
-		if entry.State != providers.Enabled {
-			continue
-		}
-		inst := reg.Instance(entry.ID)
-		if inst == nil {
-			continue
-		}
+	memory := c.capabilityMux(mux, isSQLiteStore)
+	observationsRoutes(memory, c)
+	promptsRoutes(memory, c)
+	projectsRoutes(memory, c)
+	overviewRoutes(memory, c)
+	orphansRoutes(memory, c)
+	sessionsRoutes(memory, c)
+	syncRoutes(memory, c)
+	graphRoutes(memory, c)
+	writeRoutes(memory, c)
 
-		switch entry.ID {
-		case "engram":
-			// Mount all Engram-specific routes via the package-level accessor.
-			if deps, ddeps, ok := engramprovider.EngramDeps(inst); ok {
-				// Propagate live handles into container fields so that route-group
-				// functions (which accept *Container) pick up the open DB pools.
-				c.RoDB = deps.RoDB
-				c.RWDB = deps.RWDB
-				c.Paths = deps.Paths
+	ccSessionsRoutes(c.capabilityMux(mux, isTranscriptSource), c)
 
-				observationsRoutes(mux, c)
-				promptsRoutes(mux, c)
-				projectsRoutes(mux, c)
-				overviewRoutes(mux, c)
-				orphansRoutes(mux, c)
-				sessionsRoutes(mux, c)
-				syncRoutes(mux, c)
-				graphRoutes(mux, c)
-				writeRoutes(mux, c)
-
-				doctor.Mount(mux, ddeps)
-
-				// Wire the container's ReloadEngramDB / SetClaudeDir callbacks so
-				// the existing settings handlers (POST /settings/engram-db etc.)
-				// keep working on the registry-backed path.
-				deps.ReloadEngramDB = c.ReloadEngramDB
-				deps.SetClaudeDir = c.SetClaudeDir
-				// Wire NavGroups so the sidebar is data-driven from the registry.
-				deps.NavGroups = reg.NavGroups
-				// Wire WU-8 Modules callbacks.
-				deps.Modules = buildModulesFn(reg, store)
-				deps.ToggleModule = buildToggleModuleFn(reg, store)
-				deps.ValidateModulePath = buildValidateModulePathFn(reg, store)
-				// Wire WU-9 Accounts callbacks.
-				deps.Profiles = buildProfilesFn(store)
-				deps.ActiveProfile = buildActiveProfileFn(store)
-				deps.SwitchProfile = buildSwitchProfileFn(reg, store)
-				deps.CreateProfile = buildCreateProfileFn(store)
-				deps.DeleteProfile = buildDeleteProfileFn(store)
-				// Wire WU-10 ActiveCount for onboarding zero-state branching.
-				deps.ActiveCount = reg.ActiveCount
-				// Wire WU-11 CC account sources for multi-account read path.
-				deps.CCAccountSources = buildCCAccountSourcesFn(store, c.Paths.ClaudeDir(), c.Config.ConfigHome)
-				// Wire Slice 2b CC accounts management callbacks.
-				deps.CCAccounts = buildCCAccountsFn(store)
-				deps.AddCCAccount = buildAddCCAccountFn(reg, store)
-				deps.UpdateCCAccount = buildUpdateCCAccountFn(store)
-				deps.RemoveCCAccount = buildRemoveCCAccountFn(store)
-				// Wire PR6b advanced-view per-profile preference.
-				deps.AdvancedView = buildAdvancedViewFn(store)
-				deps.SetAdvancedView = buildSetAdvancedViewFn(store)
-				// Thread demo mode into the UI layer.
-				deps.DemoMode = c.Config.DemoMode
-				ui.Mount(mux, deps)
-				engramMounted = true
-			}
-		case "cc-sessions":
-			// Mount CC-sessions routes via the package-level accessor.
-			if rtp, ok := ccsessions.CCRuntimePaths(inst); ok {
-				c.Paths.SetClaudeDir(rtp.ClaudeDir())
-				ccSessionsRoutes(mux, c)
-			}
-		}
-	}
-
-	// Always register daemon routes (independent of provider state).
+	// Daemon routes are independent of provider state.
 	daemonRoutes(mux, c)
 
-	// Always mount the UI shell (GET /, settings, etc.) — it renders a working
-	// skeleton even with zero providers active (onboarding zero-state is WU-10).
-	// When Engram was not mounted above, ui.Mount receives nil RoDB/RWDB so
-	// data-fetch handlers degrade gracefully, but the shell itself renders.
-	if !engramMounted {
-		ui.Mount(mux, ui.Deps{
-			RoDB:               c.RoDB,
-			RWDB:               c.RWDB,
-			Config:             c.Config,
-			Paths:              c.Paths,
-			DemoMode:           c.Config.DemoMode,
-			ReloadEngramDB:     c.ReloadEngramDB,
-			SetClaudeDir:       c.SetClaudeDir,
-			NavGroups:          reg.NavGroups,
-			Modules:            buildModulesFn(reg, store),
-			ToggleModule:       buildToggleModuleFn(reg, store),
-			ValidateModulePath: buildValidateModulePathFn(reg, store),
-			Profiles:           buildProfilesFn(store),
-			ActiveProfile:      buildActiveProfileFn(store),
-			SwitchProfile:      buildSwitchProfileFn(reg, store),
-			CreateProfile:      buildCreateProfileFn(store),
-			DeleteProfile:      buildDeleteProfileFn(store),
-			// WU-10: wire ActiveCount for onboarding zero-state branching.
-			ActiveCount: reg.ActiveCount,
-			// WU-11: wire CC account sources for multi-account read path.
-			CCAccountSources: buildCCAccountSourcesFn(store, c.Paths.ClaudeDir(), c.Config.ConfigHome),
-			// Slice 2b: CC accounts management callbacks.
-			CCAccounts:      buildCCAccountsFn(store),
-			AddCCAccount:    buildAddCCAccountFn(reg, store),
-			UpdateCCAccount: buildUpdateCCAccountFn(store),
-			RemoveCCAccount: buildRemoveCCAccountFn(store),
-			// PR6b: advanced-view per-profile preference.
-			AdvancedView:    buildAdvancedViewFn(store),
-			SetAdvancedView: buildSetAdvancedViewFn(store),
-		})
-	}
+	doctor.Mount(memory, doctor.Deps{Config: c.Config, Live: c.storeHandles})
+
+	// The UI shell renders with zero providers (onboarding zero-state); module
+	// pages are gated per request through Live.
+	ui.Mount(mux, ui.Deps{
+		Config:             c.Config,
+		Paths:              c.Paths,
+		DemoMode:           c.Config.DemoMode,
+		Live:               c.uiLive,
+		ReloadEngramDB:     c.ReloadEngramDB,
+		SetClaudeDir:       c.SetClaudeDir,
+		NavGroups:          reg.NavGroups,
+		Modules:            buildModulesFn(reg, store),
+		ToggleModule:       buildToggleModuleFn(reg, store),
+		ValidateModulePath: buildValidateModulePathFn(reg, store),
+		Profiles:           buildProfilesFn(store),
+		ActiveProfile:      buildActiveProfileFn(store),
+		SwitchProfile:      buildSwitchProfileFn(reg, store),
+		CreateProfile:      buildCreateProfileFn(store),
+		DeleteProfile:      buildDeleteProfileFn(store),
+		// WU-10: wire ActiveCount for onboarding zero-state branching.
+		ActiveCount: reg.ActiveCount,
+		// WU-11: wire CC account sources for multi-account read path.
+		CCAccountSources: buildCCAccountSourcesFn(store, c.Paths.ClaudeDir(), c.Config.ConfigHome),
+		// Slice 2b: CC accounts management callbacks.
+		CCAccounts:      buildCCAccountsFn(store),
+		AddCCAccount:    buildAddCCAccountFn(reg, store),
+		UpdateCCAccount: buildUpdateCCAccountFn(store),
+		RemoveCCAccount: buildRemoveCCAccountFn(store),
+		// PR6b: advanced-view per-profile preference.
+		AdvancedView:    buildAdvancedViewFn(store),
+		SetAdvancedView: buildSetAdvancedViewFn(store),
+	})
 }
 
 // healthHandler replicates the Node /api/health shape exactly:

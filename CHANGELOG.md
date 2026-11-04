@@ -18,6 +18,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Module enable/disable without restart** — enabling a module in Settings serves its pages, API and
+  maintenance routes right away (they used to 404 until a restart when the module was off at boot). While a
+  module is disabled its API routes answer `503 MODULE_DISABLED` and its pages show a localized notice, instead
+  of 404s or `500` errors on closed database handles. Switching the database with Engram disabled returns a user
+  error instead of panicking.
 - **`/api/health` after a database switch** — `db.path` reports the database in use after a Settings switch (it
   kept the path opened at startup).
 - **Demo mode served the real database** — with an existing `config.json` profile, `--demo` served the profile's

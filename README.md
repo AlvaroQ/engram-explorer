@@ -228,6 +228,8 @@ Both are **Tier-1**: if not found at their default paths the UI keeps them visib
 
 **Provider states:** `enabled` (open and serving) · `detected` (found, not yet activated) · `disabled` (toggled off) · `errored` (failed to open — check the path) · `registered` (known, detection not attempted).
 
+**Disabled modules:** routes are mounted once at startup and follow the module's live state. While a module is disabled its API routes answer `503` with code `MODULE_DISABLED` and its pages show "This module is disabled. Enable it in Settings → Modules."; enabling it serves them again without a restart.
+
 **To activate a Tier-1 provider manually:** Settings → Modules → find the `detected`/`registered` row → enter the path → **Validate & Activate**. On success it becomes `enabled` and its sidebar section appears immediately; the path is persisted to `~/.engram/config.json`.
 
 ---
