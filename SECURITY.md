@@ -59,8 +59,8 @@ safety backup next to the DB before merging.
   `Retry-After` and error code `RATE_LIMITED`; htmx does not swap 4xx responses, so a limited UI action leaves the
   page unchanged.
 - Cloud sync is **read-only**: the dashboard shows sync diagnostics and proxies the daemon's GET telemetry endpoints (`/health`, `/sync/status`, `/stats`). It never enrolls, unenrolls or syncs a project and never spawns the `engram` CLI — do those with the `engram` CLI directly (`engram cloud enroll <project>`, `engram cloud unenroll <project>`).
-- Demo mode uses only an in-memory profile: it serves the bundled demo database and never reads or writes
-  `config.json`. Claude Code sessions still come from `CLAUDE_PROJECTS_DIR` or `~/.claude/projects`.
+- Demo mode uses only an in-memory profile: it serves the bundled demo database, never reads or writes
+  `config.json`, and refuses every request that would change the data source. Claude Code sessions still come from `CLAUDE_PROJECTS_DIR` or `~/.claude/projects`.
   Environment overrides (`ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR`, `ENGRAM_DAEMON_URL`) are never written to
   disk.
 - In production (`ENGRAM_DASH_ENV` unset) internal error details are never returned to the client. HTML views

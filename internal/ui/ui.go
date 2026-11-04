@@ -280,6 +280,15 @@ func requireRW(d Deps, h http.HandlerFunc) http.HandlerFunc {
 	return RequireRW(d.DemoMode, d.RWDB != nil, h)
 }
 
+// demoBlocked rejects a data-source change in demo mode with the same
+// ErrorPartial as any other demo write: the demo must keep serving the bundled
+// sample database, so it can never be repointed at another database,
+// directory, module, profile or Claude Code account. Display preferences
+// (theme, language, sidebar, advanced view) do not go through it.
+func demoBlocked(d Deps, h http.HandlerFunc) http.HandlerFunc {
+	return RequireRW(d.DemoMode, true, h)
+}
+
 // Mount registers all UI routes at the root of mux.
 func Mount(mux *http.ServeMux, d Deps) {
 	// Default the live path holder from the immutable Config so tests that build
@@ -290,6 +299,7 @@ func Mount(mux *http.ServeMux, d Deps) {
 	// shell pages work with any module state; memory and claude pages answer
 	// 503 while their module is disabled (see Deps.Live).
 	shell := func(f handlerFactory) http.HandlerFunc { return liveHandler(d, nil, f) }
+	dataSource := func(f handlerFactory) http.HandlerFunc { return demoBlocked(d, shell(f)) }
 	memory := func(f handlerFactory) http.HandlerFunc { return liveHandler(d, engramEnabled, f) }
 	claude := func(f handlerFactory) http.HandlerFunc { return liveHandler(d, claudeEnabled, f) }
 
@@ -355,8 +365,8 @@ func Mount(mux *http.ServeMux, d Deps) {
 
 	// Settings routes.
 	mux.HandleFunc("GET /settings", shell(handleSettingsPage))
-	mux.HandleFunc("POST /settings/engram-db", shell(handleEngramDBPost))
-	mux.HandleFunc("POST /settings/claude-dir", shell(handleClaudeDirPost))
+	mux.HandleFunc("POST /settings/engram-db", dataSource(handleEngramDBPost))
+	mux.HandleFunc("POST /settings/claude-dir", dataSource(handleClaudeDirPost))
 	mux.HandleFunc("POST /settings/nav-visibility", handleNavVisibilityPost())
 	mux.HandleFunc("POST /theme", handleThemePost())
 	mux.HandleFunc("POST /lang", handleLangPost())
@@ -365,19 +375,19 @@ func Mount(mux *http.ServeMux, d Deps) {
 	mux.HandleFunc("POST /settings/advanced-view", shell(handleAdvancedViewPost))
 
 	// Settings → Modules routes (WU-8).
-	mux.HandleFunc("POST /settings/modules/{id}/toggle", shell(handleModulesTogglePost))
-	mux.HandleFunc("POST /settings/modules/{id}/path", shell(handleModulesPathPost))
+	mux.HandleFunc("POST /settings/modules/{id}/toggle", dataSource(handleModulesTogglePost))
+	mux.HandleFunc("POST /settings/modules/{id}/path", dataSource(handleModulesPathPost))
 
 	// Settings → Accounts routes (WU-9).
 	mux.HandleFunc("GET /settings/accounts", shell(handleAccountsPage))
-	mux.HandleFunc("POST /settings/profile/switch", shell(handleProfileSwitchPost))
-	mux.HandleFunc("POST /settings/profile/create", shell(handleProfileCreatePost))
-	mux.HandleFunc("POST /settings/profile/delete", shell(handleProfileDeletePost))
+	mux.HandleFunc("POST /settings/profile/switch", dataSource(handleProfileSwitchPost))
+	mux.HandleFunc("POST /settings/profile/create", dataSource(handleProfileCreatePost))
+	mux.HandleFunc("POST /settings/profile/delete", dataSource(handleProfileDeletePost))
 
 	// Settings → CC Accounts routes (Slice 2b).
-	mux.HandleFunc("POST /settings/cc-accounts", shell(handleCCAccountAddPost))
-	mux.HandleFunc("POST /settings/cc-accounts/{id}/remove", shell(handleCCAccountRemovePost))
-	mux.HandleFunc("POST /settings/cc-accounts/{id}/toggle", shell(handleCCAccountTogglePost))
+	mux.HandleFunc("POST /settings/cc-accounts", dataSource(handleCCAccountAddPost))
+	mux.HandleFunc("POST /settings/cc-accounts/{id}/remove", dataSource(handleCCAccountRemovePost))
+	mux.HandleFunc("POST /settings/cc-accounts/{id}/toggle", dataSource(handleCCAccountTogglePost))
 
 	// Observations routes.
 	// /list and /{id} must be registered before the wildcard so Go 1.22 exact

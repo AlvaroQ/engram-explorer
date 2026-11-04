@@ -18,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Demo mode data-source lock** — demo mode rejects every change of data source (Engram database path, Claude Code
+  directory, module enable/disable and path, profile create/switch/delete, Claude Code accounts) with "Write
+  operations are disabled in demo mode.", so a demo instance can never be repointed at a real database. Theme,
+  language, sidebar and advanced-view preferences still work.
 - **Module enable/disable without restart** — enabling a module in Settings serves its pages, API and
   maintenance routes right away (they used to 404 until a restart when the module was off at boot). While a
   module is disabled its API routes answer `503 MODULE_DISABLED` and its pages show a localized notice, instead
