@@ -1,7 +1,8 @@
 # Makefile for engram-explorer single-binary build
 # Compatible with POSIX sh (git-bash on Windows, bash on Linux/macOS in CI).
 
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+# Same format as GoReleaser's {{.Version}}: the tag without its leading "v".
+VERSION ?= $(or $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/^v//'),dev)
 BINARY  := engram-explorer
 DIST_SRC := apps/frontend/dist
 DIST_EMBED := internal/web/dist
