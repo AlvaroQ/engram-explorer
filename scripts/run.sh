@@ -6,7 +6,7 @@
 #   ./scripts/run.sh                        # run against ~/.engram
 #   ENGRAM_DASH_READONLY=true ./scripts/run.sh   # pure read-only viewer
 #   make seed-demo && ENGRAM_DATA_DIR=./demo CLAUDE_PROJECTS_DIR=./demo/claude \
-#     ENGRAM_DASH_READONLY=true ./scripts/run.sh   # the demo dataset (as `make demo`)
+#     CODEX_HOME=./demo/codex ENGRAM_DASH_READONLY=true ./scripts/run.sh   # the demo dataset (as `make demo`)
 #
 # After this runs once, ./engram-explorer is left on disk — re-launch it
 # directly (instant, no rebuild) until you change the code again.

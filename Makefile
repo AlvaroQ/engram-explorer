@@ -57,16 +57,18 @@ test:
 	go test ./...
 
 ## seed-demo: generate the demo dataset in ./demo — engram.db plus sample Claude
-##            Code transcripts in ./demo/claude (use DEMO_OUT=<dir> to override)
+##            Code transcripts in ./demo/claude and Codex CLI rollouts in
+##            ./demo/codex (use DEMO_OUT=<dir> to override)
 seed-demo:
 	go run ./cmd/seed-demo --out $(or $(DEMO_OUT),./demo) --force
 
 ## demo: seed the demo dataset and run the normal binary read-only against it.
 ##       Engram writes answer 503; settings persist in ./demo/config.json and
-##       nothing is read from ~/.engram or ~/.claude/projects.
+##       nothing is read from ~/.engram, ~/.claude/projects or ~/.codex.
 demo: seed-demo
 	ENGRAM_DATA_DIR=$(or $(DEMO_OUT),./demo) \
 	CLAUDE_PROJECTS_DIR=$(or $(DEMO_OUT),./demo)/claude \
+	CODEX_HOME=$(or $(DEMO_OUT),./demo)/codex \
 	ENGRAM_DASH_READONLY=true \
 	go run ./cmd/engram-explorer
 
