@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
@@ -188,6 +189,10 @@ func ValidateProjectsDir(path string) error {
 // ccInstance — implements providers.Instance (NO Writable — read-only)
 // ---------------------------------------------------------------------------
 
+// errProjectsDirUnavailable is the production health message for a missing or
+// unreadable projects directory.
+const errProjectsDirUnavailable = "projects directory unavailable"
+
 // ccInstance is the per-profile live activation of the CC sessions provider.
 // Because the DiskProjectsReader has no persistent handle (reads per request),
 // this struct only holds the resolved path and config.
@@ -199,6 +204,8 @@ type ccInstance struct {
 
 // Health returns per-provider health for /api/health aggregation. For CC
 // sessions the health check is whether the projects directory still exists.
+// The error is generic in production (the OS error text names the path and
+// goes to the log); development (ExposeDetails) shows the detail.
 func (i *ccInstance) Health(ctx context.Context) providers.ProviderHealth {
 	h := providers.ProviderHealth{
 		ID:   "cc-sessions",
@@ -207,10 +214,14 @@ func (i *ccInstance) Health(ctx context.Context) providers.ProviderHealth {
 
 	info, err := os.Stat(i.path)
 	if err != nil || !info.IsDir() {
+		detail := "path is not a directory"
 		if err != nil {
-			h.Error = err.Error()
-		} else {
-			h.Error = "path is not a directory"
+			detail = err.Error()
+		}
+		slog.Warn("claude code projects directory unavailable", "path", i.path, "err", detail)
+		h.Error = errProjectsDirUnavailable
+		if i.cfg.ExposeDetails {
+			h.Error = detail
 		}
 		return h
 	}

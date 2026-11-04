@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 
 	_ "modernc.org/sqlite" // register the "sqlite" driver
@@ -322,7 +323,13 @@ func (i *engramInstance) Health(ctx context.Context) providers.ProviderHealth {
 	h.OK = err == nil && n >= 2
 	if !h.OK {
 		if err != nil {
-			h.Error = err.Error()
+			// The driver error can name the file; production shows a generic
+			// message and logs the detail.
+			slog.Warn("engram health query failed", "path", h.Path, "err", err)
+			h.Error = "database unavailable"
+			if i.deps.Config.ExposeDetails {
+				h.Error = err.Error()
+			}
 		} else {
 			h.Error = "schema not found"
 		}

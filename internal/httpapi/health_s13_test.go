@@ -9,12 +9,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/httpapi"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
+	ccprovider "github.com/AlvaroQ/engram-explorer/internal/providers/ccsessions"
 	engramprovider "github.com/AlvaroQ/engram-explorer/internal/providers/engram"
 )
 
@@ -140,5 +143,54 @@ func TestHealth_DBPathFollowsSettingsSwitch(t *testing.T) {
 		if entry["id"] == "engram" && entry["path"] != pathB {
 			t.Errorf("providers[engram].path: got %v, want %q", entry["path"], pathB)
 		}
+	}
+}
+
+// TestHealth_ProviderErrorTextHidden covers S13: when the Claude Code
+// projects directory disappears, providers[].error in /api/health carries a
+// generic message in production, never the OS error text or the path;
+// development (ExposeDetails) keeps the detail.
+func TestHealth_ProviderErrorTextHidden(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		expose bool
+	}{{"production", false}, {"development", true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			ccDir := filepath.Join(makeClaudeDir(t), "projects")
+			if err := os.MkdirAll(filepath.Join(ccDir, "-Users-me-project"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			cfg := config.Config{ClaudeProjectsDir: ccDir, ExposeDetails: tc.expose, DaemonBaseURL: closedDaemonURL(t), DaemonTimeoutMs: 200}
+			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+			reg := providers.NewRegistry(logger)
+			reg.Register(ccprovider.NewProvider(cfg))
+			reg.Boot(context.Background(), httpapi.AdaptProfile(config.Profile{Providers: map[string]config.ProviderConfig{
+				"cc-sessions": {Enabled: true, Path: ccDir},
+			}}))
+			c := httpapi.NewContainerWithRegistry(reg, cfg, logger)
+			t.Cleanup(c.Close)
+			if err := os.RemoveAll(ccDir); err != nil {
+				t.Fatal(err)
+			}
+
+			body := healthBody(t, httpapi.NewServeMux(c))
+			provs, _ := body["providers"].([]any)
+			var msg string
+			for _, p := range provs {
+				if e, _ := p.(map[string]any); e["id"] == "cc-sessions" {
+					msg, _ = e["error"].(string)
+				}
+			}
+			if msg == "" {
+				t.Fatalf("providers: %v, want a cc-sessions entry with an error", provs)
+			}
+			leaks := strings.Contains(msg, "no such file") || strings.Contains(msg, ccDir) || strings.Contains(msg, "stat ")
+			if !tc.expose && leaks {
+				t.Errorf("production providers[cc-sessions].error = %q, want a generic message", msg)
+			}
+			if tc.expose && !leaks {
+				t.Errorf("development providers[cc-sessions].error = %q, want the detail", msg)
+			}
+		})
 	}
 }

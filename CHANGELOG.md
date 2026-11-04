@@ -92,6 +92,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Health endpoint without daemon error text** — when the daemon is unreachable, `/api/health` reports
   `"error": "daemon unavailable"` plus a `code` (`NETWORK`, `TIMEOUT`, `HTTP`, `PARSE`); the raw client error (URL,
   dial error) is only shown with `ENGRAM_DASH_ENV=development`.
+- **Health provider errors without OS text** — `/api/health` `providers[].error` shows a generic message
+  (`projects directory unavailable`, `database unavailable`) outside development; the OS detail (paths) goes to
+  the server log.
 - **Daemon proxy without client error text** — `/api/daemon/*` errors answer `DAEMON_UNAVAILABLE` with
   `daemon <path> unavailable (<CODE>)` in production; the raw client error (URL, dial error) goes to the log and is
   only returned with `ENGRAM_DASH_ENV=development`.
