@@ -68,6 +68,7 @@ export function AccessibleNodeList({ nodes, matchedIds, onSelect }: Props): JSX.
 
   return (
     <nav
+      data-brain-node-list
       aria-label={t('brain.a11y.listLabel')}
       className="sr-only z-30 focus-within:not-sr-only focus-within:absolute focus-within:left-3 focus-within:top-3 focus-within:flex focus-within:max-h-[calc(100%-1.5rem)] focus-within:w-72 focus-within:flex-col focus-within:overflow-auto focus-within:rounded-lg focus-within:border focus-within:border-border focus-within:bg-surface focus-within:p-2 focus-within:shadow-xl"
     >

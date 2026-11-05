@@ -122,7 +122,7 @@ export function NodeDetailPanel({
     function handlePointerUp(e: PointerEvent): void {
       const target = e.target as Element | null;
       // Ignore if the pointer-up happened inside a brain canvas wrapper.
-      if (target?.closest?.('[data-brain-canvas]')) return;
+      if (target?.closest?.('[data-brain-canvas], [data-brain-node-list]')) return;
       if (panelRef.current && !panelRef.current.contains(target)) {
         onClose();
       }

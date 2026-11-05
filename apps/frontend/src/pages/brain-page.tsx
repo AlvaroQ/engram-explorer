@@ -511,7 +511,7 @@ export function BrainPage(): JSX.Element {
                 onClick={() => {
                   void refetch();
                 }}
-                className="mt-2 rounded bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                className="mt-2 rounded bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 {t('brain.retry')}
               </button>
@@ -525,54 +525,63 @@ export function BrainPage(): JSX.Element {
             {data && data.nodes.length > 0 && (
               <>
                 {/* Canvas wrapper — full-bleed, behind the floating rails (Req 3) */}
-                <div
-                  className="absolute inset-0 bg-black"
-                  role="img"
-                  data-brain-canvas
-                  aria-label={t('brain.a11y.canvasLabel', {
-                    nodes: data.nodes.length,
-                    edges: data.edges.length,
-                  })}
-                >
-                  {webglAvailable ? (
-                    <ErrorBoundary
-                      fallback={
-                        <div className="flex h-full w-full items-center justify-center text-sm text-fg-muted">
-                          {t('brain.graphError')}
-                        </div>
-                      }
-                    >
-                      <Suspense fallback={<Skeleton className="h-full w-full" />}>
-                        <GraphScene
-                          nodes={data.nodes}
-                          edges={data.edges}
-                          colorBy={colorBy}
-                          animate
-                          onNodeClick={handleNodeSelect}
-                          onNodeHover={handleNodeHover}
-                          selected={focusNode}
-                          hovered={hoverNode}
-                          detailOpen={detailNode !== null}
-                          matchedIds={matchedIds}
-                          focusNodeId={focusNode?.id ?? null}
-                          onUserCameraStart={handleCloseDetail}
-                          onReady={handleGraphReady}
-                        />
-                      </Suspense>
-                    </ErrorBoundary>
-                  ) : (
-                    // WebGL unavailable (e.g. Chrome hardware acceleration off).
-                    // The 3D canvas can't render; show how to fix it. The spotlight
-                    // (⌘K), project rails and the accessible node list below still work.
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-6 text-center">
-                      <p className="text-base font-medium text-fg">
-                        {t('brain.webglUnavailableTitle')}
-                      </p>
-                      <p className="max-w-md text-sm text-fg-muted">
-                        {t('brain.webglUnavailableHint')}
-                      </p>
-                    </div>
-                  )}
+                <div className="absolute inset-0 bg-black">
+                  {/* Only the canvas is an image for assistive tech; the accessible
+                      node list below stays outside it so it is not hidden. The
+                      WebGL-unavailable message is real text, so it gets no role. */}
+                  <div
+                    className="h-full w-full"
+                    data-brain-canvas
+                    role={webglAvailable ? 'img' : undefined}
+                    aria-label={
+                      webglAvailable
+                        ? t('brain.a11y.canvasLabel', {
+                            nodes: data.nodes.length,
+                            edges: data.edges.length,
+                          })
+                        : undefined
+                    }
+                  >
+                    {webglAvailable ? (
+                      <ErrorBoundary
+                        fallback={
+                          <div className="flex h-full w-full items-center justify-center text-sm text-fg-muted">
+                            {t('brain.graphError')}
+                          </div>
+                        }
+                      >
+                        <Suspense fallback={<Skeleton className="h-full w-full" />}>
+                          <GraphScene
+                            nodes={data.nodes}
+                            edges={data.edges}
+                            colorBy={colorBy}
+                            animate
+                            onNodeClick={handleNodeSelect}
+                            onNodeHover={handleNodeHover}
+                            selected={focusNode}
+                            hovered={hoverNode}
+                            detailOpen={detailNode !== null}
+                            matchedIds={matchedIds}
+                            focusNodeId={focusNode?.id ?? null}
+                            onUserCameraStart={handleCloseDetail}
+                            onReady={handleGraphReady}
+                          />
+                        </Suspense>
+                      </ErrorBoundary>
+                    ) : (
+                      // WebGL unavailable (e.g. Chrome hardware acceleration off).
+                      // The 3D canvas can't render; show how to fix it. The spotlight
+                      // (⌘K), project rails and the accessible node list below still work.
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-6 text-center">
+                        <p className="text-base font-medium text-fg">
+                          {t('brain.webglUnavailableTitle')}
+                        </p>
+                        <p className="max-w-md text-sm text-fg-muted">
+                          {t('brain.webglUnavailableHint')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Screen-reader / keyboard fallback for the WebGL canvas */}
                   <AccessibleNodeList
