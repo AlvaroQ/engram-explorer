@@ -24,6 +24,12 @@
 //                                  (when given) and refocus the element that
 //                                  had focus when it opened
 //   data-dialog-close              click: close() the enclosing <dialog>
+//   data-menu-button               <button aria-controls="menu-id">: menu-button
+//                                  pattern. Click/Enter/Space toggle the menu,
+//                                  ArrowDown/ArrowUp open it on the first/last
+//                                  item; inside, arrows/Home/End move, Esc closes
+//                                  and refocuses the button, Tab closes it and
+//                                  lets focus move on, a click outside closes it
 (function () {
   'use strict';
 
@@ -103,6 +109,101 @@
     },
     true,
   );
+
+  // ---- Menu buttons ----
+  function menuOf(button) {
+    return byId(button.getAttribute('aria-controls'));
+  }
+
+  function menuItems(menu) {
+    return Array.prototype.slice.call(menu.querySelectorAll('[role="menuitem"]'));
+  }
+
+  function setMenuOpen(button, open, focusAt) {
+    var menu = menuOf(button);
+    if (!menu) {
+      return;
+    }
+    button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    menu.hidden = !open;
+    if (!open) {
+      return;
+    }
+    var items = menuItems(menu);
+    var item = focusAt === 'last' ? items[items.length - 1] : items[0];
+    if (item) {
+      item.focus();
+    }
+  }
+
+  function closeMenus(except) {
+    var open = document.querySelectorAll('[data-menu-button][aria-expanded="true"]');
+    for (var i = 0; i < open.length; i++) {
+      if (open[i] !== except) {
+        setMenuOpen(open[i], false);
+      }
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    var button = closestWith(e.target, 'data-menu-button');
+    if (button) {
+      var opening = button.getAttribute('aria-expanded') !== 'true';
+      closeMenus(button);
+      setMenuOpen(button, opening, 'first');
+      return;
+    }
+    // A click on a menu item runs its own action (form submit, link) first;
+    // the menu closes after it. Any other click closes it right away.
+    if (e.target instanceof Element && e.target.closest('[role="menu"]')) {
+      setTimeout(function () {
+        closeMenus(null);
+      }, 0);
+      return;
+    }
+    closeMenus(null);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    var button = closestWith(e.target, 'data-menu-button');
+    if (button && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      e.preventDefault();
+      setMenuOpen(button, true, e.key === 'ArrowUp' ? 'last' : 'first');
+      return;
+    }
+    var menu = e.target instanceof Element ? e.target.closest('[role="menu"]') : null;
+    if (!menu) {
+      return;
+    }
+    var owner = document.querySelector('[data-menu-button][aria-controls="' + menu.id + '"]');
+    if (!owner) {
+      return;
+    }
+    var items = menuItems(menu);
+    var at = items.indexOf(e.target);
+    var next = null;
+    if (e.key === 'ArrowDown') {
+      next = items[(at + 1) % items.length];
+    } else if (e.key === 'ArrowUp') {
+      next = items[(at - 1 + items.length) % items.length];
+    } else if (e.key === 'Home') {
+      next = items[0];
+    } else if (e.key === 'End') {
+      next = items[items.length - 1];
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setMenuOpen(owner, false);
+      owner.focus();
+      return;
+    } else if (e.key === 'Tab') {
+      setMenuOpen(owner, false);
+      return;
+    }
+    if (next) {
+      e.preventDefault();
+      next.focus();
+    }
+  });
 
   // ---- Modal dialogs ----
   // The element that issued the last htmx request: the opener when the

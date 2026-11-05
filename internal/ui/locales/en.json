@@ -64,7 +64,8 @@
       "dbError": "DB error",
       "daemonOffline": "daemon offline",
       "allOk": "Status ok"
-    }
+    },
+    "switchAccount": "Switch account"
   },
   "overview": {
     "kpi": {

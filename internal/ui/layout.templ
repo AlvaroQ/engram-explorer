@@ -296,11 +296,25 @@ templ sidebarGroup(label, variant, icon string) {
 // It is shown only when 2+ profiles exist (injected via context by renderDeps).
 templ accountSwitcher(lang string, profiles []ProfileInfo) {
 	<div class="account-switcher">
-		if active := activeProfileFromProfiles(profiles); active != "" {
-			<span class="account-avatar" aria-hidden="true">{ profileInitial(active) }</span>
-			<span class="sidebar-brand-label">{ active }</span>
-		}
-		<div class="account-switcher-menu">
+		// Menu button (ui-actions.js data-menu-button): click, Enter, Space or
+		// the arrow keys open the menu; arrows move, Esc closes and refocuses
+		// the trigger, Tab leaves it.
+		<button
+			type="button"
+			class="account-switcher-trigger"
+			id="account-switcher-trigger"
+			aria-haspopup="menu"
+			aria-expanded="false"
+			aria-controls="account-switcher-menu"
+			aria-label={ T(lang, "sidebar.switchAccount") + ": " + activeProfileFromProfiles(profiles) }
+			data-menu-button
+		>
+			if active := activeProfileFromProfiles(profiles); active != "" {
+				<span class="account-avatar" aria-hidden="true">{ profileInitial(active) }</span>
+				<span class="sidebar-brand-label">{ active }</span>
+			}
+		</button>
+		<div class="account-switcher-menu" id="account-switcher-menu" role="menu" aria-labelledby="account-switcher-trigger" hidden>
 			for _, p := range profiles {
 				if !p.Active {
 					// Use hx-post without explicit hx-target/hx-swap:
@@ -311,13 +325,13 @@ templ accountSwitcher(lang string, profiles []ProfileInfo) {
 						hx-post="/settings/profile/switch"
 						hx-push-url="true">
 						<input type="hidden" name="name" value={ p.Name }/>
-						<button type="submit" class="account-switcher-item">
+						<button type="submit" class="account-switcher-item" role="menuitem" tabindex="-1">
 							{ p.Name }
 						</button>
 					</form>
 				}
 			}
-			<a href="/settings/accounts" class="account-switcher-item account-switcher-manage">
+			<a href="/settings/accounts" class="account-switcher-item account-switcher-manage" role="menuitem" tabindex="-1">
 				{ T(lang, "settings.accounts.manage") }
 			</a>
 		</div>

@@ -279,14 +279,37 @@ a:hover {
   display: inline-flex;
 }
 
-.account-switcher > .sidebar-brand-label {
+/* Menu-button trigger: looks like the brand label it replaces. */
+.account-switcher-trigger {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  cursor: default;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
-.account-switcher > .sidebar-brand-label::after {
+.account-switcher-trigger:hover {
+  background: hsl(var(--fg) / var(--state-hover));
+}
+
+.account-switcher-trigger:focus-visible {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 1px;
+}
+
+.account-switcher-trigger > .sidebar-brand-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.account-switcher-trigger > .sidebar-brand-label::after {
   content: "";
   width: 0;
   height: 0;
@@ -326,8 +349,8 @@ a:hover {
   box-shadow: var(--elevation-3);
 }
 
-.account-switcher:hover .account-switcher-menu,
-.account-switcher:focus-within .account-switcher-menu {
+/* Opened by ui-actions.js (data-menu-button), which drops [hidden]. */
+.account-switcher-menu:not([hidden]) {
   display: flex;
 }
 
@@ -1493,7 +1516,7 @@ code {
   }
   .app-shell.sidebar-collapsed .sidebar-sync-label,
   .app-shell.sidebar-collapsed .status-pill-label,
-  .app-shell.sidebar-collapsed .account-switcher > .sidebar-brand-label {
+  .app-shell.sidebar-collapsed .account-switcher-trigger > .sidebar-brand-label {
     display: none;
   }
   /* Hidden visually, kept for assistive tech. */

@@ -64,7 +64,8 @@
       "dbError": "error de BD",
       "daemonOffline": "daemon offline",
       "allOk": "Estado correcto"
-    }
+    },
+    "switchAccount": "Cambiar de cuenta"
   },
   "overview": {
     "kpi": {
