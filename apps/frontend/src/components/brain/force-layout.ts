@@ -104,9 +104,10 @@ function exactRepulsion(pos: Float32Array, vel: Float32Array, m: number): void {
 /**
  * Barnes–Hut octree in flat typed arrays, rebuilt every iteration.
  * Leaves hold a linked list of bodies (first/next) so coincident points at the
- * depth limit share a leaf. A far cell (size/distance < BH_THETA) acts as one
- * body of `mass` bodies at its centre of mass; its force is the capped pair
- * force times mass, matching the exact path for well-separated groups.
+ * depth limit share a leaf. A far cell (size/distance < BH_THETA) that does
+ * not contain the body acts as one body of `mass` bodies at its centre of
+ * mass; its force is the capped pair force times mass, matching the exact
+ * path for well-separated groups.
  */
 class Octree {
   private cap = 0;
@@ -301,8 +302,15 @@ class Octree {
         dy = yi - (this.sy[c] ?? 0) / mass,
         dz = zi - (this.sz[c] ?? 0) / mass;
       const d2 = dx * dx + dy * dy + dz * dz + 0.01;
-      const size = 2 * (this.half[c] ?? 0);
-      if ((size * size) / d2 < theta2) {
+      const h = this.half[c] ?? 0;
+      const size = 2 * h;
+      // A cell holding body i is always opened: its centre of mass includes
+      // i itself, so approximating it would push i with its own mass.
+      const holdsI =
+        Math.abs(xi - (this.ox[c] ?? 0)) <= h &&
+        Math.abs(yi - (this.oy[c] ?? 0)) <= h &&
+        Math.abs(zi - (this.oz[c] ?? 0)) <= h;
+      if (!holdsI && (size * size) / d2 < theta2) {
         const k = (repulse(d2) * mass) / Math.sqrt(d2);
         fx += dx * k;
         fy += dy * k;
@@ -318,6 +326,18 @@ class Octree {
     vel[i * 3 + 1] = r(vel, i * 3 + 1) + fy;
     vel[i * 3 + 2] = r(vel, i * 3 + 2) + fz;
   }
+}
+
+/**
+ * One Barnes–Hut repulsion pass over the first m nodes, as the velocity
+ * increment per node (exposed for the accuracy test against the exact sum).
+ */
+export function barnesHutRepulsion(pos: Float32Array, m: number): Float32Array {
+  const vel = new Float32Array(m * 3);
+  const tree = new Octree(m);
+  tree.build(pos, m);
+  for (let i = 0; i < m; i++) tree.applyRepulsion(pos, vel, i);
+  return vel;
 }
 
 export function computeLayout(
