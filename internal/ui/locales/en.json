@@ -12,7 +12,10 @@
     "orphans": "Orphans",
     "agentSessions": "Agent sessions",
     "agentSessionsOverview": "Overview",
-    "agentSessionsList": "Sessions"
+    "agentSessionsList": "Sessions",
+    "agents": "Agents",
+    "agentClaudeCode": "Claude Code",
+    "agentCodex": "Codex"
   },
   "common": {
     "errorGeneric": "Something went wrong. Check the server log for details.",
@@ -36,7 +39,8 @@
     "no": "no",
     "all": "all",
     "none": "—",
-    "language": "Language"
+    "language": "Language",
+    "skipToContent": "Skip to content"
   },
   "sidebar": {
     "brand": "Explorer",
@@ -818,7 +822,8 @@
       "noMatch": "No sessions match these filters.",
       "page": "Page {{page}} of {{pages}}",
       "prev": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "total": "{{total}} sessions"
     },
     "filter": {
       "agent": "Agent",

@@ -31,6 +31,34 @@ a:hover {
   text-decoration: underline;
 }
 
+/* ---------- Skip link ----------
+   First focusable element of every page; slides in on keyboard focus and
+   jumps to <main id="main-content" tabindex="-1">. */
+.skip-link {
+  position: absolute;
+  left: var(--space-2);
+  top: -48px;
+  z-index: 100;
+  padding: var(--space-2) 14px;
+  border-radius: var(--radius-sm);
+  background: hsl(var(--surface-2));
+  color: hsl(var(--fg));
+  border: 1px solid hsl(var(--accent));
+  font-size: 13px;
+  font-weight: 600;
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+  top: var(--space-2);
+  text-decoration: none;
+}
+
+/* The main landmark takes programmatic focus from the skip link only. */
+#main-content:focus {
+  outline: none;
+}
+
 /* ---------- App shell layout ---------- */
 .app-shell {
   display: flex;
@@ -175,6 +203,19 @@ a:hover {
   background: hsl(var(--brand-cc));
 }
 
+.sidebar-group-agent-sessions .sidebar-group-dot {
+  background: hsl(var(--fg-muted));
+}
+
+/* Agent entries carry their brand color on the icon. */
+.nav-icon-claude-code {
+  color: hsl(var(--brand-cc));
+}
+
+.nav-icon-codex {
+  color: hsl(var(--brand-codex));
+}
+
 /* Divider between the Engram and Claude Code groups — tighten the gap before
    the following group heading so the separation reads as one boundary. */
 .sidebar-divider + .sidebar-group-label {
@@ -252,6 +293,20 @@ a:hover {
   border-left: 3px solid transparent;
   border-right: 3px solid transparent;
   border-top: 4px solid hsl(var(--fg-muted));
+}
+
+/* Initial of the active profile; only shown in the collapsed rail. */
+.account-avatar {
+  display: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  background: hsl(var(--accent) / 0.14);
+  color: hsl(var(--accent));
+  box-shadow: inset 0 0 0 1px hsl(var(--accent) / 0.35);
 }
 
 .account-switcher-menu {
@@ -1425,21 +1480,43 @@ code {
   display: none;
 }
 
-/* ===== >= 640px: collapsed = icon-only rail ===== */
+/* ===== >= 640px: collapsed = 64px icon rail (default) ===== */
 @media (min-width: 640px) {
   .app-shell.sidebar-collapsed .sidebar {
-    width: 72px;
+    position: relative;
+    z-index: 30;
+    width: 64px;
     padding-left: var(--space-2);
     padding-right: var(--space-2);
+    /* Let the label chips float over the main content. */
+    overflow: visible;
   }
-  .app-shell.sidebar-collapsed .nav-label,
-  .app-shell.sidebar-collapsed .sidebar-group-text,
-  .app-shell.sidebar-collapsed .sidebar-brand-text,
   .app-shell.sidebar-collapsed .sidebar-sync-label,
-  .app-shell.sidebar-collapsed .status-pill-label {
+  .app-shell.sidebar-collapsed .status-pill-label,
+  .app-shell.sidebar-collapsed .account-switcher > .sidebar-brand-label {
     display: none;
   }
+  /* Hidden visually, kept for assistive tech. */
+  .app-shell.sidebar-collapsed .sidebar-group-text,
+  .app-shell.sidebar-collapsed .sidebar-brand-title,
+  .app-shell.sidebar-collapsed .sidebar-brand-text > .sidebar-brand-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .app-shell.sidebar-collapsed .account-avatar {
+    display: grid;
+  }
+  .app-shell.sidebar-collapsed .account-switcher-menu {
+    top: 0;
+    left: calc(100% + var(--space-2));
+    margin-top: 0;
+  }
   .app-shell.sidebar-collapsed .sidebar-brand {
+    flex-direction: column;
     justify-content: center;
   }
   .app-shell.sidebar-collapsed .sidebar-brand-actions {
@@ -1461,6 +1538,29 @@ code {
   .app-shell.sidebar-collapsed .sidebar-nav a.active::before {
     left: 0;
   }
+  /* Labels become a floating chip, shown on hover and keyboard focus. */
+  .app-shell.sidebar-collapsed .nav-label {
+    position: absolute;
+    left: calc(100% + 14px);
+    top: 50%;
+    transform: translate(-4px, -50%);
+    padding: 6px 10px;
+    white-space: nowrap;
+    background: hsl(var(--surface-2));
+    color: hsl(var(--fg));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius-sm);
+    box-shadow: var(--elevation-2);
+    font-weight: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease, transform 0.15s ease;
+  }
+  .app-shell.sidebar-collapsed .sidebar-nav a:hover .nav-label,
+  .app-shell.sidebar-collapsed .sidebar-nav a:focus-visible .nav-label {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
 }
 
 /* ===== < 640px: fixed rail that expands to an overlay drawer ===== */
@@ -1471,17 +1571,17 @@ code {
     left: 0;
     bottom: 0;
     z-index: 50;
-    width: 72px;
+    width: 64px;
     padding-left: var(--space-2);
     padding-right: var(--space-2);
   }
   /* Keep content clear of the fixed rail. */
   .main-content,
   .main-content-full {
-    padding-left: calc(72px + var(--space-4));
+    padding-left: calc(64px + var(--space-4));
   }
   .main-content-full {
-    padding-left: 72px;
+    padding-left: 64px;
   }
   /* Rail (closed): icon-only. */
   .app-shell:not(.sidebar-open) .nav-label,

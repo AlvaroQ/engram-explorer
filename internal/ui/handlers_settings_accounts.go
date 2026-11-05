@@ -22,7 +22,7 @@ func handleAccountsPage(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lang := langForRequest(r)
 		theme := themeForRequest(r)
-		data := buildAccountsData(d, lang, theme)
+		data := buildAccountsData(d, r, lang, theme)
 
 		if IsHTMX(r) {
 			renderDeps(w, r, d, AccountsPartial(data))
@@ -52,14 +52,14 @@ func handleProfileSwitchPost(d Deps) http.HandlerFunc {
 		theme := themeForRequest(r)
 
 		if name == "" {
-			data := buildAccountsData(d, lang, theme)
+			data := buildAccountsData(d, r, lang, theme)
 			data.AccountsError = T(lang, "settings.accounts.nameEmpty")
 			renderAccounts(w, r, d, data)
 			return
 		}
 
 		if err := d.SwitchProfile(name); err != nil {
-			data := buildAccountsData(d, lang, theme)
+			data := buildAccountsData(d, r, lang, theme)
 			data.AccountsError = ErrorMessage(r, "", err)
 			renderAccounts(w, r, d, data)
 			return
@@ -88,14 +88,14 @@ func handleProfileCreatePost(d Deps) http.HandlerFunc {
 		theme := themeForRequest(r)
 
 		if name == "" {
-			data := buildAccountsData(d, lang, theme)
+			data := buildAccountsData(d, r, lang, theme)
 			data.AccountsError = T(lang, "settings.accounts.nameEmpty")
 			renderAccounts(w, r, d, data)
 			return
 		}
 
 		if err := d.CreateProfile(name); err != nil {
-			data := buildAccountsData(d, lang, theme)
+			data := buildAccountsData(d, r, lang, theme)
 			data.AccountsError = ErrorMessage(r, "", err)
 			renderAccounts(w, r, d, data)
 			return
@@ -124,14 +124,14 @@ func handleProfileDeletePost(d Deps) http.HandlerFunc {
 		theme := themeForRequest(r)
 
 		if name == "" {
-			data := buildAccountsData(d, lang, theme)
+			data := buildAccountsData(d, r, lang, theme)
 			data.AccountsError = T(lang, "settings.accounts.nameEmpty")
 			renderAccounts(w, r, d, data)
 			return
 		}
 
 		if err := d.DeleteProfile(name); err != nil {
-			data := buildAccountsData(d, lang, theme)
+			data := buildAccountsData(d, r, lang, theme)
 			data.AccountsError = ErrorMessage(r, "", err)
 			renderAccounts(w, r, d, data)
 			return
@@ -141,7 +141,7 @@ func handleProfileDeletePost(d Deps) http.HandlerFunc {
 }
 
 // buildAccountsData collects the data needed for the accounts page.
-func buildAccountsData(d Deps, lang, theme string) accountsData {
+func buildAccountsData(d Deps, r *http.Request, lang, theme string) accountsData {
 	var profiles []ProfileInfo
 	if d.Profiles != nil {
 		profiles = d.Profiles()
@@ -155,6 +155,7 @@ func buildAccountsData(d Deps, lang, theme string) accountsData {
 		ActiveProfile: active,
 		Lang:          lang,
 		Theme:         theme,
+		SidebarState:  sidebarStateForRequest(r),
 	}
 }
 

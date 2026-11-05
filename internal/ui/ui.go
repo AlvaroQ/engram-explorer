@@ -7,6 +7,7 @@ import (
 	"context"
 	"io/fs"
 	"net/http"
+	"strings"
 
 	"github.com/AlvaroQ/engram-explorer/internal/agentsessions"
 	"github.com/AlvaroQ/engram-explorer/internal/config"
@@ -212,7 +213,7 @@ func IsHTMX(r *http.Request) bool {
 func renderDeps(w http.ResponseWriter, r *http.Request, d Deps, c templ.Component) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	ctx := NavContextWithGroupsAndProfiles(r, d.NavGroups, d.Profiles)
-	_ = c.Render(ctx, w)
+	_ = c.Render(withShellRequest(ctx, r, d.AgentSessions), w)
 }
 
 // Render writes a templ component to the response with text/html content type.
@@ -221,7 +222,66 @@ func renderDeps(w http.ResponseWriter, r *http.Request, d Deps, c templ.Componen
 // renderDeps when a Deps is available (it also passes NavGroups).
 func Render(w http.ResponseWriter, r *http.Request, c templ.Component) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = c.Render(NavContext(r), w)
+	_ = c.Render(withShellRequest(NavContext(r), r, nil), w)
+}
+
+// ---------------------------------------------------------------------------
+// Shell request — what the shared Sidebar reads from the request besides the
+// nav prefs: the URL (agent entries are current by ?agent on the agent pages)
+// and the agent kinds with a live source.
+// ---------------------------------------------------------------------------
+
+type shellRequestKey struct{}
+
+type shellRequest struct {
+	path, agent string
+	// agents holds the agent kinds with a live source; nil means unknown
+	// (no Deps at render time), which shows every agent entry.
+	agents map[string]bool
+}
+
+func withShellRequest(ctx context.Context, r *http.Request, sources []agentsessions.Source) context.Context {
+	sr := shellRequest{path: r.URL.Path, agent: r.URL.Query().Get("agent")}
+	if len(sources) > 0 {
+		sr.agents = map[string]bool{}
+		for _, s := range sources {
+			sr.agents[s.Agent()] = true
+		}
+	}
+	return context.WithValue(ctx, shellRequestKey{}, sr)
+}
+
+func shellRequestFrom(ctx context.Context) shellRequest {
+	sr, _ := ctx.Value(shellRequestKey{}).(shellRequest)
+	return sr
+}
+
+// sidebarLinks drops the agent entries whose agent has no live source.
+func sidebarLinks(ctx context.Context, links []providers.NavLink) []providers.NavLink {
+	agents := shellRequestFrom(ctx).agents
+	if agents == nil {
+		return links
+	}
+	out := make([]providers.NavLink, 0, len(links))
+	for _, l := range links {
+		if a := providers.NavLinkAgent(l); a == "" || agents[a] {
+			out = append(out, l)
+		}
+	}
+	return out
+}
+
+// navLinkActive reports whether l is the current sidebar entry: an agent
+// entry on an agent-session page whose ?agent matches (the neutral view has
+// no current agent), any other entry by its activeNav key.
+func navLinkActive(ctx context.Context, l providers.NavLink, activeNav string) bool {
+	agent := providers.NavLinkAgent(l)
+	if agent == "" {
+		return l.Key == activeNav
+	}
+	sr := shellRequestFrom(ctx)
+	onAgentPage := sr.path == agentsessions.RoutePrefix || strings.HasPrefix(sr.path, agentsessions.RoutePrefix+"/")
+	return onAgentPage && sr.agent == agent
 }
 
 // RequireRW wraps a write handler with a read-only guard shared by the ui and

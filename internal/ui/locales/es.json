@@ -12,7 +12,10 @@
     "orphans": "Huérfanos",
     "agentSessions": "Sesiones de agentes",
     "agentSessionsOverview": "Resumen",
-    "agentSessionsList": "Sesiones"
+    "agentSessionsList": "Sesiones",
+    "agents": "Agentes",
+    "agentClaudeCode": "Claude Code",
+    "agentCodex": "Codex"
   },
   "common": {
     "errorGeneric": "Algo salió mal. Revisa el registro del servidor para más detalles.",
@@ -36,7 +39,8 @@
     "no": "no",
     "all": "todos",
     "none": "—",
-    "language": "Idioma"
+    "language": "Idioma",
+    "skipToContent": "Saltar al contenido"
   },
   "sidebar": {
     "brand": "Explorer",
@@ -818,7 +822,8 @@
       "noMatch": "Ninguna sesión coincide con estos filtros.",
       "page": "Página {{page}} de {{pages}}",
       "prev": "Anterior",
-      "next": "Siguiente"
+      "next": "Siguiente",
+      "total": "{{total}} sesiones"
     },
     "filter": {
       "agent": "Agente",
