@@ -92,6 +92,9 @@ func mountLegacyRoutes(mux *http.ServeMux, c *Container) {
 	// --- Phase 3 write routes ---
 	writeRoutes(mux, c)
 
+	// --- Phase 5 maintenance checks ---
+	maintenanceRoutes(mux, c)
+
 	// Cloud is read-only: no enroll/unenroll/sync routes. Sync diagnostics
 	// (syncRoutes) and the GET daemon proxy (daemonRoutes) cover it.
 
@@ -141,6 +144,7 @@ func mountRegistryRoutes(mux *http.ServeMux, c *Container) {
 	syncRoutes(memory, c)
 	graphRoutes(memory, c)
 	writeRoutes(memory, c)
+	maintenanceRoutes(memory, c)
 
 	// The cross-agent stats API, served from every live AgentSessionSource.
 	agentSessionsRoutes(c.capabilityMux(mux, isAgentSessionSource), c)
