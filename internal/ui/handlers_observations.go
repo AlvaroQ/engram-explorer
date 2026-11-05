@@ -97,7 +97,7 @@ func handleObservationsPage(d Deps) http.HandlerFunc {
 			q := strings.TrimSpace(r.URL.Query().Get("q"))
 			topics, err := loadTopics(r, d, q)
 			if err != nil {
-				RenderError(w, r, "Failed to load topics: ", err)
+				RenderError(w, r, "errors.loadTopics", err)
 				return
 			}
 			if IsHTMX(r) {
@@ -110,7 +110,7 @@ func handleObservationsPage(d Deps) http.HandlerFunc {
 			q := r.URL.Query().Get("q")
 			items, searchItems, err := loadPrompts(d, q)
 			if err != nil {
-				RenderError(w, r, "Failed to load prompts: ", err)
+				RenderError(w, r, "errors.loadPrompts", err)
 				return
 			}
 			if IsHTMX(r) {
@@ -124,7 +124,7 @@ func handleObservationsPage(d Deps) http.HandlerFunc {
 			params := observationListParamsFromQuery(r)
 			items, nextCursor, err := loadObservations(d, params)
 			if err != nil {
-				RenderError(w, r, "Failed to load observations: ", err)
+				RenderError(w, r, "errors.loadObservations", err)
 				return
 			}
 			projects := loadProjectNames(d)
@@ -153,7 +153,7 @@ func handleObservationsListPartial(d Deps) http.HandlerFunc {
 
 		items, nextCursor, err := loadObservations(d, params)
 		if err != nil {
-			RenderError(w, r, "Failed to load observations: ", err)
+			RenderError(w, r, "errors.loadObservations", err)
 			return
 		}
 
@@ -175,7 +175,7 @@ func handleObservationDetailPartial(d Deps) http.HandlerFunc {
 		idStr := r.PathValue("id")
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
-			Render(w, r, ErrorPartial("Invalid observation id: "+idStr))
+			Render(w, r, ErrorPartial(T(langForRequest(r), "errors.invalidObservationId", "id", idStr)))
 			return
 		}
 
@@ -186,7 +186,7 @@ func handleObservationDetailPartial(d Deps) http.HandlerFunc {
 
 		obs, revisions, err := services.ObservationsGetByID(d.RoDB, id)
 		if err != nil {
-			RenderError(w, r, "Failed to load observation: ", err)
+			RenderError(w, r, "errors.loadObservation", err)
 			return
 		}
 		if obs == nil {

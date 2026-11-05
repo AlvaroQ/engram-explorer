@@ -13,7 +13,9 @@
 //                                  requestSubmit(), so submit listeners such
 //                                  as data-submit-confirm still run
 //   data-submit-confirm="text"     submit: cancel unless confirm(text) is accepted
-//   data-merge-confirm-source="p"  submit: set hx-confirm from #merge-target value
+//   data-merge-confirm-source="p"  submit: set hx-confirm from #merge-target value,
+//                                  using data-merge-confirm-template (localized,
+//                                  {source}/{target} placeholders)
 //   data-show-on-swap              htmx:afterSwap into this element: clear the
 //                                  hidden attribute and any inline display
 //   data-remove-after-request="id" htmx:afterRequest from this element: remove #id
@@ -93,16 +95,17 @@
         return;
       }
       var source = form.getAttribute('data-merge-confirm-source');
-      if (source !== null) {
+      var template = form.getAttribute('data-merge-confirm-template');
+      if (source !== null && template !== null) {
         var sel = document.getElementById('merge-target');
         if (sel) {
+          // One pass, so a project name containing a placeholder stays literal.
+          var target = sel.value;
           form.setAttribute(
             'hx-confirm',
-            'Combine "' +
-              source +
-              '" into "' +
-              sel.value +
-              '"? This moves all its memories and cannot be undone.',
+            template.replace(/\{(source|target)\}/g, function (_, k) {
+              return k === 'source' ? source : target;
+            }),
           );
         }
       }

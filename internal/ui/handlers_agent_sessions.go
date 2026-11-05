@@ -72,7 +72,7 @@ func handleAgentSessionsList(d Deps) http.HandlerFunc {
 		q := agentListQueryFrom(r)
 		res, err := agentsessions.ListSessions(r.Context(), d.AgentSessions, q.params())
 		if err != nil {
-			RenderError(w, r, "Failed to load agent sessions: ", err)
+			RenderError(w, r, "errors.loadAgentSessions", err)
 			return
 		}
 		v := agentListView{Result: res, Query: q, Lang: lang}

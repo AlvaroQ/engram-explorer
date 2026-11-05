@@ -1112,5 +1112,32 @@
     "network": "No se pudo contactar con el servidor. Comprueba que está en marcha.",
     "unavailable": "Esta función no está disponible ahora.",
     "close": "Cerrar aviso"
+  },
+  "errors": {
+    "loadSession": "No se pudo cargar la sesión: ",
+    "loadAgentSessions": "No se pudieron cargar las sesiones de agentes: ",
+    "loadTopics": "No se pudieron cargar los temas: ",
+    "loadPrompts": "No se pudieron cargar los prompts: ",
+    "loadObservations": "No se pudieron cargar las observaciones: ",
+    "loadObservation": "No se pudo cargar la observación: ",
+    "loadOverview": "No se pudo cargar el resumen: ",
+    "loadProject": "No se pudo cargar el proyecto: ",
+    "badRequest": "Solicitud no válida: ",
+    "loadProjects": "No se pudieron cargar los proyectos: ",
+    "loadSessions": "No se pudieron cargar las sesiones: ",
+    "loadOrphans": "No se pudieron cargar los elementos sin proyecto: ",
+    "invalidForm": "Datos del formulario no válidos: ",
+    "assignFailed": "No se pudo asignar: ",
+    "deleteFailed": "No se pudo borrar: ",
+    "reloadFailed": "No se pudo recargar: ",
+    "loadSyncProjects": "No se pudieron cargar los proyectos de sync: ",
+    "computeSyncIssues": "No se pudieron calcular los problemas de sync: ",
+    "loadProjectDetail": "No se pudo cargar el detalle del proyecto: ",
+    "invalidObservationId": "Id de observación no válido: {{id}}",
+    "invalidId": "Id no válido: {{id}}",
+    "readOnly": "Las operaciones de escritura no están disponibles en modo de solo lectura.",
+    "noDatabase": "La base de datos no está disponible.",
+    "observationNotFound": "No se encontró la observación {{id}}.",
+    "projectRequired": "Elige un proyecto."
   }
 }

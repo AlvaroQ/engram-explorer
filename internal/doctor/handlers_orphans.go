@@ -53,7 +53,7 @@ func parseEntityAndID(r *http.Request) (services.EntityKind, any, error) {
 	}
 	n, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		return "", nil, usererr.New(fmt.Sprintf("invalid id %q", idStr))
+		return "", nil, usererr.New(ui.T(ui.LangForRequest(r), "errors.invalidId", "id", idStr))
 	}
 	return kind, n, nil
 }
@@ -64,7 +64,7 @@ func handleOrphansListPartial(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data, projects, err := loadOrphansData(r.Context(), d)
 		if err != nil {
-			ui.RenderError(w, r, "Failed to load orphans: ", err)
+			ui.RenderError(w, r, "errors.loadOrphans", err)
 			return
 		}
 		ui.Render(w, r, OrphansList(data, projects))
@@ -79,21 +79,21 @@ func handleOrphanObservationDetail(d Deps) http.HandlerFunc {
 		idStr := r.PathValue("id")
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
-			ui.Render(w, r, ui.ErrorPartial(fmt.Sprintf("invalid observation id %q", idStr)))
+			ui.Render(w, r, ui.ErrorPartial(ui.T(ui.LangForRequest(r), "errors.invalidObservationId", "id", idStr)))
 			return
 		}
 		if d.RoDB == nil {
-			ui.Render(w, r, ui.ErrorPartial("Database is not available."))
+			ui.Render(w, r, ui.ErrorPartial(ui.T(ui.LangForRequest(r), "errors.noDatabase")))
 			return
 		}
 
 		detail, err := services.LoadOrphanObservationDetail(d.RoDB, id)
 		if err != nil {
-			ui.RenderError(w, r, "Failed to load observation: ", err)
+			ui.RenderError(w, r, "errors.loadObservation", err)
 			return
 		}
 		if detail == nil {
-			ui.Render(w, r, ui.ErrorPartial(fmt.Sprintf("Observation %d not found.", id)))
+			ui.Render(w, r, ui.ErrorPartial(ui.T(ui.LangForRequest(r), "errors.observationNotFound", "id", strconv.FormatInt(id, 10))))
 			return
 		}
 
@@ -116,17 +116,17 @@ func handleOrphansAssign(d Deps) http.HandlerFunc {
 		}
 
 		if err := r.ParseForm(); err != nil {
-			ui.RenderError(w, r, "Invalid form data: ", err)
+			ui.RenderError(w, r, "errors.invalidForm", err)
 			return
 		}
 		project := r.FormValue("project")
 		if project == "" {
-			ui.Render(w, r, ui.ErrorPartial("project field is required"))
+			ui.Render(w, r, ui.ErrorPartial(ui.T(ui.LangForRequest(r), "errors.projectRequired")))
 			return
 		}
 
 		if _, err := services.AssignProject(r.Context(), d.RWDB, kind, id, project); err != nil {
-			respondOrphans(w, r, d, ui.ErrorMessage(r, "Assign failed: ", err))
+			respondOrphans(w, r, d, ui.ErrorMessage(r, "errors.assignFailed", err))
 			return
 		}
 		respondOrphans(w, r, d, "")
@@ -144,7 +144,7 @@ func handleOrphansDelete(d Deps) http.HandlerFunc {
 		}
 
 		if _, err := services.DeleteEntity(r.Context(), d.RWDB, kind, id); err != nil {
-			respondOrphans(w, r, d, ui.ErrorMessage(r, "Delete failed: ", err))
+			respondOrphans(w, r, d, ui.ErrorMessage(r, "errors.deleteFailed", err))
 			return
 		}
 		respondOrphans(w, r, d, "")
@@ -164,7 +164,7 @@ func respondOrphans(w http.ResponseWriter, r *http.Request, d Deps, errMsg strin
 		if errMsg != "" {
 			ui.Render(w, r, ui.ErrorPartial(errMsg))
 		} else {
-			ui.RenderError(w, r, "Reload failed: ", loadErr)
+			ui.RenderError(w, r, "errors.reloadFailed", loadErr)
 		}
 		return
 	}

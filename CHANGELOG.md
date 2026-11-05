@@ -166,7 +166,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (Enter, Space or arrows open it; arrows, Home and End move; Esc closes it and returns focus).
 - **Maintenance pages in Spanish** — the orphans list, its detail dialog and the cloud sync panels no longer
   hard-code English; every user-visible string in the templ sources goes through the locale catalogs (guarded by
-  `TestTemplSources_NoEnglishLiterals`).
+  `TestTemplSources_NoEnglishLiterals`). Inline errors built in Go handlers (orphan detail and assign errors,
+  read-only writes, invalid ids, the "Failed to load …" prefixes) and the project-combine confirmation follow
+  the language too (guarded by `TestGoSources_NoEnglishErrorLiterals`).
 - **Design tokens meet WCAG AA** — colors live only in `internal/ui/static/tokens.css` (linked before `app.css`
   and `styles.css`; the doctor stylesheet now uses them instead of its own hex palette), every text/background
   pair passes AA in light and dark (guarded by `tokens_contrast_test.go`), and new `--accent-fg`, `--info` and

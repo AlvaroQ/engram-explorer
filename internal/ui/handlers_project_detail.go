@@ -58,7 +58,7 @@ func handleProjectDetailPage(d Deps) http.HandlerFunc {
 
 		overview, err := services.ProjectsGetOverview(d.RoDB, project)
 		if err != nil {
-			RenderError(w, r, "Failed to load project: ", err)
+			RenderError(w, r, "errors.loadProject", err)
 			return
 		}
 		if overview == nil {
@@ -111,7 +111,7 @@ func handleProjectMergePost(d Deps) http.HandlerFunc {
 		lang := langForRequest(r)
 
 		if err := r.ParseForm(); err != nil {
-			RenderError(w, r, "Bad request: ", err)
+			RenderError(w, r, "errors.badRequest", err)
 			return
 		}
 		target := r.FormValue("target")

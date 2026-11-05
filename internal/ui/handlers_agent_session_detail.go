@@ -23,7 +23,7 @@ func RenderAgentSessionDetail(w http.ResponseWriter, r *http.Request, src agents
 		return
 	}
 	if err != nil {
-		RenderError(w, r, "Failed to load session: ", err)
+		RenderError(w, r, "errors.loadSession", err)
 		return
 	}
 	d.Session.Source, d.Session.Agent = src.ID(), src.Agent()

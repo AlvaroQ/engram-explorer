@@ -65,7 +65,7 @@ func handleProjectsPage(d Deps) http.HandlerFunc {
 
 		data, err := loadProjects(d)
 		if err != nil {
-			RenderError(w, r, "Failed to load projects: ", err)
+			RenderError(w, r, "errors.loadProjects", err)
 			return
 		}
 
@@ -88,7 +88,7 @@ func handleProjectsListPartial(d Deps) http.HandlerFunc {
 
 		data, err := loadProjects(d)
 		if err != nil {
-			RenderError(w, r, "Failed to load projects: ", err)
+			RenderError(w, r, "errors.loadProjects", err)
 			return
 		}
 

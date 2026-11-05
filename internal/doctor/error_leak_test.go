@@ -97,7 +97,7 @@ func TestErrorLeak_DomainErrorsStayVisible(t *testing.T) {
 
 	w = serve(mux, httptest.NewRequest(http.MethodDelete, "/doctor/orphans/observations/abc", nil))
 	body := w.Body.String()
-	if w.Code != http.StatusOK || !strings.Contains(body, `invalid id &#34;abc&#34;`) {
+	if w.Code != http.StatusOK || !strings.Contains(body, `Invalid id: abc`) {
 		t.Errorf("invalid id message must stay visible (200); got %d: %s", w.Code, body)
 	}
 	if strings.Contains(body, "strconv") {

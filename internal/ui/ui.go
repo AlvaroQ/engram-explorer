@@ -304,7 +304,7 @@ func navLinkActive(ctx context.Context, l providers.NavLink, activeNav string) b
 func RequireRW(writable bool, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !writable {
-			Render(w, r, ErrorPartial("Write operations are not available in read-only mode."))
+			Render(w, r, ErrorPartial(T(langForRequest(r), "errors.readOnly")))
 			return
 		}
 		h(w, r)

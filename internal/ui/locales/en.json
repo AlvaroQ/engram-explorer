@@ -1112,5 +1112,32 @@
     "network": "Could not reach the server. Check that it is running.",
     "unavailable": "This feature is not available right now.",
     "close": "Dismiss notification"
+  },
+  "errors": {
+    "loadSession": "Failed to load session: ",
+    "loadAgentSessions": "Failed to load agent sessions: ",
+    "loadTopics": "Failed to load topics: ",
+    "loadPrompts": "Failed to load prompts: ",
+    "loadObservations": "Failed to load observations: ",
+    "loadObservation": "Failed to load observation: ",
+    "loadOverview": "Failed to load overview: ",
+    "loadProject": "Failed to load project: ",
+    "badRequest": "Bad request: ",
+    "loadProjects": "Failed to load projects: ",
+    "loadSessions": "Failed to load sessions: ",
+    "loadOrphans": "Failed to load orphans: ",
+    "invalidForm": "Invalid form data: ",
+    "assignFailed": "Assign failed: ",
+    "deleteFailed": "Delete failed: ",
+    "reloadFailed": "Reload failed: ",
+    "loadSyncProjects": "Failed to load sync projects: ",
+    "computeSyncIssues": "Failed to compute sync issues: ",
+    "loadProjectDetail": "Failed to load project detail: ",
+    "invalidObservationId": "Invalid observation id: {{id}}",
+    "invalidId": "Invalid id: {{id}}",
+    "readOnly": "Write operations are not available in read-only mode.",
+    "noDatabase": "Database is not available.",
+    "observationNotFound": "Observation {{id}} not found.",
+    "projectRequired": "Choose a project."
   }
 }

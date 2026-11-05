@@ -22,7 +22,7 @@ func handleSessionDetailPage(d Deps) http.HandlerFunc {
 
 		detail, err := services.SessionsGetDetail(d.RoDB, id)
 		if err != nil {
-			RenderError(w, r, "Failed to load session: ", err)
+			RenderError(w, r, "errors.loadSession", err)
 			return
 		}
 		if detail == nil {

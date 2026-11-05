@@ -321,6 +321,7 @@ templ projectDetailCombineCard(current string, otherProjects []string, lang stri
 					hx-confirm={ T(lang, "projectDetail.combine.confirm", "source", current, "target", "") }
 					class="flex flex-col gap-3 sm:flex-row sm:items-end"
 					data-merge-confirm-source={ current }
+					data-merge-confirm-template={ T(lang, "projectDetail.combine.confirm", "source", "{source}", "target", "{target}") }
 				>
 					<div class="flex flex-col gap-1">
 						<label for="merge-target" class="text-xs text-fg-muted">{ T(lang, "projectDetail.combine.targetLabel") }</label>
