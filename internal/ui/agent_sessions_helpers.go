@@ -29,14 +29,14 @@ func asTurnText(t agentsessions.Turn) string {
 	return ""
 }
 
-// asFirstUserPrompt returns the first user text without IDE/harness markers,
-// skipping marker-only turns (the page title).
-func asFirstUserPrompt(turns []agentsessions.Turn) string {
+// asFirstUserPrompt returns the first user text without the IDE/harness
+// markers of agent, skipping marker-only turns (the page title).
+func asFirstUserPrompt(agent string, turns []agentsessions.Turn) string {
 	for _, t := range turns {
 		if t.Role != "user" {
 			continue
 		}
-		if clean := ccsPlainFromSegments(ccsSplitMarkers(asTurnText(t))); clean != "" {
+		if clean := ccsPlainFromSegments(asSplitMarkers(agent, asTurnText(t))); clean != "" {
 			return clean
 		}
 	}
@@ -62,13 +62,18 @@ func asClock(t agentsessions.Turn) string {
 	return t.Timestamp.UTC().Format("15:04:05")
 }
 
-// asTurnPreview summarizes a turn for its collapsed summary line.
-func asTurnPreview(t agentsessions.Turn) string {
+// asTurnPreview summarizes a turn with the Claude Code marker set
+// (asTurnPreviewFor).
+func asTurnPreview(t agentsessions.Turn) string { return asTurnPreviewFor(claudeAgent, t) }
+
+// asTurnPreviewFor summarizes a turn for its collapsed summary line, hiding
+// the IDE/harness markers of agent.
+func asTurnPreviewFor(agent string, t agentsessions.Turn) string {
 	var parts []string
 	for _, b := range t.Blocks {
 		switch b.Kind {
 		case agentsessions.BlockText:
-			if plain := ccsPlainFromSegments(ccsSplitMarkers(b.Text)); plain != "" {
+			if plain := ccsPlainFromSegments(asSplitMarkers(agent, b.Text)); plain != "" {
 				parts = append(parts, ccsPromptPreview(plain))
 			} else if b.Text != "" {
 				parts = append(parts, "📎 attachment")

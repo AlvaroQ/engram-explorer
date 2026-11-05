@@ -5,10 +5,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/AlvaroQ/engram-explorer/internal/services"
+	"github.com/AlvaroQ/engram-explorer/internal/agentsessions"
 )
 
-// Transcript helpers shared by the agent-session pages: Claude Code IDE /
+// Transcript helpers shared by the agent-session pages: per-agent IDE /
 // harness marker handling (marker chips in transcripts, marker-free prompt
 // previews) and the token, size and time formatters. Moved here from the
 // former Claude Code session templates.
@@ -33,17 +33,24 @@ func ccsMarkerLabel(tag, full string) string {
 	return tag
 }
 
-// ccsMarkerTags is the list of IDE/harness wrapper tags injected into Claude
-// Code session transcripts. The canonical list lives in the services layer
-// (services.CCMarkerTags) so prompt-preview stripping and chip rendering share a
-// single source of truth.
-var ccsMarkerTags = services.CCMarkerTags
+// Marker tags are agent-specific: each agent reader registers its own set with
+// agentsessions.RegisterMarkers (Claude Code: services.CCMarkerTags) and these
+// helpers look it up by the session's agent kind, so a Codex prompt is never
+// stripped with Claude Code tags.
 
-// ccsMarkerReList holds one compiled regexp per marker tag, index-aligned with
-// ccsMarkerTags. The patterns are compiled once in the services layer
-// (services.CCMarkerReList) and reused here for positional marker splitting, so
-// the identical RE2 patterns are not compiled twice across packages.
-var ccsMarkerReList = services.CCMarkerReList()
+// ccsMarkerTags is the Claude Code marker set's tag list, read from the
+// registry (used by ccsAttachment and the transcript tests).
+var ccsMarkerTags = agentsessions.Markers(claudeAgent).Tags()
+
+// asMarkers is the marker set of agent. Hosts stamp the agent on every session
+// they render; an unstamped session (empty agent) keeps the historical Claude
+// Code set, while any other agent only ever gets its own registered set.
+func asMarkers(agent string) agentsessions.MarkerSet {
+	if agent == "" {
+		agent = claudeAgent
+	}
+	return agentsessions.Markers(agent)
+}
 
 // ccsSegment is one piece of a split transcript string.
 type ccsSegment struct {
@@ -58,16 +65,21 @@ type markerSpan struct {
 	tag        string
 }
 
-// ccsSplitMarkers splits s into an ordered sequence of plain-text and marker
-// segments. Marker spans are found by running each tag's regexp and collecting
-// [start,end,tag] tuples; overlapping spans are dropped (first/leftmost wins).
-// Plain-text segments that are whitespace-only are omitted.
-func ccsSplitMarkers(s string) []ccsSegment {
+// ccsSplitMarkers splits s with the Claude Code marker set (asSplitMarkers).
+func ccsSplitMarkers(s string) []ccsSegment { return asSplitMarkers(claudeAgent, s) }
+
+// asSplitMarkers splits s into an ordered sequence of plain-text and marker
+// segments, using the marker set of agent. Marker spans are found by running
+// each tag's regexp and collecting [start,end,tag] tuples; overlapping spans
+// are dropped (first/leftmost wins). Whitespace-only plain segments are omitted.
+func asSplitMarkers(agent, s string) []ccsSegment {
+	set := asMarkers(agent)
+	tags := set.Tags()
 	// Collect all marker spans across all tags.
 	var spans []markerSpan
-	for i, re := range ccsMarkerReList {
+	for i, re := range set.Patterns() {
 		for _, loc := range re.FindAllStringIndex(s, -1) {
-			spans = append(spans, markerSpan{start: loc[0], end: loc[1], tag: ccsMarkerTags[i]})
+			spans = append(spans, markerSpan{start: loc[0], end: loc[1], tag: tags[i]})
 		}
 	}
 	if len(spans) == 0 {
@@ -157,19 +169,14 @@ func ccsPromptPreview(s string) string {
 	return string(runes[:max]) + "…"
 }
 
-// ccsStripAttachments removes all marker segments from a prompt and reports
-// whether any were present. It delegates to the canonical ccsMarkerReList (defined
-// in cc_sessions_detail.templ) so the list and detail views share the same tag set.
-// Whitespace in the result is collapsed to one line.
-func ccsStripAttachments(s string) (string, bool) {
-	found := false
-	for _, re := range ccsMarkerReList {
-		if re.MatchString(s) {
-			found = true
-			s = re.ReplaceAllString(s, " ")
-		}
-	}
-	return strings.Join(strings.Fields(s), " "), found
+// ccsStripAttachments strips a prompt with the Claude Code marker set
+// (asStripMarkers).
+func ccsStripAttachments(s string) (string, bool) { return asStripMarkers(claudeAgent, s) }
+
+// asStripMarkers removes every marker of agent's set from a prompt and reports
+// whether any were present. Whitespace in the result is collapsed to one line.
+func asStripMarkers(agent, s string) (string, bool) {
+	return asMarkers(agent).Strip(s)
 }
 
 // ccsFormatTokens renders a token count compactly (e.g. 850, 12.3k, 1.45M).

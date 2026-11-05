@@ -1059,7 +1059,7 @@ func asRow(s agentsessions.Session, lang string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if clean, hasAttach := ccsStripAttachments(s.FirstPrompt); hasAttach {
+		if clean, hasAttach := asStripMarkers(s.Agent, s.FirstPrompt); hasAttach {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 94, "<span class=\"cc-prompt-clip\" title=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err

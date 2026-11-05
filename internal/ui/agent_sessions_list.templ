@@ -155,7 +155,7 @@ templ asRow(s agentsessions.Session, lang string) {
 		</td>
 		<td class="px-4 py-2">
 			<a href={ templ.SafeURL(agentsessions.DetailPath(s.Source, s.Key)) } class="text-sm text-fg hover:text-accent">
-				if clean, hasAttach := ccsStripAttachments(s.FirstPrompt); hasAttach {
+				if clean, hasAttach := asStripMarkers(s.Agent, s.FirstPrompt); hasAttach {
 					<span class="cc-prompt-clip" title={ T(lang, "agentSessions.attachment") }>
 						@ccsPaperclip()
 					</span>

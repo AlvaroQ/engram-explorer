@@ -23,7 +23,7 @@ templ asDetailContent(d *agentsessions.Detail, lang string) {
 			<div class="page-header-back">
 				<a href="/agent-sessions/list">← { T(lang, "common.back") }</a>
 			</div>
-			if title := asFirstUserPrompt(d.Turns); title != "" {
+			if title := asFirstUserPrompt(d.Session.Agent, d.Turns); title != "" {
 				<h1 class="cc-detail-title">{ title }</h1>
 			} else {
 				<h1>{ T(lang, "common.untitled") }</h1>
@@ -69,7 +69,7 @@ templ asDetailContent(d *agentsessions.Detail, lang string) {
 				}
 			</div>
 			<div class="card-body">
-				@asTurns(d.Turns, lang)
+				@asTurns(d.Session.Agent, d.Turns, lang)
 			</div>
 		</div>
 		if len(d.Turns) > 0 {
@@ -78,8 +78,8 @@ templ asDetailContent(d *agentsessions.Detail, lang string) {
 	</div>
 }
 
-// asTurns renders the conversation timeline.
-templ asTurns(turns []agentsessions.Turn, lang string) {
+// asTurns renders the conversation timeline; agent selects the marker set.
+templ asTurns(agent string, turns []agentsessions.Turn, lang string) {
 	if len(turns) == 0 {
 		<p class="muted">{ T(lang, "agentSessions.noTurns") }</p>
 	} else {
@@ -89,12 +89,12 @@ templ asTurns(turns []agentsessions.Turn, lang string) {
 					<summary class="timeline-event-summary">
 						<span class={ ccsTurnBadgeClass(turn.Role) }>{ turn.Role }</span>
 						<span class="timeline-event-at muted mono">{ asClock(turn) }</span>
-						<span class="timeline-event-title">{ asTurnPreview(turn) }</span>
+						<span class="timeline-event-title">{ asTurnPreviewFor(agent, turn) }</span>
 						<span class="timeline-event-index muted">{ fmt.Sprintf("#%d", i+1) }</span>
 					</summary>
 					<div class="timeline-event-body cc-blocks">
 						for _, b := range turn.Blocks {
-							@asBlock(b, lang)
+							@asBlock(agent, b, lang)
 						}
 					</div>
 				</details>
@@ -105,7 +105,7 @@ templ asTurns(turns []agentsessions.Turn, lang string) {
 
 // asBlock renders one block: text (with marker chips), reasoning (collapsed),
 // a tool call with its paired output, or an unpaired tool result.
-templ asBlock(b agentsessions.Block, lang string) {
+templ asBlock(agent string, b agentsessions.Block, lang string) {
 	switch b.Kind {
 		case agentsessions.BlockReasoning:
 			<details class="cc-tool-block cc-thinking" data-cc-block="thinking">
@@ -148,6 +148,6 @@ templ asBlock(b agentsessions.Block, lang string) {
 				<pre class="event-content cc-tool-input">{ asTruncate(b.Output, 4000) }</pre>
 			</details>
 		default:
-			@ccsRenderTextSegments(b.Text)
+			@ccsRenderTextSegments(agent, b.Text)
 	}
 }

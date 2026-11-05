@@ -113,7 +113,7 @@ func asDetailContent(d *agentsessions.Detail, lang string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if title := asFirstUserPrompt(d.Turns); title != "" {
+		if title := asFirstUserPrompt(d.Session.Agent, d.Turns); title != "" {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<h1 class=\"cc-detail-title\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -310,7 +310,7 @@ func asDetailContent(d *agentsessions.Detail, lang string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = asTurns(d.Turns, lang).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = asTurns(d.Session.Agent, d.Turns, lang).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -332,8 +332,8 @@ func asDetailContent(d *agentsessions.Detail, lang string) templ.Component {
 	})
 }
 
-// asTurns renders the conversation timeline.
-func asTurns(turns []agentsessions.Turn, lang string) templ.Component {
+// asTurns renders the conversation timeline; agent selects the marker set.
+func asTurns(agent string, turns []agentsessions.Turn, lang string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -449,9 +449,9 @@ func asTurns(turns []agentsessions.Turn, lang string) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var21 string
-				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(asTurnPreview(turn))
+				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(asTurnPreviewFor(agent, turn))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/agent_sessions_detail.templ`, Line: 92, Col: 62}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/ui/agent_sessions_detail.templ`, Line: 92, Col: 72}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 				if templ_7745c5c3_Err != nil {
@@ -475,7 +475,7 @@ func asTurns(turns []agentsessions.Turn, lang string) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				for _, b := range turn.Blocks {
-					templ_7745c5c3_Err = asBlock(b, lang).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = asBlock(agent, b, lang).Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -496,7 +496,7 @@ func asTurns(turns []agentsessions.Turn, lang string) templ.Component {
 
 // asBlock renders one block: text (with marker chips), reasoning (collapsed),
 // a tool call with its paired output, or an unpaired tool result.
-func asBlock(b agentsessions.Block, lang string) templ.Component {
+func asBlock(agent string, b agentsessions.Block, lang string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -771,7 +771,7 @@ func asBlock(b agentsessions.Block, lang string) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		default:
-			templ_7745c5c3_Err = ccsRenderTextSegments(b.Text).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = ccsRenderTextSegments(agent, b.Text).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
