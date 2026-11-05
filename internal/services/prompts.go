@@ -62,7 +62,9 @@ func scanPromptRow(s scanner) (PromptRow, error) {
 	return r, err
 }
 
-// PromptsSearch runs FTS5 search on the prompts_fts table.
+// PromptsSearch runs FTS5 search on the prompts_fts table, ranked by weighted
+// BM25 (see promptsBM25). It has no OR fallback: its callers have no way to
+// tell the user that results match any word.
 func PromptsSearch(db sqlite.Querier, rawQ string, limit int) ([]PromptWithSnippet, error) {
 	sanitized := fts.SanitizeQuery(rawQ)
 	if sanitized == "" {
@@ -73,7 +75,7 @@ func PromptsSearch(db sqlite.Querier, rawQ string, limit int) ([]PromptWithSnipp
 		FROM user_prompts p
 		JOIN prompts_fts ON prompts_fts.rowid = p.id
 		WHERE prompts_fts MATCH ?
-		ORDER BY rank, p.id DESC
+		ORDER BY ` + promptsBM25 + `, p.id DESC
 		LIMIT ?`
 	rows, err := db.Query(query, fts.HighlightStart, fts.HighlightEnd, sanitized, limit)
 	if err != nil {

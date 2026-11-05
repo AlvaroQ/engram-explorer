@@ -261,7 +261,8 @@ func ObservationsGetByID(db sqlite.Querier, id int64) (obs *ObservationRow, revi
 	return obs, revisions, nil
 }
 
-// ObservationsSearch runs an FTS5 snippet search.
+// ObservationsSearch runs an FTS5 snippet search ranked by weighted BM25 (see
+// observationsBM25).
 func ObservationsSearch(db sqlite.Querier, rawQ string, limit int) ([]ObservationWithSnippet, error) {
 	sanitized := fts.SanitizeQuery(rawQ)
 	if sanitized == "" {
@@ -272,7 +273,7 @@ func ObservationsSearch(db sqlite.Querier, rawQ string, limit int) ([]Observatio
 		FROM observations o
 		JOIN observations_fts ON observations_fts.rowid = o.id
 		WHERE observations_fts MATCH ? AND o.deleted_at IS NULL
-		ORDER BY rank, o.id DESC
+		ORDER BY ` + observationsBM25 + `, o.id DESC
 		LIMIT ?`
 	return queryRows(db, query, []any{sanitized, limit}, scanObservationWithSnippet)
 }
