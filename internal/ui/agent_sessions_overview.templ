@@ -1,18 +1,18 @@
 package ui
 
 // asTabBar renders the Overview / Sessions tabs of the agent-session pages.
-// active is "overview" or "list".
-templ asTabBar(active, lang string) {
+// active is "overview" or "list"; both tabs keep the selected agent.
+templ asTabBar(active, agent, lang string) {
 	<nav class="flex gap-1 border-b border-border mb-4" aria-label={ T(lang, "agentSessions.title") }>
 		<a
-			href="/agent-sessions"
+			href={ templ.SafeURL(agentScopedURL("/agent-sessions", agent)) }
 			class={ "px-4 py-2 text-sm font-medium rounded-t-md border border-transparent -mb-px", templ.KV("border-border border-b-bg text-fg bg-surface", active == "overview"), templ.KV("text-fg-muted hover:text-fg", active != "overview") }
 			if active == "overview" {
 				aria-current="page"
 			}
 		>{ T(lang, "agentSessions.tabs.overview") }</a>
 		<a
-			href="/agent-sessions/list"
+			href={ templ.SafeURL(agentScopedURL("/agent-sessions/list", agent)) }
 			class={ "px-4 py-2 text-sm font-medium rounded-t-md border border-transparent -mb-px", templ.KV("border-border border-b-bg text-fg bg-surface", active == "list"), templ.KV("text-fg-muted hover:text-fg", active != "list") }
 			if active == "list" {
 				aria-current="page"
@@ -22,20 +22,41 @@ templ asTabBar(active, lang string) {
 }
 
 // AgentSessionsOverviewPage renders the cross-agent usage overview.
-templ AgentSessionsOverviewPage(lang, theme, sidebarState string) {
-	@Layout(T(lang, "agentSessions.title"), "agent-sessions", lang, theme, sidebarState, asOverviewContent(lang))
+templ AgentSessionsOverviewPage(v agentOverviewView, theme, sidebarState string) {
+	@Layout(T(v.Lang, "agentSessions.title"), "agent-sessions", v.Lang, theme, sidebarState, asOverviewContent(v))
 }
 
 // AgentSessionsOverviewPartial renders the overview body for HTMX swaps.
-templ AgentSessionsOverviewPartial(lang string) {
-	@asOverviewContent(lang)
+templ AgentSessionsOverviewPartial(v agentOverviewView) {
+	@asOverviewContent(v)
+}
+
+// asAgentTabs is the agent scope of the overview: "All agents" plus one tab
+// per live agent, each a plain link to ?agent=<kind>.
+templ asAgentTabs(v agentOverviewView) {
+	<nav class="flex flex-wrap gap-2 mb-4" aria-label={ T(v.Lang, "agentSessions.filter.agent") }>
+		@asAgentTab("/agent-sessions", T(v.Lang, "agentSessions.filter.allAgents"), v.Agent == "")
+		for _, a := range v.Agents {
+			@asAgentTab(agentScopedURL("/agent-sessions", a), asAgentLabel(v.Lang, a), v.Agent == a)
+		}
+	</nav>
+}
+
+templ asAgentTab(href, label string, current bool) {
+	if current {
+		<a href={ templ.SafeURL(href) } class="btn btn-primary btn-sm" aria-current="page">{ label }</a>
+	} else {
+		<a href={ templ.SafeURL(href) } class="btn btn-secondary btn-sm">{ label }</a>
+	}
 }
 
 // asOverviewContent: totals, per agent / project / model / day charts and the
 // top sessions, all drawn by the island from /api/agent-sessions/stats.
-templ asOverviewContent(lang string) {
+templ asOverviewContent(v agentOverviewView) {
+	{{ lang := v.Lang }}
 	<div>
-		@asTabBar("overview", lang)
+		@asTabBar("overview", v.Agent, lang)
+		@asAgentTabs(v)
 		<div class="page-header">
 			<h1>{ T(lang, "agentSessions.title") }</h1>
 			<p>{ T(lang, "agentSessions.description") }</p>
@@ -46,7 +67,7 @@ templ asOverviewContent(lang string) {
 				<p>{ T(lang, "agentSessions.charts.description") }</p>
 			</div>
 			<div class="card-body">
-				@Island("agent-usage-charts", agentUsageChartsProps(lang))
+				@Island("agent-usage-charts", agentUsageChartsProps(lang, v.Agent))
 			</div>
 		</div>
 	</div>

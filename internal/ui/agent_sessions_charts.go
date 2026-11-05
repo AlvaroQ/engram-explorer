@@ -6,6 +6,9 @@ package ui
 type AgentUsageChartsProps struct {
 	Labels AgentUsageLabels  `json:"labels"`
 	Agents map[string]string `json:"agents"` // agent kind → display name
+	// Agent is the selected agent kind (?agent= on the page); the island
+	// forwards it to /api/agent-sessions/stats. Omitted for all agents.
+	Agent string `json:"agent,omitempty"`
 }
 
 // AgentUsageLabels mirrors the AgentUsageLabels interface of the island.
@@ -28,8 +31,9 @@ type AgentUsageLabels struct {
 	SourceError      string `json:"sourceError"` // "{{source}}" / "{{agent}}" placeholders
 }
 
-// agentUsageChartsProps builds the island props localized for lang.
-func agentUsageChartsProps(lang string) AgentUsageChartsProps {
+// agentUsageChartsProps builds the island props localized for lang, scoped
+// to agent ("" = all agents).
+func agentUsageChartsProps(lang, agent string) AgentUsageChartsProps {
 	k := func(key string) string { return T(lang, "agentSessions.charts."+key) }
 	return AgentUsageChartsProps{
 		Labels: AgentUsageLabels{
@@ -44,5 +48,6 @@ func agentUsageChartsProps(lang string) AgentUsageChartsProps {
 			"claude-code": asAgentLabel(lang, "claude-code"),
 			"codex":       asAgentLabel(lang, "codex"),
 		},
+		Agent: agent,
 	}
 }

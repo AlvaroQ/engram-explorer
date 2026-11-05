@@ -242,13 +242,13 @@ All three are **Tier-1**: if not found at their default paths the UI keeps them 
 **Agent sessions (Claude Code + Codex).** Both session modules feed one set of vendor-neutral pages, under a
 single "Agent sessions" sidebar group:
 
-| Route                                                    | What it shows                                                                                                      |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `/agent-sessions`                                        | Usage overview: totals, cost per agent / project / day, tokens per model, most expensive sessions                  |
-| `/agent-sessions/list`                                   | Every session; filters `agent`, `source`, `project`, `model`, `q`, `from`/`to` (days, UTC), `sort`/`order`, `page` |
-| `/agent-sessions/claude-code/<account>/<project>/<id>`   | One Claude Code session (served by the Claude Code module, one source per enabled account)                         |
-| `/agent-sessions/codex/<YYYY>/<MM>/<DD>/<rollout>.jsonl` | One Codex session (served by the Codex module)                                                                     |
-| `GET /api/agent-sessions/stats`                          | The same aggregate as JSON, cached until a session file changes                                                    |
+| Route                                                    | What it shows                                                                                                                                                                        |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/agent-sessions`                                        | Usage overview: totals, cost per agent / project / day, tokens per model, most expensive sessions; `?agent=<kind>` (tabs: All agents, one per live agent) scopes it to one agent     |
+| `/agent-sessions/list`                                   | Every session; filters `agent`, `source`, `project`, `model`, `q`, `from`/`to` (days, UTC), `sort`/`order`; 50 rows per page with **Load more** (`page` still links a numbered page) |
+| `/agent-sessions/claude-code/<account>/<project>/<id>`   | One Claude Code session (served by the Claude Code module, one source per enabled account)                                                                                           |
+| `/agent-sessions/codex/<YYYY>/<MM>/<DD>/<rollout>.jsonl` | One Codex session (served by the Codex module)                                                                                                                                       |
+| `GET /api/agent-sessions/stats`                          | The same aggregate as JSON, cached until a session file changes                                                                                                                      |
 
 Token counts use **disjoint buckets**: uncached input, cache read, cache write and output add up to the total;
 reasoning tokens are part of output and shown apart. Codex reports cached tokens inside `input_tokens`, so the
