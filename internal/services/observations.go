@@ -230,9 +230,15 @@ func listObservations(db sqlite.Querier, p ObservationListParams, text textFilte
 
 // reviewDueCondition matches the rows ObservationRow.ReviewDue reports as
 // due: review_after in the stored "YYYY-MM-DD HH:MM:SS" layout (the GLOB
-// rejects other formats, which ReviewDue cannot parse either) and not later
-// than now in UTC. The stored layout sorts lexically, so <= compares dates.
+// rejects other formats, which ReviewDue cannot parse either), a real date
+// and time, and not later than now in UTC. datetime() returns NULL for an
+// impossible month or second and normalizes an impossible day (Feb 30 → Mar
+// 2), so the round trip rejects both; it keeps hour 24, which time.Parse
+// rejects, hence the hour check. The stored layout sorts lexically, so <=
+// compares dates.
 const reviewDueCondition = `o.review_after GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]'
+	AND datetime(o.review_after) = o.review_after
+	AND substr(o.review_after, 12, 2) < '24'
 	AND o.review_after <= ?`
 
 // observationFilters builds the WHERE clause, the optional FTS join and their

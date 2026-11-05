@@ -122,3 +122,32 @@ func keys(m map[string]services.ObservationRow) []string {
 	}
 	return out
 }
+
+// Values in the stored layout that are not real dates or times (they pass the
+// layout GLOB and sort before now) are not due: ReviewDue() cannot parse them,
+// so the filter must not list them either. SQLite's datetime() rejects some
+// (month 13, second 60) and normalizes others (Feb 30 → Mar 2, hour 24 kept).
+func TestObservationsList_ReviewDueIgnoresInvalidDates(t *testing.T) {
+	db, _ := newWriteDB(t)
+	seedReviewObs(t, db, "valid", "proj", strPtr("2024-02-29 10:00:00"), false)
+	for _, v := range []string{
+		"2020-13-45 99:99:99",
+		"2026-02-30 10:00:00",
+		"2025-02-29 10:00:00",
+		"2025-01-01 24:00:00",
+		"2025-01-01 23:59:60",
+		"2020-00-10 10:00:00",
+	} {
+		seedReviewObs(t, db, v, "proj", strPtr(v), false)
+	}
+
+	got := listTitles(t, db, services.ObservationListParams{ReviewDue: true})
+	if len(got) != 1 || got["valid"].ID == 0 {
+		t.Errorf("review due list = %v, want exactly [valid]", keys(got))
+	}
+	for title, row := range listTitles(t, db, services.ObservationListParams{}) {
+		if _, listed := got[title]; row.ReviewDue() != listed {
+			t.Errorf("%s: ReviewDue()=%v but listed=%v", title, row.ReviewDue(), listed)
+		}
+	}
+}
