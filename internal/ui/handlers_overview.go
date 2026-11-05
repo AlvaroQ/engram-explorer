@@ -89,10 +89,11 @@ func handleOverviewPage(d Deps) http.HandlerFunc {
 			return
 		}
 
+		v := overviewView{Data: data.Overview, Issues: data.Issues, Lang: lang, AgentsLive: len(d.AgentSessions) > 0}
 		if IsHTMX(r) {
-			renderDeps(w, r, d, OverviewPartial(data.Overview, data.Issues, lang))
+			renderDeps(w, r, d, OverviewPartial(v))
 		} else {
-			renderDeps(w, r, d, OverviewPage(data.Overview, data.Issues, lang, theme, sidebarState))
+			renderDeps(w, r, d, OverviewPage(v, theme, sidebarState))
 		}
 	}
 }

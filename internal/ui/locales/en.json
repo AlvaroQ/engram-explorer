@@ -78,9 +78,17 @@
       "drillProject": "Drill into a project",
       "prompts": "Prompts",
       "searchPrompts": "Search prompts",
+      "keyFigures": "Key figures",
+      "last7d": "+{{count}} in the last 7 days",
+      "browse": "Browse",
+      "mostActive": "Most active:",
+      "drillIn": "Drill in",
+      "spend": "Agent spend this month",
       "window7d": "last 7 days",
       "viewSessions": "View sessions",
-      "spendDetails": "Details"
+      "spendDetails": "Details",
+      "agentsEmpty": "No coding agent connected yet.",
+      "agentsSetup": "Connect one in Settings → Data sources"
     },
     "alert": {
       "syncIssues": "{{count}} sync issue(s) need attention",
@@ -138,7 +146,7 @@
       }
     },
     "recent": {
-      "title": "Recent observations",
+      "title": "Recent memories",
       "description": "Newest 10 across all projects",
       "empty": "No observations yet.",
       "col": {
@@ -146,7 +154,8 @@
         "title": "Title",
         "project": "Project",
         "created": "Created"
-      }
+      },
+      "viewAll": "View all"
     }
   },
   "brain": {

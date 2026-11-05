@@ -72,15 +72,23 @@
     "kpi": {
       "observations": "Memorias guardadas",
       "browseAll": "Ver todas",
-      "sessions": "Conversaciones IA",
+      "sessions": "Conversaciones con IA",
       "seeTimeline": "Ver línea de tiempo",
       "projects": "Proyectos",
       "drillProject": "Explorar un proyecto",
       "prompts": "Prompts",
       "searchPrompts": "Buscar prompts",
+      "keyFigures": "Cifras clave",
+      "last7d": "+{{count}} en los últimos 7 días",
+      "browse": "Ver",
+      "mostActive": "Más activo:",
+      "drillIn": "Explorar",
+      "spend": "Gasto en agentes este mes",
       "window7d": "últimos 7 días",
       "viewSessions": "Ver sesiones",
-      "spendDetails": "Detalles"
+      "spendDetails": "Detalles",
+      "agentsEmpty": "Aún no hay ningún agente conectado.",
+      "agentsSetup": "Conecta uno en Ajustes → Fuentes de datos"
     },
     "alert": {
       "syncIssues": "{{count}} problema(s) de sincronización requieren atención",
@@ -138,7 +146,7 @@
       }
     },
     "recent": {
-      "title": "Observaciones recientes",
+      "title": "Memorias recientes",
       "description": "Las 10 más recientes en todos los proyectos",
       "empty": "Aún no hay observaciones.",
       "col": {
@@ -146,7 +154,8 @@
         "title": "Título",
         "project": "Proyecto",
         "created": "Creado"
-      }
+      },
+      "viewAll": "Ver todas"
     }
   },
   "brain": {
