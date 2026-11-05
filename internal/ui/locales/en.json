@@ -40,7 +40,8 @@
     "all": "all",
     "none": "—",
     "language": "Language",
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "errorLabel": "Error:"
   },
   "sidebar": {
     "brand": "Explorer",
@@ -405,7 +406,8 @@
     "tabs": {
       "memories": "Memories",
       "threads": "Threads",
-      "conversations": "Conversations"
+      "conversations": "Conversations",
+      "ariaLabel": "Memory tabs"
     },
     "advancedView": {
       "label": "Advanced view"
@@ -823,7 +825,8 @@
       "confirmTitle": "Import database?",
       "confirmBody": "The file's content will be merged into your current database: only new memories are added, nothing is overwritten. An automatic backup of your current database is taken first.",
       "imported": "Imported: {{observations}} observations, {{sessions}} sessions, {{prompts}} prompts, {{relations}} relations.",
-      "backupSaved": "Backup saved to {{path}}"
+      "backupSaved": "Backup saved to {{path}}",
+      "importConfirm": "Import database? Only new memories are added — nothing is overwritten. A backup is taken first."
     },
     "row": {
       "path": "Path",
@@ -1012,7 +1015,15 @@
       "content": "Content",
       "actions": "Actions",
       "assign": "Assign",
-      "delete": "Delete"
+      "delete": "Delete",
+      "topicKey": "Topic Key",
+      "updatedAt": "Updated At",
+      "startedAt": "Started At",
+      "endedAt": "Ended At",
+      "contentPreview": "Content (preview)",
+      "sessionId": "Session ID",
+      "createdAt": "Created At",
+      "updated": "Updated"
     },
     "deleteConfirm": {
       "title": "Delete this row?",
@@ -1020,6 +1031,31 @@
       "descSession": "The session will be permanently removed from the DB. This cannot be undone.",
       "descPrompt": "The prompt will be permanently removed from the DB. This cannot be undone.",
       "confirm": "Delete"
+    },
+    "emptyAll": "No orphaned entities found. All observations, sessions, and prompts are assigned to a project.",
+    "heading": {
+      "observations": "Observations",
+      "sessions": "Sessions",
+      "prompts": "Prompts"
+    },
+    "viewDetails": "View details to help assign a project",
+    "assignSelected": "Assign to selected project",
+    "assignPlaceholder": "— assign project —",
+    "deleteLabel": {
+      "observation": "Delete this orphaned observation",
+      "session": "Delete this orphaned session",
+      "prompt": "Delete this orphaned prompt"
+    },
+    "deleteConfirmText": {
+      "observation": "Delete this orphaned observation? This action cannot be undone.",
+      "session": "Delete this orphaned session? This action cannot be undone.",
+      "prompt": "Delete this orphaned prompt? This action cannot be undone."
+    },
+    "dialog": {
+      "observationTitle": "Observation #{{id}}",
+      "sessionDir": "Session working directory",
+      "sessionDirUnknown": "— unknown (no session directory recorded)",
+      "noContent": "No content recorded for this observation."
     }
   },
   "assign": {

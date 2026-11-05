@@ -40,7 +40,8 @@
     "all": "todos",
     "none": "—",
     "language": "Idioma",
-    "skipToContent": "Saltar al contenido"
+    "skipToContent": "Saltar al contenido",
+    "errorLabel": "Error:"
   },
   "sidebar": {
     "brand": "Explorer",
@@ -405,7 +406,8 @@
     "tabs": {
       "memories": "Memorias",
       "threads": "Hilos",
-      "conversations": "Conversaciones"
+      "conversations": "Conversaciones",
+      "ariaLabel": "Pestañas de memoria"
     },
     "advancedView": {
       "label": "Vista avanzada"
@@ -823,7 +825,8 @@
       "confirmTitle": "¿Importar base de datos?",
       "confirmBody": "Se fusionará el contenido del archivo en tu base actual: solo se agregan memorias nuevas, nada se sobrescribe. Antes se guarda un backup automático de tu base actual.",
       "imported": "Importado: {{observations}} observaciones, {{sessions}} sesiones, {{prompts}} prompts, {{relations}} relaciones nuevas.",
-      "backupSaved": "Backup guardado en {{path}}"
+      "backupSaved": "Backup guardado en {{path}}",
+      "importConfirm": "¿Importar la base de datos? Solo se añaden memorias nuevas; no se sobrescribe nada. Antes se hace una copia de seguridad."
     },
     "row": {
       "path": "Ruta",
@@ -1012,7 +1015,15 @@
       "content": "Contenido",
       "actions": "Acciones",
       "assign": "Asignar",
-      "delete": "Borrar"
+      "delete": "Borrar",
+      "topicKey": "Clave de tema",
+      "updatedAt": "Actualizado el",
+      "startedAt": "Inicio",
+      "endedAt": "Fin",
+      "contentPreview": "Contenido (vista previa)",
+      "sessionId": "ID de sesión",
+      "createdAt": "Creado el",
+      "updated": "Actualizado"
     },
     "deleteConfirm": {
       "title": "¿Borrar este registro?",
@@ -1020,6 +1031,31 @@
       "descSession": "La sesión se eliminará permanentemente de la BD. Esta acción no se puede deshacer.",
       "descPrompt": "El prompt se eliminará permanentemente de la BD. Esta acción no se puede deshacer.",
       "confirm": "Borrar"
+    },
+    "emptyAll": "No hay elementos sin proyecto. Todas las observaciones, sesiones y prompts tienen un proyecto asignado.",
+    "heading": {
+      "observations": "Observaciones",
+      "sessions": "Sesiones",
+      "prompts": "Prompts"
+    },
+    "viewDetails": "Ver detalles para ayudar a asignar un proyecto",
+    "assignSelected": "Asignar al proyecto seleccionado",
+    "assignPlaceholder": "— asignar proyecto —",
+    "deleteLabel": {
+      "observation": "Borrar esta observación sin proyecto",
+      "session": "Borrar esta sesión sin proyecto",
+      "prompt": "Borrar este prompt sin proyecto"
+    },
+    "deleteConfirmText": {
+      "observation": "¿Borrar esta observación sin proyecto? Esta acción no se puede deshacer.",
+      "session": "¿Borrar esta sesión sin proyecto? Esta acción no se puede deshacer.",
+      "prompt": "¿Borrar este prompt sin proyecto? Esta acción no se puede deshacer."
+    },
+    "dialog": {
+      "observationTitle": "Observación #{{id}}",
+      "sessionDir": "Directorio de trabajo de la sesión",
+      "sessionDirUnknown": "— desconocido (la sesión no registró directorio)",
+      "noContent": "Esta observación no tiene contenido."
     }
   },
   "assign": {

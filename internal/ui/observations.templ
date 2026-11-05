@@ -11,7 +11,7 @@ import (
 // memoryTabBar renders the three-tab navigation for the Memory page.
 // activeView is "", "threads", or "conversations".
 templ memoryTabBar(activeView string, lang string) {
-	<nav class="flex gap-1 border-b border-border mb-4" aria-label="Memory tabs">
+	<nav class="flex gap-1 border-b border-border mb-4" aria-label={ T(lang, "memory.tabs.ariaLabel") }>
 		<a
 			href="/observations"
 			class={ "px-4 py-2 text-sm font-medium rounded-t-md border border-transparent -mb-px", templ.KV("border-border border-b-bg text-fg bg-surface", activeView == ""), templ.KV("text-fg-muted hover:text-fg", activeView != "") }
