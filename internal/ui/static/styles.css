@@ -1,82 +1,6 @@
-/* engram-explorer ui shell — HSL design tokens + minimal layout */
-
-/* ---------- Design tokens (dark default, mirrored from apps/frontend/src/styles.css) ---------- */
-/* Tokens are stored as bare HSL triplets (H S% L%) — NOT wrapped in hsl() —
-   so they match apps/frontend/src/styles.css and the compiled app.css.
-   Consumers below (and Tailwind utilities / React islands) wrap them with
-   hsl(var(--token)). Wrapping the token value itself would produce the
-   invalid hsl(hsl(...)) and silently fall back to currentColor / black. */
-:root {
-  --bg: 249 22% 12%;
-  --surface: 247 23% 15%;
-  --surface-2: 248 25% 18%;
-  --border: 249 15% 28%;
-  --fg: 245 50% 91%;
-  --fg-muted: 248 15% 61%;
-  --accent: 343 76% 68%;
-  --ok: 189 43% 73%;
-  --warn: 35 88% 72%;
-  --fail: 343 35% 55%;
-  --brand-engram: 343 76% 68%;
-  --brand-cc: 18 72% 62%;
-  color-scheme: dark;
-}
-
-:root.light {
-  --bg: 32 57% 95%;
-  --surface: 35 100% 98%;
-  --surface-2: 28 40% 92%;
-  --border: 10 9% 86%;
-  --fg: 248 19% 40%;
-  --fg-muted: 248 12% 52%;
-  --accent: 343 35% 55%;
-  --ok: 189 30% 48%;
-  --warn: 35 81% 56%;
-  --fail: 343 35% 55%;
-  --brand-engram: 343 35% 55%;
-  --brand-cc: 16 60% 50%;
-  color-scheme: light;
-}
-
-/* ---------- Material-discipline design primitives ----------
-   Spacing rhythm (4/8px scale), radii, and a consistent elevation/shadow
-   scale layered on top of the existing HSL token system. These are used by
-   sidebar, cards, settings, and the sync footer so spacing and depth stay
-   coherent instead of ad-hoc per-component values. */
-:root {
-  /* 4px-based spacing scale */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-
-  /* Radii */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-
-  /* Elevation scale (Material-like). Dark theme uses deeper, softer shadows. */
-  --elevation-1: 0 1px 2px hsl(222 47% 4% / 0.35), 0 1px 1px hsl(222 47% 4% / 0.25);
-  --elevation-2: 0 2px 6px hsl(222 47% 4% / 0.40), 0 1px 2px hsl(222 47% 4% / 0.30);
-  --elevation-3: 0 6px 16px hsl(222 47% 4% / 0.45), 0 2px 6px hsl(222 47% 4% / 0.35);
-
-  /* State-layer opacities (Material state layers via background-color alpha). */
-  --state-hover: 0.08;
-  --state-active: 0.14;
-}
-
-:root.light {
-  /* Light theme: shadows are tinted to the cool slate background, not pure black. */
-  --elevation-1: 0 1px 2px hsl(222 47% 30% / 0.08), 0 1px 1px hsl(222 47% 30% / 0.06);
-  --elevation-2: 0 2px 6px hsl(222 47% 30% / 0.10), 0 1px 2px hsl(222 47% 30% / 0.08);
-  --elevation-3: 0 8px 24px hsl(222 47% 30% / 0.12), 0 2px 8px hsl(222 47% 30% / 0.08);
-
-  --state-hover: 0.06;
-  --state-active: 0.10;
-}
+/* engram-explorer ui shell — minimal layout and components.
+   Design tokens (colors, spacing, radii, elevation, state layers) live in
+   tokens.css, linked before this file; consume them as hsl(var(--token)). */
 
 /* ---------- Reset & base ---------- */
 *, *::before, *::after {
@@ -974,7 +898,7 @@ a:hover {
 .btn.is-active {
   background: hsl(var(--accent));
   border-color: hsl(var(--accent));
-  color: #fff;
+  color: hsl(var(--accent-fg));
 }
 
 /* Hide block groups when the wrapper carries the matching class. */
@@ -1065,7 +989,7 @@ code {
 
 .btn-primary {
   background: hsl(var(--accent));
-  color: hsl(220, 25%, 98%);
+  color: hsl(var(--accent-fg));
   border-color: hsl(var(--accent));
 }
 
@@ -1418,11 +1342,11 @@ code {
   padding: 6px 10px 10px;
 }
 
-/* Goal 3: agent "thinking" is de-emphasized (lighter gray, italic);
+/* Goal 3: agent "thinking" is de-emphasized (muted, italic; no extra alpha so it keeps AA);
    user prompts and the agent's final text keep the normal tone. */
 .cc-thinking .event-content,
 .cc-thinking .cc-tool-summary {
-  color: hsl(var(--fg-muted) / 0.7);
+  color: hsl(var(--fg-muted));
   font-style: italic;
 }
 

@@ -3,34 +3,9 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --bg: 249 22% 12%;
-    --surface: 247 23% 15%;
-    --surface-2: 248 25% 18%;
-    --border: 249 15% 28%;
-    --fg: 245 50% 91%;
-    --fg-muted: 248 15% 61%;
-    --accent: 343 76% 68%;
-    --ok: 189 43% 73%;
-    --warn: 35 88% 72%;
-    --fail: 343 35% 55%;
-    color-scheme: dark;
-  }
-
-  :root.light {
-    --bg: 32 57% 95%;
-    --surface: 35 100% 98%;
-    --surface-2: 28 40% 92%;
-    --border: 10 9% 86%;
-    --fg: 248 19% 40%;
-    --fg-muted: 248 12% 52%;
-    --accent: 343 35% 55%;
-    --ok: 189 30% 48%;
-    --warn: 35 81% 56%;
-    --fail: 343 35% 55%;
-    color-scheme: light;
-  }
-
+  /* Design tokens are not defined here: internal/ui/static/tokens.css is the
+     single source, linked by the server layout before app.css. Tailwind only
+     references them through hsl(var(--token)) in tailwind.config.ts. */
   body {
     @apply bg-bg text-fg font-sans antialiased;
   }
