@@ -1,9 +1,11 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -11,6 +13,7 @@ import (
 	"time"
 
 	"github.com/AlvaroQ/engram-explorer/internal/services"
+	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
 // Rate limits for write routes, per client and route pattern per minute.
@@ -49,6 +52,7 @@ func writeRoutes(mux routeMux, c *Container) {
 
 	// Database export / import
 	mux.Handle("GET /api/db/export", limited(exportRL, handleDBExport(c)))
+	mux.Handle("GET /api/projects/{project}/export", limited(exportRL, handleProjectExport(c)))
 	mux.Handle("POST /api/db/import", limited(importRL, handleDBImport(c)))
 }
 
@@ -359,44 +363,123 @@ func handleDBExport(c *Container) http.HandlerFunc {
 		if guardRWDB(w, r, c) {
 			return
 		}
-
-		// Build filename stamp matching the Node route format: "YYYY-MM-DDTHH-MM-SS"
-		stamp := strings.NewReplacer(":", "-", " ", "T").Replace(services.NowSqlite())
-		w.Header().Set("Content-Type", "application/octet-stream")
-		w.Header().Set("Content-Disposition", `attachment; filename="engram-backup-`+stamp+`.db"`)
-
-		// HEAD (routed here by the GET pattern) only describes the download:
-		// building a full snapshot just to discard it would let HEAD requests
-		// run VACUUM INTO for free.
-		if r.Method == http.MethodHead {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		tmpPath, cleanup, err := services.ExportSnapshot(r.Context(), c.rw(r))
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "INTERNAL", "export failed", err.Error(), c.Config.ExposeDetails)
-			return
-		}
-		defer cleanup()
-
-		f, err := os.Open(tmpPath)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "INTERNAL", "could not read export file", err.Error(), c.Config.ExposeDetails)
-			return
-		}
-		defer f.Close()
-
-		info, err := f.Stat()
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "INTERNAL", "could not stat export file", err.Error(), c.Config.ExposeDetails)
-			return
-		}
-
-		w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
-		w.WriteHeader(http.StatusOK)
-		_, _ = io.Copy(w, f)
+		serveSnapshot(w, r, c, "engram-backup-"+exportStamp()+".db", services.ExportSnapshot)
 	}
+}
+
+// exportStamp is the backup filename stamp, matching the Node route format:
+// "YYYY-MM-DDTHH-MM-SS".
+func exportStamp() string {
+	return strings.NewReplacer(":", "-", " ", "T").Replace(services.NowSqlite())
+}
+
+// serveSnapshot streams the snapshot built by build as an attachment named
+// filename. HEAD (routed here by the GET pattern) only describes the
+// download: building a full snapshot just to discard it would let HEAD
+// requests run VACUUM INTO for free.
+func serveSnapshot(w http.ResponseWriter, r *http.Request, c *Container, filename string,
+	build func(ctx context.Context, db sqlite.Querier) (string, func(), error)) {
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
+	if r.Method == http.MethodHead {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	tmpPath, cleanup, err := build(r.Context(), c.rw(r))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL", "export failed", err.Error(), c.Config.ExposeDetails)
+		return
+	}
+	defer cleanup()
+
+	f, err := os.Open(tmpPath)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL", "could not read export file", err.Error(), c.Config.ExposeDetails)
+		return
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL", "could not stat export file", err.Error(), c.Config.ExposeDetails)
+		return
+	}
+
+	w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.Copy(w, f)
+}
+
+// ---------------------------------------------------------------------------
+// handleProjectExport — GET /api/projects/{project}/export
+// ---------------------------------------------------------------------------
+
+// handleProjectExport downloads a backup of one project: a full-schema
+// snapshot holding only that project's rows (services.ExportProjectSnapshot),
+// which POST /api/db/import merges back. It answers like GET /api/db/export
+// (same-origin only, 503 in read-only mode, HEAD without a snapshot), plus 404
+// for an unknown project.
+func handleProjectExport(c *Container) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Guard applies this check to /api/db/export by exact path; a backup of
+		// one project is just as sensitive, so this route enforces it itself.
+		if !sameOriginRequest(r, trustedDevOrigins(c.Config.Env)) {
+			logger := c.Logger
+			if logger == nil {
+				logger = slog.Default()
+			}
+			logger.Warn("blocked cross-origin request", "method", r.Method, "path", r.URL.Path,
+				"origin", r.Header.Get("Origin"), "sec_fetch_site", r.Header.Get("Sec-Fetch-Site"))
+			writeError(w, http.StatusForbidden, "CROSS_ORIGIN_REQUEST", "cross-origin request blocked", nil, false)
+			return
+		}
+		if guardRWDB(w, r, c) {
+			return
+		}
+		project := r.PathValue("project")
+		exists, err := services.ProjectExistsDB(c.rw(r), project)
+		if err != nil {
+			writeDBError(w, err, c.Config.ExposeDetails)
+			return
+		}
+		if !exists {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "project not found", nil, c.Config.ExposeDetails)
+			return
+		}
+		serveSnapshot(w, r, c, "engram-backup-"+backupNamePart(project)+"-"+exportStamp()+".db",
+			func(ctx context.Context, db sqlite.Querier) (string, func(), error) {
+				return services.ExportProjectSnapshot(ctx, db, project)
+			})
+	}
+}
+
+// backupNamePart turns a project name into a filename-safe fragment: runs of
+// characters other than ASCII letters, digits, '.', '_' and '-' become one
+// '-', leading/trailing separators are trimmed, and the result is capped at
+// 64 bytes ("project" when nothing is left).
+func backupNamePart(project string) string {
+	var b strings.Builder
+	dash := false
+	for _, r := range project {
+		ok := r < 128 && (r == '.' || r == '_' || r == '-' ||
+			(r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9'))
+		if ok {
+			b.WriteRune(r)
+			dash = false
+		} else if !dash {
+			b.WriteByte('-')
+			dash = true
+		}
+	}
+	out := strings.Trim(b.String(), "-.")
+	if len(out) > 64 {
+		out = strings.Trim(out[:64], "-.")
+	}
+	if out == "" {
+		return "project"
+	}
+	return out
 }
 
 // ---------------------------------------------------------------------------
