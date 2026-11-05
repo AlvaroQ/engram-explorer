@@ -18,6 +18,7 @@ func observationsRoutes(mux routeMux, c *Container) {
 	mux.HandleFunc("GET /api/observations/types", handleObservationsTypes(c))
 	mux.HandleFunc("GET /api/observations/search", handleObservationsSearch(c))
 	mux.HandleFunc("GET /api/observations/{id}", handleObservationsGetByID(c))
+	mux.HandleFunc("GET /api/observations/{id}/versions", handleObservationVersions(c))
 }
 
 // expandList splits a comma-separated value or accepts multiple occurrences.
@@ -157,5 +158,29 @@ func handleObservationsGetByID(c *Container) http.HandlerFunc {
 			Revisions   []services.ObservationRow `json:"revisions"`
 		}
 		writeJSON(w, http.StatusOK, resp{Observation: obs, Revisions: revisions})
+	}
+}
+
+// handleObservationVersions serves the read-only revision history of one
+// observation: {"available": bool, "versions": [...]} newest first.
+// available is false (with 200) when the database has no history table.
+func handleObservationVersions(c *Container) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := r.PathValue("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "BAD_INPUT", "id must be an integer", nil, c.Config.ExposeDetails)
+			return
+		}
+		res, found, err := services.ObservationVersions(r.Context(), c.ro(r), id)
+		if err != nil {
+			writeDBError(w, err, c.Config.ExposeDetails)
+			return
+		}
+		if !found {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "observation "+idStr+" not found", nil, c.Config.ExposeDetails)
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
 	}
 }
