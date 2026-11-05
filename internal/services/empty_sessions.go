@@ -11,12 +11,16 @@ import (
 // Empty sessions (Maintenance → "Empty sessions").
 //
 // A session is EMPTY when it has:
-//   - no summary (NULL or whitespace only),
+//   - no summary (NULL, empty, or only ASCII whitespace: space, tab, newline,
+//     carriage return, vertical tab, form feed),
 //   - no observations at all — soft-deleted observations count as content, so
 //     a session whose only memories are soft-deleted is NOT empty (restoring or
 //     purging deleted memories is a separate concern, and removing the session
 //     would break the session_id reference of those rows),
-//   - no user prompts.
+//   - no user prompts,
+//   - no memory relation and no prompt tombstone pointing at it through
+//     session_id (checked only when the table has that column: older schemas
+//     lack them). Deleting such a session would leave the reference dangling.
 //
 // An empty session is DELETABLE when, in addition:
 //   - its project is not enrolled for cloud sync (same rule as DeleteProject:
@@ -27,21 +31,49 @@ import (
 //     break the live agent. A started_at that SQLite cannot parse is treated as
 //     recent (kept).
 //
-// The predicates are SQL fragments over the alias "s" shared by the list and
-// the delete, so the delete re-checks exactly what the list showed.
+// The predicates are SQL fragments over the alias "s" built by
+// emptySessionPredicates and shared by the list and the delete, so the delete
+// re-checks exactly what the list showed.
 const (
 	emptySessionGrace = "-1 day"
 
-	emptySessionSQL = `(s.summary IS NULL OR TRIM(s.summary) = '')
+	emptySessionBaseSQL = `(s.summary IS NULL OR TRIM(s.summary, ' ' || char(9, 10, 11, 12, 13)) = '')
 	  AND NOT EXISTS (SELECT 1 FROM observations o WHERE o.session_id = s.id)
 	  AND NOT EXISTS (SELECT 1 FROM user_prompts p WHERE p.session_id = s.id)`
 
 	emptySessionEnrolledSQL = `EXISTS (SELECT 1 FROM sync_enrolled_projects e WHERE e.project = s.project)`
 
 	emptySessionOldSQL = `COALESCE(datetime(s.started_at) < datetime('now', '` + emptySessionGrace + `'), 0)`
-
-	emptySessionDeletableSQL = emptySessionSQL + ` AND NOT ` + emptySessionEnrolledSQL + ` AND ` + emptySessionOldSQL
 )
+
+// emptySessionRefs lists the optional tables whose session_id column also
+// references a session. The names are constants, safe to splice into SQL.
+var emptySessionRefs = []string{"memory_relations", "prompt_tombstones"}
+
+// ctxRowQuerier is the part of *sql.DB and *sql.Tx emptySessionPredicates uses.
+type ctxRowQuerier interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+// emptySessionPredicates returns the "empty" predicate and the "deletable
+// empty" predicate for the schema q sees: the base rule plus a NOT EXISTS for
+// every emptySessionRefs table that has a session_id column.
+func emptySessionPredicates(ctx context.Context, q ctxRowQuerier) (empty, deletable string, err error) {
+	empty = emptySessionBaseSQL
+	for _, table := range emptySessionRefs {
+		var n int
+		if err := q.QueryRowContext(ctx,
+			`SELECT COUNT(*) FROM pragma_table_info(?) WHERE name = 'session_id'`, table).Scan(&n); err != nil {
+			return "", "", fmt.Errorf("inspect %s: %w", table, err)
+		}
+		if n > 0 {
+			empty += `
+	  AND NOT EXISTS (SELECT 1 FROM ` + table + ` r WHERE r.session_id = s.id)`
+		}
+	}
+	deletable = empty + ` AND NOT ` + emptySessionEnrolledSQL + ` AND ` + emptySessionOldSQL
+	return empty, deletable, nil
+}
 
 // EmptySessionsDefaultLimit bounds the rows the Maintenance list renders.
 const EmptySessionsDefaultLimit = 50
@@ -82,6 +114,10 @@ func ListEmptySessions(db sqlite.Querier, limit int) (EmptySessionsReport, error
 		limit = EmptySessionsDefaultLimit
 	}
 	rep := EmptySessionsReport{Limit: limit, Sessions: []EmptySessionRow{}}
+	emptySQL, deletableSQL, err := emptySessionPredicates(context.Background(), db)
+	if err != nil {
+		return EmptySessionsReport{}, err
+	}
 
 	var total, enrolled, recent sql.NullInt64
 	if err := db.QueryRow(`
@@ -90,7 +126,7 @@ func ListEmptySessions(db sqlite.Querier, limit int) (EmptySessionsReport, error
 		  SUM(CASE WHEN `+emptySessionEnrolledSQL+` THEN 1 ELSE 0 END),
 		  SUM(CASE WHEN NOT `+emptySessionEnrolledSQL+` AND NOT `+emptySessionOldSQL+` THEN 1 ELSE 0 END)
 		FROM sessions s
-		WHERE `+emptySessionSQL,
+		WHERE `+emptySQL,
 	).Scan(&total, &enrolled, &recent); err != nil {
 		return EmptySessionsReport{}, fmt.Errorf("count empty sessions: %w", err)
 	}
@@ -99,7 +135,7 @@ func ListEmptySessions(db sqlite.Querier, limit int) (EmptySessionsReport, error
 	rows, err := queryRows(db, `
 		SELECT s.id, COALESCE(s.project, ''), COALESCE(s.directory, ''), COALESCE(s.started_at, '')
 		FROM sessions s
-		WHERE `+emptySessionDeletableSQL+`
+		WHERE `+deletableSQL+`
 		ORDER BY s.started_at ASC, s.id ASC
 		LIMIT ?`,
 		[]any{limit},
@@ -127,8 +163,12 @@ func DeleteEmptySessions(ctx context.Context, db sqlite.Querier) (DeleteEmptySes
 	}
 	defer tx.Rollback() //nolint:errcheck
 
+	_, deletableSQL, err := emptySessionPredicates(ctx, tx)
+	if err != nil {
+		return DeleteEmptySessionsResult{}, err
+	}
 	res, err := tx.ExecContext(ctx,
-		`DELETE FROM sessions WHERE id IN (SELECT s.id FROM sessions s WHERE `+emptySessionDeletableSQL+`)`)
+		`DELETE FROM sessions WHERE id IN (SELECT s.id FROM sessions s WHERE `+deletableSQL+`)`)
 	if err != nil {
 		return DeleteEmptySessionsResult{}, fmt.Errorf("delete empty sessions: %w", err)
 	}

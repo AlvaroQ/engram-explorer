@@ -3,6 +3,7 @@ package services_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 
 	"github.com/AlvaroQ/engram-explorer/internal/services"
@@ -185,5 +186,70 @@ func TestDeleteEmptySessions_RechecksAtDeleteTime(t *testing.T) {
 	ids := sessionIDs(t, db)
 	if !ids["s-prompt"] || !ids["s-obs"] || ids["s-still-empty"] {
 		t.Errorf("sessions after delete = %v, want s-prompt and s-obs kept, s-still-empty gone", ids)
+	}
+}
+
+// TestEmptySessions_ReferencedAndWhitespace (full upstream schema): a session
+// that a memory relation or a prompt tombstone points at is not empty (the
+// reference would dangle), and a summary of only ASCII whitespace (spaces,
+// tabs, newlines, carriage returns) is no summary. The delete removes exactly
+// the listed sessions and leaves every other table unchanged.
+func TestEmptySessions_ReferencedAndWhitespace(t *testing.T) {
+	db, _ := openEngramDB(t, "engram.db")
+	old := "2026-01-01 10:00:00"
+	for _, s := range []struct {
+		id      string
+		summary any
+	}{
+		{"plain-empty", nil},
+		{"ws-tab", "\t"},
+		{"ws-mixed", " \r\n\t\v\f "},
+		{"ref-relation", nil},
+		{"ref-tombstone", nil},
+		{"text-after-ws", "\n done"},
+	} {
+		if _, err := db.Exec(`INSERT INTO sessions (id, project, directory, started_at, summary) VALUES (?, 'repo', '/tmp', ?, ?)`,
+			s.id, old, s.summary); err != nil {
+			t.Fatalf("seed %s: %v", s.id, err)
+		}
+	}
+	for _, s := range []string{
+		`INSERT INTO memory_relations (sync_id, source_id, target_id, session_id) VALUES ('rel-1', 'a', 'b', 'ref-relation')`,
+		`INSERT INTO prompt_tombstones (sync_id, session_id, project) VALUES ('tomb-1', 'ref-tombstone', 'repo')`,
+	} {
+		if _, err := db.Exec(s); err != nil {
+			t.Fatalf("seed: %v", err)
+		}
+	}
+
+	rep, err := services.ListEmptySessions(db, 50)
+	if err != nil {
+		t.Fatalf("ListEmptySessions: %v", err)
+	}
+	listed := map[string]bool{}
+	for _, s := range rep.Sessions {
+		listed[s.ID] = true
+	}
+	want := map[string]bool{"plain-empty": true, "ws-tab": true, "ws-mixed": true}
+	if rep.Total != 3 || fmt.Sprint(listed) != fmt.Sprint(want) {
+		t.Fatalf("total=%d listed=%v, want 3 %v", rep.Total, listed, want)
+	}
+
+	res, err := services.DeleteEmptySessions(context.Background(), db)
+	if err != nil {
+		t.Fatalf("DeleteEmptySessions: %v", err)
+	}
+	if int(res.Deleted) != rep.Total {
+		t.Errorf("Deleted = %d, want the listed total %d", res.Deleted, rep.Total)
+	}
+	ids := sessionIDs(t, db)
+	if fmt.Sprint(ids) != "map[ref-relation:true ref-tombstone:true text-after-ws:true]" {
+		t.Errorf("sessions after delete = %v, want ref-relation, ref-tombstone, text-after-ws", ids)
+	}
+	var rel, tomb int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM memory_relations`).Scan(&rel)
+	_ = db.QueryRow(`SELECT COUNT(*) FROM prompt_tombstones`).Scan(&tomb)
+	if rel != 1 || tomb != 1 {
+		t.Errorf("memory_relations=%d prompt_tombstones=%d, want 1/1", rel, tomb)
 	}
 }
