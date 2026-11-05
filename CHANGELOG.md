@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Weighted search** — memory and conversation search rank results with column-weighted BM25; a several-word
+  search that finds nothing retries once matching any word, and the Memory list says when it did.
+- **Trigram-aware search** — on Engram databases indexed with the trigram tokenizer, words under 3 characters no
+  longer empty an all-words search, and a query of only short words matches memory titles.
+- **Revision history API** — `GET /api/observations/{id}/versions` exposes a memory's stored revisions (read-only;
+  reports `available: false` on databases without history).
+- **ESLint** — a flat config (typescript-eslint, react-hooks) runs in CI via `pnpm lint` over the frontend islands
+  and the UI browser scripts. Frontend tests now fail when no test files are found.
 - **Brain-first overview** — the overview opens on a full-width knowledge-graph hero with the page title, an
   "Open Knowledge Graph" button and a memory search (`/observations?q=`). On wide screens the hero collapses into
   a 72px bar as you scroll and the KPI cards fold into a 44px strip whose items stay links; under reduced motion
