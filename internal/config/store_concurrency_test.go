@@ -100,7 +100,7 @@ func TestStore_EphemeralWritesNoFiles(t *testing.T) {
 	dir := t.TempDir()
 	wd, _ := os.Getwd()
 	_ = os.Chdir(dir)
-	defer os.Chdir(wd)
+	defer func() { _ = os.Chdir(wd) }()
 	for _, s := range []*config.Store{config.NewEphemeralStore(contentionData()), config.NewMemoryStore(config.Config{EngramDbPath: "/d.db", ConfigHome: dir})} {
 		if err := s.Update(func(st *config.ProfileStore) error { st.Profiles["n"] = config.Profile{}; return nil }); err != nil {
 			t.Fatal(err)

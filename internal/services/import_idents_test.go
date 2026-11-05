@@ -3,6 +3,7 @@ package services_test
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"path/filepath"
 	"testing"
 
@@ -44,8 +45,8 @@ func TestImportMerge_RejectsUnsafeColumnNames(t *testing.T) {
 	alignTable(t, db, srcPath, "observations")
 
 	_, err = services.ImportMerge(context.Background(), db, srcPath, filepath.Dir(path))
-	die, ok := err.(*services.DatabaseImportError)
-	if !ok {
+	var die *services.DatabaseImportError
+	if !errors.As(err, &die) {
 		t.Fatalf("expected *DatabaseImportError, got %T: %v", err, err)
 	}
 	if die.Code != services.DatabaseImportCodeSchemaMismatch {

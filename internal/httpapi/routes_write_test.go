@@ -322,7 +322,9 @@ func TestDeleteObservation_AlreadyDeleted(t *testing.T) {
 		t.Errorf("status: got %d, want 409 (body: %s)", rec.Code, rec.Body.String())
 	}
 	var body map[string]any
-	json.NewDecoder(rec.Body).Decode(&body)
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
 	if errObj, ok := body["error"].(map[string]any); ok {
 		if errObj["code"] != "BAD_INPUT" {
 			t.Errorf("error code: got %v, want BAD_INPUT", errObj["code"])
@@ -338,7 +340,9 @@ func TestDeleteSession_HasPrompts(t *testing.T) {
 		t.Errorf("status: got %d, want 409 (body: %s)", rec.Code, rec.Body.String())
 	}
 	var body map[string]any
-	json.NewDecoder(rec.Body).Decode(&body)
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
 	if errObj, ok := body["error"].(map[string]any); ok {
 		if errObj["code"] != "BAD_INPUT" {
 			t.Errorf("error code: got %v, want BAD_INPUT", errObj["code"])
@@ -351,8 +355,12 @@ func TestDeleteSession_HasObservations(t *testing.T) {
 	path := seedEngramDB(t)
 	// Add a session without prompts.
 	db, _ := sql.Open("sqlite", "file:"+path)
-	db.Exec(`INSERT INTO sessions (id, project, directory, started_at) VALUES ('sess-2', 'myproject', '/tmp', '2026-01-01 12:00:00')`)
-	db.Exec(`INSERT INTO observations (session_id, type, title, content, project, scope, created_at, updated_at) VALUES ('sess-2', 'note', 'obs for sess-2', 'content', 'myproject', 'project', '2026-01-01 12:00:00', '2026-01-01 12:00:00')`)
+	if _, err := db.Exec(`INSERT INTO sessions (id, project, directory, started_at) VALUES ('sess-2', 'myproject', '/tmp', '2026-01-01 12:00:00')`); err != nil {
+		t.Fatalf("fixture: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO observations (session_id, type, title, content, project, scope, created_at, updated_at) VALUES ('sess-2', 'note', 'obs for sess-2', 'content', 'myproject', 'project', '2026-01-01 12:00:00', '2026-01-01 12:00:00')`); err != nil {
+		t.Fatalf("fixture: %v", err)
+	}
 	db.Close()
 
 	cfg := config.Config{EngramDbPath: path, EngramDataDir: filepath.Dir(path), Env: "development", ExposeDetails: true}
@@ -374,7 +382,9 @@ func TestDeleteSession_HasObservations(t *testing.T) {
 func TestDeleteSession_Success(t *testing.T) {
 	path := seedEngramDB(t)
 	db, _ := sql.Open("sqlite", "file:"+path)
-	db.Exec(`INSERT INTO sessions (id, project, directory, started_at) VALUES ('sess-empty', 'myproject', '/tmp', '2026-01-01 12:00:00')`)
+	if _, err := db.Exec(`INSERT INTO sessions (id, project, directory, started_at) VALUES ('sess-empty', 'myproject', '/tmp', '2026-01-01 12:00:00')`); err != nil {
+		t.Fatalf("fixture: %v", err)
+	}
 	db.Close()
 
 	cfg := config.Config{EngramDbPath: path, EngramDataDir: filepath.Dir(path), Env: "development", ExposeDetails: true}
@@ -391,7 +401,9 @@ func TestDeleteSession_Success(t *testing.T) {
 		t.Fatalf("status: got %d, want 200 (body: %s)", rec.Code, rec.Body.String())
 	}
 	var body map[string]any
-	json.NewDecoder(rec.Body).Decode(&body)
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
 	if body["mode"] != "hard" {
 		t.Errorf("mode: got %v, want hard", body["mode"])
 	}
@@ -405,7 +417,9 @@ func TestDeletePrompt_Success(t *testing.T) {
 		t.Fatalf("status: got %d, want 200 (body: %s)", rec.Code, rec.Body.String())
 	}
 	var body map[string]any
-	json.NewDecoder(rec.Body).Decode(&body)
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
 	if body["mode"] != "hard" {
 		t.Errorf("mode: got %v, want hard", body["mode"])
 	}
@@ -444,7 +458,9 @@ func TestProjectRename_TARGET_EXISTS(t *testing.T) {
 	path := seedEngramDB(t)
 	// Add a second project.
 	db, _ := sql.Open("sqlite", "file:"+path)
-	db.Exec(`INSERT INTO sessions (id, project, directory, started_at) VALUES ('s2', 'targetproject', '/tmp', '2026-01-01 00:00:00')`)
+	if _, err := db.Exec(`INSERT INTO sessions (id, project, directory, started_at) VALUES ('s2', 'targetproject', '/tmp', '2026-01-01 00:00:00')`); err != nil {
+		t.Fatalf("fixture: %v", err)
+	}
 	db.Close()
 
 	cfg := config.Config{EngramDbPath: path, EngramDataDir: filepath.Dir(path), Env: "development", ExposeDetails: true}
@@ -471,7 +487,9 @@ func TestProjectRename_Success(t *testing.T) {
 		t.Fatalf("status: got %d, want 200 (body: %s)", rec.Code, rec.Body.String())
 	}
 	var body map[string]any
-	json.NewDecoder(rec.Body).Decode(&body)
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
 	// Verify affected counts are present.
 	for _, key := range []string{"observations", "sessions", "userPrompts"} {
 		if _, ok := body[key]; !ok {
@@ -489,7 +507,9 @@ func TestProjectRename_ValidationOrder(t *testing.T) {
 		t.Errorf("status: got %d, want 400 (SAME_NAME should win over SOURCE_NOT_FOUND)", rec.Code)
 	}
 	var body map[string]any
-	json.NewDecoder(rec.Body).Decode(&body)
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
 	if errObj, ok := body["error"].(map[string]any); ok {
 		// The message should indicate same name.
 		msg := fmt.Sprintf("%v", errObj["message"])
@@ -536,7 +556,9 @@ func TestDBImport_RoundTrip(t *testing.T) {
 	}
 	tmpPath := tmpFile.Name()
 	t.Cleanup(func() { os.Remove(tmpPath) })
-	tmpFile.Write(exportBytes)
+	if _, err := tmpFile.Write(exportBytes); err != nil {
+		t.Fatalf("write temp: %v", err)
+	}
 	tmpFile.Close()
 
 	// Step 3: Import via multipart POST.
@@ -550,7 +572,9 @@ func TestDBImport_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open tmp: %v", err)
 	}
-	io.Copy(fw, f)
+	if _, err := io.Copy(fw, f); err != nil {
+		t.Fatalf("copy upload: %v", err)
+	}
 	f.Close()
 	mw.Close()
 
@@ -579,7 +603,9 @@ func TestDBImport_BadFile(t *testing.T) {
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
 	fw, _ := mw.CreateFormFile("file", "notadb.db")
-	fw.Write([]byte("this is not a sqlite file"))
+	if _, err := fw.Write([]byte("this is not a sqlite file")); err != nil {
+		t.Fatalf("write upload: %v", err)
+	}
 	mw.Close()
 
 	rec := httptest.NewRecorder()

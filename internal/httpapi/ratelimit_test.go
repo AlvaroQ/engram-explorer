@@ -59,7 +59,9 @@ func emptyImport(t *testing.T, handler http.Handler, remoteAddr string) *httptes
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
 	fw, _ := mw.CreateFormFile("file", "notadb.db")
-	fw.Write([]byte("not a sqlite file"))
+	if _, err := fw.Write([]byte("not a sqlite file")); err != nil {
+		t.Fatalf("write upload: %v", err)
+	}
 	mw.Close()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/db/import", &buf)
