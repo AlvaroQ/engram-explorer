@@ -1,0 +1,54 @@
+package ui
+
+import "fmt"
+
+// OverviewAgentKPIsFragment (GET /partials/overview-agents) fills both
+// versions of the overview agent cards out of band (innerHTML), so the strip
+// keeps whatever inert state the collapse script gave it.
+templ OverviewAgentKPIsFragment(k overviewAgentKPIs, lang string) {
+	<div id="kpi-conversations-body" hx-swap-oob="innerHTML">
+		<p class="kpi-value">{ fmt.Sprintf("%d", k.Conversations) }</p>
+		@overviewAgentSplit(k.ConversationsByAgent, lang, false)
+		<p class="kpi-cap ov-agent-cap">
+			@overviewAgentCaption(k.ConversationsByAgent, lang, false)
+			<span class="ov-sep" aria-hidden="true">·</span>
+			<span>{ T(lang, "overview.kpi.window7d") }</span>
+			<span class="ov-sep" aria-hidden="true">·</span>
+			<a href="/agent-sessions/list">{ T(lang, "overview.kpi.viewSessions") }</a>
+		</p>
+	</div>
+	<span id="kpi-conversations-mini-v" hx-swap-oob="innerHTML">{ fmt.Sprintf("%d", k.Conversations) }</span>
+	<div id="kpi-spend-body" hx-swap-oob="innerHTML">
+		<p class="kpi-value">{ ovFormatSpend(k.Spend) }</p>
+		@overviewAgentSplit(k.SpendByAgent, lang, true)
+		<p class="kpi-cap ov-agent-cap">
+			@overviewAgentCaption(k.SpendByAgent, lang, true)
+			<span class="ov-sep" aria-hidden="true">·</span>
+			<a href="/agent-sessions">{ T(lang, "overview.kpi.spendDetails") }</a>
+		</p>
+	</div>
+	<span id="kpi-spend-mini-v" hx-swap-oob="innerHTML">{ ovFormatSpend(k.Spend) }</span>
+}
+
+// overviewAgentSplit draws the per-agent proportion bar as SVG rects (width
+// attributes, not inline style, under style-src 'self').
+templ overviewAgentSplit(shares []agentShare, lang string, cost bool) {
+	if segs := ovSplitSegments(shares, cost); len(segs) > 0 {
+		<svg class="ov-split" viewBox="0 0 100 6" preserveAspectRatio="none" role="img" aria-label={ ovSplitLabel(shares, lang, cost) }>
+			for _, sg := range segs {
+				<rect x={ sg.X } width={ sg.W } height="6" class={ "ov-fill-" + sg.Agent }></rect>
+			}
+		</svg>
+	}
+}
+
+// overviewAgentCaption lists each live agent with its value and brand dot;
+// the caption is a flex row, so separators are decorative spans.
+templ overviewAgentCaption(shares []agentShare, lang string, cost bool) {
+	for i, sh := range shares {
+		if i > 0 {
+			<span class="ov-sep" aria-hidden="true">·</span>
+		}
+		<span class={ "kv ov-agent-" + sh.Agent }>{ ovShareText(sh, lang, cost) }</span>
+	}
+}

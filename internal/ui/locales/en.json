@@ -77,7 +77,10 @@
       "projects": "Projects",
       "drillProject": "Drill into a project",
       "prompts": "Prompts",
-      "searchPrompts": "Search prompts"
+      "searchPrompts": "Search prompts",
+      "window7d": "last 7 days",
+      "viewSessions": "View sessions",
+      "spendDetails": "Details"
     },
     "alert": {
       "syncIssues": "{{count}} sync issue(s) need attention",

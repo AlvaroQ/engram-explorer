@@ -1,0 +1,83 @@
+package ui_test
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/AlvaroQ/engram-explorer/internal/agentsessions"
+	"github.com/AlvaroQ/engram-explorer/internal/ui"
+)
+
+type ovSource struct {
+	agent    string
+	sessions []agentsessions.Session
+}
+
+func (s ovSource) ID() string                                  { return s.agent }
+func (s ovSource) Agent() string                               { return s.agent }
+func (s ovSource) Fingerprint(context.Context) (string, error) { return "fp", nil }
+func (s ovSource) List(context.Context) ([]agentsessions.Session, error) {
+	return s.sessions, nil
+}
+func (s ovSource) Detail(context.Context, string) (*agentsessions.Detail, error) {
+	return nil, agentsessions.ErrNotFound
+}
+
+func ovNow(dayOffset int, cost float64, unknown bool) agentsessions.Session {
+	return agentsessions.Session{
+		StartedAt: time.Now().UTC().Add(-time.Duration(dayOffset) * time.Hour),
+		Usage:     agentsessions.Usage{CostUSD: cost, UnknownModel: unknown},
+	}
+}
+
+func ovGet(t *testing.T, d ui.Deps, target, lang string) string {
+	t.Helper()
+	mux := http.NewServeMux()
+	ui.Mount(mux, d)
+	req := httptest.NewRequest(http.MethodGet, target, nil)
+	req.AddCookie(&http.Cookie{Name: "lang", Value: lang})
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET %s = %d", target, w.Code)
+	}
+	return w.Body.String()
+}
+
+// TestOverviewAgentsPartial: /partials/overview-agents fills both versions
+// of the two agent cards out of band (innerHTML targets, so the strip keeps
+// its inert state), with the per-agent split as SVG rects and a "~" lower
+// bound when a model is unpriced.
+func TestOverviewAgentsPartial(t *testing.T) {
+	sources := []agentsessions.Source{
+		ovSource{agent: "claude-code", sessions: []agentsessions.Session{ovNow(2, 2.5, false), ovNow(30, 1.25, false)}},
+		ovSource{agent: "codex", sessions: []agentsessions.Session{ovNow(5, 0.75, true)}},
+	}
+	d := ui.Deps{RoDB: openProjectsDB(t), AgentSessions: sources}
+	frag := ovGet(t, d, "/partials/overview-agents", "en")
+	// Spend this month depends on the calendar; conversations are in the 7-day window.
+	for _, want := range []string{
+		`<div id="kpi-conversations-body" hx-swap-oob="innerHTML">`,
+		`<p class="kpi-value">3</p>`,
+		`aria-label="Claude Code 2, Codex 1"`,
+		`class="kv ov-agent-claude-code">Claude Code 2</span>`,
+		`class="kv ov-agent-codex">Codex 1</span>`,
+		`<span id="kpi-conversations-mini-v" hx-swap-oob="innerHTML">3</span>`,
+		`<div id="kpi-spend-body" hx-swap-oob="innerHTML">`,
+		`<span id="kpi-spend-mini-v" hx-swap-oob="innerHTML">`,
+	} {
+		if !strings.Contains(frag, want) {
+			t.Errorf("agent fragment lacks %s\n%s", want, frag)
+		}
+	}
+	if !strings.Contains(frag, "~") {
+		t.Error("an unpriced Codex model must mark the spend as a lower bound (~)")
+	}
+	if strings.Contains(frag, "style=") || strings.Contains(frag, "<script") {
+		t.Error("agent fragment carries inline style or script")
+	}
+}

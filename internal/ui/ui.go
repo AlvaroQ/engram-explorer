@@ -471,4 +471,7 @@ func Mount(mux *http.ServeMux, d Deps) {
 
 	// Sidebar status pill partial (polled by HTMX from the sidebar footer).
 	mux.HandleFunc("GET /partials/status-pill", shell(handleStatusPillPartial))
+
+	// Overview agent KPI cards, loaded lazily by the overview page.
+	mux.HandleFunc("GET /partials/overview-agents", shell(handleOverviewAgentsPartial))
 }
