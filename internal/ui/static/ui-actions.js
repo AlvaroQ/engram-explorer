@@ -19,6 +19,11 @@
 //   data-remove-after-request="id" htmx:afterRequest from this element: remove #id
 //   data-poll-visible-only         htmx:beforeRequest after the first one: skip
 //                                  while the document is hidden
+//   data-modal-dialog="id"         <dialog> swapped in by htmx: showModal() it
+//                                  (focus trap, native Esc). On close: empty #id
+//                                  (when given) and refocus the element that
+//                                  had focus when it opened
+//   data-dialog-close              click: close() the enclosing <dialog>
 (function () {
   'use strict';
 
@@ -98,6 +103,86 @@
     },
     true,
   );
+
+  // ---- Modal dialogs ----
+  // The element that issued the last htmx request: the opener when the
+  // browser did not move focus to the clicked button (Safari).
+  var lastRequester = null;
+  document.addEventListener('htmx:beforeRequest', function (e) {
+    if (e.detail && e.detail.elt instanceof HTMLElement) {
+      lastRequester = e.detail.elt;
+    }
+  });
+
+  function openModals(root) {
+    if (!(root instanceof Element)) {
+      return;
+    }
+    if (root.matches('dialog[data-modal-dialog]')) {
+      openModal(root);
+    }
+    var list = root.querySelectorAll('dialog[data-modal-dialog]');
+    for (var i = 0; i < list.length; i++) {
+      openModal(list[i]);
+    }
+  }
+
+  function openModal(dialog) {
+    if (dialog.open || typeof dialog.showModal !== 'function') {
+      return;
+    }
+    var opener =
+      document.activeElement && document.activeElement !== document.body
+        ? document.activeElement
+        : lastRequester;
+    dialog.addEventListener(
+      'close',
+      function () {
+        var host = byId(dialog.getAttribute('data-modal-dialog'));
+        if (host && host.contains(dialog)) {
+          host.innerHTML = '';
+        }
+        if (opener instanceof HTMLElement && opener.isConnected) {
+          opener.focus();
+        }
+      },
+      { once: true },
+    );
+    dialog.showModal();
+  }
+
+  document.addEventListener('click', function (e) {
+    var trigger = closestWith(e.target, 'data-dialog-close');
+    var dialog = trigger ? trigger.closest('dialog') : null;
+    if (dialog && dialog.open) {
+      dialog.close();
+    }
+  });
+
+  // An action inside the dialog can re-render the region that holds it
+  // (e.g. assigning an orphan replaces #orphans-list). The dialog then leaves
+  // the DOM without a close event; keep focus on the page instead of <body>.
+  document.addEventListener('htmx:beforeSwap', function () {
+    var open = document.querySelector('dialog[data-modal-dialog][open]');
+    if (!open) {
+      return;
+    }
+    setTimeout(function () {
+      if (
+        !open.isConnected &&
+        (document.activeElement === document.body || !document.activeElement)
+      ) {
+        var main = byId('main-content');
+        if (main) {
+          main.focus();
+        }
+      }
+    }, 0);
+  });
+
+  document.addEventListener('htmx:load', function (e) {
+    openModals(e.target);
+  });
 
   document.addEventListener('htmx:afterSwap', function (e) {
     var target = e.target;

@@ -490,10 +490,18 @@
   padding: 0;
   border: none;
   background: transparent;
+  z-index: 1000;
+}
+/* Only lay out the dialog while open: display:flex on the closed element
+   would override the UA's dialog:not([open]) { display: none }. */
+.orphan-dialog[open] {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+}
+/* showModal() adds a native ::backdrop; the card brings its own scrim. */
+.orphan-dialog::backdrop {
+  background: transparent;
 }
 .orphan-dialog-backdrop {
   position: fixed;

@@ -16,7 +16,7 @@ templ OrphansList(data *services.OrphansResponse, projects []services.ProjectSta
 templ orphansContent(data *services.OrphansResponse, projects []services.ProjectStats) {
 	<div id="orphans-list">
 		<!-- Host for the observation-detail dialog. HTMX swaps the rendered
-		     <dialog> into here; the dialog's close button clears it again. -->
+		     <dialog> into here; closing the dialog clears it again. -->
 		<div id="orphan-dialog-host"></div>
 		if data.Totals.Observations == 0 && data.Totals.Sessions == 0 && data.Totals.Prompts == 0 {
 			@ui.EmptyState("No orphaned entities found. All observations, sessions, and prompts are assigned to a project.")
@@ -238,14 +238,16 @@ templ OrphansListWithError(data *services.OrphansResponse, projects []services.P
 // observation content, and embeds the same assign-to-project dropdown and delete
 // action used in the row so the user can act without leaving the dialog.
 // Assigning/deleting refreshes #orphans-list (outerHTML), which removes the
-// dialog along with the rest of the list markup. The backdrop and close button
-// clear the host via data-clear-target (/static/ui-actions.js). All strings stay in English to match the doctor view.
+// dialog along with the rest of the list markup.
+//
+// data-modal-dialog makes /static/ui-actions.js open it with showModal() once
+// swapped in: focus moves inside and stays there (the rest of the page is
+// inert), Esc closes it natively, and on close the host is cleared and focus
+// returns to the button that opened it. The backdrop and close button call
+// close() through data-dialog-close.
 templ OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects []services.ProjectStats) {
-	<!-- Esc-to-close: native <dialog open> (attribute, not showModal) does not
-	     handle Esc; data-escape-clear-target makes /static/ui-actions.js clear
-	     the host on Escape while this dialog is in the DOM. -->
-	<dialog class="orphan-dialog" open aria-modal="true" aria-labelledby="orphan-dialog-title" data-escape-clear-target="orphan-dialog-host">
-		<div class="orphan-dialog-backdrop" data-clear-target="orphan-dialog-host" aria-hidden="true"></div>
+	<dialog class="orphan-dialog" aria-labelledby="orphan-dialog-title" data-modal-dialog="orphan-dialog-host">
+		<div class="orphan-dialog-backdrop" data-dialog-close aria-hidden="true"></div>
 		<article class="orphan-dialog-card">
 			<header class="orphan-dialog-header">
 				<h3 id="orphan-dialog-title">
@@ -259,7 +261,7 @@ templ OrphanObservationDetailDialog(d *services.OrphanObservationDetail, project
 					type="button"
 					class="orphan-dialog-close"
 					aria-label="Close"
-					data-clear-target="orphan-dialog-host"
+					data-dialog-close
 				>&times;</button>
 			</header>
 			<div class="orphan-dialog-body">

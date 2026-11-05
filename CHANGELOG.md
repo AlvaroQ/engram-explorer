@@ -154,6 +154,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   starts with a "Skip to content" link, the current entry has `aria-current="page"`, and the agent pages are an
   "Agents" group with one entry per live agent (`/agent-sessions?agent=claude-code`, `?agent=codex`) instead of
   the neutral Overview / Sessions pair, which stays reachable as the page's "All agents" tab.
+- **Accessible orphan dialog** — the orphan detail dialog opens with `showModal()` (focus stays inside, Esc closes
+  it, focus returns to the row that opened it).
 - **Design tokens meet WCAG AA** — colors live only in `internal/ui/static/tokens.css` (linked before `app.css`
   and `styles.css`; the doctor stylesheet now uses them instead of its own hex palette), every text/background
   pair passes AA in light and dark (guarded by `tokens_contrast_test.go`), and new `--accent-fg`, `--info` and

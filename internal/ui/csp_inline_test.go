@@ -31,6 +31,8 @@ var uiActionsHooks = []string{
 	"data-show-on-swap",
 	"data-remove-after-request",
 	"data-poll-visible-only",
+	"data-modal-dialog",
+	"data-dialog-close",
 }
 
 // newCSPMux mounts the UI on a DB seeded with two projects, one observation
