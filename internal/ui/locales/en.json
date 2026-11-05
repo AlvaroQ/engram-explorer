@@ -784,6 +784,26 @@
       "error": {
         "notSuggested": "These projects are no longer suggested as the same project. Reload the list."
       }
+    },
+    "dataQuality": {
+      "title": "Data quality",
+      "description": "Exact checks over live memories: memories with an empty title, and memories stored more than once with exactly the same content. Nothing is changed here: open a memory to review it, then edit or delete it from Memory.",
+      "noTitle": "(no title)",
+      "emptyTitles": {
+        "title": "Empty titles",
+        "none": "No memories with an empty title.",
+        "count": "{{count}} memories have an empty title.",
+        "countOne": "{{count}} memory has an empty title."
+      },
+      "duplicates": {
+        "title": "Exact duplicates",
+        "none": "No exact duplicates.",
+        "count": "{{count}} groups of exact duplicates ({{memories}} memories).",
+        "countOne": "{{count}} group of exact duplicates ({{memories}} memories).",
+        "copies": "{{count}} copies"
+      },
+      "showing": "Showing {{shown}} of {{total}}.",
+      "hint": "Only exact matches are reported. Nothing is deleted automatically."
     }
   },
   "settings": {
@@ -1179,6 +1199,7 @@
     "observationNotFound": "Observation {{id}} not found.",
     "projectRequired": "Choose a project.",
     "loadEmptySessions": "Could not load empty sessions: ",
-    "loadFragmentedProjects": "Could not load possibly fragmented projects: "
+    "loadFragmentedProjects": "Could not load possibly fragmented projects: ",
+    "loadDataQuality": "Could not load the data quality checks: "
   }
 }

@@ -175,4 +175,8 @@ func Mount(mux Registrar, d Deps) {
 	// POST /doctor/maintenance/fragmented-projects/combine — merge one
 	// suggested name into its group's target (services.RenameProject merge).
 	mux.HandleFunc("POST /doctor/maintenance/fragmented-projects/combine", writeGuard(handleFragmentedProjectsCombine))
+
+	// GET /doctor/maintenance/data-quality — empty titles and exact
+	// duplicates (read-only; no write route).
+	mux.HandleFunc("GET /doctor/maintenance/data-quality", live(handleDataQuality))
 }

@@ -55,6 +55,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   no generic prefix matching). Each group shows memory and session counts, a backup link and a confirmed
   "Combine into <target>" that reuses the project merge. Suggestions only: nothing is merged automatically,
   cloud-enrolled projects cannot be combined and read-only mode hides the action.
+- **Maintenance: data quality** — Settings → Maintenance lists live memories with an empty title and groups of
+  exact duplicates (same `normalized_hash`), capped at 50 entries with full counts. Each memory opens its detail;
+  the checks are read-only and never delete anything.
 - **Design specs** — `design/` (design system reference and overview shell directions) is now versioned.
 - **Code of Conduct** — `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1).
 
