@@ -303,7 +303,8 @@
         "targetExists": "A project named \"{{target}}\" already exists. Use merge mode instead.",
         "generic": "Operation failed: {{message}}"
       }
-    }
+    },
+    "heroLabel": "Knowledge graph preview: the {{nodes}} most connected memories. Open the Knowledge Graph for the interactive view."
   },
   "syncSummary": {
     "title": "Sync health",

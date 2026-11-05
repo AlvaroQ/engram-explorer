@@ -43,6 +43,7 @@ templ overviewContent(v overviewView) {
 				<a href="/settings/maintenance" class="font-medium text-fg underline">{ T(v.Lang, "overview.alert.review") }</a>
 			</div>
 		}
+		@overviewHero(v.Lang)
 		@overviewKPIs(v)
 		<div class="ov-below">
 			<!-- Charts row: activity (span-2) + type breakdown -->
@@ -88,6 +89,35 @@ templ overviewContent(v overviewView) {
 			</div>
 		</div>
 	</div>
+}
+
+// overviewHero is the hero band: page title, CTA to the Knowledge Graph and
+// the memory search (a plain GET /observations?q= form).
+templ overviewHero(lang string) {
+	<section class="ov-hero" id="ov-hero" aria-labelledby="ov-title">
+		<div class="ov-hero-back">
+			<!-- The graph island labels itself (role="img"); the solid bar
+			     layer is decoration. -->
+			<div class="ov-hero-canvas">
+				@Island("brain-preview-hero", struct{}{})
+			</div>
+			<div class="ov-hero-solid" aria-hidden="true"></div>
+		</div>
+		<div class="ov-hero-ui" id="ov-hero-ui">
+			<header class="ov-hero-head">
+				<p class="ov-eyebrow" data-collapse-fade>Engram</p>
+				<h1 id="ov-title">{ T(lang, "sidebar.overview") }</h1>
+				<p class="ov-sub" data-collapse-fade>{ T(lang, "overview.hero.subtitle") }</p>
+				<p class="ov-cta" data-collapse-fade>
+					<a class="btn btn-tonal" href="/brain">{ T(lang, "overview.hero.openGraph") }</a>
+				</p>
+			</header>
+			<form class="ov-search glass" id="ov-search" role="search" action="/observations" method="get">
+				<label class="sr-only" for="ov-q">{ T(lang, "overview.hero.searchLabel") }</label>
+				<input id="ov-q" type="search" name="q" autocomplete="off" placeholder={ T(lang, "overview.hero.searchLabel") }/>
+			</form>
+		</div>
+	</section>
 }
 
 // overviewKPIs renders the four KPI cards. Each card has two versions: the

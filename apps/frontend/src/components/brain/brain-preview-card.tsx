@@ -1,25 +1,18 @@
 import { lazy, Suspense, useMemo, useState, type JSX } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { api, type GraphNode, type GraphEdge } from '../../lib/api.ts';
+import { api, type GraphNode } from '../../lib/api.ts';
 import { Card, CardBody, CardHeader } from '../ui/card.tsx';
 import { ErrorBoundary } from '../ui/error-boundary.tsx';
 import { Skeleton } from '../ui/skeleton.tsx';
 import { NodeDetailPanel } from './node-detail-panel.tsx';
 import { nodeColor } from './node-colors.ts';
+import { samplePreviewGraph, type PreviewGraph } from './preview-sample.ts';
 
 const GraphScene = lazy(() => import('./graph-scene.tsx').then((m) => ({ default: m.GraphScene })));
 
-// The preview cards run an O(n²) force layout in a Web Worker. Above ~200 nodes
-// it takes seconds to converge AND nodes cluster too tight for a fixed-camera
-// mini view, so we cap the sample here. The full graph still lives in /brain.
-//
-// KNOWN COST: the Overview mounts two cards (colorBy "project" and "type") with
-// the SAME graph, so each GraphScene spins up its OWN worker and the identical
-// layout is computed twice. Sharing one layout would mean lifting the worker out
-// of graph-scene.tsx (the brain feature's core); deferred intentionally. The
-// PREVIEW_LIMIT cap keeps the duplicated work bounded.
-const PREVIEW_LIMIT = 150;
+// The preview samples the heaviest nodes (samplePreviewGraph): the full graph
+// lives in /brain. Each mounted preview runs its own layout worker.
 
 // Horizontal space the open detail panel reserves on the right edge of the card:
 // the compact panel is w-72 (288px) anchored with right-3 (12px). The fly-to uses
@@ -41,18 +34,7 @@ export function BrainPreviewCard({ title, description, colorBy }: Props): JSX.El
     queryFn: () => api.graph(),
   });
 
-  // Sample top-N nodes by weight for the preview. Drop edges that touch a
-  // node we filtered out so the worker doesn't try to attract to a ghost.
-  const { nodes, edges } = useMemo<{ nodes: GraphNode[]; edges: GraphEdge[] }>(() => {
-    if (!data) return { nodes: [], edges: [] };
-    if (data.nodes.length <= PREVIEW_LIMIT) {
-      return { nodes: data.nodes, edges: data.edges };
-    }
-    const top = [...data.nodes].sort((a, b) => b.weight - a.weight).slice(0, PREVIEW_LIMIT);
-    const ids = new Set(top.map((n) => n.id));
-    const kept = data.edges.filter((e) => ids.has(e.source) && ids.has(e.target));
-    return { nodes: top, edges: kept };
-  }, [data]);
+  const { nodes, edges } = useMemo<PreviewGraph>(() => samplePreviewGraph(data), [data]);
 
   return (
     <Card className="flex flex-col">

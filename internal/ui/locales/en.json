@@ -156,6 +156,11 @@
         "created": "Created"
       },
       "viewAll": "View all"
+    },
+    "hero": {
+      "subtitle": "Your agents' long-term memory at a glance.",
+      "openGraph": "Open Knowledge Graph",
+      "searchLabel": "Search memories"
     }
   },
   "brain": {

@@ -156,6 +156,11 @@
         "created": "Creado"
       },
       "viewAll": "Ver todas"
+    },
+    "hero": {
+      "subtitle": "La memoria a largo plazo de tus agentes, de un vistazo.",
+      "openGraph": "Abrir el grafo de conocimiento",
+      "searchLabel": "Buscar memorias"
     }
   },
   "brain": {

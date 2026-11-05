@@ -303,7 +303,8 @@
         "targetExists": "Ya existe un proyecto llamado «{{target}}». Usá el modo fusión.",
         "generic": "La operación falló: {{message}}"
       }
-    }
+    },
+    "heroLabel": "Vista previa del grafo de conocimiento: las {{nodes}} memorias más conectadas. Abre el grafo de conocimiento para la vista interactiva."
   },
   "syncSummary": {
     "title": "Salud del sync",

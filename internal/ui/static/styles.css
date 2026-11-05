@@ -1989,3 +1989,17 @@ code {
     transform: none;
   }
 }
+
+/* Hero graph: full bleed, non-interactive (the CTA opens /brain), so the
+   wheel scrolls the page instead of zooming the camera. */
+.ov-hero-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.ov-hero-canvas > .island-mount {
+  height: 100%;
+  min-height: 0;
+}
