@@ -74,12 +74,14 @@ func TestFragmentedPartial_SuggestsCombine(t *testing.T) {
 	doctor.Mount(mux, doctor.Deps{RoDB: db, RWDB: db})
 
 	cases := map[string][]string{
-		"en": {"Suggested target", "Combine into foo", `hx-confirm="Combine &#34;/Users/x/repo/foo&#34; into &#34;foo&#34;?`, "Download a backup first"},
-		"es": {"Destino sugerido", "Combinar en foo", `hx-confirm="¿Combinar «/Users/x/repo/foo» en «foo»?`, "Descarga antes una copia de seguridad"},
+		"en": {"Suggested target", "Combine into foo", `hx-confirm="Combine &#34;/Users/x/repo/foo&#34; into &#34;foo&#34;?`, "Download a backup first", ">Back up this project</a>"},
+		"es": {"Destino sugerido", "Combinar en foo", `hx-confirm="¿Combinar «/Users/x/repo/foo» en «foo»?`, "Descarga antes una copia de seguridad", ">Copia de este proyecto</a>"},
 	}
+	// Each name links to the backup of that project alone.
+	backups := []string{`href="/api/projects/foo/export"`, `href="/api/projects/%2FUsers%2Fx%2Frepo%2Ffoo/export"`}
 	for lang, wants := range cases {
 		body := doctorRequest(t, mux, http.MethodGet, fragmentedPath, lang).Body.String()
-		for _, want := range append(wants, `href="/api/db/export"`, `name="source" value="/Users/x/repo/foo"`, `name="target" value="foo"`, `hx-post="`+fragmentedPath+`/combine"`) {
+		for _, want := range append(append(wants, backups...), `href="/api/db/export"`, `name="source" value="/Users/x/repo/foo"`, `name="target" value="foo"`, `hx-post="`+fragmentedPath+`/combine"`) {
 			if !strings.Contains(body, want) {
 				t.Errorf("lang=%s: body missing %q", lang, want)
 			}
@@ -126,6 +128,9 @@ func TestFragmentedPartial_ReadOnly(t *testing.T) {
 	body := doctorRequest(t, mux, http.MethodGet, fragmentedPath, "en").Body.String()
 	if strings.Contains(body, "hx-post") || !strings.Contains(body, "Read-only mode: cleanup actions are disabled.") {
 		t.Errorf("read-only: want no form and the read-only hint, got %s", body)
+	}
+	if strings.Contains(body, "/api/projects/") {
+		t.Error("read-only: the project backup links need the read-write pool and must be hidden")
 	}
 	body = postCombine(t, mux, "/Users/x/repo/foo", "foo", "en")
 	if !strings.Contains(body, "inline-error") || projectObsCount(t, db, "/Users/x/repo/foo") != 1 {

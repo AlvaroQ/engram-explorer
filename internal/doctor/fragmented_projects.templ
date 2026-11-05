@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"net/url"
 	"strconv"
 
 	"github.com/AlvaroQ/engram-explorer/internal/services"
@@ -62,13 +63,18 @@ templ FragmentedProjectsPartial(groups []services.FragmentedGroup, writable bool
 	}
 }
 
-// fragmentedAction renders the action cell of one name.
+// fragmentedAction renders the action cell of one name. With writes available
+// it links to the backup of that project alone (the export route needs the
+// read-write pool).
 templ fragmentedAction(g services.FragmentedGroup, n services.FragmentedProjectName, writable bool) {
 	if n.Name == g.Target {
 		<span class="badge">{ tr(ctx, "maintenance.fragmented.target") }</span>
 	}
 	if n.Enrolled {
 		<span class="badge badge-enrolled">{ tr(ctx, "maintenance.fragmented.enrolledBadge") }</span>
+	}
+	if writable {
+		<a href={ templ.SafeURL("/api/projects/" + url.PathEscape(n.Name) + "/export") } download>{ tr(ctx, "maintenance.fragmented.backupProject") }</a>
 	}
 	if n.Combinable && writable {
 		<form

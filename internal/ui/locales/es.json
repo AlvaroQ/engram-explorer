@@ -677,6 +677,7 @@
     "allObservations": "Todas las observaciones →",
     "allSessions": "Todas las sesiones →",
     "syncDetail": "Detalle de sync →",
+    "backup": "Descargar copia del proyecto",
     "notFound": "Proyecto no encontrado.",
     "kpi": {
       "observations": "Observaciones",
@@ -781,6 +782,7 @@
       "none": "No hay proyectos posiblemente fragmentados.",
       "backup": "Combinar no se puede deshacer.",
       "backupLink": "Descarga antes una copia de seguridad",
+      "backupProject": "Copia de este proyecto",
       "table": {
         "project": "Proyecto",
         "memories": "Memorias",

@@ -677,6 +677,7 @@
     "allObservations": "All observations →",
     "allSessions": "All sessions →",
     "syncDetail": "Sync detail →",
+    "backup": "Download project backup",
     "notFound": "Project not found.",
     "kpi": {
       "observations": "Observations",
@@ -781,6 +782,7 @@
       "none": "No possibly fragmented projects found.",
       "backup": "Combining cannot be undone.",
       "backupLink": "Download a backup first",
+      "backupProject": "Back up this project",
       "table": {
         "project": "Project",
         "memories": "Memories",
