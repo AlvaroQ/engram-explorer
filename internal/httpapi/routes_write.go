@@ -422,8 +422,8 @@ func serveSnapshot(w http.ResponseWriter, r *http.Request, c *Container, filenam
 // for an unknown project.
 func handleProjectExport(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Guard applies this check to /api/db/export by exact path; a backup of
-		// one project is just as sensitive, so this route enforces it itself.
+		// Guard already refuses cross-site exports; kept as defense in depth for
+		// callers that mount the handler without Guard (tests, embedding).
 		if !sameOriginRequest(r, trustedDevOrigins(c.Config.Env)) {
 			logger := c.Logger
 			if logger == nil {
