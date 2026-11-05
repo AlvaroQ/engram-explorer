@@ -61,6 +61,8 @@ func handleObservationsList(c *Container) http.HandlerFunc {
 			Limit:          limit,
 			// match=any keeps later pages of an OR-fallback result in OR mode.
 			MatchAny: q.Get("match") == "any",
+			// review=due keeps memories whose review date has passed (additive).
+			ReviewDue: q.Get("review") == "due",
 		}
 
 		page, err := services.ObservationsListPage(c.ro(r), params)

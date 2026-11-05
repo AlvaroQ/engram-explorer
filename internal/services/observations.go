@@ -76,6 +76,9 @@ type ObservationListParams struct {
 	// MatchAny forces the OR-joined query for Q. Callers set it on later pages
 	// after a first page reported MatchedAny, so pagination stays in OR mode.
 	MatchAny bool
+	// ReviewDue keeps only memories whose review date has passed, the same
+	// rows ObservationRow.ReviewDue reports (see reviewDueCondition).
+	ReviewDue bool
 }
 
 // ObservationListPage is one keyset page of the list query.
@@ -177,8 +180,64 @@ func ObservationsListPage(db sqlite.Querier, p ObservationListParams) (Observati
 // listObservations runs the list query; text is the full-text filter (zero
 // for none).
 func listObservations(db sqlite.Querier, p ObservationListParams, text textFilter) (items []ObservationRow, nextCursor *string, err error) {
+	whereClause, ftsJoin, params := observationFilters(p, text)
+
+	var cursorClause string
+	if p.Cursor != "" {
+		dec := cursor.Decode(p.Cursor)
+		if dec != nil {
+			connector := "AND"
+			if whereClause == "" {
+				connector = "WHERE"
+			}
+			cursorClause = connector + ` (
+				COALESCE(o.updated_at, o.created_at, '') < ?
+				OR (COALESCE(o.updated_at, o.created_at, '') = ? AND o.id < ?)
+			)`
+			params = append(params, dec.OrderKey, dec.OrderKey, dec.ID)
+		}
+	}
+
+	query := `SELECT ` + obsCols + `
+		FROM observations o
+		` + ftsJoin + `
+		` + whereClause + `
+		` + cursorClause + `
+		ORDER BY COALESCE(o.updated_at, o.created_at, '') DESC, o.id DESC
+		LIMIT ?`
+	params = append(params, p.Limit+1)
+
+	all, err := queryRows(db, query, params, scanObservation)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(all) > p.Limit {
+		items = all[:p.Limit]
+	} else {
+		items = all
+	}
+
+	if len(all) > p.Limit && len(items) > 0 {
+		last := items[len(items)-1]
+		orderKey := coalesceStr(last.UpdatedAt, coalesceStr(last.CreatedAt, ""))
+		c := cursor.Encode(orderKey, last.ID)
+		nextCursor = &c
+	}
+	return items, nextCursor, nil
+}
+
+// reviewDueCondition matches the rows ObservationRow.ReviewDue reports as
+// due: review_after in the stored "YYYY-MM-DD HH:MM:SS" layout (the GLOB
+// rejects other formats, which ReviewDue cannot parse either) and not later
+// than now in UTC. The stored layout sorts lexically, so <= compares dates.
+const reviewDueCondition = `o.review_after GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]'
+	AND o.review_after <= ?`
+
+// observationFilters builds the WHERE clause, the optional FTS join and their
+// positional params (FTS param first) for every list filter except the cursor.
+func observationFilters(p ObservationListParams, text textFilter) (whereClause, ftsJoin string, params []any) {
 	conditions := []string{}
-	params := []any{}
 
 	if text.like != "" {
 		conditions = append(conditions, text.like)
@@ -225,63 +284,38 @@ func listObservations(db sqlite.Querier, p ObservationListParams, text textFilte
 		conditions = append(conditions, "o.created_at <= ?")
 		params = append(params, p.To)
 	}
+	if p.ReviewDue {
+		conditions = append(conditions, reviewDueCondition)
+		params = append(params, time.Now().UTC().Format(sqliteTimeLayout))
+	}
 
-	var whereClause string
 	if len(conditions) > 0 {
 		whereClause = "WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	var cursorClause string
-	if p.Cursor != "" {
-		dec := cursor.Decode(p.Cursor)
-		if dec != nil {
-			connector := "AND"
-			if whereClause == "" {
-				connector = "WHERE"
-			}
-			cursorClause = connector + ` (
-				COALESCE(o.updated_at, o.created_at, '') < ?
-				OR (COALESCE(o.updated_at, o.created_at, '') = ? AND o.id < ?)
-			)`
-			params = append(params, dec.OrderKey, dec.OrderKey, dec.ID)
-		}
-	}
-
-	// FTS join — prepend fts param so it becomes the first positional arg.
-	var ftsJoin string
+	// FTS join — prepend its param so it becomes the first positional arg.
 	if text.match != "" {
 		ftsJoin = `JOIN observations_fts fts ON fts.rowid = o.id AND observations_fts MATCH ?`
-		// Prepend so FTS param comes before WHERE params.
 		params = append([]any{text.match}, params...)
 	}
+	return whereClause, ftsJoin, params
+}
 
-	query := `SELECT ` + obsCols + `
-		FROM observations o
-		` + ftsJoin + `
-		` + whereClause + `
-		` + cursorClause + `
-		ORDER BY COALESCE(o.updated_at, o.created_at, '') DESC, o.id DESC
-		LIMIT ?`
-	params = append(params, p.Limit+1)
-
-	all, err := queryRows(db, query, params, scanObservation)
-	if err != nil {
-		return nil, nil, err
+// ObservationsReviewDueCount counts the memories that would be listed with
+// ReviewDue set: every other filter of p applies (deleted rows only when p
+// asks for them), the cursor does not. Q uses the same mode as the list page
+// (p.MatchAny selects the OR fallback).
+func ObservationsReviewDueCount(db sqlite.Querier, p ObservationListParams) (int, error) {
+	strict, fallback := newFTSQuery(db, "observations_fts", p.Q).filters("o.title")
+	text := strict
+	if p.MatchAny && !fallback.none() {
+		text = fallback
 	}
-
-	if len(all) > p.Limit {
-		items = all[:p.Limit]
-	} else {
-		items = all
-	}
-
-	if len(all) > p.Limit && len(items) > 0 {
-		last := items[len(items)-1]
-		orderKey := coalesceStr(last.UpdatedAt, coalesceStr(last.CreatedAt, ""))
-		c := cursor.Encode(orderKey, last.ID)
-		nextCursor = &c
-	}
-	return items, nextCursor, nil
+	p.ReviewDue = true
+	whereClause, ftsJoin, params := observationFilters(p, text)
+	var n int
+	err := db.QueryRow(`SELECT COUNT(*) FROM observations o `+ftsJoin+` `+whereClause, params...).Scan(&n)
+	return n, err
 }
 
 // ObservationsGetByID returns the observation and its topic revisions, or nil if not found.
