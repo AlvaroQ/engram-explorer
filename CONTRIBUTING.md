@@ -59,6 +59,9 @@ Open <http://127.0.0.1:8787>. The `engram serve` daemon is optional — the dash
 ## Before opening a PR
 
 - `go build ./...`, `go vet ./...`, and `go test ./...` must all pass.
+- `golangci-lint run ./...` must report 0 issues (config in `.golangci.yml`; CI pins v2.15.0). Install that version
+  with `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0`. Add a `//nolint:<linter> // reason`
+  comment only when a rule is wrong for that line.
 - `pnpm typecheck`, `pnpm format:check`, `pnpm lint`, and `pnpm test` must all pass (CI runs them too).
   `pnpm lint` runs ESLint (root `eslint.config.js`) over the islands in `apps/frontend/src` and the browser
   scripts in `internal/ui/static`; it must report zero errors. `pnpm test` fails when no test files are found.

@@ -25,6 +25,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   which the existing import merges back.
 - **ESLint** — a flat config (typescript-eslint, react-hooks) runs in CI via `pnpm lint` over the frontend islands
   and the UI browser scripts. Frontend tests now fail when no test files are found.
+- **golangci-lint** — CI lints the Go backend with golangci-lint v2.15.0 (`.golangci.yml`: the standard linters plus
+  bodyclose, errorlint and unconvert); the existing findings are fixed and unused code is removed.
 - **Brain-first overview** — the overview opens on a full-width knowledge-graph hero with the page title, an
   "Open Knowledge Graph" button and a memory search (`/observations?q=`). On wide screens the hero collapses into
   a 72px bar as you scroll and the KPI cards fold into a 44px strip whose items stay links; under reduced motion
