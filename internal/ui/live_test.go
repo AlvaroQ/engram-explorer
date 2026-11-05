@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AlvaroQ/engram-explorer/internal/agentsessions"
+	"github.com/AlvaroQ/engram-explorer/internal/agentsessions/codex"
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
 )
@@ -32,7 +34,7 @@ func TestMount_LiveGatesModulePagesPerRequest(t *testing.T) {
 		{"en", "This module is disabled."},
 		{"es", "Este módulo está desactivado."},
 	} {
-		for _, route := range []string{"/observations", "/projects", "/brain", "/cc-overview"} {
+		for _, route := range []string{"/observations", "/projects", "/brain", "/agent-sessions", "/agent-sessions/list"} {
 			rec := get(route, tc.lang)
 			if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), tc.want) {
 				t.Errorf("%s GET %s while off: status %d body %.120q, want 503 with %q", tc.lang, route, rec.Code, rec.Body.String(), tc.want)
@@ -43,8 +45,11 @@ func TestMount_LiveGatesModulePagesPerRequest(t *testing.T) {
 		t.Errorf("GET /settings (shell) while modules are off: status %d, want 200", rec.Code)
 	}
 
-	live.Claude = true
-	if rec := get("/cc-overview", "en"); rec.Code != http.StatusOK {
-		t.Errorf("GET /cc-overview after enabling: status %d, want 200 (body %.200q)", rec.Code, rec.Body.String())
+	// Any live agent-session source turns the agent-session pages on.
+	live.AgentSessions = []agentsessions.Source{codex.New("codex", t.TempDir())}
+	for _, route := range []string{"/agent-sessions", "/agent-sessions/list"} {
+		if rec := get(route, "en"); rec.Code != http.StatusOK {
+			t.Errorf("GET %s after enabling: status %d, want 200 (body %.200q)", route, rec.Code, rec.Body.String())
+		}
 	}
 }

@@ -190,6 +190,7 @@ func EnsureConfig(configHome string, resolved Config) (*ProfileStore, error) {
 	base := Config{
 		EngramDbPath:      firstNonEmpty(legacy.EngramDbPath, resolved.Defaults.EngramDbPath, resolved.EngramDbPath),
 		ClaudeProjectsDir: firstNonEmpty(legacy.ClaudeProjectsDir, resolved.Defaults.ClaudeProjectsDir, resolved.ClaudeProjectsDir),
+		CodexHome:         firstNonEmpty(resolved.Defaults.CodexHome, resolved.CodexHome),
 	}
 	seed := &ProfileStore{
 		Version:       1,
@@ -206,8 +207,8 @@ func EnsureConfig(configHome string, resolved Config) (*ProfileStore, error) {
 }
 
 // ProfileFromConfig is the exported form of profileFromResolved. It builds a
-// Profile from an already-resolved Config. Used for in-memory stores (demo
-// mode and the fallback when config.json cannot be loaded) and by tests.
+// Profile from an already-resolved Config. Used for the in-memory store boot
+// falls back to when config.json cannot be loaded, and by tests.
 func ProfileFromConfig(cfg Config) Profile {
 	return profileFromResolved(cfg)
 }
@@ -227,6 +228,12 @@ func profileFromResolved(cfg Config) Profile {
 		providers["cc-sessions"] = ProviderConfig{
 			Enabled: true,
 			Path:    cfg.ClaudeProjectsDir,
+		}
+	}
+	if cfg.CodexHome != "" {
+		providers[codexProviderID] = ProviderConfig{
+			Enabled: true,
+			Path:    cfg.CodexHome,
 		}
 	}
 

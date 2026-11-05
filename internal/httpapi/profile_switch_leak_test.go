@@ -3,6 +3,7 @@ package httpapi_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/httpapi"
@@ -27,6 +29,28 @@ func liveInstances(p *providertest.FakeProvider) int {
 		}
 	}
 	return n
+}
+
+// eventually retries check until it reports no problem or two seconds pass,
+// then fails with the last problems. A switch request holds a lease on the
+// instances it supersedes, so they are closed in the background just after the
+// request returns; the leak checks must allow for that.
+func eventually(t *testing.T, check func() []string) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		problems := check()
+		if len(problems) == 0 {
+			return
+		}
+		if time.Now().After(deadline) {
+			for _, p := range problems {
+				t.Error(p)
+			}
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
 }
 
 // TestProfileSwitch_NoInstanceLeaks (S3 regression probe): concurrent
@@ -85,8 +109,7 @@ func TestProfileSwitch_NoInstanceLeaks(t *testing.T) {
 		}
 		wg.Wait()
 	}
-	assertMatchesRegistry := func(phase string) {
-		t.Helper()
+	matchesRegistry := func(phase string) (problems []string) {
 		for _, e := range reg.Entries() {
 			want := 0
 			if e.State == providers.Enabled {
@@ -95,11 +118,16 @@ func TestProfileSwitch_NoInstanceLeaks(t *testing.T) {
 			for _, p := range all {
 				if p.ID() == e.ID {
 					if got := liveInstances(p); got != want {
-						t.Errorf("%s: provider %s (%s) has %d live instances, want %d", phase, e.ID, e.State, got, want)
+						problems = append(problems, fmt.Sprintf("%s: provider %s (%s) has %d live instances, want %d", phase, e.ID, e.State, got, want))
 					}
 				}
 			}
 		}
+		return problems
+	}
+	assertMatchesRegistry := func(phase string) {
+		t.Helper()
+		eventually(t, func() []string { return matchesRegistry(phase) })
 	}
 
 	// Phase 1: switches only. The active profile is never "bad" and the
@@ -118,15 +146,18 @@ func TestProfileSwitch_NoInstanceLeaks(t *testing.T) {
 	if active == "p1" {
 		wantOnlyP1 = 1
 	}
-	if got := liveInstances(both); got != 1 {
-		t.Errorf("phase 1: both has %d live instances, want 1", got)
-	}
-	if got := liveInstances(onlyP1); got != wantOnlyP1 {
-		t.Errorf("phase 1 (active %s): only-p1 has %d live instances, want %d", active, got, wantOnlyP1)
-	}
-	if got := liveInstances(broken); got != 0 {
-		t.Errorf("phase 1: broken has %d live instances, want 0", got)
-	}
+	eventually(t, func() (problems []string) {
+		if got := liveInstances(both); got != 1 {
+			problems = append(problems, fmt.Sprintf("phase 1: both has %d live instances, want 1", got))
+		}
+		if got := liveInstances(onlyP1); got != wantOnlyP1 {
+			problems = append(problems, fmt.Sprintf("phase 1 (active %s): only-p1 has %d live instances, want %d", active, got, wantOnlyP1))
+		}
+		if got := liveInstances(broken); got != 0 {
+			problems = append(problems, fmt.Sprintf("phase 1: broken has %d live instances, want 0", got))
+		}
+		return problems
+	})
 	assertMatchesRegistry("phase 1")
 
 	// Phase 2: a Shutdown races the switches; live instances still match

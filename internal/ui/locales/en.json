@@ -10,9 +10,9 @@
     "brain": "Knowledge Graph",
     "syncHealth": "Sync Health",
     "orphans": "Orphans",
-    "ccsessions": "Claude Code",
-    "ccsessionsList": "Claude Code Sessions",
-    "ccsessionsOverview": "Overview"
+    "agentSessions": "Agent sessions",
+    "agentSessionsOverview": "Overview",
+    "agentSessionsList": "Sessions"
   },
   "common": {
     "errorGeneric": "Something went wrong. Check the server log for details.",
@@ -42,14 +42,11 @@
     "brand": "Explorer",
     "subtitle": "Local Dashboard",
     "groupEngram": "Engram",
-    "groupClaudeCode": "Claude Code",
     "overview": "Overview",
     "knowledge": "Knowledge Graph",
     "projects": "Projects",
     "observations": "Memory",
     "sessions": "Sessions",
-    "ccOverview": "Claude Code",
-    "ccSessions": "Claude Code Sessions",
     "syncHealth": "Sync Health",
     "prompts": "Prompts",
     "topics": "Topics",
@@ -596,8 +593,6 @@
       "progressTitle": "{{acked}} of {{enq}} acked ({{percent}}%)"
     },
     "toast": {
-      "enrollSuccess": "{{project}} enrolled in cloud. The daemon will start syncing within minutes.",
-      "enrollError": "Could not enroll {{project}}: {{error}}",
       "syncStarted": "Syncing {{project}}…",
       "syncSuccess": "{{project}} synced.",
       "syncError": "Sync failed for {{project}}: {{error}}"
@@ -755,8 +750,6 @@
     "runtime": "Runtime",
     "navTitle": "Sidebar sections",
     "navHeaderDesc": "Show or hide whole sections in the left sidebar.",
-    "navEngram": "Engram",
-    "navClaude": "Claude Code",
     "navDescription": "Toggle this section's visibility in the sidebar.",
     "navShow": "Show",
     "navHide": "Hide",
@@ -789,7 +782,6 @@
       "path": "Path",
       "status": "Status",
       "url": "URL",
-      "cloudEnroll": "cloud enroll",
       "dashboard": "Dashboard",
       "node": "Node",
       "uptime": "Uptime"
@@ -805,47 +797,80 @@
       "notInCli": "not in this CLI"
     }
   },
-  "ccSessions": {
-    "title": "Claude Code",
-    "description": "Live transcripts from",
-    "filterProject": "Project",
-    "attachment": "Attached a file",
-    "filter": {
-      "compact": "Compact",
-      "thinking": "Thinking",
-      "tools": "Tools",
-      "attachments": "Attachments",
-      "account": "Account",
-      "allAccounts": "All accounts"
-    },
-    "listTitle": "Sessions",
-    "listLoaded": "{{count}} loaded",
-    "noMatch": "No Claude Code sessions found.",
-    "notFound": "Session not found.",
+  "agentSessions": {
+    "title": "Agent sessions",
+    "description": "Token usage and cost across your local coding-agent sessions.",
     "session": "Session",
-    "counts": "Counts",
-    "conversation": "Conversation",
-    "conversationDesc": "{{count}} turns",
-    "noTurns": "No conversation turns found.",
-    "col": {
-      "prompt": "First prompt",
+    "attachment": "Attached a file",
+    "agents": {
+      "claude-code": "Claude Code",
+      "codex": "Codex"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "sessions": "Sessions"
+    },
+    "tokenNote": "Tokens are counted in disjoint buckets: uncached input, cache read, cache write and output. Reasoning is part of output.",
+    "sourceError": "Could not read {{source}} ({{agent}}); its sessions are not shown.",
+    "list": {
+      "title": "Sessions",
+      "count": "{{count}} of {{total}}",
+      "noMatch": "No sessions match these filters.",
+      "page": "Page {{page}} of {{pages}}",
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "filter": {
+      "agent": "Agent",
+      "allAgents": "All agents",
+      "source": "Source",
+      "allSources": "All sources",
       "project": "Project",
+      "model": "Model",
+      "query": "Search",
+      "queryPlaceholder": "Prompt, project, branch or ID",
+      "from": "From",
+      "to": "To",
+      "sort": "Sort by",
+      "order": "Order",
+      "apply": "Apply",
+      "reset": "Reset",
+      "compact": "Compact",
+      "reasoning": "Reasoning",
+      "tools": "Tools",
+      "attachments": "Attachments"
+    },
+    "sort": {
+      "ended": "Last activity",
       "started": "Started",
-      "ended": "Modified",
-      "branch": "Branch",
-      "version": "CC version",
+      "cost": "Cost",
+      "tokens": "Tokens",
       "size": "Size",
+      "project": "Project"
+    },
+    "order": {
+      "desc": "Descending",
+      "asc": "Ascending"
+    },
+    "col": {
+      "ended": "Last activity",
+      "prompt": "First prompt",
+      "agent": "Agent",
       "tokens": "Tokens",
       "cost": "Cost",
-      "account": "Account"
+      "size": "Size",
+      "project": "Project",
+      "branch": "Branch"
     },
     "fields": {
       "project": "Project",
       "cwd": "Directory",
       "branch": "Branch",
-      "version": "CC version",
+      "version": "Agent version",
+      "agent": "Agent",
+      "source": "Source",
       "started": "Started",
-      "ended": "Last modified",
+      "ended": "Last activity",
       "size": "File size",
       "turns": "Turns",
       "userTurns": "User turns",
@@ -855,13 +880,28 @@
     },
     "usage": {
       "input": "Input",
-      "output": "Output",
+      "cacheRead": "Cache read",
       "cacheWrite": "Cache write",
-      "cacheRead": "Cache read"
+      "output": "Output",
+      "reasoning": "Reasoning (part of output)"
+    },
+    "conversation": "Conversation",
+    "conversationDesc": "{{count}} turns",
+    "noTurns": "No conversation turns found.",
+    "blocks": {
+      "reasoning": "Reasoning",
+      "toolCall": "Tool call",
+      "toolResult": "Tool result",
+      "input": "Input",
+      "output": "Output",
+      "error": "Error",
+      "noOutput": "No output recorded",
+      "noCall": "No matching call"
     },
     "charts": {
       "title": "Usage summary",
-      "description": "Tokens and cost across all Claude Code sessions.",
+      "description": "Tokens and cost across every agent session.",
+      "costByAgent": "Cost by agent",
       "costByProject": "Cost by project",
       "tokensByModel": "Tokens by model",
       "overTime": "Usage over time",
@@ -870,23 +910,11 @@
       "tokens": "Total tokens",
       "cost": "Estimated cost",
       "loading": "Loading…",
-      "empty": "No Claude Code sessions found.",
+      "empty": "No agent sessions found.",
       "error": "Failed to load usage stats.",
       "others": "Others",
       "untitled": "(untitled)",
       "costEstimateNote": "Cost excludes turns on unpriced models — actual spend may be higher."
-    }
-  },
-  "ccOverview": {
-    "title": "Claude Code",
-    "description": "Token usage and cost across all your Claude Code sessions.",
-    "byAccount": {
-      "title": "Per-account breakdown",
-      "total": "All accounts"
-    },
-    "tabs": {
-      "overview": "Overview",
-      "sessions": "Sessions"
     }
   },
   "placeholder": {
@@ -962,12 +990,6 @@
       "current": "Current",
       "next": "New",
       "empty": "(empty)"
-    }
-  },
-  "demo": {
-    "banner": {
-      "text": "Demo data — this is a sample database for previewing Engram Explorer.",
-      "dismiss": "Dismiss"
     }
   },
   "onboarding": {

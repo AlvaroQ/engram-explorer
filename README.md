@@ -70,14 +70,19 @@ engram serve   # creates ~/.engram/engram.db on first run
 
 ### 👀 Just want to look around first? (demo data)
 
-No Engram, no real data needed — seed a realistic demo database and explore every view. Requires [building from source](#-build-from-source):
+No Engram, no real data needed — seed a realistic demo dataset and explore every view. Requires [building from source](#-build-from-source):
 
 ```bash
-go run ./cmd/seed-demo        # generates ./demo/engram.db
-./engram-explorer --demo      # run against the demo data (write actions disabled)
+make demo   # seeds ./demo (engram.db + sample Claude Code and Codex sessions) and runs read-only against it
 ```
 
-See [Command-line flags](#command-line-flags) for `--demo-db=<path>` and the matching env vars.
+`make demo` is a normal run with four environment variables — `ENGRAM_DATA_DIR=./demo`,
+`CLAUDE_PROJECTS_DIR=./demo/claude`, `CODEX_HOME=./demo/codex` and `ENGRAM_DASH_READONLY=true`. The seeder
+writes sample Claude Code transcripts under `./demo/claude` and sample Codex rollouts under `./demo/codex`.
+Engram write actions answer `503`, and Settings changes are saved in `./demo/config.json`. That file may still
+record the default `~/.claude/projects` and `~/.codex` paths: the `CLAUDE_PROJECTS_DIR` and `CODEX_HOME`
+overrides are what keep the demo away from your real sessions (and `ENGRAM_DATA_DIR` from `~/.engram`), so
+running the binary against `./demo` without them reads your real `~/.claude/projects` and `~/.codex`.
 
 ---
 
@@ -99,7 +104,7 @@ This is the centerpiece. **The Brain renders every observation in your database 
 
 ## 📊 What it surfaces
 
-13 views, all server-rendered, all in EN/ES + light/dark:
+14 views, all server-rendered, all in EN/ES + light/dark:
 
 | View                  | What you get                                                                                                              |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -115,6 +120,7 @@ This is the centerpiece. **The Brain renders every observation in your database 
 | 🔄 **Sync project**   | Per-project cloud sync detail and mutation queue (read-only)                                                              |
 | 🧹 **Orphans**        | Observations captured without a project — the capture bugs the CLI can't show                                             |
 | 🩺 **Diagnostics**    | Orphan projects, broken sync — a diagnostic engine across all views                                                       |
+| 🤖 **Agent sessions** | Claude Code and Codex sessions: usage overview, filterable list, transcript with tool calls                               |
 | ⚙️ **Settings**       | UI preferences, language, theme, Modules (provider toggles), Accounts (profiles)                                          |
 
 ---
@@ -145,10 +151,10 @@ The official plugin ecosystem talks to the daemon over HTTP at `127.0.0.1:7437`.
 git clone https://github.com/AlvaroQ/engram-explorer.git
 cd engram-explorer
 
-make build                   # frontend → embed → go build
-go run ./cmd/seed-demo       # seed a realistic demo DB in ./demo/engram.db
-./engram-explorer --demo     # run against demo data in demo mode
-# open http://127.0.0.1:8787
+make build                                  # frontend → embed → go build
+go run ./cmd/seed-demo --out ./demo --force # engram.db + sample Claude Code and Codex sessions in ./demo
+ENGRAM_DATA_DIR=./demo CLAUDE_PROJECTS_DIR=./demo/claude CODEX_HOME=./demo/codex ENGRAM_DASH_READONLY=true ./engram-explorer
+# open http://127.0.0.1:8787   (`make demo` does the last two steps with `go run`)
 ```
 
 ### Path B — Use your real Engram database
@@ -219,16 +225,40 @@ It lists the auto-detected Tier-1 providers (Engram database, Claude Code projec
 
 **Modules** are the data-source providers Engram Explorer can connect to. Manage them in **Settings → Modules**.
 
-| Provider                 | ID            | What it reads                                    | Default auto-detect path                         |
-| ------------------------ | ------------- | ------------------------------------------------ | ------------------------------------------------ |
-| **Engram**               | `engram`      | SQLite database written by the Engram daemon     | `~/.engram/engram.db` (or `$ENGRAM_DATA_DIR`)    |
-| **Claude Code Sessions** | `cc-sessions` | JSONL session transcripts written by Claude Code | `~/.claude/projects` (or `$CLAUDE_PROJECTS_DIR`) |
+| Provider                 | ID               | What it reads                                                    | Default auto-detect path                         |
+| ------------------------ | ---------------- | ---------------------------------------------------------------- | ------------------------------------------------ |
+| **Engram**               | `engram`         | SQLite database written by the Engram daemon                     | `~/.engram/engram.db` (or `$ENGRAM_DATA_DIR`)    |
+| **Claude Code Sessions** | `cc-sessions`    | JSONL session transcripts written by Claude Code                 | `~/.claude/projects` (or `$CLAUDE_PROJECTS_DIR`) |
+| **Codex**                | `codex-sessions` | Local Codex CLI rollouts (`sessions/YYYY/MM/DD/rollout-*.jsonl`) | `~/.codex` (or `$CODEX_HOME`)                    |
 
-Both are **Tier-1**: if not found at their default paths the UI keeps them visible with a path entry field, so you can point the dashboard at a non-default location without restarting. **Tier-2 providers** (planned) are silent auto-detect only; none ship in the current release.
+All three are **Tier-1**: if not found at their default paths the UI keeps them visible with a path entry field, so you can point the dashboard at a non-default location without restarting. **Tier-2 providers** (planned) are silent auto-detect only; none ship in the current release.
 
 **Provider states:** `enabled` (open and serving) · `detected` (found, not yet activated) · `disabled` (toggled off) · `errored` (failed to open — check the path) · `registered` (known, detection not attempted).
 
 **Disabled modules:** routes are mounted once at startup and follow the module's live state. While a module is disabled its API routes answer `503` with code `MODULE_DISABLED` and its pages show "This module is disabled. Enable it in Settings → Modules."; enabling it serves them again without a restart. A request that is already running when a module is disabled or the profile changes finishes on the data source it started with.
+
+**Limits:** that grace is bounded. A superseded data source waits at most **30 s** (the drain timeout) for the requests still using it, then it is closed and a request still running on it fails. The HTTP server's write timeout is also **30 s**, but it only stops the response: the handler is not cancelled, so a database import that needs more time can still complete on the server while the client sees a connection error. Reload to check the result before retrying.
+
+**Agent sessions (Claude Code + Codex).** Both session modules feed one set of vendor-neutral pages, under a
+single "Agent sessions" sidebar group:
+
+| Route                                                    | What it shows                                                                                                      |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `/agent-sessions`                                        | Usage overview: totals, cost per agent / project / day, tokens per model, most expensive sessions                  |
+| `/agent-sessions/list`                                   | Every session; filters `agent`, `source`, `project`, `model`, `q`, `from`/`to` (days, UTC), `sort`/`order`, `page` |
+| `/agent-sessions/claude-code/<account>/<project>/<id>`   | One Claude Code session (served by the Claude Code module, one source per enabled account)                         |
+| `/agent-sessions/codex/<YYYY>/<MM>/<DD>/<rollout>.jsonl` | One Codex session (served by the Codex module)                                                                     |
+| `GET /api/agent-sessions/stats`                          | The same aggregate as JSON, cached until a session file changes                                                    |
+
+Token counts use **disjoint buckets**: uncached input, cache read, cache write and output add up to the total;
+reasoning tokens are part of output and shown apart. Codex reports cached tokens inside `input_tokens`, so the
+explorer subtracts them; usage is deduplicated by `response_id` (or by the cumulative `token_count` totals of
+older files), and a resumed or forked session never counts replayed usage twice. Costs use public list prices;
+a model without a published price counts as unknown (cost `0`, shown with `~`). The Codex module only reads the
+rollout files under `<CODEX_HOME>/sessions`: never your Codex configuration, credentials or history, and it
+never runs the `codex` CLI. Change its home in Settings → Modules (Codex row → path → Apply); `CODEX_HOME`, when
+set, still wins at startup. The old Claude Code URLs (`/cc-overview`, `/cc-sessions…`) redirect to these pages,
+and `GET /api/cc-sessions/stats` remains as a deprecated Claude-only endpoint with its previous shape.
 
 **To activate a Tier-1 provider manually:** Settings → Modules → find the `detected`/`registered` row → enter the path → **Validate & Activate**. On success it becomes `enabled` and its sidebar section appears immediately; the path is persisted to `~/.engram/config.json`.
 
@@ -251,13 +281,13 @@ If a profile references a path that no longer exists, that provider is marked **
 
 ### Command-line flags
 
-| Flag                         | Purpose                                                                                                                                                                                                                                                                                                                                                                   |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--demo`                     | Run against the demo database in **demo mode**: a demo banner is shown and write actions are disabled (API write endpoints return `403 DEMO_MODE`). The profile lives in memory only: `config.json` is neither read nor written, and data-source changes in Settings (database, Claude Code directory, modules, profiles, accounts) are refused. Same as `ENGRAM_DEMO=1`. |
-| `--demo-db=<path>`           | Demo database to use with `--demo`. Same as `ENGRAM_DEMO_DB`. Without it, `demo/engram.db` is looked up next to the executable, then in the working directory; if none exists the binary exits with `demo database not found … run: go run ./cmd/seed-demo`.                                                                                                              |
-| `--version`, `-v`, `version` | Print `engram-explorer <version>` and exit.                                                                                                                                                                                                                                                                                                                               |
+| Flag                         | Purpose                                     |
+| ---------------------------- | ------------------------------------------- |
+| `--version`, `-v`, `version` | Print `engram-explorer <version>` and exit. |
 
-The demo database is not shipped with release binaries — generate it with `go run ./cmd/seed-demo` (or `make seed-demo`).
+The former demo mode (`--demo`, `--demo-db`, `ENGRAM_DEMO`, `ENGRAM_DEMO_DB`) was removed: the binary refuses to
+start when one of them is set and points to `make demo`. The demo dataset is not shipped with release binaries —
+generate it with `go run ./cmd/seed-demo` (or `make seed-demo`).
 
 ### Environment variables
 
@@ -265,6 +295,7 @@ The demo database is not shipped with release binaries — generate it with `go 
 | -------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ENGRAM_DATA_DIR`          | `~/.engram`             | Directory containing `engram.db`; also the location of `config.json`                                                                              |
 | `CLAUDE_PROJECTS_DIR`      | `~/.claude/projects`    | Directory where Claude Code stores session transcripts                                                                                            |
+| `CODEX_HOME`               | `~/.codex`              | Codex CLI home; the Codex module reads the rollouts under `$CODEX_HOME/sessions` (in memory only, never saved)                                    |
 | `DASHBOARD_HOST`           | `127.0.0.1`             | HTTP bind address; must be loopback unless `DASHBOARD_ALLOW_REMOTE=true`                                                                          |
 | `DASHBOARD_ALLOW_REMOTE`   | `false`                 | Set to `true` to allow a non-loopback `DASHBOARD_HOST` (no authentication!)                                                                       |
 | `DASHBOARD_PORT`           | `8787`                  | HTTP listen port                                                                                                                                  |
@@ -274,14 +305,12 @@ The demo database is not shipped with release binaries — generate it with `go 
 | `LOG_LEVEL`                | `info` / `debug` in dev | Logging verbosity: `debug`, `info`, `warn`, `error`                                                                                               |
 | `ENGRAM_DASH_ENV`          | `production`            | Set to `development` to expose internal error details in API responses and trust the Vite dev server origins (`localhost:5173`, `127.0.0.1:5173`) |
 | `ENGRAM_DASH_READONLY`     | `false`                 | Set to `true` to disable all mutating routes (returns `503`)                                                                                      |
-| `ENGRAM_DEMO`              | unset                   | `1`, `true`, `yes`, or `on` enables demo mode (same as `--demo`)                                                                                  |
-| `ENGRAM_DEMO_DB`           | `demo/engram.db`        | Demo database path used in demo mode (same as `--demo-db=<path>`)                                                                                 |
 
 ### config.json (persistent settings)
 
 Provider paths and account profiles are stored at `$ENGRAM_DATA_DIR/config.json` (default `~/.engram/config.json`), written atomically on every change. **You don't need to edit it manually — the Settings UI writes it for you.**
 
-**Precedence** (highest wins): **1.** environment variable (`ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR`, `ENGRAM_DAEMON_URL`), applied in memory at startup and never saved → **2.** the active profile in `config.json`, the only file the explorer writes → **3.** built-in default. The legacy `explorer-settings.json` is read once, only to create `config.json` on first run, and is never written. While an environment variable is set it wins over a path saved in Settings; the saved value applies again once the variable is unset. `CLAUDE_PROJECTS_DIR` applies to the `default` Claude Code account.
+**Precedence** (highest wins): **1.** environment variable (`ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR`, `CODEX_HOME`, `ENGRAM_DAEMON_URL`), applied in memory at startup and never saved → **2.** the active profile in `config.json`, the only file the explorer writes → **3.** built-in default. The legacy `explorer-settings.json` is read once, only to create `config.json` on first run, and is never written. While an environment variable is set it wins over a path saved in Settings; the saved value applies again once the variable is unset. `CLAUDE_PROJECTS_DIR` applies to the `default` Claude Code account. A profile without a saved Codex path uses the built-in `~/.codex`.
 
 ---
 
@@ -310,7 +339,7 @@ For a strict viewer with **no** write capability, start with `ENGRAM_DASH_READON
 
 The dashboard shows the **onboarding screen** instead of crashing. From there you can activate Engram or Claude Code Sessions. If you have Engram but it isn't auto-detected: go to **Settings → Modules** and enter the path to `engram.db`, or set `ENGRAM_DATA_DIR=/path/to/dir` before starting.
 
-To get a real DB: `brew install gentleman-programming/tap/engram && engram serve`. To try demo data: `go run ./cmd/seed-demo`, then `./engram-explorer --demo`.
+To get a real DB: `brew install gentleman-programming/tap/engram && engram serve`. To try demo data: `make demo`.
 
 </details>
 
@@ -377,13 +406,15 @@ engram-explorer/
 ├── go.mod                          # module github.com/AlvaroQ/engram-explorer
 ├── cmd/
 │   ├── engram-explorer/            # Binary entry point — config → container → serve
-│   └── seed-demo/                  # Demo database seeder (generates ./demo/engram.db)
+│   └── seed-demo/                  # Demo dataset seeder (./demo/engram.db + ./demo/claude)
 ├── internal/
 │   ├── config/                     # Env-var config, ProfileStore, EnsureConfig
+│   ├── agentsessions/              # Vendor-neutral agent-session model (+ codex/ rollout reader)
 │   ├── httpapi/                    # net/http mux, routes, middleware, container (/api/*)
 │   ├── providers/                  # Provider port + Registry (state-machine, hot-swap)
 │   │   ├── engram/                 # Engram provider adapter (SQLite, daemon proxy, health)
 │   │   ├── ccsessions/             # Claude Code Sessions provider adapter (JSONL reader)
+│   │   ├── codexsessions/          # Codex provider adapter (local rollouts, read-only)
 │   │   └── providertest/           # FakeProvider + test helpers
 │   ├── ui/                         # templ+HTMX server-rendered UI (all pages)
 │   │   ├── locales/                # en.json, es.json

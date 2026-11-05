@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/AlvaroQ/engram-explorer/internal/providers"
 	"log/slog"
 	"net/http"
 	"os"
@@ -126,28 +127,21 @@ func handleSettingsPage(d Deps) http.HandlerFunc {
 }
 
 // handleNavVisibilityPost serves POST /settings/nav-visibility. It toggles
-// whether a sidebar section (engram|claude) is shown, via a cookie, then
-// reloads /settings so the sidebar re-renders.
-func handleNavVisibilityPost() http.HandlerFunc {
+// whether a sidebar section (a NavGroup ID of the registry, or of
+// legacyNavGroups without one) is shown, via a nav_{id} cookie, then reloads
+// /settings so the sidebar re-renders. Unknown sections answer 400.
+func handleNavVisibilityPost(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseForm(); err != nil {
 			http.Error(w, "bad form", http.StatusBadRequest)
 			return
 		}
-		// Section values are provider IDs: "engram", "cc-sessions".
-		// The legacy "claude" value is also accepted for backward compat.
 		section := r.FormValue("section")
-		var cookieName string
-		switch section {
-		case "engram":
-			cookieName = "nav_engram"
-		case "cc-sessions", "claude":
-			// "claude" is the legacy value; map to the provider-ID cookie.
-			cookieName = "nav_cc-sessions"
-		default:
+		if !hasNavGroup(navGroupsOf(d), section) {
 			http.Error(w, "invalid section", http.StatusBadRequest)
 			return
 		}
+		cookieName := navCookiePrefix + section
 
 		cookieVal := "1"
 		if r.FormValue("value") == "hide" {
@@ -297,17 +291,14 @@ func buildSettingsData(d Deps, r *http.Request, lang, theme string) settingsData
 	}
 
 	return settingsData{
-		DBPath:      d.Paths.EngramDB(),
-		DBOk:        dbOk,
-		ClaudePath:  claudePath,
-		ClaudeOk:    claudeOk,
-		DaemonURL:   d.Config.DaemonBaseURL,
-		DaemonOk:    daemonResult.OK,
-		DaemonError: daemonErrMsg,
-		ShowNavGroups: map[string]bool{
-			"engram":      prefs.isShown("engram"),
-			"cc-sessions": prefs.isShown("cc-sessions"),
-		},
+		DBPath:           d.Paths.EngramDB(),
+		DBOk:             dbOk,
+		ClaudePath:       claudePath,
+		ClaudeOk:         claudeOk,
+		DaemonURL:        d.Config.DaemonBaseURL,
+		DaemonOk:         daemonResult.OK,
+		DaemonError:      daemonErrMsg,
+		NavSections:      navSectionsOf(navGroupsOf(d), prefs),
 		Lang:             lang,
 		Theme:            theme,
 		Modules:          modules,
@@ -404,4 +395,40 @@ func redirectSettings(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Redirect(w, r, "/settings", http.StatusSeeOther)
 	}
+}
+
+// navGroupsOf returns the sidebar groups of d (legacyNavGroups without a
+// registry), so the settings page and the visibility toggle derive the
+// sections from the same registry data as the sidebar.
+func navGroupsOf(d Deps) []providers.NavGroup {
+	if d.NavGroups != nil {
+		if groups := d.NavGroups(); len(groups) > 0 {
+			return groups
+		}
+	}
+	return legacyNavGroups()
+}
+
+func hasNavGroup(groups []providers.NavGroup, id string) bool {
+	for _, g := range groups {
+		if g.ID == id && id != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// navSection is one row of the Settings → sidebar sections list.
+type navSection struct {
+	ID       string
+	LabelKey string
+	Shown    bool
+}
+
+func navSectionsOf(groups []providers.NavGroup, prefs navPrefs) []navSection {
+	out := make([]navSection, 0, len(groups))
+	for _, g := range groups {
+		out = append(out, navSection{ID: g.ID, LabelKey: g.LabelKey, Shown: prefs.isShown(g.ID)})
+	}
+	return out
 }

@@ -44,7 +44,7 @@ func (s State) String() string {
 // activeEntry holds one provider's runtime state.
 type activeEntry struct {
 	p     Provider
-	h     *handle // the open instance; nil unless state == Enabled (or a failed re-open kept it)
+	h     *handle // the open instance; nil unless state == Enabled
 	state State
 	err   error
 }
@@ -75,7 +75,8 @@ func NewRegistry(log *slog.Logger) *Registry {
 
 // Register adds a provider to the registry. The order of registration determines
 // render order within the same Featured tier (featured providers are always
-// sorted before non-featured ones regardless of registration order).
+// sorted before non-featured ones regardless of registration order). A
+// provider implementing LoggerSetter receives the registry logger.
 // Register panics if a provider with the same ID is registered twice.
 func (r *Registry) Register(p Provider) {
 	r.mu.Lock()
@@ -86,6 +87,9 @@ func (r *Registry) Register(p Provider) {
 		panic(fmt.Sprintf("providers: duplicate provider ID %q", id))
 	}
 	r.entries[id] = &activeEntry{p: p, state: Registered}
+	if ls, ok := p.(LoggerSetter); ok && r.log != nil {
+		ls.SetLogger(r.log)
+	}
 
 	// Insert into order: featured providers go first.
 	if p.Featured() {
@@ -200,20 +204,44 @@ func (r *Registry) SwitchProfile(ctx context.Context, next Profile) error {
 }
 
 // NavGroups returns the sidebar nav groups for all enabled providers in
-// registry order.
+// registry order. Groups sharing an ID (e.g. AgentSessionsNavID) are merged
+// into the first one: its links are followed by the links of the later ones
+// whose Key it does not already have.
 func (r *Registry) NavGroups() []NavGroup {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	var groups []NavGroup
+	at := map[string]int{}
 	for _, id := range r.order {
 		e := r.entries[id]
 		if e.state != Enabled {
 			continue
 		}
-		groups = append(groups, e.p.Nav(e.h.inst))
+		g := e.p.Nav(e.h.inst)
+		i, seen := at[g.ID]
+		if !seen {
+			at[g.ID] = len(groups)
+			g.Links = append([]NavLink(nil), g.Links...)
+			groups = append(groups, g)
+			continue
+		}
+		for _, l := range g.Links {
+			if !hasLinkKey(groups[i].Links, l.Key) {
+				groups[i].Links = append(groups[i].Links, l)
+			}
+		}
 	}
 	return groups
+}
+
+func hasLinkKey(links []NavLink, key string) bool {
+	for _, l := range links {
+		if l.Key == key {
+			return true
+		}
+	}
+	return false
 }
 
 // AggregateHealth returns per-provider health for all registered providers.
@@ -291,6 +319,25 @@ func (r *Registry) Find(match func(Instance) bool) Instance {
 		}
 	}
 	return nil
+}
+
+// FindAll returns every Enabled instance, in registry order, for which match
+// returns true (nil when none). It is Find for capabilities that several
+// providers serve at once (e.g. AgentSessionSource); match runs under the
+// registry read lock. The instances belong to the registry — callers must
+// not close them.
+func (r *Registry) FindAll(match func(Instance) bool) []Instance {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var out []Instance
+	for _, id := range r.order {
+		e := r.entries[id]
+		if e.state == Enabled && e.h != nil && match(e.h.inst) {
+			out = append(out, e.h.inst)
+		}
+	}
+	return out
 }
 
 // Providers returns every registered provider in registry order, whatever its
@@ -427,7 +474,9 @@ func (r *Registry) Validate(ctx context.Context, id string, cfg ProviderConfig) 
 // provider is not registered or if Open fails.
 //
 // A replaced instance is retired and closed once the requests holding it
-// finish (see Lease); new requests get the re-opened instance.
+// finish (see Lease); new requests get the re-opened instance. When Open fails
+// the entry becomes Errored and stops serving, so its previous instance is
+// retired the same way instead of staying open until Shutdown.
 func (r *Registry) Enable(ctx context.Context, id string, cfg ProviderConfig) error {
 	r.mu.Lock()
 	var retired []retiredHandle
@@ -443,6 +492,7 @@ func (r *Registry) Enable(ctx context.Context, id string, cfg ProviderConfig) er
 
 	inst, err := e.p.Open(ctx, cfg)
 	if err != nil {
+		retired = e.retire(retired)
 		e.state = Errored
 		e.err = err
 		if r.log != nil {
@@ -463,8 +513,8 @@ func (r *Registry) Enable(ctx context.Context, id string, cfg ProviderConfig) er
 // Disable transitions the named provider to Disabled state and retires its
 // active instance: new requests no longer get it, and it is closed once the
 // requests holding it finish (see Lease). Returns an error if the provider is
-// not registered. If the provider is not currently Enabled, Disable is a
-// no-op (returns nil).
+// not registered. Whatever the current state, the entry ends Disabled and any
+// instance it still holds is retired.
 func (r *Registry) Disable(ctx context.Context, id string) error {
 	r.mu.Lock()
 	var retired []retiredHandle
@@ -477,11 +527,6 @@ func (r *Registry) Disable(ctx context.Context, id string) error {
 	if !ok {
 		return fmt.Errorf("provider %q is not registered", id)
 	}
-	if e.state != Enabled {
-		e.state = Disabled
-		return nil
-	}
-
 	retired = e.retire(retired)
 	e.state = Disabled
 	return nil

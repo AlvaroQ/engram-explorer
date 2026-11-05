@@ -59,10 +59,25 @@ safety backup next to the DB before merging.
   `Retry-After` and error code `RATE_LIMITED`; htmx does not swap 4xx responses, so a limited UI action leaves the
   page unchanged.
 - Cloud sync is **read-only**: the dashboard shows sync diagnostics and proxies the daemon's GET telemetry endpoints (`/health`, `/sync/status`, `/stats`). It never enrolls, unenrolls or syncs a project and never spawns the `engram` CLI — do those with the `engram` CLI directly (`engram cloud enroll <project>`, `engram cloud unenroll <project>`).
-- Demo mode uses only an in-memory profile: it serves the bundled demo database, never reads or writes
-  `config.json`, and refuses every request that would change the data source. Claude Code sessions still come from `CLAUDE_PROJECTS_DIR` or `~/.claude/projects`.
-  Environment overrides (`ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR`, `ENGRAM_DAEMON_URL`) are never written to
-  disk.
+- There is no demo mode: `make demo` is a normal read-only run (`ENGRAM_DASH_READONLY=true`) against the
+  seeded `./demo` dataset (`ENGRAM_DATA_DIR=./demo`, `CLAUDE_PROJECTS_DIR=./demo/claude`,
+  `CODEX_HOME=./demo/codex`; the seeder writes sample Claude Code transcripts and Codex rollouts there), so it
+  never reads `~/.engram`, `~/.claude/projects` or `~/.codex`. Read-only mode blocks Engram writes only;
+  Settings changes persist in `./demo/config.json`, which may still record the default `~/.claude/projects` and
+  `~/.codex` paths — the `CLAUDE_PROJECTS_DIR` and `CODEX_HOME` overrides are what keep the demo away from
+  your real sessions, so do not run against `./demo` without them. The removed `--demo` / `--demo-db` flags and `ENGRAM_DEMO` / `ENGRAM_DEMO_DB` variables
+  make the binary refuse to start instead of silently serving your real data.
+  Environment overrides (`ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR`, `CODEX_HOME`, `ENGRAM_DAEMON_URL`) are never
+  written to disk.
+- Agent sessions are **read-only**. The Claude Code and Codex modules only read session files: Claude Code
+  transcripts under each account's projects directory and Codex rollouts under `$CODEX_HOME/sessions`
+  (default `~/.codex/sessions`) — never Codex's configuration, credentials or history files. They never write,
+  move or delete anything there and never execute a program (no `codex` or `claude` CLI). Session keys taken
+  from the URL are validated (clean relative paths only, no `..`, no absolute paths, no backslashes or NUL; a
+  Codex key must also be a rollout the listing found) and an invalid key answers `404`. Symlinked entries
+  inside the Codex sessions directory are skipped (the configured home and its `sessions` directory themselves
+  are used as given), and a detail page only opens regular files.
+  `CODEX_HOME` is an in-memory override and is never written to disk.
 - In production (`ENGRAM_DASH_ENV` unset) internal error details are never returned to the client. HTML views
   never show raw provider or daemon error text: Settings module errors go through the same safe error mapper,
   and the sync daemon's `last_error` / `reason_message` texts are replaced by a generic localized message plus

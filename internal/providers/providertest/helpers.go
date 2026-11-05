@@ -36,6 +36,8 @@ type FakeProviderOptions struct {
 	// optional capabilities such as providers.Writable or providers.Searcher).
 	// Opened still records the undecorated *FakeInstance.
 	Wrap func(*FakeInstance) providers.Instance
+	// Nav, if non-nil, replaces the default NavGroup (ID = provider ID).
+	Nav func(providers.Instance) providers.NavGroup
 }
 
 // FakeProvider is a test-double Provider. It is safe for concurrent use and
@@ -107,7 +109,10 @@ func (f *FakeProvider) Routes(r providers.Router) {
 	}
 }
 
-func (f *FakeProvider) Nav(_ providers.Instance) providers.NavGroup {
+func (f *FakeProvider) Nav(inst providers.Instance) providers.NavGroup {
+	if f.opts.Nav != nil {
+		return f.opts.Nav(inst)
+	}
 	return providers.NavGroup{
 		ID:       f.opts.ID,
 		LabelKey: "nav." + f.opts.ID,

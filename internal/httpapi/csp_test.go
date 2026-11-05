@@ -130,7 +130,7 @@ func TestTemplGuard_DetectsInlineCode(t *testing.T) {
 	good := []string{
 		`<script src="/static/ui-actions.js" defer></script>`,
 		`<script type="module" src="/islands/loader.js"></script>`,
-		`<button data-hide-target="demo-banner">`,
+		`<button data-hide-target="obs-detail">`,
 		`<div hx-trigger="load, every 15s" hx-include="[name='q']">`,
 		"// IslandScript emits the <script> tag that loads the island loader.",
 		"<!-- inline <script> was removed -->",

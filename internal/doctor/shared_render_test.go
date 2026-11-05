@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/doctor"
 )
 
@@ -48,7 +47,7 @@ func TestDoctorUsesSharedUIHelpers(t *testing.T) {
 // TestDoctorRendering_ShellBehaviourPreserved pins the doctor rendering
 // behaviour shared with the ui package: HTMX requests get the bare partial,
 // direct navigation gets the full ui.Layout page, both as text/html, and the
-// write guard answers with the demo-mode / read-only error partial without
+// write guard answers with the read-only error partial without
 // touching the database.
 func TestDoctorRendering_ShellBehaviourPreserved(t *testing.T) {
 	db := openSyncTestDB(t)
@@ -87,7 +86,6 @@ func TestDoctorRendering_ShellBehaviourPreserved(t *testing.T) {
 		deps doctor.Deps
 		want string
 	}{
-		{"demo", doctor.Deps{RoDB: db, RWDB: db, Config: config.Config{DemoMode: true}}, "Write operations are disabled in demo mode."},
 		{"read-only", doctor.Deps{RoDB: db}, "Write operations are not available in read-only mode."},
 	}
 	for _, tc := range cases {

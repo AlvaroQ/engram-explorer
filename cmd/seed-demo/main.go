@@ -1,20 +1,26 @@
-// Command seed-demo creates a self-contained demo database so newcomers can
-// try the engram-explorer dashboard without having Engram installed.
+// Command seed-demo creates a self-contained demo dataset so newcomers can
+// try the engram-explorer dashboard without having Engram, Claude Code or
+// Codex installed: an Engram database (<out>/engram.db), sample Claude Code
+// transcripts (<out>/claude/<project-folder>/<uuid>.jsonl) and sample Codex
+// CLI rollouts (<out>/codex/sessions/YYYY/MM/DD/rollout-<ts>-<uuid>.jsonl).
 //
 // Usage:
 //
 //	go run ./cmd/seed-demo [--out ./demo] [--force]
 //
 // The command writes ONLY to the directory specified by --out (default ./demo).
-// It never touches ~/.engram.
+// It never touches ~/.engram. `make demo` runs it and then starts the normal
+// binary read-only against the result.
 package main
 
 import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,17 +33,23 @@ import (
 // fall within the last 90 days.
 var seedBase time.Time
 
+// nowFunc is the clock seedBase is derived from; tests pin it.
+var nowFunc = time.Now
+
 func main() {
-	if err := run(); err != nil {
+	if err := run(os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintf(os.Stderr, "seed-demo: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	outDir := flag.String("out", "./demo", "output directory for the demo database")
-	force := flag.Bool("force", false, "overwrite an existing database")
-	flag.Parse()
+func run(args []string, stdout io.Writer) error {
+	fs := flag.NewFlagSet("seed-demo", flag.ContinueOnError)
+	outDir := fs.String("out", "./demo", "output directory for the demo database")
+	force := fs.Bool("force", false, "overwrite an existing database")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 
 	// Resolve the absolute path so the message is unambiguous.
 	absOut, err := filepath.Abs(*outDir)
@@ -88,10 +100,10 @@ func run() error {
 	}
 
 	// Anchor timestamps to today at noon UTC so data always falls in the last 90 days.
-	now := time.Now().UTC()
+	now := nowFunc().UTC()
 	seedBase = time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, time.UTC)
 
-	fmt.Printf("Creating demo database at %s\n", dbPath)
+	fmt.Fprintf(stdout, "Creating demo database at %s\n", dbPath)
 
 	if err := applySchema(db); err != nil {
 		return fmt.Errorf("apply schema: %w", err)
@@ -102,20 +114,45 @@ func run() error {
 		return fmt.Errorf("seed data: %w", err)
 	}
 
-	fmt.Println("\nDemo database seeded successfully.")
-	fmt.Printf("  sessions:         %d\n", counts.sessions)
-	fmt.Printf("  observations:     %d\n", counts.observations)
-	fmt.Printf("  user_prompts:     %d\n", counts.prompts)
-	fmt.Printf("  memory_relations: %d\n", counts.relations)
-	fmt.Printf("  sync_enrolled:    %d\n", counts.syncEnrolled)
-	fmt.Printf("  sync_mutations:   %d\n", counts.syncMutations)
-	fmt.Println()
-	fmt.Println("Run the dashboard against the demo database:")
-	fmt.Printf("  Linux/macOS: ENGRAM_DATA_DIR=%s ./engram-explorer\n", *outDir)
-	fmt.Printf("  Windows/pwsh: $env:ENGRAM_DATA_DIR=\"%s\"; .\\engram-explorer.exe\n", absOut)
-	fmt.Println()
-	fmt.Println("Then open http://127.0.0.1:8787 in your browser.")
+	fmt.Fprintln(stdout, "\nDemo database seeded successfully.")
+	fmt.Fprintf(stdout, "  sessions:         %d\n", counts.sessions)
+	fmt.Fprintf(stdout, "  observations:     %d\n", counts.observations)
+	fmt.Fprintf(stdout, "  user_prompts:     %d\n", counts.prompts)
+	fmt.Fprintf(stdout, "  memory_relations: %d\n", counts.relations)
+	fmt.Fprintf(stdout, "  sync_enrolled:    %d\n", counts.syncEnrolled)
+	fmt.Fprintf(stdout, "  sync_mutations:   %d\n", counts.syncMutations)
+
+	claudeDir := filepath.Join(absOut, "claude")
+	nCC, err := writeClaudeSessions(claudeDir)
+	if err != nil {
+		return fmt.Errorf("write sample Claude Code sessions: %w", err)
+	}
+	fmt.Fprintf(stdout, "  claude sessions:  %d (in %s)\n", nCC, claudeDir)
+
+	codexDir := filepath.Join(absOut, "codex")
+	nCX, err := writeCodexSessions(codexDir)
+	if err != nil {
+		return fmt.Errorf("write sample Codex sessions: %w", err)
+	}
+	fmt.Fprintf(stdout, "  codex sessions:   %d (in %s)\n", nCX, codexDir)
+	fmt.Fprintln(stdout)
+	fmt.Fprintln(stdout, "Run the dashboard read-only against the demo dataset (or just `make demo`):")
+	fmt.Fprintf(stdout, "  Linux/macOS: ENGRAM_DATA_DIR=%s CLAUDE_PROJECTS_DIR=%s CODEX_HOME=%s ENGRAM_DASH_READONLY=true ./engram-explorer\n",
+		*outDir, filepath.Join(*outDir, "claude"), filepath.Join(*outDir, "codex"))
+	fmt.Fprintf(stdout, "  Windows/pwsh: $env:ENGRAM_DATA_DIR=\"%s\"; $env:CLAUDE_PROJECTS_DIR=\"%s\"; $env:CODEX_HOME=\"%s\"; $env:ENGRAM_DASH_READONLY=\"true\"; .\\engram-explorer.exe\n",
+		absOut, claudeDir, codexDir)
+	fmt.Fprintln(stdout)
+	fmt.Fprintf(stdout, "Then open http://127.0.0.1:%d in your browser.\n", dashboardPort())
 	return nil
+}
+
+// dashboardPort mirrors how config.Load reads the listen port: DASHBOARD_PORT
+// when it parses as an integer, otherwise the default 8787.
+func dashboardPort() int {
+	if n, err := strconv.Atoi(os.Getenv("DASHBOARD_PORT")); err == nil {
+		return n
+	}
+	return 8787
 }
 
 // rowCounts holds the number of rows inserted per table.

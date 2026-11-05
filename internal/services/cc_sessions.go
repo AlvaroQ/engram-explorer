@@ -115,8 +115,11 @@ type CCMessageBlock struct {
 	// For tool_use blocks.
 	ID   string `json:"id,omitempty"`
 	Name string `json:"name,omitempty"`
+	// For thinking blocks (Claude stores the reasoning under "thinking").
+	Thinking string `json:"thinking,omitempty"`
 	// For tool_result blocks.
 	ToolUseID string `json:"tool_use_id,omitempty"`
+	IsError   bool   `json:"is_error,omitempty"`
 	// Raw content for tool_use/tool_result — displayed as summary.
 	RawInput json.RawMessage `json:"input,omitempty"`
 	Content  json.RawMessage `json:"content,omitempty"`

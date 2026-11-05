@@ -100,7 +100,7 @@ func NewContainer(cfg config.Config, logger *slog.Logger) (*Container, error) {
 
 // ReloadEngramDB validates newPath, opens fresh pools, swaps them in live, and
 // saves the path into the active profile of config.json (through the Store,
-// so an ephemeral demo store saves nothing). The previous pools are closed after a short grace so
+// so an ephemeral store saves nothing). The previous pools are closed after a short grace so
 // in-flight queries can drain. On any validation/open error the current DB is
 // left untouched. Live reads of the path go through c.Paths; c.Config is the
 // immutable startup snapshot and is not mutated here.
@@ -293,6 +293,18 @@ func NewContainerWithRegistry(reg *providers.Registry, cfg config.Config, logger
 	}
 
 	return c
+}
+
+// transcriptSource is implemented by instances that serve Claude Code
+// transcripts (the cc-sessions provider); boot seeds the Settings projects
+// directory from it.
+type transcriptSource interface {
+	RuntimePaths() *config.RuntimePaths
+}
+
+func isTranscriptSource(i providers.Instance) bool {
+	_, ok := i.(transcriptSource)
+	return ok
 }
 
 // populateFromRegistry seeds the container's live paths from the instances

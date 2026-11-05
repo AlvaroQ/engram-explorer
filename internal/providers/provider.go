@@ -5,6 +5,8 @@ package providers
 import (
 	"context"
 	"net/http"
+
+	"github.com/AlvaroQ/engram-explorer/internal/agentsessions"
 )
 
 // Tier classifies how a provider is detected and presented in the UI.
@@ -97,7 +99,8 @@ type Instance interface {
 // Optional capabilities discovered by type-assertion on the live Instance —
 // NOT in the core port. Providers that do not implement a capability simply
 // omit it. The host resolves them per request on the first Enabled instance
-// (registry order) that implements them (Registry.Find).
+// (registry order) that implements them (Registry.Find), or on every one
+// (Registry.FindAll) for capabilities several providers serve at once.
 
 // Searcher is an optional capability for providers that support full-text
 // search. It backs GET /api/observations/search; the result is encoded as the
@@ -110,6 +113,16 @@ type Searcher interface {
 // stats. It backs GET /api/overview; the result is encoded as the response body.
 type StatsSource interface {
 	Stats(ctx context.Context) (any, error)
+}
+
+// AgentSessionSource is an optional capability for instances that serve
+// coding-agent sessions (Claude Code, Codex, ...) through the vendor-neutral
+// agentsessions model. Several providers may serve it at once: the host
+// resolves every live one per request (Registry.FindAll / Lease.FindAll) and
+// merges their sources for the /agent-sessions pages and API. Each Source ID
+// must be unique among all live sources.
+type AgentSessionSource interface {
+	AgentSessionSources() []agentsessions.Source
 }
 
 // Writable marks an instance that can accept write operations right now.
@@ -158,7 +171,10 @@ type NavGroup struct {
 	ID       string
 	LabelKey string // i18n key, resolved by the templ template via T(lang, key)
 	Featured bool
-	Links    []NavLink
+	// Icon is the brand image shown before the group label (a /static URL);
+	// empty renders the plain accent dot.
+	Icon  string
+	Links []NavLink
 }
 
 // NavLink is a single sidebar entry within a NavGroup.

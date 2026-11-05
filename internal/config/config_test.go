@@ -18,7 +18,7 @@ func TestLoad_Defaults(t *testing.T) {
 	unset := []string{
 		"ENGRAM_DATA_DIR", "DASHBOARD_HOST", "DASHBOARD_PORT",
 		"ENGRAM_PORT", "ENGRAM_DAEMON_URL", "ENGRAM_DAEMON_TIMEOUT_MS",
-		"LOG_LEVEL", "ENGRAM_DASH_ENV", "CLAUDE_PROJECTS_DIR",
+		"LOG_LEVEL", "ENGRAM_DASH_ENV", "CLAUDE_PROJECTS_DIR", "CODEX_HOME",
 	}
 	for _, k := range unset {
 		t.Setenv(k, "")
@@ -157,6 +157,7 @@ func TestLoad_IgnoresLegacySettingsFile(t *testing.T) {
 	t.Setenv("USERPROFILE", home)
 	t.Setenv("ENGRAM_DATA_DIR", "")
 	t.Setenv("CLAUDE_PROJECTS_DIR", "")
+	t.Setenv("CODEX_HOME", "")
 
 	configHome := filepath.Join(home, ".engram")
 	customDB := filepath.Join(home, "custom", "engram.db")

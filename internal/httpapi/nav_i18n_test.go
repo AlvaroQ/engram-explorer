@@ -11,6 +11,7 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
 	"github.com/AlvaroQ/engram-explorer/internal/providers/ccsessions"
+	"github.com/AlvaroQ/engram-explorer/internal/providers/codexsessions"
 	"github.com/AlvaroQ/engram-explorer/internal/providers/engram"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
 )
@@ -20,6 +21,7 @@ func TestProviderNavLabelKeys_ResolveInAllLocales(t *testing.T) {
 	provs := []providers.Provider{
 		engram.NewProvider(cfg),
 		ccsessions.NewProvider(cfg),
+		codexsessions.NewProvider(cfg),
 	}
 	locales := []string{"en", "es"}
 

@@ -1,0 +1,5 @@
+{"timestamp":"2026-01-10T10:00:00Z","type":"session_meta","payload":{"id":"P1","timestamp":"2026-01-10T10:00:00Z","cwd":"/w/p","cli_version":"0.50.0"}}
+{"timestamp":"2026-01-10T10:00:00Z","type":"turn_context","payload":{"cwd":"/w/p","model":"gpt-5"}}
+{"timestamp":"2026-01-10T10:00:01Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1000,"cached_input_tokens":400,"output_tokens":100,"reasoning_output_tokens":50,"total_tokens":1100},"model_context_window":272000}}}
+{"timestamp":"2026-01-10T10:00:02Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1000,"cached_input_tokens":400,"output_tokens":100,"reasoning_output_tokens":50,"total_tokens":1100},"model_context_window":272000}}}
+{"timestamp":"2026-01-10T10:00:03Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":3000,"cached_input_tokens":1600,"output_tokens":400,"reasoning_output_tokens":120,"total_tokens":3400},"model_context_window":272000}}}

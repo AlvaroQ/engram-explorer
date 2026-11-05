@@ -109,13 +109,13 @@ type settingsData struct {
 	DaemonURL       string
 	DaemonOk        bool
 	DaemonError     string
-	// ShowNavGroups maps provider ID to visibility (true=shown).
-	// Keys: "engram", "cc-sessions". Replaces the old ShowEngram/ShowClaude booleans.
-	ShowNavGroups map[string]bool
-	UptimeS       int
-	Lang          string
-	Theme         string
-	SidebarState  string
+	// NavSections lists the sidebar groups (from the registry NavGroups) with
+	// their visibility.
+	NavSections  []navSection
+	UptimeS      int
+	Lang         string
+	Theme        string
+	SidebarState string
 
 	// WU-8: Modules section data.
 	// Modules is the list of registered providers for the Settings → Modules page.
@@ -217,19 +217,15 @@ templ settingsContent(d settingsData) {
 		<section class="settings-group">
 			<h2 class="settings-group-title">{ T(d.Lang, "settings.navTitle") }</h2>
 			<p class="settings-group-desc">{ T(d.Lang, "settings.navHeaderDesc") }</p>
-			<div class="preference-row">
-				<div class="preference-label">
-					<p class="preference-name">{ T(d.Lang, "settings.navEngram") }</p>
-					<p class="preference-desc">{ T(d.Lang, "settings.navDescription") }</p>
+			for _, sec := range d.NavSections {
+				<div class="preference-row">
+					<div class="preference-label">
+						<p class="preference-name">{ T(d.Lang, sec.LabelKey) }</p>
+						<p class="preference-desc">{ T(d.Lang, "settings.navDescription") }</p>
+					</div>
+					@navVisibilityControls(d.Lang, sec.ID, sec.Shown)
 				</div>
-				@navVisibilityControls(d.Lang, "engram", d.ShowNavGroups["engram"])
-			</div>
-			<div class="preference-row">
-				<div class="preference-label">
-					<p class="preference-name">{ T(d.Lang, "settings.navClaude") }</p>
-				</div>
-				@navVisibilityControls(d.Lang, "cc-sessions", d.ShowNavGroups["cc-sessions"])
-			</div>
+			}
 		</section>
 
 		<!-- Sistema (Engram database) -->
@@ -460,7 +456,8 @@ func moduleStateBadgeKey(s ModuleState) string {
 
 // moduleRow renders one provider row in the Settings → Modules section.
 // It shows: display name, state badge, path (if any), enable/disable toggle,
-// and (for Tier-1 providers in non-Enabled state) a manual path entry form.
+// and a manual path entry form for Tier-1 providers that are not enabled, or
+// are enabled with no dedicated Settings section for their path.
 templ moduleRow(lang string, m ModuleInfo, pathError string) {
 	<div class="module-row" id={ "module-" + m.ID }>
 		<div class="module-row-header">
@@ -503,8 +500,8 @@ templ moduleRow(lang string, m ModuleInfo, pathError string) {
 		if m.errMsg != "" {
 			<p class="error-hint">{ m.errMsg }</p>
 		}
-		<!-- Tier-1 manual path entry: show when provider is not enabled -->
-		if m.Tier == ModuleTier1 && m.State != ModuleEnabled {
+		<!-- Tier-1 manual path entry: when not enabled, or enabled without a dedicated section -->
+		if m.Tier == ModuleTier1 && (m.State != ModuleEnabled || m.PathEditable) {
 			<form class="path-edit-form" method="post"
 				action={ templ.SafeURL("/settings/modules/" + m.ID + "/path") }
 				hx-post={ "/settings/modules/" + m.ID + "/path" }
@@ -522,7 +519,11 @@ templ moduleRow(lang string, m ModuleInfo, pathError string) {
 					placeholder={ T(lang, "settings.modules.pathPlaceholder") }
 				/>
 				<button type="submit" class="btn btn-sm btn-primary">
-					{ T(lang, "settings.modules.validateAndActivate") }
+					if m.State == ModuleEnabled {
+						{ T(lang, "settings.path.apply") }
+					} else {
+						{ T(lang, "settings.modules.validateAndActivate") }
+					}
 				</button>
 			</form>
 			if pathError != "" {
@@ -593,7 +594,7 @@ templ ccAccountRow(lang string, acc CCAccountInfo, isLast bool) {
 }
 
 // navVisibilityControls renders Show/Hide toggle buttons for a sidebar section
-// (section is "engram" or "claude"). The active state is highlighted.
+// (section is a NavGroup ID). The active state is highlighted.
 templ navVisibilityControls(lang, section string, shown bool) {
 	<div class="preference-controls">
 		<form method="post" action="/settings/nav-visibility">

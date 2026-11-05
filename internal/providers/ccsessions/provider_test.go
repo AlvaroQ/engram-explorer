@@ -2,6 +2,7 @@ package ccsessions_test
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -309,32 +310,37 @@ func TestInstance_DoesNotImplementWritable(t *testing.T) {
 // Routes
 // ---------------------------------------------------------------------------
 
-// TestRoutes_DoesNotPanic asserts that Routes does not panic.
-func TestRoutes_DoesNotPanic(t *testing.T) {
-	dir := seedProjectsDir(t)
-	p := ccsessions.NewProvider(baseCfg())
-	cfg := providers.ProviderConfig{Enabled: true, Path: dir}
+// recordingRouter records the patterns a provider registers.
+type recordingRouter struct{ patterns []string }
 
-	inst, err := p.Open(context.Background(), cfg)
-	if err != nil {
-		t.Fatalf("Open: %v", err)
-	}
-	defer inst.Close(context.Background()) //nolint:errcheck
+func (r *recordingRouter) Handle(pattern string, _ http.Handler) {
+	r.patterns = append(r.patterns, pattern)
+}
+func (r *recordingRouter) HandleFunc(pattern string, _ func(http.ResponseWriter, *http.Request)) {
+	r.patterns = append(r.patterns, pattern)
+}
+func (r *recordingRouter) Live(*http.Request) providers.Instance { return nil }
 
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("Routes panicked: %v", r)
+// TestRoutes_MountsTheClaudeDetailRoute asserts that the provider owns the
+// source-scoped detail route of its sessions.
+func TestRoutes_MountsTheClaudeDetailRoute(t *testing.T) {
+	r := &recordingRouter{}
+	ccsessions.NewProvider(baseCfg()).Routes(r)
+	want := "GET /agent-sessions/claude-code/{account}/{key...}"
+	for _, p := range r.patterns {
+		if p == want {
+			return
 		}
-	}()
-	p.Routes(nil)
+	}
+	t.Errorf("Routes registered %v, want %q among them", r.patterns, want)
 }
 
 // ---------------------------------------------------------------------------
 // Nav
 // ---------------------------------------------------------------------------
 
-// TestNav_ReturnsGroup asserts Nav returns a populated NavGroup with the
-// correct ID and at least one link.
+// TestNav_ReturnsGroup asserts Nav returns the shared agent-sessions group
+// (merged with the Codex provider's by the registry) with its links.
 func TestNav_ReturnsGroup(t *testing.T) {
 	dir := seedProjectsDir(t)
 	p := ccsessions.NewProvider(baseCfg())
@@ -347,8 +353,8 @@ func TestNav_ReturnsGroup(t *testing.T) {
 	defer inst.Close(context.Background()) //nolint:errcheck
 
 	nav := p.Nav(inst)
-	if nav.ID != "cc-sessions" {
-		t.Errorf("Nav.ID: got %q, want %q", nav.ID, "cc-sessions")
+	if nav.ID != providers.AgentSessionsNavID {
+		t.Errorf("Nav.ID: got %q, want the shared %q group", nav.ID, providers.AgentSessionsNavID)
 	}
 	if nav.Featured {
 		t.Error("Nav.Featured: expected false for CC sessions provider")

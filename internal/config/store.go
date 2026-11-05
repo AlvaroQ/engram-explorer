@@ -19,7 +19,7 @@ import (
 // and disk unchanged. The underlying maps are never handed out.
 //
 // An ephemeral Store (NewEphemeralStore) applies changes in memory only and
-// never touches the disk; demo mode uses it so nothing it does is persisted.
+// never touches the disk; boot falls back to one when config.json is unreadable.
 //
 // Environment overrides (OpenStore) are kept apart from the persisted data:
 // Effective applies them on top of a profile for the live providers, and they
@@ -30,6 +30,7 @@ type Store struct {
 	configHome string
 	ephemeral  bool
 	env        PathSettings // immutable after construction
+	defaults   PathSettings // built-in defaults (OpenStore); immutable
 }
 
 // NewStore returns a Store persisted to config.json in configHome, holding a

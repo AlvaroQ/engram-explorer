@@ -26,7 +26,7 @@ const islandEntries: Record<string, string> = {
     __dirname,
     'src/islands/activity-by-project-chart.tsx',
   ),
-  'islands/cc-usage-charts': resolve(__dirname, 'src/islands/cc-usage-charts.tsx'),
+  'islands/agent-usage-charts': resolve(__dirname, 'src/islands/agent-usage-charts.tsx'),
   'islands/project-activity-chart': resolve(__dirname, 'src/islands/project-activity-chart.tsx'),
   'islands/brain-preview-card': resolve(__dirname, 'src/islands/brain-preview-card.tsx'),
   'islands/brain': resolve(__dirname, 'src/islands/brain.tsx'),

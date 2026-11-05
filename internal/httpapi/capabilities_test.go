@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -21,14 +22,26 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
-// TestServerWiring_NoProviderIDSwitch covers S5: the HTTP wiring discovers
-// providers through capability interfaces, never by switching on a provider
-// ID (no `switch x.ID` / `switch x.ID()` and no case on a provider ID string).
+// providerIDs are the IDs no host code may switch on.
+var providerIDs = map[string]bool{"engram": true, "cc-sessions": true, "codex-sessions": true}
+
+// TestServerWiring_NoProviderIDSwitch covers S5 (Phase 2) and S7 (Phase 3):
+// the HTTP wiring and the UI discover providers through capability interfaces
+// and registry data, never by switching on a provider ID (no `switch x.ID` /
+// `switch x.ID()` and no case on a provider ID string). It scans the
+// non-test Go files of internal/httpapi and internal/ui (generated templ
+// code included) and the .templ sources of internal/ui.
 func TestServerWiring_NoProviderIDSwitch(t *testing.T) {
-	ids := map[string]bool{"engram": true, "cc-sessions": true}
-	files, err := filepath.Glob("*.go")
-	if err != nil {
-		t.Fatal(err)
+	var files []string
+	for _, pattern := range []string{"*.go", "../ui/*.go"} {
+		m, err := filepath.Glob(pattern)
+		if err != nil {
+			t.Fatal(err)
+		}
+		files = append(files, m...)
+	}
+	if len(files) < 20 {
+		t.Fatalf("scanned only %d Go files; the globs are wrong", len(files))
 	}
 	fset := token.NewFileSet()
 	for _, name := range files {
@@ -58,7 +71,7 @@ func TestServerWiring_NoProviderIDSwitch(t *testing.T) {
 			for _, stmt := range sw.Body.List {
 				for _, expr := range stmt.(*ast.CaseClause).List {
 					if lit, ok := expr.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-						if v, _ := strconv.Unquote(lit.Value); ids[v] {
+						if v, _ := strconv.Unquote(lit.Value); providerIDs[v] {
 							t.Errorf("%s: case on provider ID %q", fset.Position(lit.Pos()), v)
 						}
 					}
@@ -66,6 +79,32 @@ func TestServerWiring_NoProviderIDSwitch(t *testing.T) {
 			}
 			return true
 		})
+	}
+
+	templs, err := filepath.Glob("../ui/*.templ")
+	if err != nil || len(templs) == 0 {
+		t.Fatalf("no .templ files found (err %v)", err)
+	}
+	caseRe := regexp.MustCompile(`\bcase\s+([^:]+):`)
+	strRe := regexp.MustCompile(`"([^"]*)"`)
+	switchRe := regexp.MustCompile(`\bswitch\s+[\w.]*\.ID(\(\))?\s*\{`)
+	for _, name := range templs {
+		src, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, line := range strings.Split(string(src), "\n") {
+			if switchRe.MatchString(line) {
+				t.Errorf("%s:%d: switch on a provider ID", name, i+1)
+			}
+			for _, c := range caseRe.FindAllStringSubmatch(line, -1) {
+				for _, lit := range strRe.FindAllStringSubmatch(c[1], -1) {
+					if providerIDs[lit[1]] {
+						t.Errorf("%s:%d: case on provider ID %q", name, i+1, lit[1])
+					}
+				}
+			}
+		}
 	}
 }
 

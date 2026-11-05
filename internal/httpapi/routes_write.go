@@ -21,7 +21,7 @@ const (
 )
 
 // writeRoutes registers all write (mutating) routes on mux.
-// Every handler guards demo mode and a writable store before proceeding, and is
+// Every handler guards a writable store before proceeding, and is
 // wrapped in a per-client, per-route fixed-window rate limiter.
 func writeRoutes(mux routeMux, c *Container) {
 	writeRL := newRateLimiter(time.Minute, writeRateLimit)
@@ -52,17 +52,6 @@ func writeRoutes(mux routeMux, c *Container) {
 	mux.Handle("POST /api/db/import", limited(importRL, handleDBImport(c)))
 }
 
-// guardDemo returns true and writes a 403 when the server is in demo mode.
-// Call this before guardRWDB in every write handler.
-func guardDemo(w http.ResponseWriter, c *Container) bool {
-	if c.Config.DemoMode {
-		writeError(w, http.StatusForbidden, "DEMO_MODE",
-			"Disabled in demo mode.", nil, c.Config.ExposeDetails)
-		return true
-	}
-	return false
-}
-
 // guardRWDB returns true and writes a 503 if the RW pool is unavailable: the
 // live store does not implement providers.Writable or reports false.
 func guardRWDB(w http.ResponseWriter, r *http.Request, c *Container) bool {
@@ -81,9 +70,6 @@ func guardRWDB(w http.ResponseWriter, r *http.Request, c *Container) bool {
 
 func handleObservationPatch(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if guardDemo(w, c) {
-			return
-		}
 		if guardRWDB(w, r, c) {
 			return
 		}
@@ -190,9 +176,6 @@ func parseObservationPatch(body map[string]json.RawMessage) (services.Observatio
 
 func handleAssignProject(c *Container, entity services.EntityKind) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if guardDemo(w, c) {
-			return
-		}
 		if guardRWDB(w, r, c) {
 			return
 		}
@@ -246,9 +229,6 @@ func handleAssignProject(c *Container, entity services.EntityKind) http.HandlerF
 
 func handleDeleteEntity(c *Container, entity services.EntityKind) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if guardDemo(w, c) {
-			return
-		}
 		if guardRWDB(w, r, c) {
 			return
 		}
@@ -305,9 +285,6 @@ func handleDeleteEntity(c *Container, entity services.EntityKind) http.HandlerFu
 
 func handleProjectRename(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if guardDemo(w, c) {
-			return
-		}
 		if guardRWDB(w, r, c) {
 			return
 		}
@@ -379,9 +356,6 @@ func handleProjectRename(c *Container) http.HandlerFunc {
 
 func handleDBExport(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if guardDemo(w, c) {
-			return
-		}
 		if guardRWDB(w, r, c) {
 			return
 		}
@@ -434,9 +408,6 @@ const maxUploadSize = 512 << 20
 
 func handleDBImport(c *Container) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if guardDemo(w, c) {
-			return
-		}
 		if guardRWDB(w, r, c) {
 			return
 		}

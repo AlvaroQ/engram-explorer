@@ -10,6 +10,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Codex sessions provider** — a new `codex-sessions` module ("Codex") reads the local Codex CLI rollouts under
+  `$CODEX_HOME/sessions` (default `~/.codex/sessions`), read-only. Token counts are normalized to disjoint
+  buckets (cached tokens are a subset of Codex's `input_tokens`), usage is deduplicated by `response_id` (or by
+  cumulative `token_count` totals), tool calls are paired with their output by `call_id`, and resumed or forked
+  sessions do not double-count replayed usage. Models without a published OpenAI price count as unknown (cost 0,
+  flagged with `~`). New installs get the module enabled at `~/.codex`; existing `config.json` files are not
+  rewritten — the module runs on the built-in home until a path is saved in Settings → Modules, where the Codex
+  row offers its path form also while the module is enabled.
+- **Agent sessions** — Claude Code and Codex sessions share one vendor-neutral model and one set of pages:
+  `/agent-sessions` (usage overview: totals, cost per agent / project / day, tokens per model, most expensive
+  sessions), `/agent-sessions/list` (filters by agent, source, project, model, text and date range; sort and
+  pages; one notice per source that cannot be read) and a detail page per session
+  (`/agent-sessions/claude-code/<account>/<project>/<id>`, `/agent-sessions/codex/<rollout path>`) that shows
+  text, collapsed reasoning, each tool call with its output and unpaired calls or outputs marked.
+  `GET /api/agent-sessions/stats` returns the neutral aggregate (input, cache read, cache write and output
+  tokens, reasoning apart, cost, unknown-model flag, per agent), cached by a source fingerprint. Enabling both
+  modules shows a single "Agent sessions" sidebar group.
 - **CI hardening** — CI now also runs on `develop`, uses least-privilege permissions and SHA-pinned actions,
   runs `go test -race` and `govulncheck`, and fails when generated templ code or the Tailwind CSS bundle is
   stale. Dependabot keeps Go modules, npm packages and GitHub Actions up to date.
@@ -19,16 +36,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - **Disabled-module page** — opening a disabled module's page directly shows the full app layout (sidebar,
-  account switcher, demo banner) with the notice and status `503`, instead of an unstyled fragment.
+  account switcher) with the notice and status `503`, instead of an unstyled fragment.
 - **Module toggles and profile switches during requests** — a module disabled, re-opened or switched while
   pages and API calls are in flight no longer fails them with `500` ("database is closed"): each request keeps
-  the data source it started with, and the old one is closed when those requests finish (at most 30 s later).
+  the data source it started with, and the old one is closed when those requests finish (at most 30 s later). A
+  request still running after that 30 s drain timeout has its data source closed under it and fails. The HTTP
+  write timeout (also 30 s) only stops the response, not the handler: a longer import can still complete on
+  the server while the client sees an error (see "Limits" in the README).
+- **Failed module re-open kept the old data source open** — when re-opening a module fails (it becomes `errored`),
+  its previous database or directory handle is now closed once the requests using it finish, instead of staying
+  open until the server stops. Disabling an `errored` module closes anything it still held.
+- **Health-check log noise** — a failing provider health check (missing Claude Code projects directory, unusable
+  Engram database) is logged once when it starts failing and once when it recovers, through the configured
+  logger, instead of a warning on every `/api/health` poll.
+- **Maintenance page sidebar** — Settings → Maintenance and the sync project page show the same sidebar as the
+  other pages (enabled modules only, account switcher) instead of a fixed Engram + Claude Code layout.
 - **Stale cloud locale strings** — removed leftover UI strings that claimed the `engram` CLI has no
   `cloud unenroll` and that the dashboard writes `sync_enrolled_projects` directly.
-- **Demo mode data-source lock** — demo mode rejects every change of data source (Engram database path, Claude Code
-  directory, module enable/disable and path, profile create/switch/delete, Claude Code accounts) with "Write
-  operations are disabled in demo mode.", so a demo instance can never be repointed at a real database. Theme,
-  language, sidebar and advanced-view preferences still work.
 - **Module enable/disable without restart** — enabling a module in Settings serves its pages, API and
   maintenance routes right away (they used to 404 until a restart when the module was off at boot). While a
   module is disabled its API routes answer `503 MODULE_DISABLED` and its pages show a localized notice, instead
@@ -36,9 +60,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   error instead of panicking.
 - **`/api/health` after a database switch** — `db.path` reports the database in use after a Settings switch (it
   kept the path opened at startup).
-- **Demo mode served the real database** — with an existing `config.json` profile, `--demo` served the profile's
-  database. Demo mode now runs on an in-memory profile: it always serves the demo database and never reads or
-  writes `config.json`.
 - **Environment overrides ignored** — `ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR` and `ENGRAM_DAEMON_URL` were ignored once
   `config.json` existed; they now win over the saved profile at startup and are never written to disk.
 - **Profile store races** — concurrent Settings requests no longer race on the profile store (`config.Store`
@@ -50,8 +71,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   rolls the switch back without leaking instances.
 - **Database import confirmation** — choosing a file in Settings → Import now submits with
   `requestSubmit()`, so the confirmation dialog runs before anything is uploaded (`form.submit()` skipped it).
-- **`make demo`** — the target now starts the server in demo mode (`--demo` with the seeded database), so the
-  demo banner is shown and writes are rejected.
 - **Concurrent database exports** — each export snapshot is written to its own private temp directory instead
   of a second-resolution file name, so two exports in the same second no longer fail with `500` (and one no
   longer deletes the other's file).
@@ -125,6 +144,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Claude Code URLs moved** — `/cc-overview` now answers `301` to `/agent-sessions`; `/cc-sessions`,
+  `/cc-sessions/list` and `/cc-overview?tab=sessions` answer `301` to `/agent-sessions/list?agent=claude-code`
+  (the project filter is kept and `account=<id>` becomes `source=claude-code/<id>`); `/cc-sessions/<project>/<id>`
+  answers `301` to `/agent-sessions/claude-code/<account>/<project>/<id>`. The sidebar section visibility cookie
+  for these pages is now `nav_agent-sessions` (a previously hidden Claude Code section shows again once).
+- **Provider capabilities (agent sessions)** — session providers expose `AgentSessionSource`; the host resolves
+  every live one per request (`Registry.FindAll` / `Lease.FindAll`), and each provider mounts the detail route of
+  its own sources. The UI no longer switches on provider IDs either (sidebar icons, section toggles and Settings
+  rows come from the registry's nav groups).
 - **Provider capabilities** — provider wiring goes through capability interfaces (`Provider.Routes` with a host
   `Router`, `Writable`, `Searcher`, `StatsSource`) instead of a switch on provider IDs: search
   (`GET /api/observations/search`) and overview stats (`GET /api/overview`) are served through `Searcher` and
@@ -143,15 +171,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Pinned templ generator** — `make templ` (and `make build`) runs `templ@v0.3.1001` via `go run`, the same
   version CI uses for its drift check, instead of whatever `templ` binary is on `PATH`.
 
+### Deprecated
+
+- **`GET /api/cc-sessions/stats`** — still answers with its previous JSON shape over the Claude Code accounts only,
+  now with `Deprecation: true` and `Link: </api/agent-sessions/stats>; rel="successor-version"` headers. Use
+  `GET /api/agent-sessions/stats`; the old endpoint will be removed in a future release.
+
 ### Removed
 
-- `doctor.IsHTMX`, `doctor.ErrorPartial` and `doctor.EmptyState` (internal): the doctor module reuses the UI
-  shell helpers (`ui.Render`, `ui.RenderError`, `ui.IsHTMX`, `ui.RequireRW`, `ui.ErrorPartial`,
-  `ui.EmptyState`) instead of keeping copies.
+- **BREAKING: demo mode** — `--demo`, `--demo-db`, `ENGRAM_DEMO`, `ENGRAM_DEMO_DB`, the demo banner and the
+  `403 DEMO_MODE` answer are gone. The binary now refuses to start when one of those flags or variables is set
+  (instead of serving your real data) and names the replacement. `make demo` seeds `./demo` — `engram.db` plus
+  sample Claude Code sessions in `./demo/claude` and sample Codex rollouts in `./demo/codex` — and runs the normal
+  binary with `ENGRAM_DATA_DIR=./demo`, `CLAUDE_PROJECTS_DIR=./demo/claude`, `CODEX_HOME=./demo/codex` and
+  `ENGRAM_DASH_READONLY=true`: write routes answer
+  `503 RW_UNAVAILABLE`, Settings changes persist in `./demo/config.json`, and `~/.claude/projects` is no longer
+  read by the demo. Scripts that ran `engram-explorer --demo` must switch to `make demo` or those variables.
 - `doctor.IsHTMX`, `doctor.ErrorPartial` and `doctor.EmptyState` (internal): the doctor module reuses the UI
   shell helpers (`ui.Render`, `ui.RenderError`, `ui.IsHTMX`, `ui.RequireRW`, `ui.ErrorPartial`,
   `ui.EmptyState`) instead of keeping copies.
 - Unused Pico CSS stylesheet from the doctor module.
+- Unused locale strings `projects.toast.enrollSuccess`, `projects.toast.enrollError` and `settings.row.cloudEnroll`,
+  and the unused helpers `engram.EngramDeps`, the Engram instance's `DoctorDeps` and `ccsessions.CCRuntimePaths`
+  (internal).
 - `scripts/update-engram.*`, a personal helper unrelated to this project.
 
 ## [0.2.0] - 2026-06-12

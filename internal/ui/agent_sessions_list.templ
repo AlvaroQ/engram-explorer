@@ -1,0 +1,204 @@
+package ui
+
+import (
+	"fmt"
+
+	"github.com/AlvaroQ/engram-explorer/internal/agentsessions"
+)
+
+// AgentSessionsListPage renders the cross-agent session list page.
+templ AgentSessionsListPage(v agentListView, theme, sidebarState string) {
+	@Layout(T(v.Lang, "agentSessions.title"), "agent-sessions-list", v.Lang, theme, sidebarState, asListContent(v))
+}
+
+// AgentSessionsListPartial renders the list body for HTMX swaps.
+templ AgentSessionsListPartial(v agentListView) {
+	@asListContent(v)
+}
+
+templ asListContent(v agentListView) {
+	<div class="flex flex-col gap-4">
+		@asTabBar("list", v.Lang)
+		<div class="page-header">
+			<h1>{ T(v.Lang, "agentSessions.title") }</h1>
+			<p>{ T(v.Lang, "agentSessions.description") }</p>
+		</div>
+		for _, e := range v.Result.Errors {
+			<p class="inline-error" role="alert">{ T(v.Lang, "agentSessions.sourceError", "source", e.Source, "agent", asAgentLabel(v.Lang, e.Agent)) }</p>
+		}
+		<div class="card">
+			<div class="card-header card-header-flex">
+				<h2>{ T(v.Lang, "agentSessions.list.title") }: <span class="cc-list-count">{ T(v.Lang, "agentSessions.list.count", "count", fmt.Sprintf("%d", len(v.Result.Items)), "total", fmt.Sprintf("%d", v.Result.Total)) }</span></h2>
+			</div>
+			<div class="card-body">
+				@asFilterForm(v)
+			</div>
+			<div class="card-body p-0">
+				@asTable(v)
+			</div>
+			if v.Result.Pages > 1 {
+				@asPager(v)
+			}
+		</div>
+		<p class="muted text-xs">{ T(v.Lang, "agentSessions.tokenNote") }</p>
+	</div>
+}
+
+// asFilterForm is a plain GET form (no inline code): agent, source, project,
+// model, free text, date range and sort.
+templ asFilterForm(v agentListView) {
+	<form method="get" action="/agent-sessions/list" class="cc-list-filter agent-filter">
+		<label class="filter-label">
+			{ T(v.Lang, "agentSessions.filter.agent") }
+			<select name="agent" class="input input-sm">
+				<option value="" selected?={ v.Query.Agent == "" }>{ T(v.Lang, "agentSessions.filter.allAgents") }</option>
+				for _, a := range v.Result.Agents {
+					<option value={ a } selected?={ v.Query.Agent == a }>{ asAgentLabel(v.Lang, a) }</option>
+				}
+			</select>
+		</label>
+		<label class="filter-label">
+			{ T(v.Lang, "agentSessions.filter.source") }
+			<select name="source" class="input input-sm">
+				<option value="" selected?={ v.Query.Source == "" }>{ T(v.Lang, "agentSessions.filter.allSources") }</option>
+				for _, s := range v.Result.Sources {
+					<option value={ s.ID } selected?={ v.Query.Source == s.ID }>{ s.ID }</option>
+				}
+			</select>
+		</label>
+		<label class="filter-label">
+			{ T(v.Lang, "agentSessions.filter.project") }
+			<select name="project" class="input input-sm">
+				<option value="" selected?={ v.Query.Project == "" }>{ T(v.Lang, "common.all") }</option>
+				for _, p := range v.Result.Projects {
+					<option value={ p } selected?={ v.Query.Project == p }>{ p }</option>
+				}
+			</select>
+		</label>
+		<label class="filter-label">
+			{ T(v.Lang, "agentSessions.filter.model") }
+			<select name="model" class="input input-sm">
+				<option value="" selected?={ v.Query.Model == "" }>{ T(v.Lang, "common.all") }</option>
+				for _, m := range v.Result.Models {
+					<option value={ m } selected?={ v.Query.Model == m }>{ m }</option>
+				}
+			</select>
+		</label>
+		<label class="filter-label">
+			{ T(v.Lang, "agentSessions.filter.query") }
+			<input type="search" name="q" value={ v.Query.Q } class="input input-sm" placeholder={ T(v.Lang, "agentSessions.filter.queryPlaceholder") }/>
+		</label>
+		<label class="filter-label">
+			{ T(v.Lang, "agentSessions.filter.from") }
+			<input type="date" name="from" value={ v.Query.From } class="input input-sm"/>
+		</label>
+		<label class="filter-label">
+			{ T(v.Lang, "agentSessions.filter.to") }
+			<input type="date" name="to" value={ v.Query.To } class="input input-sm"/>
+		</label>
+		<label class="filter-label">
+			{ T(v.Lang, "agentSessions.filter.sort") }
+			<select name="sort" class="input input-sm">
+				for _, s := range asSortKeys {
+					<option value={ s } selected?={ asSortSelected(v.Query.Sort, s) }>{ T(v.Lang, "agentSessions.sort."+s) }</option>
+				}
+			</select>
+		</label>
+		<label class="filter-label">
+			{ T(v.Lang, "agentSessions.filter.order") }
+			<select name="order" class="input input-sm">
+				<option value="desc" selected?={ v.Query.Order != "asc" }>{ T(v.Lang, "agentSessions.order.desc") }</option>
+				<option value="asc" selected?={ v.Query.Order == "asc" }>{ T(v.Lang, "agentSessions.order.asc") }</option>
+			</select>
+		</label>
+		<button type="submit" class="btn btn-primary btn-sm">{ T(v.Lang, "agentSessions.filter.apply") }</button>
+		<a href="/agent-sessions/list" class="btn btn-secondary btn-sm">{ T(v.Lang, "agentSessions.filter.reset") }</a>
+	</form>
+}
+
+templ asTable(v agentListView) {
+	if len(v.Result.Items) == 0 {
+		@EmptyState(T(v.Lang, "agentSessions.list.noMatch"))
+	} else {
+		<div class="overflow-x-auto">
+			<table class="w-full text-sm">
+				<thead class="table-head">
+					<tr>
+						<th class="px-4 py-2 text-left">{ T(v.Lang, "agentSessions.col.ended") }</th>
+						<th class="px-4 py-2 text-left">{ T(v.Lang, "agentSessions.col.agent") }</th>
+						<th class="px-4 py-2 text-left">{ T(v.Lang, "agentSessions.col.prompt") }</th>
+						<th class="px-4 py-2 text-right">{ T(v.Lang, "agentSessions.col.tokens") }</th>
+						<th class="px-4 py-2 text-right">{ T(v.Lang, "agentSessions.col.cost") }</th>
+						<th class="px-4 py-2 text-right">{ T(v.Lang, "agentSessions.col.size") }</th>
+						<th class="px-4 py-2 text-left">{ T(v.Lang, "agentSessions.col.project") }</th>
+						<th class="px-4 py-2 text-left">{ T(v.Lang, "agentSessions.col.branch") }</th>
+					</tr>
+				</thead>
+				<tbody class="table-divide">
+					for _, s := range v.Result.Items {
+						@asRow(s, v.Lang)
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+}
+
+templ asRow(s agentsessions.Session, lang string) {
+	<tr class="hover:bg-surface-2 align-top">
+		<td class="px-4 py-2 mono text-xs text-fg-muted whitespace-nowrap">
+			<div>{ ccsFormatDate(s.EndedAt) }</div>
+			<div class="muted">{ ccsFormatClock(s.EndedAt) }</div>
+		</td>
+		<td class="px-4 py-2 text-xs whitespace-nowrap">
+			<span class="badge badge-neutral" title={ s.Source }>{ asAgentLabel(lang, s.Agent) }</span>
+		</td>
+		<td class="px-4 py-2">
+			<a href={ templ.SafeURL(agentsessions.DetailPath(s.Source, s.Key)) } class="text-sm text-fg hover:text-accent">
+				if clean, hasAttach := ccsStripAttachments(s.FirstPrompt); hasAttach {
+					<span class="cc-prompt-clip" title={ T(lang, "agentSessions.attachment") }>
+						@ccsPaperclip()
+					</span>
+					if clean != "" {
+						{ clean }
+					} else {
+						<span class="muted">{ T(lang, "agentSessions.attachment") }</span>
+					}
+				} else if clean != "" {
+					{ clean }
+				} else {
+					<span class="muted">{ T(lang, "common.untitled") }</span>
+				}
+			</a>
+		</td>
+		<td class="px-4 py-2 mono text-xs text-fg-muted text-right whitespace-nowrap" title={ asUsageBreakdown(s.Usage, lang) }>{ ccsFormatTokens(s.Usage.Total()) }</td>
+		<td class="px-4 py-2 mono text-xs text-right whitespace-nowrap">{ asFormatCost(s.Usage) }</td>
+		<td class="px-4 py-2 mono text-xs text-fg-muted text-right whitespace-nowrap">{ ccsFormatSize(s.SizeBytes) }</td>
+		<td class="px-4 py-2 text-fg-muted text-xs whitespace-nowrap">
+			if s.Project != "" {
+				<span class="badge badge-accent">{ s.Project }</span>
+			} else {
+				<span class="muted">—</span>
+			}
+		</td>
+		<td class="px-4 py-2 text-fg-muted text-xs whitespace-nowrap">
+			if s.GitBranch != "" {
+				<span class="badge badge-neutral">{ s.GitBranch }</span>
+			} else {
+				<span class="muted">—</span>
+			}
+		</td>
+	</tr>
+}
+
+templ asPager(v agentListView) {
+	<nav class="agent-pager" aria-label={ T(v.Lang, "agentSessions.list.title") }>
+		if v.Result.Page > 1 {
+			<a class="btn btn-secondary btn-sm" href={ templ.SafeURL(v.Query.pageURL(v.Result.Page - 1)) }>{ T(v.Lang, "agentSessions.list.prev") }</a>
+		}
+		<span class="muted text-xs">{ T(v.Lang, "agentSessions.list.page", "page", fmt.Sprintf("%d", v.Result.Page), "pages", fmt.Sprintf("%d", v.Result.Pages)) }</span>
+		if v.Result.HasMore {
+			<a class="btn btn-secondary btn-sm" href={ templ.SafeURL(v.Query.pageURL(v.Result.Page + 1)) }>{ T(v.Lang, "agentSessions.list.next") }</a>
+		}
+	</nav>
+}

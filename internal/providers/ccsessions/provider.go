@@ -1,7 +1,7 @@
 // Package ccsessions implements the Provider port for the Claude Code sessions
-// data source. It wraps the existing internal/services/cc_sessions.go reader
-// and the internal/httpapi/routes_cc_sessions.go + internal/ui cc-sessions routes
-// behind the providers.Provider interface.
+// data source. It wraps the internal/services/cc_sessions*.go reader behind
+// the providers.Provider interface and serves every enabled Claude account as
+// a vendor-neutral agent-session source (providers.AgentSessionSource).
 //
 // This provider is READ-ONLY: it does NOT implement the providers.Writable
 // capability. The CC sessions store is owned by Claude Code — this provider
@@ -15,6 +15,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"sync"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
 	"github.com/AlvaroQ/engram-explorer/internal/providers"
@@ -27,13 +28,24 @@ import (
 
 // ccProvider is the singleton descriptor for the Claude Code sessions data source.
 type ccProvider struct {
-	cfg config.Config
+	cfg      config.Config
+	log      *slog.Logger              // registry logger (SetLogger); nil logs nothing
+	accounts func() []config.CCAccount // WithAccounts; nil serves the provider path
+	stats    statsCache                // deprecated /api/cc-sessions/stats
 }
 
 // NewProvider returns the Claude Code sessions Provider adapter.
-func NewProvider(cfg config.Config) providers.Provider {
-	return &ccProvider{cfg: cfg}
+func NewProvider(cfg config.Config, opts ...Option) providers.Provider {
+	p := &ccProvider{cfg: cfg}
+	for _, o := range opts {
+		o(p)
+	}
+	return p
 }
+
+// SetLogger receives the registry logger (providers.LoggerSetter); instances
+// opened afterwards log their health transitions through it.
+func (p *ccProvider) SetLogger(log *slog.Logger) { p.log = log }
 
 // ID returns the stable machine identifier.
 func (p *ccProvider) ID() string { return "cc-sessions" }
@@ -108,29 +120,15 @@ func (p *ccProvider) Open(ctx context.Context, cfg providers.ProviderConfig) (pr
 		cfg:          appCfg,
 		runtimePaths: runtimePaths,
 		path:         path,
+		health:       providers.NewHealthLog(p.log),
+		accounts:     p.accounts,
 	}, nil
 }
 
-// Routes registers the routes the Claude Code provider owns: none. Its pages
-// (/cc-overview, /cc-sessions/...) and GET /api/cc-sessions/stats read every
-// enabled CC account from the profile store, which only the host has, so the
-// host serves them and gates them on an enabled instance exposing
-// RuntimePaths (this provider's capability).
-func (p *ccProvider) Routes(providers.Router) {}
-
-// Nav returns the sidebar NavGroup for the CC sessions provider.
-// cc-sessions list is intentionally omitted from the primary nav (PR1 UX
-// simplification). The list page remains accessible via direct URL; the
-// overview is the primary entry point.
-func (p *ccProvider) Nav(inst providers.Instance) providers.NavGroup {
-	return providers.NavGroup{
-		ID:       "cc-sessions",
-		LabelKey: "nav.ccsessions",
-		Featured: false,
-		Links: []providers.NavLink{
-			{Href: "/cc-overview", Key: "cc-overview", LabelKey: "nav.ccsessionsOverview", Icon: "overview"},
-		},
-	}
+// Nav contributes the shared "Agent sessions" sidebar group (the registry
+// merges it with the other agent-session providers').
+func (p *ccProvider) Nav(providers.Instance) providers.NavGroup {
+	return providers.AgentSessionsNav()
 }
 
 // Validate checks a candidate config before activation (Tier-1 manual path
@@ -200,12 +198,18 @@ type ccInstance struct {
 	cfg          config.Config
 	runtimePaths *config.RuntimePaths
 	path         string
+	health       *providers.HealthLog
+	accounts     func() []config.CCAccount
+
+	mu      sync.Mutex
+	sources map[string]*claudeSource // by account id + path (AgentSessionSources)
 }
 
 // Health returns per-provider health for /api/health aggregation. For CC
 // sessions the health check is whether the projects directory still exists.
 // The error is generic in production (the OS error text names the path and
-// goes to the log); development (ExposeDetails) shows the detail.
+// goes to the log, once per transition — see providers.HealthLog);
+// development (ExposeDetails) shows the detail.
 func (i *ccInstance) Health(ctx context.Context) providers.ProviderHealth {
 	h := providers.ProviderHealth{
 		ID:   "cc-sessions",
@@ -218,7 +222,7 @@ func (i *ccInstance) Health(ctx context.Context) providers.ProviderHealth {
 		if err != nil {
 			detail = err.Error()
 		}
-		slog.Warn("claude code projects directory unavailable", "path", i.path, "err", detail)
+		i.health.Failing("claude code projects directory unavailable", "path", i.path, "err", detail)
 		h.Error = errProjectsDirUnavailable
 		if i.cfg.ExposeDetails {
 			h.Error = detail
@@ -227,6 +231,7 @@ func (i *ccInstance) Health(ctx context.Context) providers.ProviderHealth {
 	}
 
 	h.OK = true
+	i.health.Healthy("claude code projects directory available again", "path", i.path)
 	return h
 }
 
@@ -242,20 +247,3 @@ func (i *ccInstance) RuntimePaths() *config.RuntimePaths { return i.runtimePaths
 
 // Config returns the app config held by this instance. Used by WU-5.
 func (i *ccInstance) Config() config.Config { return i.cfg }
-
-// ---------------------------------------------------------------------------
-// Package-level accessor helper for WU-5 (container wiring)
-// ---------------------------------------------------------------------------
-
-// CCRuntimePaths extracts the *config.RuntimePaths from a providers.Instance
-// that is an active CC sessions instance. Returns (*config.RuntimePaths, true)
-// on success, or (nil, false) if inst is not a CC sessions instance.
-//
-// This lets httpapi/server.go wire CC routes without exposing ccInstance.
-func CCRuntimePaths(inst providers.Instance) (*config.RuntimePaths, bool) {
-	ci, ok := inst.(*ccInstance)
-	if !ok {
-		return nil, false
-	}
-	return ci.RuntimePaths(), true
-}

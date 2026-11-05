@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { api } from './api.ts';
+import { agentSessionDetailPath, api } from './api.ts';
 
 // Regression guard for the singular/plural mismatch that caused a 405 on
 // move-project and delete: the backend write routes are PLURAL
@@ -55,5 +55,36 @@ describe('api client write routes hit the plural backend paths', () => {
     const { url, init } = lastCall();
     expect(url).toBe('/api/projects/old-proj/rename');
     expect(init.method).toBe('POST');
+  });
+});
+
+// Agent sessions: the island reads the neutral stats endpoint and links each
+// top session to its source-scoped detail page (same rule as Go's
+// agentsessions.DetailPath: every '/'-separated segment path-escaped).
+describe('agent sessions client', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('agentSessionsStats fetches the neutral endpoint', async () => {
+    await api.agentSessionsStats();
+    expect(String(fetchMock.mock.calls.at(-1)?.[0])).toBe('/api/agent-sessions/stats');
+  });
+
+  it('agentSessionDetailPath escapes each segment of the source and key', () => {
+    expect(agentSessionDetailPath('codex', '2025/10/01/rollout-a.jsonl')).toBe(
+      '/agent-sessions/codex/2025/10/01/rollout-a.jsonl',
+    );
+    expect(agentSessionDetailPath('claude-code/work', 'a b/c?d#e')).toBe(
+      '/agent-sessions/claude-code/work/a%20b/c%3Fd%23e',
+    );
   });
 });
