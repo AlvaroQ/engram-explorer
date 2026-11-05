@@ -1,0 +1,72 @@
+package doctor
+
+import (
+	"strconv"
+
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+	"github.com/AlvaroQ/engram-explorer/internal/ui"
+)
+
+// EmptySessionsPartial renders the body of the Maintenance "Empty sessions"
+// section. writable gates the bulk delete button (read-only mode never offers
+// it; the POST route is guarded too). deleted is non-nil right after a bulk
+// delete and reports how many sessions it removed.
+templ EmptySessionsPartial(rep services.EmptySessionsReport, writable bool, deleted *int64) {
+	if deleted != nil {
+		<p class="maintenance-notice" role="status">{ trCount(ctx, "maintenance.emptySessions.deleted", int(*deleted)) }</p>
+	}
+	if rep.Total == 0 {
+		@ui.EmptyState(tr(ctx, "maintenance.emptySessions.none"))
+	} else {
+		<p class="maintenance-count">{ trCount(ctx, "maintenance.emptySessions.count", rep.Total) }</p>
+		<table class="maintenance-table">
+			<thead>
+				<tr>
+					<th>{ tr(ctx, "maintenance.emptySessions.table.session") }</th>
+					<th>{ tr(ctx, "maintenance.emptySessions.table.project") }</th>
+					<th>{ tr(ctx, "maintenance.emptySessions.table.started") }</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, s := range rep.Sessions {
+					<tr>
+						<td class="mono">{ s.ID }</td>
+						<td>{ s.Project }</td>
+						<td class="mono">{ s.StartedAt }</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+		if emptySessionsTruncated(rep) {
+			<p class="maintenance-hint">{ tr(ctx, "maintenance.emptySessions.showing", "shown", strconv.Itoa(len(rep.Sessions)), "total", strconv.Itoa(rep.Total)) }</p>
+		}
+	}
+	if rep.SkippedEnrolled > 0 {
+		<p class="maintenance-hint">{ tr(ctx, "maintenance.emptySessions.skippedEnrolled", "count", strconv.Itoa(rep.SkippedEnrolled)) }</p>
+	}
+	if rep.SkippedRecent > 0 {
+		<p class="maintenance-hint">{ tr(ctx, "maintenance.emptySessions.skippedRecent", "count", strconv.Itoa(rep.SkippedRecent)) }</p>
+	}
+	if rep.Total > 0 {
+		if writable {
+			<div class="maintenance-actions">
+				<button
+					type="button"
+					class="btn-danger"
+					hx-post="/doctor/maintenance/empty-sessions/delete"
+					hx-target="#empty-sessions-container"
+					hx-swap="innerHTML"
+					hx-confirm={ trCount(ctx, "maintenance.emptySessions.confirm", rep.Total) }
+				>{ trCount(ctx, "maintenance.emptySessions.delete", rep.Total) }</button>
+			</div>
+		} else {
+			<p class="maintenance-hint">{ tr(ctx, "maintenance.readOnly") }</p>
+		}
+	}
+}
+
+// emptySessionsTruncated reports whether the list shows fewer rows than the
+// total, so the section explains that only the oldest are listed.
+func emptySessionsTruncated(rep services.EmptySessionsReport) bool {
+	return len(rep.Sessions) < rep.Total
+}

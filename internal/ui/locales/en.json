@@ -740,6 +740,28 @@
       "title": "Cloud backup",
       "description": "Read-only sync diagnostics. Enroll, unenroll and sync projects with the engram CLI.",
       "lastErrorGeneric": "The sync daemon recorded an error for this project. Check the Engram daemon log for details."
+    },
+    "readOnly": "Read-only mode: deleting is disabled.",
+    "emptySessions": {
+      "title": "Empty sessions",
+      "description": "Sessions with no memories, no prompts and no summary. They only add noise to session lists. Sessions of cloud-enrolled projects and sessions started in the last 24 hours are never deleted here.",
+      "none": "No empty sessions found.",
+      "count": "{{count}} empty sessions",
+      "countOne": "{{count}} empty session",
+      "showing": "Showing the oldest {{shown}} of {{total}}.",
+      "table": {
+        "session": "Session",
+        "project": "Project",
+        "started": "Started"
+      },
+      "skippedEnrolled": "Kept because the project is cloud-enrolled: {{count}}.",
+      "skippedRecent": "Kept because they started in the last 24 hours: {{count}}.",
+      "delete": "Delete all {{count}} empty sessions",
+      "deleteOne": "Delete the empty session",
+      "confirm": "Delete {{count}} empty sessions? Only sessions that are still empty are deleted. This cannot be undone.",
+      "confirmOne": "Delete {{count}} empty session? It is deleted only if it is still empty. This cannot be undone.",
+      "deleted": "Deleted {{count}} empty sessions.",
+      "deletedOne": "Deleted {{count}} empty session."
     }
   },
   "settings": {
@@ -1133,6 +1155,7 @@
     "readOnly": "Write operations are not available in read-only mode.",
     "noDatabase": "Database is not available.",
     "observationNotFound": "Observation {{id}} not found.",
-    "projectRequired": "Choose a project."
+    "projectRequired": "Choose a project.",
+    "loadEmptySessions": "Could not load empty sessions: "
   }
 }

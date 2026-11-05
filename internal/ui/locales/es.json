@@ -740,6 +740,28 @@
       "title": "Copia de seguridad en la nube",
       "description": "Diagnóstico de sincronización de solo lectura. Inscribe, desinscribe y sincroniza proyectos con el CLI de engram.",
       "lastErrorGeneric": "El daemon de sincronización registró un error para este proyecto. Consulta el registro del daemon de Engram para ver los detalles."
+    },
+    "readOnly": "Modo de solo lectura: la eliminación está desactivada.",
+    "emptySessions": {
+      "title": "Sesiones vacías",
+      "description": "Sesiones sin memorias, sin prompts y sin resumen. Solo ensucian los listados de sesiones. Las sesiones de proyectos inscritos en la nube y las iniciadas en las últimas 24 horas nunca se eliminan aquí.",
+      "none": "No hay sesiones vacías.",
+      "count": "{{count}} sesiones vacías",
+      "countOne": "{{count}} sesión vacía",
+      "showing": "Se muestran las {{shown}} más antiguas de {{total}}.",
+      "table": {
+        "session": "Sesión",
+        "project": "Proyecto",
+        "started": "Inicio"
+      },
+      "skippedEnrolled": "Se conservan porque el proyecto está inscrito en la nube: {{count}}.",
+      "skippedRecent": "Se conservan porque se iniciaron en las últimas 24 horas: {{count}}.",
+      "delete": "Eliminar las {{count}} sesiones vacías",
+      "deleteOne": "Eliminar la sesión vacía",
+      "confirm": "¿Eliminar {{count}} sesiones vacías? Solo se eliminan las que sigan vacías. No se puede deshacer.",
+      "confirmOne": "¿Eliminar {{count}} sesión vacía? Solo se elimina si sigue vacía. No se puede deshacer.",
+      "deleted": "Se eliminaron {{count}} sesiones vacías.",
+      "deletedOne": "Se eliminó {{count}} sesión vacía."
     }
   },
   "settings": {
@@ -1133,6 +1155,7 @@
     "readOnly": "Las operaciones de escritura no están disponibles en modo de solo lectura.",
     "noDatabase": "La base de datos no está disponible.",
     "observationNotFound": "No se encontró la observación {{id}}.",
-    "projectRequired": "Elige un proyecto."
+    "projectRequired": "Elige un proyecto.",
+    "loadEmptySessions": "No se pudieron cargar las sesiones vacías: "
   }
 }

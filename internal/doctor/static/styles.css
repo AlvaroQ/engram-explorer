@@ -633,3 +633,17 @@
   border-top: 1px solid hsl(var(--border));
 }
 .orphan-dialog-assign { display: inline-flex; gap: 0.5rem; margin: 0; }
+
+/* Maintenance checks (empty sessions, fragmented projects, data quality). */
+.maintenance-count { margin: 0 0 0.5rem; font-weight: 600; color: hsl(var(--fg)); }
+.maintenance-hint { margin: 0.25rem 0; font-size: 0.8rem; color: hsl(var(--fg-muted)); }
+.maintenance-notice {
+  margin: 0 0 0.75rem;
+  padding: 8px 12px;
+  border: 1px solid hsl(var(--ok));
+  border-radius: var(--doc-radius);
+  background: hsl(var(--ok) / 0.12);
+  color: hsl(var(--fg));
+}
+.maintenance-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+.maintenance-table .mono { font-family: var(--doc-mono); font-size: 0.8rem; }

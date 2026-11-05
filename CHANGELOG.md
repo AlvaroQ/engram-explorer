@@ -44,6 +44,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **CI hardening** — CI now also runs on `develop`, uses least-privilege permissions and SHA-pinned actions,
   runs `go test -race` and `govulncheck`, and fails when generated templ code or the Tailwind CSS bundle is
   stale. Dependabot keeps Go modules, npm packages and GitHub Actions up to date.
+- **Maintenance: empty sessions** — Settings → Maintenance lists sessions with no memories (soft-deleted ones
+  count as content), no prompts and no summary, and deletes them in bulk after a confirmation. The delete takes
+  no id list: it re-checks the rule inside one transaction, so a session that gained content in the meantime is
+  kept. Sessions of cloud-enrolled projects and sessions started in the last 24 hours are never deleted; read-only
+  mode hides the button. JSON: `GET /api/maintenance/empty-sessions`, `POST /api/maintenance/empty-sessions/delete`
+  (`503 RW_UNAVAILABLE` in read-only mode).
 - **Design specs** — `design/` (design system reference and overview shell directions) is now versioned.
 - **Code of Conduct** — `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1).
 

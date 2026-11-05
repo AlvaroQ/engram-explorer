@@ -330,6 +330,14 @@ Every mutation is confirmed in the UI, goes through a guarded write path, and ru
 
 For a strict viewer with **no** write capability, start with `ENGRAM_DASH_READONLY=true` — the read-write pool is never opened and every mutating endpoint returns `503`. Cloud sync is read-only in every mode, so no cloud operation bypasses this switch. See [SECURITY.md](./SECURITY.md) for the full concurrency contract.
 
+### 🧹 Maintenance checks
+
+**Settings → Maintenance** collects data-cleanup checks. Each one explains what it found; nothing runs on its own.
+
+- **Empty sessions** — sessions with no memories, no prompts and no summary (a session whose only memories are soft-deleted is *not* empty). "Delete all N empty sessions" asks for confirmation, then deletes, in one transaction, only the sessions that are still empty at that moment. Sessions of cloud-enrolled projects and sessions started in the last 24 hours (they may belong to an agent that is still running) are always kept. Also available as `GET /api/maintenance/empty-sessions` and `POST /api/maintenance/empty-sessions/delete`.
+
+Cleanup is permanent: download a backup first (Settings → export, `GET /api/db/export`). In read-only mode (`ENGRAM_DASH_READONLY=true`) the checks still show their findings, but every cleanup action is hidden and its route answers `503`.
+
 ---
 
 ## 🩹 Troubleshooting
