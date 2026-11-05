@@ -19,9 +19,8 @@ import { createRoot } from 'react-dom/client';
 import '../lib/i18n.ts';
 import { BrainPage } from '../pages/brain-page.tsx';
 
-export interface BrainIslandProps {
-  // empty — brain page manages its own state
-}
+// Empty — brain page manages its own state.
+export type BrainIslandProps = Record<string, never>;
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -16,10 +16,9 @@ import { createRoot } from 'react-dom/client';
 import '../lib/i18n.ts';
 import { ActivityByProjectChart } from '../components/charts/activity-by-project-chart.tsx';
 
-export interface ActivityByProjectChartProps {
-  // No props — the island fetches /api/activity?range=... on its own.
-  // Defined here to satisfy the island contract shape.
-}
+// No props — the island fetches /api/activity?range=... on its own.
+// Defined here to satisfy the island contract shape.
+export type ActivityByProjectChartProps = Record<string, never>;
 
 const queryClient = new QueryClient({
   defaultOptions: {
