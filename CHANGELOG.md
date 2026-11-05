@@ -144,6 +144,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Design tokens meet WCAG AA** — colors live only in `internal/ui/static/tokens.css` (linked before `app.css`
+  and `styles.css`; the doctor stylesheet now uses them instead of its own hex palette), every text/background
+  pair passes AA in light and dark (guarded by `tokens_contrast_test.go`), and new `--accent-fg`, `--info` and
+  `--brand-codex` tokens cover button text, info badges and the Codex agent.
 - **Claude Code URLs moved** — `/cc-overview` now answers `301` to `/agent-sessions`; `/cc-sessions`,
   `/cc-sessions/list` and `/cc-overview?tab=sessions` answer `301` to `/agent-sessions/list?agent=claude-code`
   (the project filter is kept and `account=<id>` becomes `source=claude-code/<id>`); `/cc-sessions/<project>/<id>`
