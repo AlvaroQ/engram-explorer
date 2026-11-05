@@ -59,7 +59,9 @@ Open <http://127.0.0.1:8787>. The `engram serve` daemon is optional — the dash
 ## Before opening a PR
 
 - `go build ./...`, `go vet ./...`, and `go test ./...` must all pass.
-- `pnpm typecheck`, `pnpm format:check`, and `pnpm test` must all pass (CI runs them too).
+- `pnpm typecheck`, `pnpm format:check`, `pnpm lint`, and `pnpm test` must all pass (CI runs them too).
+  `pnpm lint` runs ESLint (root `eslint.config.js`) over the islands in `apps/frontend/src` and the browser
+  scripts in `internal/ui/static`; it must report zero errors. `pnpm test` fails when no test files are found.
 - Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`).
 - Keep **one logical change per PR**.
 - **Do not** add AI attribution or `Co-Authored-By` trailers to commits.

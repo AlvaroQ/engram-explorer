@@ -65,6 +65,9 @@ jobs:
       - name: Prettier check
         run: pnpm format:check
 
+      - name: ESLint
+        run: pnpm lint
+
       - name: Frontend tests
         run: pnpm test
 
