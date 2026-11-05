@@ -741,7 +741,7 @@
       "description": "Diagnóstico de sincronización de solo lectura. Inscribe, desinscribe y sincroniza proyectos con el CLI de engram.",
       "lastErrorGeneric": "El daemon de sincronización registró un error para este proyecto. Consulta el registro del daemon de Engram para ver los detalles."
     },
-    "readOnly": "Modo de solo lectura: la eliminación está desactivada.",
+    "readOnly": "Modo de solo lectura: las acciones de limpieza están desactivadas.",
     "emptySessions": {
       "title": "Sesiones vacías",
       "description": "Sesiones sin memorias, sin prompts y sin resumen. Solo ensucian los listados de sesiones. Las sesiones de proyectos inscritos en la nube y las iniciadas en las últimas 24 horas nunca se eliminan aquí.",
@@ -762,6 +762,28 @@
       "confirmOne": "¿Eliminar {{count}} sesión vacía? Solo se elimina si sigue vacía. No se puede deshacer.",
       "deleted": "Se eliminaron {{count}} sesiones vacías.",
       "deletedOne": "Se eliminó {{count}} sesión vacía."
+    },
+    "fragmented": {
+      "title": "Proyectos posiblemente fragmentados",
+      "description": "Nombres de proyecto que probablemente son el mismo proyecto: el mismo nombre con distintas mayúsculas, con espacios o barras finales, o una ruta de carpeta completa cuya última carpeta es el otro nombre. Son solo sugerencias; nada se combina automáticamente.",
+      "none": "No hay proyectos posiblemente fragmentados.",
+      "backup": "Combinar no se puede deshacer.",
+      "backupLink": "Descarga antes una copia de seguridad",
+      "table": {
+        "project": "Proyecto",
+        "memories": "Memorias",
+        "sessions": "Sesiones",
+        "action": "Acción"
+      },
+      "target": "Destino sugerido",
+      "enrolledBadge": "Inscrito en la nube",
+      "enrolled": "Los proyectos inscritos en la nube no se pueden combinar aquí: la copia en la nube quedaría desfasada. Cancela antes la inscripción del proyecto con la CLI de engram.",
+      "combine": "Combinar en {{target}}",
+      "confirm": "¿Combinar «{{source}}» en «{{target}}»? Sus memorias, sesiones y prompts pasan a «{{target}}» y «{{source}}» desaparece. No se puede deshacer.",
+      "combined": "Se combinó «{{source}}» en «{{target}}».",
+      "error": {
+        "notSuggested": "Estos proyectos ya no se sugieren como el mismo proyecto. Recarga la lista."
+      }
     }
   },
   "settings": {
@@ -1156,6 +1178,7 @@
     "noDatabase": "La base de datos no está disponible.",
     "observationNotFound": "No se encontró la observación {{id}}.",
     "projectRequired": "Elige un proyecto.",
-    "loadEmptySessions": "No se pudieron cargar las sesiones vacías: "
+    "loadEmptySessions": "No se pudieron cargar las sesiones vacías: ",
+    "loadFragmentedProjects": "No se pudieron cargar los proyectos posiblemente fragmentados: "
   }
 }

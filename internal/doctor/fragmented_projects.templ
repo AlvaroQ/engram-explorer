@@ -1,0 +1,96 @@
+package doctor
+
+import (
+	"strconv"
+
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+	"github.com/AlvaroQ/engram-explorer/internal/ui"
+)
+
+// FragmentedProjectsPartial renders the body of the Maintenance "Possibly
+// fragmented projects" section. Groups are suggestions only: each name that
+// can be merged gets a confirmed "Combine into <target>" form; enrolled
+// projects are listed but never offered one. writable gates every form
+// (read-only mode shows the findings only). notice / errMsg report the result
+// of the last combine.
+templ FragmentedProjectsPartial(groups []services.FragmentedGroup, writable bool, notice, errMsg string) {
+	if notice != "" {
+		<p class="maintenance-notice" role="status">{ notice }</p>
+	}
+	if errMsg != "" {
+		@ui.ErrorPartial(errMsg)
+	}
+	if len(groups) == 0 {
+		@ui.EmptyState(tr(ctx, "maintenance.fragmented.none"))
+	} else {
+		<p class="maintenance-hint">
+			{ tr(ctx, "maintenance.fragmented.backup") }
+			<a href="/api/db/export" download>{ tr(ctx, "maintenance.fragmented.backupLink") }</a>
+		</p>
+		for _, g := range groups {
+			<div class="maintenance-group">
+				<table class="maintenance-table">
+					<thead>
+						<tr>
+							<th>{ tr(ctx, "maintenance.fragmented.table.project") }</th>
+							<th>{ tr(ctx, "maintenance.fragmented.table.memories") }</th>
+							<th>{ tr(ctx, "maintenance.fragmented.table.sessions") }</th>
+							<th>{ tr(ctx, "maintenance.fragmented.table.action") }</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, n := range g.Names {
+							<tr>
+								<td class="mono">{ n.Name }</td>
+								<td>{ strconv.Itoa(n.Memories) }</td>
+								<td>{ strconv.Itoa(n.Sessions) }</td>
+								<td>
+									@fragmentedAction(g, n, writable)
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+				if fragmentedHasEnrolled(g) {
+					<p class="maintenance-hint">{ tr(ctx, "maintenance.fragmented.enrolled") }</p>
+				}
+			</div>
+		}
+		if !writable {
+			<p class="maintenance-hint">{ tr(ctx, "maintenance.readOnly") }</p>
+		}
+	}
+}
+
+// fragmentedAction renders the action cell of one name.
+templ fragmentedAction(g services.FragmentedGroup, n services.FragmentedProjectName, writable bool) {
+	if n.Name == g.Target {
+		<span class="badge">{ tr(ctx, "maintenance.fragmented.target") }</span>
+	}
+	if n.Enrolled {
+		<span class="badge badge-enrolled">{ tr(ctx, "maintenance.fragmented.enrolledBadge") }</span>
+	}
+	if n.Combinable && writable {
+		<form
+			class="maintenance-inline-form"
+			hx-post="/doctor/maintenance/fragmented-projects/combine"
+			hx-target="#fragmented-projects-container"
+			hx-swap="innerHTML"
+			hx-confirm={ tr(ctx, "maintenance.fragmented.confirm", "source", n.Name, "target", g.Target) }
+		>
+			<input type="hidden" name="source" value={ n.Name }/>
+			<input type="hidden" name="target" value={ g.Target }/>
+			<button type="submit" class="btn-action">{ tr(ctx, "maintenance.fragmented.combine", "target", g.Target) }</button>
+		</form>
+	}
+}
+
+// fragmentedHasEnrolled reports whether enrollment blocks any name of g.
+func fragmentedHasEnrolled(g services.FragmentedGroup) bool {
+	for _, n := range g.Names {
+		if n.Enrolled {
+			return true
+		}
+	}
+	return false
+}

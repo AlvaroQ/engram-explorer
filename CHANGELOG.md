@@ -50,6 +50,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   kept. Sessions of cloud-enrolled projects and sessions started in the last 24 hours are never deleted; read-only
   mode hides the button. JSON: `GET /api/maintenance/empty-sessions`, `POST /api/maintenance/empty-sessions/delete`
   (`503 RW_UNAVAILABLE` in read-only mode).
+- **Maintenance: possibly fragmented projects** — Settings → Maintenance suggests project names that probably
+  mean the same project (letter case, surrounding whitespace, trailing separators, or a path vs its last folder;
+  no generic prefix matching). Each group shows memory and session counts, a backup link and a confirmed
+  "Combine into <target>" that reuses the project merge. Suggestions only: nothing is merged automatically,
+  cloud-enrolled projects cannot be combined and read-only mode hides the action.
 - **Design specs** — `design/` (design system reference and overview shell directions) is now versioned.
 - **Code of Conduct** — `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1).
 

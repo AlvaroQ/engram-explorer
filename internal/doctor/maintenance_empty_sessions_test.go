@@ -100,7 +100,7 @@ func TestEmptySessionsPartial_ReadOnly(t *testing.T) {
 	if strings.Contains(body, "hx-post") {
 		t.Error("read-only mode must not offer the delete button")
 	}
-	if !strings.Contains(body, "Read-only mode: deleting is disabled.") {
+	if !strings.Contains(body, "Read-only mode: cleanup actions are disabled.") {
 		t.Error("read-only mode must explain why there is no delete button")
 	}
 
@@ -127,7 +127,12 @@ func TestEmptySessionsDelete_DeletesAndRerenders(t *testing.T) {
 	mux := http.NewServeMux()
 	doctor.Mount(mux, doctor.Deps{RoDB: db, RWDB: db})
 
-	for lang, want := range map[string]string{"en": "Deleted 1 empty session.", "es": "Se eliminó 1 sesión vacía."} {
+	// Ordered: the es pass re-seeds the session the en pass deleted.
+	for _, tc := range []struct{ lang, want string }{
+		{"en", "Deleted 1 empty session."},
+		{"es", "Se eliminó 1 sesión vacía."},
+	} {
+		lang, want := tc.lang, tc.want
 		if lang == "es" {
 			seedOldSession(t, db, "sess-empty", "repo")
 		}

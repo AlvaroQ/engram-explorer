@@ -168,4 +168,11 @@ func Mount(mux Registrar, d Deps) {
 	// POST /doctor/maintenance/empty-sessions/delete — bulk delete of the
 	// sessions that are still empty (predicate re-checked server-side).
 	mux.HandleFunc("POST /doctor/maintenance/empty-sessions/delete", writeGuard(handleEmptySessionsDelete))
+
+	// GET /doctor/maintenance/fragmented-projects — suggestion groups.
+	mux.HandleFunc("GET /doctor/maintenance/fragmented-projects", live(handleFragmentedProjectsList))
+
+	// POST /doctor/maintenance/fragmented-projects/combine — merge one
+	// suggested name into its group's target (services.RenameProject merge).
+	mux.HandleFunc("POST /doctor/maintenance/fragmented-projects/combine", writeGuard(handleFragmentedProjectsCombine))
 }

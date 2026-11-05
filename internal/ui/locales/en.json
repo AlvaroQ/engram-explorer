@@ -741,7 +741,7 @@
       "description": "Read-only sync diagnostics. Enroll, unenroll and sync projects with the engram CLI.",
       "lastErrorGeneric": "The sync daemon recorded an error for this project. Check the Engram daemon log for details."
     },
-    "readOnly": "Read-only mode: deleting is disabled.",
+    "readOnly": "Read-only mode: cleanup actions are disabled.",
     "emptySessions": {
       "title": "Empty sessions",
       "description": "Sessions with no memories, no prompts and no summary. They only add noise to session lists. Sessions of cloud-enrolled projects and sessions started in the last 24 hours are never deleted here.",
@@ -762,6 +762,28 @@
       "confirmOne": "Delete {{count}} empty session? It is deleted only if it is still empty. This cannot be undone.",
       "deleted": "Deleted {{count}} empty sessions.",
       "deletedOne": "Deleted {{count}} empty session."
+    },
+    "fragmented": {
+      "title": "Possibly fragmented projects",
+      "description": "Project names that probably mean the same project: the same name in different letter case, with extra spaces or trailing slashes, or a full folder path whose last folder is the other name. These are suggestions only; nothing is combined automatically.",
+      "none": "No possibly fragmented projects found.",
+      "backup": "Combining cannot be undone.",
+      "backupLink": "Download a backup first",
+      "table": {
+        "project": "Project",
+        "memories": "Memories",
+        "sessions": "Sessions",
+        "action": "Action"
+      },
+      "target": "Suggested target",
+      "enrolledBadge": "Cloud-enrolled",
+      "enrolled": "Cloud-enrolled projects cannot be combined here: it would leave the cloud copy out of step. Unenroll the project with the engram CLI first.",
+      "combine": "Combine into {{target}}",
+      "confirm": "Combine \"{{source}}\" into \"{{target}}\"? Its memories, sessions and prompts move to \"{{target}}\" and \"{{source}}\" disappears. This cannot be undone.",
+      "combined": "Combined \"{{source}}\" into \"{{target}}\".",
+      "error": {
+        "notSuggested": "These projects are no longer suggested as the same project. Reload the list."
+      }
     }
   },
   "settings": {
@@ -1156,6 +1178,7 @@
     "noDatabase": "Database is not available.",
     "observationNotFound": "Observation {{id}} not found.",
     "projectRequired": "Choose a project.",
-    "loadEmptySessions": "Could not load empty sessions: "
+    "loadEmptySessions": "Could not load empty sessions: ",
+    "loadFragmentedProjects": "Could not load possibly fragmented projects: "
   }
 }

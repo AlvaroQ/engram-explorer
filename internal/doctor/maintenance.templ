@@ -54,6 +54,21 @@ templ maintenanceContent(lang string) {
 			</div>
 		</section>
 
+		<!-- Possibly fragmented projects: suggestions + confirmed combine. -->
+		<section class="settings-group" id="fragmented-projects">
+			<h2 class="settings-group-title">{ ui.T(lang, "maintenance.fragmented.title") }</h2>
+			<p class="settings-group-desc">{ ui.T(lang, "maintenance.fragmented.description") }</p>
+			<div
+				id="fragmented-projects-container"
+				hx-get="/doctor/maintenance/fragmented-projects"
+				hx-trigger="load"
+				hx-target="#fragmented-projects-container"
+				hx-swap="innerHTML"
+			>
+				<p class="loading">{ ui.T(lang, "common.loading") }</p>
+			</div>
+		</section>
+
 		<!-- Cloud backup (was /doctor/sync). Read-only diagnostics; content polled via HTMX. -->
 		<section class="settings-group" id="cloud">
 			<h2 class="settings-group-title">{ ui.T(lang, "maintenance.cloud.title") }</h2>
