@@ -82,3 +82,28 @@ func TestOverviewAgentKPIs(t *testing.T) {
 		t.Errorf("broken source: %+v, %v; want 4 conversations and 1 source error", got, err)
 	}
 }
+
+// TestOverviewAgentKPIs_MonthBoundary: half an hour into a new UTC month the
+// spend only counts the session started at its first instant, while the
+// 7-day conversations window still counts the one from the last minute of
+// the previous month.
+func TestOverviewAgentKPIs_MonthBoundary(t *testing.T) {
+	now := time.Date(2026, 12, 1, 0, 30, 0, 0, time.UTC)
+	src := kpiSource{id: "claude-code", agent: "claude-code", sessions: []agentsessions.Session{
+		kpiSession(time.Date(2026, 11, 30, 23, 59, 0, 0, time.UTC), 2.00, false),
+		kpiSession(time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC), 0.50, false),
+	}}
+	got, err := buildOverviewAgentKPIs(context.Background(), []agentsessions.Source{src}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Spend.CostUSD != 0.50 {
+		t.Errorf("Spend = $%.2f, want $0.50 (only the session of December)", got.Spend.CostUSD)
+	}
+	if len(got.SpendByAgent) != 1 || got.SpendByAgent[0].Sessions != 1 {
+		t.Errorf("SpendByAgent = %+v, want one December session", got.SpendByAgent)
+	}
+	if got.Conversations != 2 {
+		t.Errorf("Conversations = %d, want 2 (both within the last 7 days)", got.Conversations)
+	}
+}

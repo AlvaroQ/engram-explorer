@@ -88,7 +88,9 @@
       "viewSessions": "Ver sesiones",
       "spendDetails": "Detalles",
       "agentsEmpty": "Aún no hay ningún agente conectado.",
-      "agentsSetup": "Conecta uno en Ajustes → Fuentes de datos"
+      "agentsSetup": "Conecta uno en Ajustes → Fuentes de datos",
+      "agentsError": "No se pudieron cargar las cifras de los agentes.",
+      "agentsPartial": "No se pudieron leer algunas sesiones"
     },
     "alert": {
       "syncIssues": "{{count}} problema(s) de sincronización requieren atención",
@@ -346,16 +348,6 @@
         "generic": "La operación falló: {{message}}"
       }
     }
-  },
-  "syncSummary": {
-    "title": "Salud del sync",
-    "description": "Estado del sync en la nube",
-    "open": "Abrir",
-    "openSyncHealth": "Abrir Salud del Sync",
-    "enrolled": "Inscritos",
-    "healthy": "Saludables",
-    "broken": "Rotos",
-    "pendingMutations": "Mutaciones pendientes"
   },
   "sessions": {
     "title": "Sesiones",

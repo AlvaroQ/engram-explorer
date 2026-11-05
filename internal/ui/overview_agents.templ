@@ -3,10 +3,13 @@ package ui
 import "fmt"
 
 // OverviewAgentKPIsFragment (GET /partials/overview-agents) fills both
-// versions of the overview agent cards out of band (innerHTML), so the strip
-// keeps whatever inert state the collapse script gave it.
+// versions of the overview agent cards out of band. The full-card bodies are
+// replaced whole (outerHTML), which drops their aria-busy loading state; the
+// strip values are filled with innerHTML, so the strip keeps whatever inert
+// state the collapse script gave it. When a source could not be read, both
+// cards note it, so a partial total is never silent.
 templ OverviewAgentKPIsFragment(k overviewAgentKPIs, lang string) {
-	<div id="kpi-conversations-body" hx-swap-oob="innerHTML">
+	<div id="kpi-conversations-body" hx-swap-oob="outerHTML">
 		<p class="kpi-value">{ fmt.Sprintf("%d", k.Conversations) }</p>
 		@overviewAgentSplit(k.ConversationsByAgent, lang, false)
 		<p class="kpi-cap ov-agent-cap">
@@ -16,9 +19,10 @@ templ OverviewAgentKPIsFragment(k overviewAgentKPIs, lang string) {
 			<span class="ov-sep" aria-hidden="true">·</span>
 			<a href="/agent-sessions/list">{ T(lang, "overview.kpi.viewSessions") }</a>
 		</p>
+		@overviewAgentSourceNote(k, lang)
 	</div>
 	<span id="kpi-conversations-mini-v" hx-swap-oob="innerHTML">{ fmt.Sprintf("%d", k.Conversations) }</span>
-	<div id="kpi-spend-body" hx-swap-oob="innerHTML">
+	<div id="kpi-spend-body" hx-swap-oob="outerHTML">
 		<p class="kpi-value">{ ovFormatSpend(k.Spend) }</p>
 		@overviewAgentSplit(k.SpendByAgent, lang, true)
 		<p class="kpi-cap ov-agent-cap">
@@ -26,8 +30,33 @@ templ OverviewAgentKPIsFragment(k overviewAgentKPIs, lang string) {
 			<span class="ov-sep" aria-hidden="true">·</span>
 			<a href="/agent-sessions">{ T(lang, "overview.kpi.spendDetails") }</a>
 		</p>
+		@overviewAgentSourceNote(k, lang)
 	</div>
 	<span id="kpi-spend-mini-v" hx-swap-oob="innerHTML">{ ovFormatSpend(k.Spend) }</span>
+}
+
+// overviewAgentSourceNote flags totals that miss an unreadable source.
+templ overviewAgentSourceNote(k overviewAgentKPIs, lang string) {
+	if k.SourceErrors > 0 {
+		<p class="kpi-cap">{ T(lang, "overview.kpi.agentsPartial") }</p>
+	}
+}
+
+// OverviewAgentKPIsErrorFragment is the terminal state of both versions of
+// the two agent cards when the agent sessions could not be collected: the
+// same out-of-band targets as OverviewAgentKPIsFragment, so the loading
+// state ends instead of staying on "…".
+templ OverviewAgentKPIsErrorFragment(lang string) {
+	<div id="kpi-conversations-body" hx-swap-oob="outerHTML">
+		<p class="kpi-value">—</p>
+		<p class="kpi-cap">{ T(lang, "overview.kpi.agentsError") }</p>
+	</div>
+	<span id="kpi-conversations-mini-v" hx-swap-oob="innerHTML">—</span>
+	<div id="kpi-spend-body" hx-swap-oob="outerHTML">
+		<p class="kpi-value">—</p>
+		<p class="kpi-cap">{ T(lang, "overview.kpi.agentsError") }</p>
+	</div>
+	<span id="kpi-spend-mini-v" hx-swap-oob="innerHTML">—</span>
 }
 
 // overviewAgentSplit draws the per-agent proportion bar as SVG rects (width

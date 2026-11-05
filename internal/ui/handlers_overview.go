@@ -166,22 +166,6 @@ func groupSyncIssues(issues []services.SyncIssue) []issueGroup {
 	return result
 }
 
-// overviewBrokenTone returns the CSS tone class for the broken count.
-func overviewBrokenTone(count int64) string {
-	if count > 0 {
-		return "text-fail"
-	}
-	return "text-fg"
-}
-
-// overviewPendingTone returns the CSS tone class for pending mutations.
-func overviewPendingTone(count int64) string {
-	if count > 100 {
-		return "text-warn"
-	}
-	return "text-fg"
-}
-
 // overviewSeverityBadgeClass returns a badge CSS class for a severity level.
 func overviewSeverityBadgeClass(severity string) string {
 	switch severity {

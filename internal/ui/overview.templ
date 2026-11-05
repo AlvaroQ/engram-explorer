@@ -187,35 +187,6 @@ templ overviewAgentKPI(v overviewView, id, label, href string) {
 	}
 }
 
-// overviewSyncSummaryCard renders the sync health summary card (server-rendered).
-templ overviewSyncSummaryCard(s services.SyncSummary, lang string) {
-	<div class="card flex flex-col">
-		<div class="card-header">
-			<div>
-				<h2>{ T(lang, "syncSummary.title") }</h2>
-				<p>{ T(lang, "syncSummary.description") }</p>
-			</div>
-			<a href="/doctor/sync" class="text-xs text-fg-muted transition-colors hover:text-accent">
-				{ T(lang, "syncSummary.open") }
-			</a>
-		</div>
-		<ul class="divide-y divide-border/50 px-5 pt-2">
-			@overviewSyncRow(T(lang, "syncSummary.enrolled"), fmt.Sprintf("%d", s.EnrolledCount), "")
-			@overviewSyncRow(T(lang, "syncSummary.healthy"), fmt.Sprintf("%d", s.HealthyCount), "text-ok")
-			@overviewSyncRow(T(lang, "syncSummary.broken"), fmt.Sprintf("%d", s.BrokenCount), overviewBrokenTone(s.BrokenCount))
-			@overviewSyncRow(T(lang, "syncSummary.pendingMutations"), fmt.Sprintf("%d", s.PendingMutationsTotal), overviewPendingTone(s.PendingMutationsTotal))
-		</ul>
-	</div>
-}
-
-// overviewSyncRow renders a single row in the sync summary card.
-templ overviewSyncRow(label, value, toneClass string) {
-	<li class="flex h-10 items-center justify-between">
-		<span class="text-sm text-fg-muted">{ label }</span>
-		<span class={ "font-mono text-sm font-semibold tabular-nums", toneClass }>{ value }</span>
-	</li>
-}
-
 // overviewRecentTable renders the "recent observations" table (server-side).
 templ overviewRecentTable(items []services.OverviewRecentObs, lang string) {
 	if len(items) == 0 {

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -82,12 +83,21 @@ func buildOverviewAgentKPIs(ctx context.Context, sources []agentsessions.Source,
 // the transcript scan never delays the first paint).
 func handleOverviewAgentsPartial(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		lang := langForRequest(r)
 		k, err := buildOverviewAgentKPIs(r.Context(), d.AgentSessions, time.Now())
 		if err != nil {
-			RenderError(w, r, "", err)
+			// The request uses hx-swap="none": only out-of-band swaps of a 2xx
+			// reach the page, so the failure is a 200 terminal state for both
+			// cards (an ErrorPartial would be dropped and leave them on "…").
+			// Collect fails only on a done context, which templ also refuses
+			// to render with, so the terminal state renders on a context
+			// that keeps the request values but not its cancellation.
+			slog.Default().WarnContext(r.Context(), "overview agent KPIs unavailable",
+				"path", r.URL.Path, "err", err)
+			renderDeps(w, r.WithContext(context.WithoutCancel(r.Context())), d, OverviewAgentKPIsErrorFragment(lang))
 			return
 		}
-		renderDeps(w, r, d, OverviewAgentKPIsFragment(k, langForRequest(r)))
+		renderDeps(w, r, d, OverviewAgentKPIsFragment(k, lang))
 	}
 }
 

@@ -16,7 +16,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the hero scrolls away and only the strip pins. The graph pauses while collapsed or off-screen. KPIs: memories
   saved (+ last 7 days), projects (most active in 30 days), AI conversations in the last 7 days per agent, and
   agent spend this calendar month per agent (`~` marks a lower bound). Agent figures load after the page, so a
-  large transcript folder never delays it; with no agent connected the cards link to Settings → Data sources.
+  large transcript folder never delays it; when they cannot be loaded both cards say so instead of loading
+  forever, and a note flags totals that miss a source that could not be read. With no agent connected the
+  cards link to Settings → Data sources.
 - **Error toasts** — failed htmx requests (4xx/5xx and network errors) show a toast in an `aria-live` region
   (errors are `role="alert"`), with the server's message when the response carries one and a localized
   fallback otherwise. Toasts close by button or after 8 s, pause while hovered or focused, and skip motion under

@@ -88,7 +88,9 @@
       "viewSessions": "View sessions",
       "spendDetails": "Details",
       "agentsEmpty": "No coding agent connected yet.",
-      "agentsSetup": "Connect one in Settings → Data sources"
+      "agentsSetup": "Connect one in Settings → Data sources",
+      "agentsError": "Could not load the agent figures.",
+      "agentsPartial": "Some sessions could not be read"
     },
     "alert": {
       "syncIssues": "{{count}} sync issue(s) need attention",
@@ -346,16 +348,6 @@
         "generic": "Operation failed: {{message}}"
       }
     }
-  },
-  "syncSummary": {
-    "title": "Sync health",
-    "description": "Cloud sync state",
-    "open": "Open",
-    "openSyncHealth": "Open Sync Health",
-    "enrolled": "Enrolled",
-    "healthy": "Healthy",
-    "broken": "Broken",
-    "pendingMutations": "Pending mutations"
   },
   "sessions": {
     "title": "Sessions",
