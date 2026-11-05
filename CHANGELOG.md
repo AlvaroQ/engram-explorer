@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Error toasts** — failed htmx requests (4xx/5xx and network errors) show a toast in an `aria-live` region
+  (errors are `role="alert"`), with the server's message when the response carries one and a localized
+  fallback otherwise. Toasts close by button or after 8 s, pause while hovered or focused, and skip motion under
+  reduced motion. The htmx `responseHandling` is pinned so error responses never replace page content; polled
+  widgets (status pill, sync panels) opt out with `data-no-error-toast`.
 - **Codex sessions provider** — a new `codex-sessions` module ("Codex") reads the local Codex CLI rollouts under
   `$CODEX_HOME/sessions` (default `~/.codex/sessions`), read-only. Token counts are normalized to disjoint
   buckets (cached tokens are a subset of Codex's `input_tokens`), usage is deduplicated by `response_id` (or by

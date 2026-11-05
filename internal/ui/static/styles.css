@@ -1890,3 +1890,79 @@ code {
   gap: 0.75rem;
   padding: 0.75rem 1rem;
 }
+
+/* ---------- Toasts (htmx error feedback, toasts.js) ----------
+   Fixed stack in the bottom-right corner; each toast is an error card with a
+   close button. The entrance animation only runs without reduced motion. */
+.toast-region {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: min(360px, calc(100vw - 2 * var(--space-4)));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border: 1px solid hsl(var(--border));
+  border-left: 3px solid hsl(var(--fail));
+  border-radius: var(--radius-md);
+  background: hsl(var(--surface-2));
+  color: hsl(var(--fg));
+  box-shadow: var(--elevation-3);
+  font-size: 13px;
+  pointer-events: auto;
+}
+
+.toast-message {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: hsl(var(--fg-muted));
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toast-close:hover {
+  background: hsl(var(--fg) / var(--state-hover));
+  color: hsl(var(--fg));
+}
+
+.toast-close:focus-visible {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .toast {
+    animation: toast-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

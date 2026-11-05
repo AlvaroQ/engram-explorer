@@ -38,6 +38,7 @@ templ syncShellContent() {
 				hx-get="/doctor/sync/issues"
 				hx-trigger="load, every 15s"
 				data-poll-visible-only
+				data-no-error-toast
 				hx-target="#sync-issues"
 				hx-swap="innerHTML"
 			>
@@ -49,6 +50,7 @@ templ syncShellContent() {
 			hx-get="/doctor/sync/projects"
 			hx-trigger="load, every 15s"
 			data-poll-visible-only
+			data-no-error-toast
 			hx-target="#sync-projects"
 			hx-swap="innerHTML"
 		>
