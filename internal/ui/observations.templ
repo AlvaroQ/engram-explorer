@@ -248,10 +248,14 @@ templ observationsContent(items []services.ObservationRow, nextCursor *string, p
 // ObservationsTablePartial renders the full table with load-more.
 // This is the HTMX swap target for filter changes (replaces whole table content).
 // advanced gates the technical columns (Rev, Dup, Sync id).
+// params.MatchAny marks results of the OR search fallback and adds a notice.
 templ ObservationsTablePartial(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, lang string, advanced bool) {
 	if len(items) == 0 {
 		@EmptyState(T(lang, "observations.table.noMatch"))
 	} else {
+		if params.MatchAny {
+			<p id="obs-match-any-notice" class="text-xs text-fg-muted px-4 py-3" role="status">{ T(lang, "observations.search.matchedAny") }</p>
+		}
 		<table class="data-table" id="obs-table">
 			<thead>
 				<tr>
@@ -617,6 +621,9 @@ func obsNextURL(cursor string, params services.ObservationListParams, advanced b
 	}
 	if params.Q != "" {
 		v.Set("q", params.Q)
+		if params.MatchAny {
+			v.Set("match", "any")
+		}
 	}
 	for _, p := range params.Projects {
 		v.Add("project", p)

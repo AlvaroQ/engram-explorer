@@ -494,6 +494,9 @@
       "goToSession": "Ir a la sesión",
       "copied": "{{label}} copiado",
       "clipboardError": "error de portapapeles"
+    },
+    "search": {
+      "matchedAny": "No hay coincidencias exactas. Se muestran memorias que contienen alguna de las palabras."
     }
   },
   "syncHealth": {

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/AlvaroQ/engram-explorer/internal/cursor"
-	"github.com/AlvaroQ/engram-explorer/internal/fts"
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
@@ -74,14 +73,26 @@ type ObservationListParams struct {
 	OnlyDeleted    bool
 	Cursor         string
 	Limit          int
+	// MatchAny forces the OR-joined query for Q. Callers set it on later pages
+	// after a first page reported MatchedAny, so pagination stays in OR mode.
+	MatchAny bool
+}
+
+// ObservationListPage is one keyset page of the list query.
+type ObservationListPage struct {
+	Items      []ObservationRow
+	NextCursor *string
+	// MatchedAny reports that Items come from the OR fallback: the AND query
+	// for Q matched nothing, so rows matching any word are returned instead.
+	MatchedAny bool
 }
 
 // ObservationSearchResult is the result of ObservationsSearch. It serializes
 // as {"items": [...]} plus "matched_any": true only when the fallback ran.
 type ObservationSearchResult struct {
 	Items []ObservationWithSnippet `json:"items"`
-	// MatchedAny reports that Items come from the OR fallback: the AND query
-	// matched nothing, so rows matching any word are returned instead.
+	// MatchedAny reports that Items come from the OR fallback (see
+	// ObservationListPage.MatchedAny).
 	MatchedAny bool `json:"matched_any,omitempty"`
 }
 
@@ -136,8 +147,36 @@ func scanObservationWithSnippet(s scanner) (ObservationWithSnippet, error) {
 	return r, err
 }
 
-// ObservationsList executes the keyset-paginated list query.
+// ObservationsList executes the keyset-paginated list query. It is
+// ObservationsListPage without the MatchedAny flag.
 func ObservationsList(db sqlite.Querier, p ObservationListParams) (items []ObservationRow, nextCursor *string, err error) {
+	page, err := ObservationsListPage(db, p)
+	if err != nil {
+		return nil, nil, err
+	}
+	return page.Items, page.NextCursor, nil
+}
+
+// ObservationsListPage executes the keyset-paginated list query, sorted by
+// date. With Q it applies the OR fallback, but only on the first page (no
+// Cursor): a later page of an AND result set is never topped up with OR rows.
+func ObservationsListPage(db sqlite.Querier, p ObservationListParams) (ObservationListPage, error) {
+	q := newFTSQuery(p.Q)
+	if p.MatchAny && q.any != "" {
+		items, next, err := listObservations(db, p, q.any)
+		return ObservationListPage{Items: items, NextCursor: next, MatchedAny: true}, err
+	}
+	items, next, err := listObservations(db, p, q.all)
+	if err != nil || len(items) > 0 || p.Cursor != "" || q.any == "" {
+		return ObservationListPage{Items: items, NextCursor: next}, err
+	}
+	items, next, err = listObservations(db, p, q.any)
+	return ObservationListPage{Items: items, NextCursor: next, MatchedAny: len(items) > 0}, err
+}
+
+// listObservations runs the list query; match is an FTS5 MATCH expression or
+// "" for no full-text filter.
+func listObservations(db sqlite.Querier, p ObservationListParams, match string) (items []ObservationRow, nextCursor *string, err error) {
 	conditions := []string{}
 	params := []any{}
 
@@ -205,13 +244,10 @@ func ObservationsList(db sqlite.Querier, p ObservationListParams) (items []Obser
 
 	// FTS join — prepend fts param so it becomes the first positional arg.
 	var ftsJoin string
-	if p.Q != "" {
-		sanitized := fts.SanitizeQuery(p.Q)
-		if sanitized != "" {
-			ftsJoin = `JOIN observations_fts fts ON fts.rowid = o.id AND observations_fts MATCH ?`
-			// Prepend so FTS param comes before WHERE params.
-			params = append([]any{sanitized}, params...)
-		}
+	if match != "" {
+		ftsJoin = `JOIN observations_fts fts ON fts.rowid = o.id AND observations_fts MATCH ?`
+		// Prepend so FTS param comes before WHERE params.
+		params = append([]any{match}, params...)
 	}
 
 	query := `SELECT ` + obsCols + `

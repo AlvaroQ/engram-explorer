@@ -58,13 +58,16 @@ func handleObservationsList(c *Container) http.HandlerFunc {
 			OnlyDeleted:    parseBool(q.Get("only_deleted")),
 			Cursor:         q.Get("cursor"),
 			Limit:          limit,
+			// match=any keeps later pages of an OR-fallback result in OR mode.
+			MatchAny: q.Get("match") == "any",
 		}
 
-		items, nextCursor, err := services.ObservationsList(c.ro(r), params)
+		page, err := services.ObservationsListPage(c.ro(r), params)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
 		}
+		items := page.Items
 		if items == nil {
 			items = []services.ObservationRow{}
 		}
@@ -73,8 +76,12 @@ func handleObservationsList(c *Container) http.HandlerFunc {
 			Items      []services.ObservationRow `json:"items"`
 			NextCursor *string                   `json:"nextCursor"`
 			Total      *int                      `json:"total"` // always null (Node parity)
+			// MatchedAny (additive, omitted when false): no row matched every
+			// word of q, so rows matching any word are returned. Pass match=any
+			// with nextCursor to fetch the following pages.
+			MatchedAny bool `json:"matched_any,omitempty"`
 		}
-		writeJSON(w, http.StatusOK, resp{Items: items, NextCursor: nextCursor, Total: nil})
+		writeJSON(w, http.StatusOK, resp{Items: items, NextCursor: page.NextCursor, Total: nil, MatchedAny: page.MatchedAny})
 	}
 }
 

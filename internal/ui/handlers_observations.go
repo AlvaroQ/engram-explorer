@@ -40,6 +40,8 @@ func observationListParamsFromQuery(r *http.Request) services.ObservationListPar
 		OnlyDeleted:    onlyDeleted,
 		Cursor:         q.Get("cursor"),
 		Limit:          limit,
+		// match=any is set by the load-more URL of an OR-fallback page.
+		MatchAny: q.Get("match") == "any",
 	}
 }
 
@@ -55,12 +57,19 @@ func dropEmpty(ss []string) []string {
 }
 
 // loadObservations fetches observations via the service. Returns empty result
-// when RoDB is nil.
-func loadObservations(d Deps, p services.ObservationListParams) ([]services.ObservationRow, *string, error) {
+// when RoDB is nil. When the service fell back to matching any word of the
+// search, it sets p.MatchAny so the table shows the notice and the load-more
+// URL keeps OR mode.
+func loadObservations(d Deps, p *services.ObservationListParams) ([]services.ObservationRow, *string, error) {
 	if d.RoDB == nil {
 		return []services.ObservationRow{}, nil, nil
 	}
-	return services.ObservationsList(d.RoDB, p)
+	page, err := services.ObservationsListPage(d.RoDB, *p)
+	if err != nil {
+		return nil, nil, err
+	}
+	p.MatchAny = page.MatchedAny
+	return page.Items, page.NextCursor, nil
 }
 
 // loadProjectNames fetches the distinct project names for the filter dropdown.
@@ -122,7 +131,7 @@ func handleObservationsPage(d Deps) http.HandlerFunc {
 		default:
 			advanced := d.AdvancedView != nil && d.AdvancedView()
 			params := observationListParamsFromQuery(r)
-			items, nextCursor, err := loadObservations(d, params)
+			items, nextCursor, err := loadObservations(d, &params)
 			if err != nil {
 				RenderError(w, r, "errors.loadObservations", err)
 				return
@@ -151,7 +160,7 @@ func handleObservationsListPartial(d Deps) http.HandlerFunc {
 		}
 		params := observationListParamsFromQuery(r)
 
-		items, nextCursor, err := loadObservations(d, params)
+		items, nextCursor, err := loadObservations(d, &params)
 		if err != nil {
 			RenderError(w, r, "errors.loadObservations", err)
 			return

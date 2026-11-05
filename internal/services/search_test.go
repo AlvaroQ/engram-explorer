@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/AlvaroQ/engram-explorer/internal/cursor"
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 	_ "modernc.org/sqlite"
 )
@@ -93,6 +94,14 @@ func addFiller(t *testing.T, db *sql.DB, n int) {
 }
 
 func searchIDs(items []services.ObservationWithSnippet) []int64 {
+	ids := make([]int64, len(items))
+	for i, it := range items {
+		ids[i] = it.ID
+	}
+	return ids
+}
+
+func rowIDs(items []services.ObservationRow) []int64 {
 	ids := make([]int64, len(items))
 	for i, it := range items {
 		ids[i] = it.ID
@@ -210,6 +219,76 @@ func TestObservationsSearch_EmptyQueryReturnsEmpty(t *testing.T) {
 	}
 	if res.Items == nil || len(res.Items) != 0 || res.MatchedAny {
 		t.Errorf("got %#v, want non-nil empty items without fallback", res)
+	}
+}
+
+func TestObservationsListPage_ORFallbackAndPagination(t *testing.T) {
+	forEachTokenizer(t, func(t *testing.T, db *sql.DB) {
+		a := addObs(t, db, "Auth bug in login", "token expired", "")
+		b := addObs(t, db, "Request timeout", "gateway slow", "")
+
+		page, err := services.ObservationsListPage(db, services.ObservationListParams{Q: "auth timeout", Limit: 1})
+		if err != nil {
+			t.Fatalf("list: %v", err)
+		}
+		if !page.MatchedAny {
+			t.Fatal("MatchedAny: got false, want true")
+		}
+		if got := rowIDs(page.Items); len(got) != 1 || got[0] != b || page.NextCursor == nil {
+			t.Fatalf("page 1: got %v cursor=%v, want [%d] with a cursor", got, page.NextCursor, b)
+		}
+
+		// The caller carries MatchAny to the next page.
+		page2, err := services.ObservationsListPage(db, services.ObservationListParams{
+			Q: "auth timeout", Limit: 1, Cursor: *page.NextCursor, MatchAny: true,
+		})
+		if err != nil {
+			t.Fatalf("list page 2: %v", err)
+		}
+		if got := rowIDs(page2.Items); len(got) != 1 || got[0] != a || !page2.MatchedAny {
+			t.Errorf("page 2: got %v MatchedAny=%v, want [%d] true", got, page2.MatchedAny, a)
+		}
+	})
+}
+
+// A later page never falls back on its own: an exhausted AND result set must
+// not be topped up with OR matches.
+func TestObservationsListPage_NoFallbackOnCursorPage(t *testing.T) {
+	db := newSearchDB(t, tokenizeDefault)
+	addObs(t, db, "Auth only", "one word", "")
+	addObs(t, db, "Timeout only", "one word", "")
+	addObs(t, db, "Auth timeout", "both words", "")
+
+	page, err := services.ObservationsListPage(db, services.ObservationListParams{Q: "auth timeout", Limit: 1})
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if page.MatchedAny || len(page.Items) != 1 || page.NextCursor != nil {
+		t.Fatalf("page 1: got %d items MatchedAny=%v cursor=%v; want 1 exact item, no cursor", len(page.Items), page.MatchedAny, page.NextCursor)
+	}
+	// A cursor past the only (newest) exact match: the older OR-only rows
+	// must not be appended.
+	last := page.Items[0]
+	items, _, err := services.ObservationsList(db, services.ObservationListParams{
+		Q: "auth timeout", Limit: 5, Cursor: cursor.Encode(*last.UpdatedAt, last.ID),
+	})
+	if err != nil {
+		t.Fatalf("list cursor: %v", err)
+	}
+	if len(items) != 0 {
+		t.Errorf("cursor page: got %v, want no rows (no fallback on later pages)", rowIDs(items))
+	}
+}
+
+func TestObservationsList_WrapperMatchesPage(t *testing.T) {
+	db := newSearchDB(t, tokenizeDefault)
+	b := addObs(t, db, "Request timeout", "gateway slow", "")
+	items, next, err := services.ObservationsList(db, services.ObservationListParams{Q: "auth timeout", Limit: 10})
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if got := rowIDs(items); len(got) != 1 || got[0] != b || next != nil {
+		t.Errorf("got %v next=%v, want [%d] nil (fallback applied)", got, next, b)
 	}
 }
 

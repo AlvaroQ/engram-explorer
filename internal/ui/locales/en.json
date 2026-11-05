@@ -494,6 +494,9 @@
       "goToSession": "Go to session",
       "copied": "{{label}} copied",
       "clipboardError": "clipboard error"
+    },
+    "search": {
+      "matchedAny": "No exact matches. Showing memories that match any of the words."
     }
   },
   "syncHealth": {

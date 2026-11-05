@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/AlvaroQ/engram-explorer/internal/config"
@@ -118,5 +119,34 @@ func TestObservationsSearchAPI_ExactMatchKeepsShape(t *testing.T) {
 				t.Errorf("body: got %s, want only items with 1 row", rec.Body.String())
 			}
 		})
+	}
+}
+
+func TestObservationsListAPI_ORFallbackAndMatchAnyParam(t *testing.T) {
+	h := searchContainers(t, seedAuthTimeout(t))["legacy"]
+
+	rec := doGet(t, h, "/api/observations?q=auth+timeout&limit=1")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
+	}
+	body := decodeBody(t, rec.Body.String())
+	if string(body["matched_any"]) != "true" || itemCount(t, body["items"]) != 1 {
+		t.Fatalf("page 1: got %s, want 1 item and matched_any true", rec.Body.String())
+	}
+	var next string
+	if err := json.Unmarshal(body["nextCursor"], &next); err != nil || next == "" {
+		t.Fatalf("nextCursor: got %s", body["nextCursor"])
+	}
+
+	rec = doGet(t, h, "/api/observations?q=auth+timeout&limit=1&match=any&cursor="+next)
+	body = decodeBody(t, rec.Body.String())
+	if string(body["matched_any"]) != "true" || itemCount(t, body["items"]) != 1 {
+		t.Errorf("page 2: got %s, want 1 item and matched_any true", rec.Body.String())
+	}
+
+	// Exact matches keep the previous shape (no matched_any key).
+	rec = doGet(t, h, "/api/observations?q=auth+bug")
+	if strings.Contains(rec.Body.String(), "matched_any") {
+		t.Errorf("exact match: unexpected matched_any in %s", rec.Body.String())
 	}
 }
