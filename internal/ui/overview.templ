@@ -45,6 +45,9 @@ templ overviewContent(v overviewView) {
 		}
 		@overviewHero(v.Lang)
 		@overviewKPIs(v)
+		<!-- Collapsing hero runtime (/islands/overview-collapse.js): scroll →
+		     CSS custom properties on .overview; see styles.css. -->
+		<div hidden data-island="overview-collapse" data-props="{}"></div>
 		<div class="ov-below">
 			<!-- Charts row: activity (span-2) + type breakdown -->
 			<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">

@@ -30,6 +30,7 @@ const islandEntries: Record<string, string> = {
   'islands/project-activity-chart': resolve(__dirname, 'src/islands/project-activity-chart.tsx'),
   'islands/brain-preview-card': resolve(__dirname, 'src/islands/brain-preview-card.tsx'),
   'islands/brain-preview-hero': resolve(__dirname, 'src/islands/brain-preview-hero.tsx'),
+  'islands/overview-collapse': resolve(__dirname, 'src/islands/overview-collapse.ts'),
   'islands/brain': resolve(__dirname, 'src/islands/brain.tsx'),
   'islands/loader': resolve(__dirname, 'src/islands/loader.ts'),
 };

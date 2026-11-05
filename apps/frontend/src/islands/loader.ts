@@ -24,7 +24,9 @@ type IslandModule = {
 
 async function mountIsland(el: HTMLElement): Promise<void> {
   const name = el.dataset['island'];
-  if (!name) return;
+  if (!name || el.dataset['islandMounted'] !== undefined) return;
+  // Mark first: the initial scan and htmx:load can both see the element.
+  el.dataset['islandMounted'] = '';
 
   // Parse props — data-props is optional; default to empty object.
   let props: unknown = {};
@@ -60,18 +62,25 @@ async function mountIsland(el: HTMLElement): Promise<void> {
   }
 }
 
-// Mount all islands present at DOMContentLoaded. Islands added dynamically
-// (e.g. via HTMX swap) should call mountIsland(el) directly after insertion
-// or listen for htmx:afterSwap and re-scan.
-function mountAll(): void {
-  const nodes = document.querySelectorAll<HTMLElement>('[data-island]');
+// Mount all islands under root (the document at startup). Islands swapped in
+// by htmx are mounted on htmx:load; data-island-mounted prevents a second
+// mount of the same element.
+function mountAll(root: ParentNode = document): void {
+  if (root instanceof HTMLElement && root.matches('[data-island]')) {
+    void mountIsland(root);
+  }
+  const nodes = root.querySelectorAll<HTMLElement>('[data-island]');
   nodes.forEach((el) => {
     void mountIsland(el);
   });
 }
 
+document.addEventListener('htmx:load', (e) => {
+  if (e.target instanceof HTMLElement) mountAll(e.target);
+});
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', mountAll);
+  document.addEventListener('DOMContentLoaded', () => mountAll());
 } else {
   // Already parsed (e.g. script placed at end of body or deferred in a module).
   mountAll();
