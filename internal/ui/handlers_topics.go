@@ -7,28 +7,6 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-// handleTopicsPage serves GET /topics.
-// Full page on direct GET; partial content when HX-Request: true.
-func handleTopicsPage(d Deps) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		lang := langForRequest(r)
-		theme := themeForRequest(r)
-		q := strings.TrimSpace(r.URL.Query().Get("q"))
-
-		topics, err := loadTopics(r, d, q)
-		if err != nil {
-			RenderError(w, r, "errors.loadTopics", err)
-			return
-		}
-
-		if IsHTMX(r) {
-			Render(w, r, TopicsPartial(topics, q, lang))
-		} else {
-			renderDeps(w, r, d, TopicsPage(topics, q, lang, theme, sidebarStateForRequest(r)))
-		}
-	}
-}
-
 // handleTopicsListPartial serves GET /topics/list.
 // Always returns the bare TopicsTable partial (HTMX filter target).
 func handleTopicsListPartial(d Deps) http.HandlerFunc {

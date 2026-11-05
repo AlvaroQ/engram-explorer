@@ -70,11 +70,6 @@ func navPrefsForRequest(r *http.Request) navPrefs {
 // navCookiePrefix prefixes the group ID in a section-visibility cookie name.
 const navCookiePrefix = "nav_"
 
-func cookieHidden(r *http.Request, name string) bool {
-	c, err := r.Cookie(name)
-	return err == nil && c.Value == "0"
-}
-
 // NavContext returns r's context enriched with:
 //  1. The resolved nav prefs (per-provider show/hide state from cookies)
 //  2. The NavGroups from the Deps.NavGroups func, if provided

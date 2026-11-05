@@ -75,13 +75,6 @@ func servedEngramPath(t *testing.T, c *httpapi.Container) string {
 	return inst.Health(context.Background()).Path
 }
 
-func assertNoFile(t *testing.T, path string) {
-	t.Helper()
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Errorf("%s must not exist (stat err %v)", filepath.Base(path), err)
-	}
-}
-
 // TestBuildContainer_EnvOverridesProfileAndIsNotSaved covers S6: an
 // environment variable wins over the config.json profile at boot, and the env
 // value is never written to config.json.
