@@ -21,6 +21,7 @@ import {
   api,
   type AgentSourceError,
 } from '../../lib/api.ts';
+import { friendlyModelName } from '../../lib/model-labels.ts';
 import { BrainLoadingOverlay } from '../brain/brain-loading-overlay.tsx';
 
 /**
@@ -148,9 +149,13 @@ export function AgentUsageCharts({
 
   const modelPie = useMemo(() => {
     if (!data) return [] as Array<{ name: string; value: number }>;
-    return data.by_model
-      .map((m) => ({ name: m.key, value: agentUsageTotal(m.usage) }))
-      .filter((m) => m.value > 0);
+    // Friendly names (S10); ids that share a name (dated vs undated alias) merge.
+    const totals = new Map<string, number>();
+    for (const m of data.by_model) {
+      const name = friendlyModelName(m.key);
+      totals.set(name, (totals.get(name) ?? 0) + agentUsageTotal(m.usage));
+    }
+    return [...totals].map(([name, value]) => ({ name, value })).filter((m) => m.value > 0);
   }, [data]);
 
   // One cost series per agent (stacked bars) plus the session count line.
