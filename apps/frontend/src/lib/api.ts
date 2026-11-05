@@ -471,6 +471,15 @@ export interface ObservationSearchItem extends ObservationRow {
   snippet: string;
 }
 
+/**
+ * React Query key for /api/agent-sessions/stats. The agent scope is part of
+ * the key so the all-agents and per-agent results never share a cache entry;
+ * an empty or absent agent means all agents.
+ */
+export function agentSessionsStatsQueryKey(agent?: string): readonly [string, string | null] {
+  return ['agent-sessions-stats', agent ? agent : null];
+}
+
 export const api = {
   health: () => request<HealthResponse>('/api/health'),
   meta: () => request<MetaResponse>('/api/meta'),
@@ -500,7 +509,12 @@ export const api = {
   listProjects: () => request<{ items: ProjectStats[] }>('/api/projects'),
   activityByProject: (range: ActivityRange) =>
     request<ActivityResponse>(`/api/activity?range=${range}`),
-  agentSessionsStats: () => request<AgentStatsResponse>('/api/agent-sessions/stats'),
+  agentSessionsStats: (agent?: string) =>
+    request<AgentStatsResponse>(
+      agent
+        ? `/api/agent-sessions/stats?agent=${encodeURIComponent(agent)}`
+        : '/api/agent-sessions/stats',
+    ),
   listObservations: (params: ObservationListParams) =>
     request<ObservationListResponse>(`/api/observations?${buildSearch(params)}`),
   getObservation: (id: number) =>

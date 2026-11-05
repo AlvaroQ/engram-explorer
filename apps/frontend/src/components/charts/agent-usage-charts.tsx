@@ -17,6 +17,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import {
   agentSessionDetailPath,
+  agentSessionsStatsQueryKey,
   agentUsageTotal,
   api,
   type AgentSourceError,
@@ -106,13 +107,16 @@ function sourceErrorText(template: string, e: AgentSourceError, agentName: strin
 export function AgentUsageCharts({
   labels,
   agents,
+  agent,
 }: {
   labels: AgentUsageLabels;
   agents: Record<string, string>;
+  /** Selected agent kind; absent or empty means all agents. */
+  agent?: string | undefined;
 }): JSX.Element {
   const query = useQuery({
-    queryKey: ['agent-sessions-stats'],
-    queryFn: () => api.agentSessionsStats(),
+    queryKey: agentSessionsStatsQueryKey(agent),
+    queryFn: () => api.agentSessionsStats(agent),
   });
   const data = query.data;
   const agentName = (a: string): string => agents[a] ?? a;

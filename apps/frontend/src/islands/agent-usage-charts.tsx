@@ -2,9 +2,10 @@
  * Island: agent-usage-charts
  *
  * Renders coding-agent session analytics across every live agent (Claude
- * Code, Codex, ...): totals, cost per agent, project and day, tokens per
- * model and the most expensive sessions. Data is fetched on its own from
- * /api/agent-sessions/stats (server-cached by a source fingerprint), so the
+ * Code, Codex, ...), or for one agent when the page passes `agent`: totals,
+ * cost per agent, project and day, tokens per model and the most expensive
+ * sessions. Data is fetched on its own from /api/agent-sessions/stats
+ * (?agent=<kind> when scoped; server-cached by a source fingerprint), so the
  * heavy transcript scan never blocks the page render.
  *
  * Labels and agent display names are passed in as props from the Go templ
@@ -21,6 +22,8 @@ import {
 export interface AgentUsageChartsProps {
   labels: AgentUsageLabels;
   agents: Record<string, string>;
+  /** Selected agent kind (?agent= on the page); omitted for all agents. */
+  agent?: string;
 }
 
 const queryClient = new QueryClient({
@@ -35,7 +38,7 @@ const queryClient = new QueryClient({
 export function mount(el: HTMLElement, props: AgentUsageChartsProps): void {
   createRoot(el).render(
     <QueryClientProvider client={queryClient}>
-      <AgentUsageCharts labels={props.labels} agents={props.agents} />
+      <AgentUsageCharts labels={props.labels} agents={props.agents} agent={props.agent} />
     </QueryClientProvider>,
   );
 }
