@@ -14,6 +14,12 @@ type OverviewKPIs struct {
 	Observations int64 `json:"observations"`
 	Prompts      int64 `json:"prompts"`
 	Projects     int64 `json:"projects"`
+	// ObservationsLast7d counts the observations created in the activity
+	// chart's 7-day window (cutoffDays(7), UTC days).
+	ObservationsLast7d int64 `json:"observations_last_7d"`
+	// MostActiveProject is the project with most observations created in the
+	// 30-day window (the activity chart's default range); "" when none.
+	MostActiveProject string `json:"most_active_project"`
 }
 
 // SyncSummary holds the sync health summary embedded in the overview.
@@ -105,8 +111,14 @@ func overviewKPIs(db sqlite.Querier) (OverviewKPIs, error) {
 		  (SELECT COUNT(*) FROM sessions) AS sessions,
 		  (SELECT COUNT(*) FROM observations WHERE deleted_at IS NULL) AS observations,
 		  (SELECT COUNT(*) FROM user_prompts) AS prompts,
-		  (SELECT COUNT(DISTINCT project) FROM observations WHERE deleted_at IS NULL) AS projects`,
-	).Scan(&kpis.Sessions, &kpis.Observations, &kpis.Prompts, &kpis.Projects); err != nil {
+		  (SELECT COUNT(DISTINCT project) FROM observations WHERE deleted_at IS NULL) AS projects,
+		  (SELECT COUNT(*) FROM observations WHERE deleted_at IS NULL AND created_at >= ?) AS last7d,
+		  COALESCE((SELECT project FROM observations
+		             WHERE deleted_at IS NULL AND created_at >= ? AND COALESCE(project, '') <> ''
+		             GROUP BY project ORDER BY COUNT(*) DESC, project ASC LIMIT 1), '') AS most_active`,
+		cutoffDays(7), cutoffDays(30),
+	).Scan(&kpis.Sessions, &kpis.Observations, &kpis.Prompts, &kpis.Projects,
+		&kpis.ObservationsLast7d, &kpis.MostActiveProject); err != nil {
 		return OverviewKPIs{}, fmt.Errorf("overview kpis: %w", err)
 	}
 	return kpis, nil
@@ -137,12 +149,15 @@ func overviewByType(db sqlite.Querier) ([]TypeCount, error) {
 	return byType, nil
 }
 
+// overviewRecent returns the newest observations by creation time: the same
+// created_at the table shows and the activity series buckets by, so the list
+// and the chart agree on dates (an edit never moves an old memory to the top).
 func overviewRecent(db sqlite.Querier) ([]OverviewRecentObs, error) {
 	recentObs, err := queryRows(db, `
 		SELECT id, type, title, project, created_at
 		  FROM observations
 		 WHERE deleted_at IS NULL
-		 ORDER BY COALESCE(updated_at, created_at) DESC, id DESC
+		 ORDER BY created_at DESC, id DESC
 		 LIMIT 10`, nil, func(s scanner) (OverviewRecentObs, error) {
 		var r OverviewRecentObs
 		err := s.Scan(&r.ID, &r.Type, &r.Title, &r.Project, &r.CreatedAt)
