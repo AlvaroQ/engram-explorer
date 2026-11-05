@@ -22,7 +22,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   versions when opened (newest first, capped at 50), and says when the database keeps no history.
 - **Project backup** — `GET /api/projects/{project}/export` (and "Download project backup" on the project page and in
   Maintenance → Possibly fragmented projects) downloads a full-schema snapshot holding only that project's rows,
-  which the existing import merges back.
+  which the existing import merges back. Sessions of other projects that the project's rows belong to are kept
+  without their summary and directory.
 - **ESLint** — a flat config (typescript-eslint, react-hooks) runs in CI via `pnpm lint` over the frontend islands
   and the UI browser scripts. Frontend tests now fail when no test files are found.
 - **golangci-lint** — CI lints the Go backend with golangci-lint v2.15.0 (`.golangci.yml`: the standard linters plus
@@ -62,7 +63,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   runs `go test -race` and `govulncheck`, and fails when generated templ code or the Tailwind CSS bundle is
   stale. Dependabot keeps Go modules, npm packages and GitHub Actions up to date.
 - **Maintenance: empty sessions** — Settings → Maintenance lists sessions with no memories (soft-deleted ones
-  count as content), no prompts and no summary, and deletes them in bulk after a confirmation. The delete takes
+  count as content), no prompts, no summary (whitespace only counts as none) and no memory relation or prompt
+  tombstone pointing at them, and deletes them in bulk after a confirmation. The delete takes
   no id list: it re-checks the rule inside one transaction, so a session that gained content in the meantime is
   kept. Sessions of cloud-enrolled projects and sessions started in the last 24 hours are never deleted; read-only
   mode hides the button. JSON: `GET /api/maintenance/empty-sessions`, `POST /api/maintenance/empty-sessions/delete`
