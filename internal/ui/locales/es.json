@@ -1010,5 +1010,11 @@
     },
     "settingsHint": "¿Necesitas más opciones? Ve a ",
     "settingsLink": "Configuración → Fuentes de datos"
+  },
+  "toast": {
+    "generic": "La solicitud falló. Revisa el registro del servidor para más detalles.",
+    "network": "No se pudo contactar con el servidor. Comprueba que está en marcha.",
+    "unavailable": "Esta función no está disponible ahora.",
+    "close": "Cerrar aviso"
   }
 }

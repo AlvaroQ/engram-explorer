@@ -4,7 +4,7 @@ package ui
 // Returns status 200 so HTMX still performs the swap.
 templ ErrorPartial(msg string) {
 	<div class="inline-error" role="alert">
-		<strong>Error:</strong> { msg }
+		<strong>Error:</strong> <span class="inline-error-message">{ msg }</span>
 	</div>
 }
 

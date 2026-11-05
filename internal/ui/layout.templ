@@ -20,14 +20,17 @@ templ Layout(title, activeNav, lang, theme, sidebarState string, content templ.C
 			<!-- htmx never evaluates attribute code (hx-on, trigger filters, js:):
 			     the CSP has no 'unsafe-eval' and behaviours live in ui-actions.js.
 			     includeIndicatorStyles:false stops htmx injecting a <style> element
-			     (style-src is 'self'); styles.css carries the indicator rules. -->
-			<meta name="htmx-config" content='{"allowEval":false,"includeIndicatorStyles":false}'/>
+			     (style-src is 'self'); styles.css carries the indicator rules.
+			     responseHandling is pinned: 4xx/5xx never replace the target;
+			     toasts.js announces them instead (htmx:responseError). -->
+			<meta name="htmx-config" content='{"allowEval":false,"includeIndicatorStyles":false,"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"[45]..","swap":false,"error":true}]}'/>
 			<title>{ title } — Engram</title>
 			<link rel="stylesheet" href="/static/tokens.css"/>
 			<link rel="stylesheet" href="/static/app.css"/>
 			<link rel="stylesheet" href="/static/styles.css"/>
 			<script src="/static/htmx.min.js" defer></script>
 			<script src="/static/ui-actions.js" defer></script>
+			<script src="/static/toasts.js" defer></script>
 			<!-- Island loader: mounts React components declared with data-island.
 			     Only fetches island bundles when [data-island] elements are present. -->
 			<script type="module" src="/islands/loader.js"></script>
@@ -42,6 +45,7 @@ templ Layout(title, activeNav, lang, theme, sidebarState string, content templ.C
 					@content
 				</main>
 			</div>
+			@toastRegion(lang)
 			<script src="/static/sidebar.js" defer></script>
 		</body>
 	</html>
@@ -58,13 +62,14 @@ templ LayoutFullBleed(title, activeNav, lang, theme, sidebarState string, conten
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
-			<meta name="htmx-config" content='{"allowEval":false,"includeIndicatorStyles":false}'/>
+			<meta name="htmx-config" content='{"allowEval":false,"includeIndicatorStyles":false,"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"[45]..","swap":false,"error":true}]}'/>
 			<title>{ title } — Engram</title>
 			<link rel="stylesheet" href="/static/tokens.css"/>
 			<link rel="stylesheet" href="/static/app.css"/>
 			<link rel="stylesheet" href="/static/styles.css"/>
 			<script src="/static/htmx.min.js" defer></script>
 			<script src="/static/ui-actions.js" defer></script>
+			<script src="/static/toasts.js" defer></script>
 			<script type="module" src="/islands/loader.js"></script>
 		</head>
 		<body>
@@ -77,6 +82,7 @@ templ LayoutFullBleed(title, activeNav, lang, theme, sidebarState string, conten
 					@content
 				</main>
 			</div>
+			@toastRegion(lang)
 			<script src="/static/sidebar.js" defer></script>
 		</body>
 	</html>
@@ -241,6 +247,7 @@ templ sidebarFooter(lang string) {
 			hx-get="/partials/status-pill"
 			hx-trigger="load, every 30s"
 			hx-swap="outerHTML"
+			data-no-error-toast
 		>
 			@statusPill(statusPillData{Lang: lang, State: statusChecking})
 		</div>
@@ -390,4 +397,19 @@ func profileInitial(name string) string {
 		return strings.ToUpper(string(r))
 	}
 	return ""
+}
+
+// toastRegion is the live region toasts.js appends htmx error toasts to. The
+// localized fallback messages and the close label ride on data-* attributes
+// so the static script needs no inline configuration.
+templ toastRegion(lang string) {
+	<div
+		id="toast-region"
+		class="toast-region"
+		aria-live="polite"
+		data-msg-generic={ T(lang, "toast.generic") }
+		data-msg-network={ T(lang, "toast.network") }
+		data-msg-unavailable={ T(lang, "toast.unavailable") }
+		data-label-close={ T(lang, "toast.close") }
+	></div>
 }

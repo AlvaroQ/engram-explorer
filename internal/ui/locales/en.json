@@ -1010,5 +1010,11 @@
     },
     "settingsHint": "Need more options? Visit ",
     "settingsLink": "Settings → Data sources"
+  },
+  "toast": {
+    "generic": "The request failed. Check the server log for details.",
+    "network": "Could not reach the server. Check that it is running.",
+    "unavailable": "This feature is not available right now.",
+    "close": "Dismiss notification"
   }
 }
