@@ -10,6 +10,7 @@
  */
 import { createRoot } from 'react-dom/client';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { islandT } from '../lib/island-strings.ts';
 
 export interface ActivityDay {
   day: string;
@@ -24,7 +25,7 @@ function ActivityChart({ activity_30d }: ProjectActivityChartProps) {
   if (activity_30d.length === 0) {
     return (
       <p style={{ fontSize: 14, color: 'hsl(var(--fg-muted, 215 20% 55%))' }}>
-        No activity in the last 30 days.
+        {islandT('noActivity30d')}
       </p>
     );
   }

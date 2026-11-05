@@ -9,6 +9,7 @@
  */
 import { createRoot } from 'react-dom/client';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { islandT } from '../lib/island-strings.ts';
 
 export interface TypeBreakdownEntry {
   type: string;
@@ -41,7 +42,7 @@ function TypeBreakdownChart({ by_type }: TypeBreakdownProps) {
     rest.length > 0
       ? [
           ...visible,
-          { type: 'Others', count: rest.reduce((s, d) => s + d.count, 0), isOthers: true },
+          { type: islandT('others'), count: rest.reduce((s, d) => s + d.count, 0), isOthers: true },
         ]
       : visible;
 
@@ -58,7 +59,11 @@ function TypeBreakdownChart({ by_type }: TypeBreakdownProps) {
   }
 
   if (slices.length === 0) {
-    return <p style={{ fontSize: 14, color: 'hsl(var(--fg-muted, 215 20% 55%))' }}>No data</p>;
+    return (
+      <p style={{ fontSize: 14, color: 'hsl(var(--fg-muted, 215 20% 55%))' }}>
+        {islandT('noData')}
+      </p>
+    );
   }
 
   return (
