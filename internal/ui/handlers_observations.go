@@ -42,6 +42,8 @@ func observationListParamsFromQuery(r *http.Request) services.ObservationListPar
 		Limit:          limit,
 		// match=any is set by the load-more URL of an OR-fallback page.
 		MatchAny: q.Get("match") == "any",
+		// review=due keeps memories whose review date has passed.
+		ReviewDue: q.Get("review") == "due",
 	}
 }
 
@@ -70,6 +72,21 @@ func loadObservations(d Deps, p *services.ObservationListParams) ([]services.Obs
 	}
 	p.MatchAny = page.MatchedAny
 	return page.Items, page.NextCursor, nil
+}
+
+// loadReviewDueCount returns the "Review due" chip count for the list filters
+// in p (after loadObservations, so the search mode matches the list). It is
+// best-effort: 0 when RoDB is nil or the count fails, which hides the chip
+// unless the filter is on.
+func loadReviewDueCount(d Deps, p services.ObservationListParams) int {
+	if d.RoDB == nil {
+		return 0
+	}
+	n, err := services.ObservationsReviewDueCount(d.RoDB, p)
+	if err != nil {
+		return 0
+	}
+	return n
 }
 
 // loadProjectNames fetches the distinct project names for the filter dropdown.
@@ -137,10 +154,11 @@ func handleObservationsPage(d Deps) http.HandlerFunc {
 				return
 			}
 			projects := loadProjectNames(d)
+			reviewDue := loadReviewDueCount(d, params)
 			if IsHTMX(r) {
-				Render(w, r, ObservationsPartial(items, nextCursor, params, projects, lang, advanced))
+				Render(w, r, ObservationsPartial(items, nextCursor, params, projects, lang, advanced, reviewDue))
 			} else {
-				renderDeps(w, r, d, ObservationsPage(items, nextCursor, params, projects, lang, theme, sidebarState, advanced))
+				renderDeps(w, r, d, ObservationsPage(items, nextCursor, params, projects, lang, theme, sidebarState, advanced, reviewDue))
 			}
 		}
 	}
@@ -170,7 +188,7 @@ func handleObservationsListPartial(d Deps) http.HandlerFunc {
 		if r.URL.Query().Get("append") == "true" {
 			Render(w, r, ObservationsRowsPartial(items, nextCursor, params, lang, advanced))
 		} else {
-			Render(w, r, ObservationsTablePartial(items, nextCursor, params, lang, advanced))
+			Render(w, r, ObservationsTablePartial(items, nextCursor, params, lang, advanced, loadReviewDueCount(d, params)))
 		}
 	}
 }

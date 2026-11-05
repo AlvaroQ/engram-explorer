@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   search that finds nothing retries once matching any word, and the Memory list says when it did.
 - **Trigram-aware search** — on Engram databases indexed with the trigram tokenizer, words under 3 characters no
   longer empty an all-words search, and a query of only short words matches memory titles.
+- **Review due filter** — the Memory list shows a "Review due (N)" toggle that lists only memories whose review
+  date has passed, counted with the other active filters; `GET /api/observations?review=due` does the same.
 - **Revision history API** — `GET /api/observations/{id}/versions` exposes a memory's stored revisions (read-only;
   reports `available: false` on databases without history).
 - **ESLint** — a flat config (typescript-eslint, react-hooks) runs in CI via `pnpm lint` over the frontend islands

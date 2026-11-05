@@ -458,6 +458,9 @@
     "badge": {
       "reviewDue": "Revisión pendiente"
     },
+    "reviewDue": {
+      "filter": "Revisión pendiente ({{count}})"
+    },
     "table": {
       "created": "Creado",
       "project": "Proyecto",

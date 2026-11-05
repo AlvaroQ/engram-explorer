@@ -312,6 +312,10 @@ Provider paths and account profiles are stored at `$ENGRAM_DATA_DIR/config.json`
 
 **Precedence** (highest wins): **1.** environment variable (`ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR`, `CODEX_HOME`, `ENGRAM_DAEMON_URL`), applied in memory at startup and never saved → **2.** the active profile in `config.json`, the only file the explorer writes → **3.** built-in default. The legacy `explorer-settings.json` is read once, only to create `config.json` on first run, and is never written. While an environment variable is set it wins over a path saved in Settings; the saved value applies again once the variable is unset. `CLAUDE_PROJECTS_DIR` applies to the `default` Claude Code account. A profile without a saved Codex path uses the built-in `~/.codex`.
 
+### 🗂️ Memory filters
+
+- **Review due** — when memories have a review date that has passed, the Memory list shows a "Review due (N)" toggle. N counts the memories that match the other active filters (project, type, visibility, thread, deleted rows, search); turning it on lists only those memories and keeps every other filter, also when you load more rows. The same filter is available as `GET /api/observations?review=due` (only the value `due` filters).
+
 ### 🔎 Search and revision history
 
 - **Ranking** — memory search orders results with BM25 weighted by column (title and `topic_key` count more than the body), newest first on ties. Conversation search weights prompt text over the project name.

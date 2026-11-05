@@ -37,14 +37,15 @@ templ memoryTabBar(activeView string, lang string) {
 }
 
 // ObservationsPage renders the full page shell for the observations view.
-templ ObservationsPage(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang, theme, sidebarState string, advanced bool) {
-	@Layout(T(lang, "observations.title"), "observations", lang, theme, sidebarState, observationsContent(items, nextCursor, params, projects, lang, advanced))
+// reviewDue is the "Review due" chip count (see obsReviewDueChip).
+templ ObservationsPage(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang, theme, sidebarState string, advanced bool, reviewDue int) {
+	@Layout(T(lang, "observations.title"), "observations", lang, theme, sidebarState, observationsContent(items, nextCursor, params, projects, lang, advanced, reviewDue))
 }
 
 // ObservationsPartial renders only the observations content (no HTML shell).
 // Used when HTMX requests a partial update.
-templ ObservationsPartial(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang string, advanced bool) {
-	@observationsContent(items, nextCursor, params, projects, lang, advanced)
+templ ObservationsPartial(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang string, advanced bool, reviewDue int) {
+	@observationsContent(items, nextCursor, params, projects, lang, advanced, reviewDue)
 }
 
 // MemoryThreadsPage renders the full Memory page shell with the Threads tab active.
@@ -112,7 +113,7 @@ templ advancedViewToggle(advanced bool, lang string) {
 }
 
 // observationsContent is the shared observations body.
-templ observationsContent(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang string, advanced bool) {
+templ observationsContent(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, projects []string, lang string, advanced bool, reviewDue int) {
 	<div class="flex flex-col gap-4">
 		@memoryTabBar("", lang)
 		<div class="page-header flex items-start justify-between gap-4">
@@ -158,6 +159,10 @@ templ observationsContent(items []services.ObservationRow, nextCursor *string, p
 						hx-push-url="true"
 						class="obs-filters-body"
 					>
+						if params.ReviewDue {
+							<!-- Keeps the Review due filter when other filters change. -->
+							<input type="hidden" name="review" value="due"/>
+						}
 						<!-- Project multi-select (disclosure dropdown) -->
 						<div class="flex flex-col gap-1">
 							<label class="filter-label">{ T(lang, "observations.labels.project") }</label>
@@ -232,7 +237,7 @@ templ observationsContent(items []services.ObservationRow, nextCursor *string, p
 					<p>{ T(lang, "observations.loaded", "count", fmt.Sprintf("%d", len(items))) }</p>
 				</div>
 				<div class="card-body p-0 overflow-auto" id="obs-table-container">
-					@ObservationsTablePartial(items, nextCursor, params, lang, advanced)
+					@ObservationsTablePartial(items, nextCursor, params, lang, advanced, reviewDue)
 				</div>
 			</div>
 			<!-- Detail aside (empty until a row is clicked) -->
@@ -249,7 +254,10 @@ templ observationsContent(items []services.ObservationRow, nextCursor *string, p
 // This is the HTMX swap target for filter changes (replaces whole table content).
 // advanced gates the technical columns (Rev, Dup, Sync id).
 // params.MatchAny marks results of the OR search fallback and adds a notice.
-templ ObservationsTablePartial(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, lang string, advanced bool) {
+// reviewDue is the "Review due" chip count; the chip lives here so filter
+// changes refresh it.
+templ ObservationsTablePartial(items []services.ObservationRow, nextCursor *string, params services.ObservationListParams, lang string, advanced bool, reviewDue int) {
+	@obsReviewDueChip(params, reviewDue, lang)
 	if len(items) == 0 {
 		@EmptyState(T(lang, "observations.table.noMatch"))
 	} else {
@@ -274,6 +282,28 @@ templ ObservationsTablePartial(items []services.ObservationRow, nextCursor *stri
 				@ObservationsRowsPartial(items, nextCursor, params, lang, advanced)
 			</tbody>
 		</table>
+	}
+}
+
+// obsReviewDueChip renders the "Review due (N)" toggle: N memories match the
+// other active filters and have a review date that has passed. It is a plain
+// link (full navigation) that adds or drops review=due and keeps every other
+// filter. Hidden when nothing is due and the filter is off.
+templ obsReviewDueChip(params services.ObservationListParams, count int, lang string) {
+	if params.ReviewDue || count > 0 {
+		<div class="px-4 py-3">
+			<a
+				id="obs-review-due"
+				href={ templ.SafeURL(obsReviewToggleURL(params)) }
+				role="button"
+				class={ "btn btn-sm", templ.KV("btn-primary", params.ReviewDue), templ.KV("btn-secondary", !params.ReviewDue) }
+				if params.ReviewDue {
+					aria-pressed="true"
+				} else {
+					aria-pressed="false"
+				}
+			>{ T(lang, "observations.reviewDue.filter", "count", fmt.Sprintf("%d", count)) }</a>
+		</div>
 	}
 }
 
@@ -613,17 +643,34 @@ func obsAdvancedNextVal(advanced bool) string {
 // The advanced flag is encoded so appended rows render the SAME column set as the
 // already-rendered header, even if the per-profile preference changes mid-page.
 func obsNextURL(cursor string, params services.ObservationListParams, advanced bool) string {
-	v := url.Values{}
+	v := obsFilterValues(params)
 	v.Set("cursor", cursor)
 	v.Set("append", "true")
 	if advanced {
 		v.Set("advanced", "true")
 	}
+	if params.Q != "" && params.MatchAny {
+		v.Set("match", "any")
+	}
+	return "/observations/list?" + v.Encode()
+}
+
+// obsReviewToggleURL returns the Memory page URL with the Review due filter
+// flipped and every other active filter kept.
+func obsReviewToggleURL(params services.ObservationListParams) string {
+	params.ReviewDue = !params.ReviewDue
+	if q := obsFilterValues(params).Encode(); q != "" {
+		return "/observations?" + q
+	}
+	return "/observations"
+}
+
+// obsFilterValues encodes the active list filters as query parameters (the
+// keys observationListParamsFromQuery reads).
+func obsFilterValues(params services.ObservationListParams) url.Values {
+	v := url.Values{}
 	if params.Q != "" {
 		v.Set("q", params.Q)
-		if params.MatchAny {
-			v.Set("match", "any")
-		}
 	}
 	for _, p := range params.Projects {
 		v.Add("project", p)
@@ -645,6 +692,8 @@ func obsNextURL(cursor string, params services.ObservationListParams, advanced b
 	} else if params.OnlyDeleted {
 		v.Set("deleted", "only")
 	}
-	return "/observations/list?" + v.Encode()
+	if params.ReviewDue {
+		v.Set("review", "due")
+	}
+	return v
 }
-
