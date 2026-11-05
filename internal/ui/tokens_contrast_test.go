@@ -56,7 +56,12 @@ var contrastPairs = []contrastPair{
 	{"fail", "surface", aaText, "status pill (db error), form errors"},
 	{"fail", "fail/0.18@surface", aaText, "error badge, doctor banner"},
 	{"info", "info/0.18@surface", aaText, "doctor severity-low badge"},
-	{"fg", "warn/0.10@bg", aaText, "overview sync alert"},
+	{"fg", "warn/0.15@bg", aaText, "overview sync alert"},
+	// Overview hero and KPI cards (02-brain-first): glass surface over the
+	// hero background, tonal CTA.
+	{"fg", "surface/0.72@bg", aaText, "KPI values, search text on glass"},
+	{"fg-muted", "surface/0.72@bg", aaText, "KPI labels and captions on glass"},
+	{"fg", "accent/0.22@bg", aaText, "tonal CTA (hover layer)"},
 	// Filled buttons.
 	{"accent-fg", "accent", aaText, "primary button, active toggle button"},
 	// Agent brand colors: text in KPI captions, dots as UI.

@@ -1990,6 +1990,311 @@ code {
   }
 }
 
+/* ---------- Overview (02-brain-first) ----------
+   The page is edge to edge: the hero band carries the knowledge-graph
+   preview, the KPI cards float over its lower edge, and the charts and
+   recent memories follow below the fold. */
+.main-content:has(> .overview) {
+  padding: 0;
+}
+
+.overview {
+  --ov-hero-h: 500px;
+  --ov-bar-h: 72px;
+  --ov-strip-h: 44px;
+  position: relative;
+}
+
+.ov-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-2) 32px;
+  font-size: 13px;
+  background: hsl(var(--warn) / 0.15);
+  border-bottom: 1px solid hsl(var(--warn) / 0.3);
+}
+
+.ov-hero {
+  position: relative;
+  z-index: 3;
+  isolation: isolate;
+  overflow: hidden;
+  height: var(--ov-hero-h);
+  background:
+    radial-gradient(ellipse 34% 48% at 52% 50%, hsl(var(--accent) / 0.16) 0%, transparent 72%),
+    hsl(var(--bg));
+}
+
+.ov-hero-back {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+/* Opaque bar background revealed as the hero collapses (AA for its text);
+   it sits under the graph, which fades to 0.35 over it. */
+.ov-hero-solid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: hsl(var(--surface));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ov-hero-ui {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 440px) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-6);
+  padding: var(--space-6) 32px;
+  pointer-events: none;
+}
+
+.ov-hero-ui > * {
+  pointer-events: auto;
+}
+
+.ov-hero-head {
+  max-width: 310px;
+}
+
+.ov-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-muted));
+}
+
+.ov-hero-head h1 {
+  margin-top: var(--space-2);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.ov-sub {
+  margin-top: var(--space-1);
+  font-size: 13px;
+  color: hsl(var(--fg-muted));
+}
+
+.ov-cta {
+  margin-top: var(--space-4);
+}
+
+/* Tonal primary: fg text on an accent 14% layer. */
+.btn-tonal {
+  background: hsl(var(--accent) / 0.14);
+  border-color: hsl(var(--accent) / 0.45);
+  color: hsl(var(--fg));
+  font-weight: 600;
+}
+
+.btn-tonal:hover {
+  background: hsl(var(--accent) / 0.22);
+  text-decoration: none;
+}
+
+.glass {
+  background: hsl(var(--surface) / 0.72);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  backdrop-filter: blur(14px) saturate(1.15);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: hsl(var(--surface) / 0.95);
+  }
+}
+
+.ov-search {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-3);
+}
+
+.ov-search:focus-within {
+  border-color: hsl(var(--accent));
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 2px;
+}
+
+.ov-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: none;
+  outline: none;
+  font: inherit;
+  font-size: 14px;
+  color: hsl(var(--fg));
+}
+
+.ov-search input::placeholder {
+  color: hsl(var(--fg-muted));
+  opacity: 1;
+}
+
+/* KPI cards over the hero's lower edge. */
+.ov-kpis {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+  margin: -64px 32px 0;
+}
+
+.ov-kpi {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 16px;
+  border: 1px solid hsl(var(--border) / 0.85);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-3);
+}
+
+.ov-kpi .kpi-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-muted));
+}
+
+.ov-kpi .kpi-value {
+  margin-top: var(--space-1);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-kpi .kpi-cap {
+  margin-top: 6px;
+  font-size: 12px;
+  color: hsl(var(--fg-muted));
+}
+
+.ov-kpi .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Strip version: hidden at rest, exposed by the collapse script. */
+.ov-kpi-mini {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 14px;
+  color: hsl(var(--fg));
+  opacity: 0;
+}
+
+.ov-kpi-mini[inert] {
+  pointer-events: none;
+}
+
+.ov-kpi-mini:hover {
+  text-decoration: none;
+}
+
+.ov-kpi-mini .kpi-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ov-kpi-mini-v {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-split {
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin-top: 10px;
+  border-radius: 999px;
+}
+
+.ov-fill-claude-code {
+  fill: hsl(var(--brand-cc));
+}
+
+.ov-fill-codex {
+  fill: hsl(var(--brand-codex));
+}
+
+.kv {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.kv::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: hsl(var(--fg-muted));
+}
+
+.ov-agent-cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 6px;
+}
+
+.ov-agent-claude-code::before {
+  background: hsl(var(--brand-cc));
+}
+
+.ov-agent-codex::before {
+  background: hsl(var(--brand-codex));
+}
+
+.ov-below {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: 28px 32px;
+}
+
+.ov-below .card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+@media (max-width: 1023px) {
+  .ov-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov-hero-ui {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Hero graph: full bleed, non-interactive (the CTA opens /brain), so the
    wheel scrolls the page instead of zooming the camera. */
 .ov-hero-canvas {
