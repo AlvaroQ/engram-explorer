@@ -57,15 +57,6 @@ type MergeResult struct {
 	Skipped    MergeCounts `json:"skipped"`
 }
 
-// ---------------------------------------------------------------------------
-// contentTables enumerates the tables we copy during import.
-// Sync-state tables are deliberately excluded.
-// ---------------------------------------------------------------------------
-
-// contentTables are the tables included in export/import.
-// memory_relations is optional — older engram schemas may not have it.
-var contentTables = []string{"sessions", "observations", "user_prompts", "memory_relations"}
-
 // requiredTables is the subset that MUST be present for schema validation to pass.
 var requiredTables = []string{"sessions", "observations", "user_prompts"}
 
@@ -153,7 +144,7 @@ func ImportMerge(ctx context.Context, rwDB sqlite.Querier, uploadPath, dataDir s
 
 	result, err := runMerge(ctx, conn, tx, uploadPath, backupPath)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		_, _ = conn.ExecContext(context.Background(), `DETACH DATABASE srcdb`)
 		return MergeResult{}, err
 	}
@@ -194,7 +185,7 @@ func validateImportSchema(ctx context.Context, rwDB sqlite.Querier, uploadPath s
 	}
 	header := make([]byte, 16)
 	_, readErr := f.Read(header)
-	f.Close()
+	_ = f.Close()
 	if readErr != nil || string(header[:15]) != "SQLite format 3" {
 		return &DatabaseImportError{
 			Code:    DatabaseImportCodeBadSQLite,

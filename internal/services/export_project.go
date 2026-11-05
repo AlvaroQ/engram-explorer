@@ -72,7 +72,7 @@ func filterSnapshotToProject(ctx context.Context, path, project string) error {
 	if err != nil {
 		return fmt.Errorf("open snapshot: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }() // writes are committed and quick-checked below
 	db.SetMaxOpenConns(1)
 
 	tables, err := listSnapshotTables(ctx, db)
@@ -96,8 +96,11 @@ func filterSnapshotToProject(ctx context.Context, path, project string) error {
 		return fmt.Errorf("vacuum snapshot: %w", err)
 	}
 	var qc string
-	if err := db.QueryRowContext(ctx, `PRAGMA quick_check`).Scan(&qc); err != nil || qc != "ok" {
-		return fmt.Errorf("snapshot quick_check: %q %v", qc, err)
+	if err := db.QueryRowContext(ctx, `PRAGMA quick_check`).Scan(&qc); err != nil {
+		return fmt.Errorf("snapshot quick_check: %q %w", qc, err)
+	}
+	if qc != "ok" {
+		return fmt.Errorf("snapshot quick_check: %q <nil>", qc)
 	}
 	return nil
 }

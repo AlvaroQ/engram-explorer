@@ -3,6 +3,7 @@ package services
 import (
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"sort"
 	"strings"
 
@@ -345,7 +346,7 @@ func SessionsGetDetail(db sqlite.Querier, id string) (*SessionDetailResponse, er
 		`SELECT id, project, directory, started_at, ended_at, summary FROM sessions WHERE id = ?`,
 		id,
 	).Scan(&sess.ID, &sess.Project, &sess.Directory, &sess.StartedAt, &sess.EndedAt, &sess.Summary)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {

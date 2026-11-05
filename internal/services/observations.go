@@ -3,6 +3,7 @@ package services
 
 import (
 	"database/sql"
+	"errors"
 	"strings"
 	"time"
 
@@ -322,7 +323,7 @@ func ObservationsReviewDueCount(db sqlite.Querier, p ObservationListParams) (int
 func ObservationsGetByID(db sqlite.Querier, id int64) (obs *ObservationRow, revisions []ObservationRow, err error) {
 	query := `SELECT ` + obsCols + ` FROM observations o WHERE o.id = ?`
 	r, err := scanObservation(db.QueryRow(query, id))
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil, nil
 	} else if err != nil {
 		return nil, nil, err
