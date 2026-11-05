@@ -309,16 +309,25 @@ func buildModulesFn(reg *providers.Registry, store *config.Store) func() []ui.Mo
 		out := make([]ui.ModuleInfo, 0, len(metas))
 		for _, m := range metas {
 			out = append(out, ui.ModuleInfo{
-				ID:          m.ID,
-				DisplayName: m.DisplayName,
-				Tier:        registryTierToUITier(m.Tier),
-				State:       registryStateToUIState(m.State),
-				Path:        active.ProviderCfg(m.ID).Path,
-				Cause:       m.Err,
+				ID:           m.ID,
+				DisplayName:  m.DisplayName,
+				Tier:         registryTierToUITier(m.Tier),
+				State:        registryStateToUIState(m.State),
+				Path:         active.ProviderCfg(m.ID).Path,
+				PathEditable: hasNoDedicatedPathSection(reg.Instance(m.ID)),
+				Cause:        m.Err,
 			})
 		}
 		return out
 	}
+}
+
+// hasNoDedicatedPathSection reports whether an enabled instance's path is
+// edited only through its Settings → Modules row: the Engram database
+// (sqliteStore) and the Claude Code directory (transcriptSource) have their
+// own Settings sections, any other provider (Codex) does not.
+func hasNoDedicatedPathSection(inst providers.Instance) bool {
+	return inst != nil && !isSQLiteStore(inst) && !isTranscriptSource(inst)
 }
 
 // registryTierToUITier converts a providers.Tier to a ui.ModuleTier.

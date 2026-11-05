@@ -256,7 +256,8 @@ explorer subtracts them; usage is deduplicated by `response_id` (or by the cumul
 older files), and a resumed or forked session never counts replayed usage twice. Costs use public list prices;
 a model without a published price counts as unknown (cost `0`, shown with `~`). The Codex module only reads the
 rollout files under `<CODEX_HOME>/sessions`: never your Codex configuration, credentials or history, and it
-never runs the `codex` CLI. The old Claude Code URLs (`/cc-overview`, `/cc-sessions…`) redirect to these pages,
+never runs the `codex` CLI. Change its home in Settings → Modules (Codex row → path → Apply); `CODEX_HOME`, when
+set, still wins at startup. The old Claude Code URLs (`/cc-overview`, `/cc-sessions…`) redirect to these pages,
 and `GET /api/cc-sessions/stats` remains as a deprecated Claude-only endpoint with its previous shape.
 
 **To activate a Tier-1 provider manually:** Settings → Modules → find the `detected`/`registered` row → enter the path → **Validate & Activate**. On success it becomes `enabled` and its sidebar section appears immediately; the path is persisted to `~/.engram/config.json`.

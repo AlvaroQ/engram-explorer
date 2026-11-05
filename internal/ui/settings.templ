@@ -456,7 +456,8 @@ func moduleStateBadgeKey(s ModuleState) string {
 
 // moduleRow renders one provider row in the Settings → Modules section.
 // It shows: display name, state badge, path (if any), enable/disable toggle,
-// and (for Tier-1 providers in non-Enabled state) a manual path entry form.
+// and a manual path entry form for Tier-1 providers that are not enabled, or
+// are enabled with no dedicated Settings section for their path.
 templ moduleRow(lang string, m ModuleInfo, pathError string) {
 	<div class="module-row" id={ "module-" + m.ID }>
 		<div class="module-row-header">
@@ -499,8 +500,8 @@ templ moduleRow(lang string, m ModuleInfo, pathError string) {
 		if m.errMsg != "" {
 			<p class="error-hint">{ m.errMsg }</p>
 		}
-		<!-- Tier-1 manual path entry: show when provider is not enabled -->
-		if m.Tier == ModuleTier1 && m.State != ModuleEnabled {
+		<!-- Tier-1 manual path entry: when not enabled, or enabled without a dedicated section -->
+		if m.Tier == ModuleTier1 && (m.State != ModuleEnabled || m.PathEditable) {
 			<form class="path-edit-form" method="post"
 				action={ templ.SafeURL("/settings/modules/" + m.ID + "/path") }
 				hx-post={ "/settings/modules/" + m.ID + "/path" }
@@ -518,7 +519,11 @@ templ moduleRow(lang string, m ModuleInfo, pathError string) {
 					placeholder={ T(lang, "settings.modules.pathPlaceholder") }
 				/>
 				<button type="submit" class="btn btn-sm btn-primary">
-					{ T(lang, "settings.modules.validateAndActivate") }
+					if m.State == ModuleEnabled {
+						{ T(lang, "settings.path.apply") }
+					} else {
+						{ T(lang, "settings.modules.validateAndActivate") }
+					}
 				</button>
 			</form>
 			if pathError != "" {

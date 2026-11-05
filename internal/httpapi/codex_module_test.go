@@ -51,3 +51,23 @@ func TestCodexModule_PathEditThroughSettings(t *testing.T) {
 	}
 	f.wantOK(t, "/agent-sessions/codex/2025/11/01/rollout-2025-11-01T10-00-00-x.jsonl")
 }
+
+// TestCodexModule_SettingsOffersPathWhileEnabled covers S2/S7: the Settings
+// page offers the Codex home path form while the module is enabled (Codex has
+// no dedicated Settings section, unlike the Engram database and the Claude
+// Code directory), decided by capability, not by provider ID. The Claude Code
+// module row keeps no duplicate form: its dedicated section edits the path.
+func TestCodexModule_SettingsOffersPathWhileEnabled(t *testing.T) {
+	f := newAgentFixture(t)
+	w := f.fetch(t, "/settings")
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /settings: status %d", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `action="/settings/modules/codex-sessions/path"`) {
+		t.Errorf("enabled Codex module row has no path form")
+	}
+	if strings.Contains(body, `action="/settings/modules/cc-sessions/path"`) {
+		t.Errorf("enabled Claude Code module row duplicates the dedicated directory form")
+	}
+}

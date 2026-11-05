@@ -177,6 +177,10 @@ type ModuleInfo struct {
 	Tier        ModuleTier
 	State       ModuleState
 	Path        string // current path from config; may be empty
+	// PathEditable offers the path form in the module row while the module is
+	// enabled: true when no dedicated Settings section edits this module's
+	// path (the host decides it by capability, never by provider ID).
+	PathEditable bool
 	// Cause is the provider error. It is never rendered as-is: the settings
 	// handler turns it into errMsg via ErrorMessage (usererr messages are
 	// shown, anything else is logged and replaced by the generic message).

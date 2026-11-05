@@ -16,7 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   cumulative `token_count` totals), tool calls are paired with their output by `call_id`, and resumed or forked
   sessions do not double-count replayed usage. Models without a published OpenAI price count as unknown (cost 0,
   flagged with `~`). New installs get the module enabled at `~/.codex`; existing `config.json` files are not
-  rewritten — the module runs on the built-in home until a path is saved in Settings → Modules.
+  rewritten — the module runs on the built-in home until a path is saved in Settings → Modules, where the Codex
+  row offers its path form also while the module is enabled.
 - **Agent sessions** — Claude Code and Codex sessions share one vendor-neutral model and one set of pages:
   `/agent-sessions` (usage overview: totals, cost per agent / project / day, tokens per model, most expensive
   sessions), `/agent-sessions/list` (filters by agent, source, project, model, text and date range; sort and
