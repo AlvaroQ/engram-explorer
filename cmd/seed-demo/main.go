@@ -94,7 +94,7 @@ func run(args []string, stdout io.Writer) error {
 		return fmt.Errorf("open db: %w", err)
 	}
 	db.SetMaxOpenConns(1)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := db.Ping(); err != nil {
 		return fmt.Errorf("ping db: %w", err)

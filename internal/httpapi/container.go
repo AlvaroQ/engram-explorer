@@ -127,7 +127,7 @@ func (c *Container) ReloadEngramDB(newPath string) error {
 	if !c.Config.ReadOnly {
 		newRw, err = sqlite.OpenReadWrite(newPath)
 		if err != nil {
-			newRo.Close()
+			_ = newRo.Close()
 			c.Logger.Warn("cannot open engram database read-write", "path", newPath, "err", err)
 			return usererr.New(fmt.Sprintf("database is not writable: %s", newPath))
 		}
@@ -135,9 +135,9 @@ func (c *Container) ReloadEngramDB(newPath string) error {
 
 	roSwap, rwSwap, instPaths := c.liveSwaps()
 	if roSwap == nil {
-		newRo.Close()
+		_ = newRo.Close()
 		if newRw != nil {
-			newRw.Close()
+			_ = newRw.Close()
 		}
 		return usererr.New("the Engram module is disabled; enable it in Settings → Modules first")
 	}
@@ -151,7 +151,7 @@ func (c *Container) ReloadEngramDB(newPath string) error {
 		// Started without a writable pool (read-only mode / earlier open failure).
 		// The instance stays read-only until it is reopened (toggle or restart);
 		// discard the freshly opened writable pool.
-		newRw.Close()
+		_ = newRw.Close()
 	}
 
 	c.Paths.SetEngramDB(newPath)
@@ -178,10 +178,10 @@ func (c *Container) ReloadEngramDB(newPath string) error {
 	// Close the old pools after a grace period so in-flight queries drain.
 	closeOld := func() {
 		if oldRo != nil {
-			oldRo.Close()
+			_ = oldRo.Close()
 		}
 		if oldRw != nil {
-			oldRw.Close()
+			_ = oldRw.Close()
 		}
 	}
 	if c.CloseGrace <= 0 {
@@ -252,12 +252,12 @@ func (c *Container) SetClaudeDir(newDir string) error {
 func (c *Container) Close() {
 	if c.roSwap != nil {
 		if db := c.roSwap.Current(); db != nil {
-			db.Close()
+			_ = db.Close()
 		}
 	}
 	if c.rwSwap != nil {
 		if db := c.rwSwap.Current(); db != nil {
-			db.Close()
+			_ = db.Close()
 		}
 	}
 	// In registry-backed mode the DB handles are owned by the provider

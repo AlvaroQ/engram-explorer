@@ -398,7 +398,7 @@ func serveSnapshot(w http.ResponseWriter, r *http.Request, c *Container, filenam
 		writeError(w, http.StatusInternalServerError, "INTERNAL", "could not read export file", err.Error(), c.Config.ExposeDetails)
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	info, err := f.Stat()
 	if err != nil {
@@ -511,7 +511,7 @@ func handleDBImport(c *Container) http.HandlerFunc {
 				`Expected a database file in the "file" field.`, nil, c.Config.ExposeDetails)
 			return
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		_ = fh // filename available but not needed
 
 		// Stream to temp file.
@@ -524,20 +524,20 @@ func handleDBImport(c *Container) http.HandlerFunc {
 		tmpPath := tmpFile.Name()
 
 		if _, err := io.Copy(tmpFile, f); err != nil {
-			tmpFile.Close()
-			os.Remove(tmpPath)
+			_ = tmpFile.Close()
+			_ = os.Remove(tmpPath)
 			writeError(w, http.StatusInternalServerError, "INTERNAL",
 				"could not write upload to disk", err.Error(), c.Config.ExposeDetails)
 			return
 		}
 		// Close before passing path to ImportMerge (Windows file-locking).
 		if err := tmpFile.Close(); err != nil {
-			os.Remove(tmpPath)
+			_ = os.Remove(tmpPath)
 			writeError(w, http.StatusInternalServerError, "INTERNAL",
 				"could not finalise upload file", err.Error(), c.Config.ExposeDetails)
 			return
 		}
-		defer os.Remove(tmpPath)
+		defer func() { _ = os.Remove(tmpPath) }()
 
 		// Determine data dir for safety backup (same dir as the DB file).
 		dataDir := c.Paths.DataDir()

@@ -89,7 +89,7 @@ func (c *Client) FetchJSON(path string) Result {
 		}
 		return Result{OK: false, Error: &DaemonError{Code: code, Message: msg}}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		status := resp.StatusCode
