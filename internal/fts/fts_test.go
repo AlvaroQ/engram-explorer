@@ -107,3 +107,14 @@ func TestSanitizeQuery_EqualsMatchAllOfTerms(t *testing.T) {
 		}
 	}
 }
+
+func TestSplitShort(t *testing.T) {
+	long, short := fts.SplitShort([]string{"go", "auth", "ñu", "ñuño", "ui"}, fts.TrigramMinRunes)
+	if strings.Join(long, "|") != "auth|ñuño" {
+		t.Errorf("long: got %q", long)
+	}
+	// Runes, not bytes: "ñu" is 3 bytes but 2 runes.
+	if strings.Join(short, "|") != "go|ñu|ui" {
+		t.Errorf("short: got %q", short)
+	}
+}

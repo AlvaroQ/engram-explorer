@@ -161,24 +161,29 @@ func ObservationsList(db sqlite.Querier, p ObservationListParams) (items []Obser
 // date. With Q it applies the OR fallback, but only on the first page (no
 // Cursor): a later page of an AND result set is never topped up with OR rows.
 func ObservationsListPage(db sqlite.Querier, p ObservationListParams) (ObservationListPage, error) {
-	q := newFTSQuery(p.Q)
-	if p.MatchAny && q.any != "" {
-		items, next, err := listObservations(db, p, q.any)
+	strict, fallback := newFTSQuery(db, "observations_fts", p.Q).filters("o.title")
+	if p.MatchAny && !fallback.none() {
+		items, next, err := listObservations(db, p, fallback)
 		return ObservationListPage{Items: items, NextCursor: next, MatchedAny: true}, err
 	}
-	items, next, err := listObservations(db, p, q.all)
-	if err != nil || len(items) > 0 || p.Cursor != "" || q.any == "" {
+	items, next, err := listObservations(db, p, strict)
+	if err != nil || len(items) > 0 || p.Cursor != "" || fallback.none() {
 		return ObservationListPage{Items: items, NextCursor: next}, err
 	}
-	items, next, err = listObservations(db, p, q.any)
+	items, next, err = listObservations(db, p, fallback)
 	return ObservationListPage{Items: items, NextCursor: next, MatchedAny: len(items) > 0}, err
 }
 
-// listObservations runs the list query; match is an FTS5 MATCH expression or
-// "" for no full-text filter.
-func listObservations(db sqlite.Querier, p ObservationListParams, match string) (items []ObservationRow, nextCursor *string, err error) {
+// listObservations runs the list query; text is the full-text filter (zero
+// for none).
+func listObservations(db sqlite.Querier, p ObservationListParams, text textFilter) (items []ObservationRow, nextCursor *string, err error) {
 	conditions := []string{}
 	params := []any{}
+
+	if text.like != "" {
+		conditions = append(conditions, text.like)
+		params = append(params, text.likeArgs...)
+	}
 
 	if !p.IncludeDeleted && !p.OnlyDeleted {
 		conditions = append(conditions, "o.deleted_at IS NULL")
@@ -244,10 +249,10 @@ func listObservations(db sqlite.Querier, p ObservationListParams, match string) 
 
 	// FTS join — prepend fts param so it becomes the first positional arg.
 	var ftsJoin string
-	if match != "" {
+	if text.match != "" {
 		ftsJoin = `JOIN observations_fts fts ON fts.rowid = o.id AND observations_fts MATCH ?`
 		// Prepend so FTS param comes before WHERE params.
-		params = append([]any{match}, params...)
+		params = append([]any{text.match}, params...)
 	}
 
 	query := `SELECT ` + obsCols + `
@@ -308,22 +313,32 @@ func ObservationsGetByID(db sqlite.Querier, id int64) (obs *ObservationRow, revi
 
 // ObservationsSearch runs an FTS5 snippet search ranked by weighted BM25 (see
 // observationsBM25). When every term is required and nothing matches, it
-// retries once with any term and sets MatchedAny.
+// retries once with any term and sets MatchedAny. On a trigram index a query
+// of only short terms searches titles by substring instead (see newFTSQuery).
 func ObservationsSearch(db sqlite.Querier, rawQ string, limit int) (ObservationSearchResult, error) {
-	q := newFTSQuery(rawQ)
-	if q.all == "" {
+	strict, fallback := newFTSQuery(db, "observations_fts", rawQ).filters("o.title")
+	if strict.none() {
 		return ObservationSearchResult{Items: []ObservationWithSnippet{}}, nil
 	}
-	items, err := searchObservations(db, q.all, limit)
-	if err != nil || len(items) > 0 || q.any == "" {
+	items, err := searchObservations(db, strict, limit)
+	if err != nil || len(items) > 0 || fallback.none() {
 		return ObservationSearchResult{Items: items}, err
 	}
-	items, err = searchObservations(db, q.any, limit)
+	items, err = searchObservations(db, fallback, limit)
 	return ObservationSearchResult{Items: items, MatchedAny: len(items) > 0}, err
 }
 
-// searchObservations runs one ranked FTS query for a MATCH expression.
-func searchObservations(db sqlite.Querier, match string, limit int) ([]ObservationWithSnippet, error) {
+// searchObservations runs one search step: a BM25-ranked FTS query for a
+// MATCH filter, or a newest-first title LIKE whose snippet is the plain title.
+func searchObservations(db sqlite.Querier, text textFilter, limit int) ([]ObservationWithSnippet, error) {
+	if text.like != "" {
+		query := `SELECT ` + obsCols + `, COALESCE(o.title, '') AS snippet
+			FROM observations o
+			WHERE ` + text.like + ` AND o.deleted_at IS NULL
+			ORDER BY COALESCE(o.updated_at, o.created_at, '') DESC, o.id DESC
+			LIMIT ?`
+		return queryRows(db, query, append(append([]any{}, text.likeArgs...), limit), scanObservationWithSnippet)
+	}
 	query := `SELECT ` + obsCols + `,
 		snippet(observations_fts, 0, '<mark>', '</mark>', '…', 16) AS snippet
 		FROM observations o
@@ -331,7 +346,7 @@ func searchObservations(db sqlite.Querier, match string, limit int) ([]Observati
 		WHERE observations_fts MATCH ? AND o.deleted_at IS NULL
 		ORDER BY ` + observationsBM25 + `, o.id DESC
 		LIMIT ?`
-	return queryRows(db, query, []any{match, limit}, scanObservationWithSnippet)
+	return queryRows(db, query, []any{text.match, limit}, scanObservationWithSnippet)
 }
 
 // ObservationsListTypes returns all distinct, non-empty observation types ordered

@@ -12,6 +12,7 @@ package fts
 import (
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
 const (
@@ -20,6 +21,9 @@ const (
 	maxQueryRunes = 256
 	// maxTokens caps the number of AND-joined terms in the final expression.
 	maxTokens = 32
+	// TrigramMinRunes is the shortest term an FTS5 trigram index can match:
+	// a MATCH term with fewer runes returns no rows at all.
+	TrigramMinRunes = 3
 )
 
 var (
@@ -78,4 +82,17 @@ func join(terms []string, sep string) string {
 		quoted[i] = `"` + t + `"`
 	}
 	return strings.Join(quoted, sep)
+}
+
+// SplitShort partitions terms into those with at least minRunes runes (long)
+// and the rest (short), preserving order.
+func SplitShort(terms []string, minRunes int) (long, short []string) {
+	for _, t := range terms {
+		if utf8.RuneCountInString(t) < minRunes {
+			short = append(short, t)
+		} else {
+			long = append(long, t)
+		}
+	}
+	return long, short
 }
