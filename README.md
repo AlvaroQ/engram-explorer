@@ -240,7 +240,7 @@ All three are **Tier-1**: if not found at their default paths the UI keeps them 
 **Limits:** that grace is bounded. A superseded data source waits at most **30 s** (the drain timeout) for the requests still using it, then it is closed and a request still running on it fails. The HTTP server's write timeout is also **30 s**, but it only stops the response: the handler is not cancelled, so a database import that needs more time can still complete on the server while the client sees a connection error. Reload to check the result before retrying.
 
 **Agent sessions (Claude Code + Codex).** Both session modules feed one set of vendor-neutral pages, under a
-single "Agent sessions" sidebar group:
+"Agents" sidebar group with one entry per live agent (`/agent-sessions?agent=<kind>`):
 
 | Route                                                    | What it shows                                                                                                                                                                        |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

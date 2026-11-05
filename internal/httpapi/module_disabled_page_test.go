@@ -21,7 +21,7 @@ func TestModuleLifecycle_DisabledPageFullLayoutUnlessHTMX(t *testing.T) {
 		if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(body)), "<!doctype html>") {
 			t.Errorf("GET %s: body %.120q, want a full HTML document", route, body)
 		}
-		for _, want := range []string{`id="main-content"`, `class="sidebar-nav"`, `href="/agent-sessions"`, "This module is disabled."} {
+		for _, want := range []string{`id="main-content"`, `class="sidebar-nav"`, `href="/agent-sessions?agent=`, "This module is disabled."} {
 			if !strings.Contains(body, want) {
 				t.Errorf("GET %s: full page lacks %q", route, want)
 			}

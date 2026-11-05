@@ -207,7 +207,7 @@ func TestLegacyCCDetail_RedirectsToClaudeDetail(t *testing.T) {
 }
 
 // TestAgentSessionsSidebar_OneGroupForBothProviders: with both agent-session
-// providers enabled the sidebar has one "Agent sessions" group with each link
+// providers enabled the sidebar has one "Agents" group with each link
 // once.
 func TestAgentSessionsSidebar_OneGroupForBothProviders(t *testing.T) {
 	f := newAgentFixture(t)
@@ -219,7 +219,7 @@ func TestAgentSessionsSidebar_OneGroupForBothProviders(t *testing.T) {
 	if strings.Contains(sidebar, "/cc-overview") {
 		t.Error("the sidebar still links the legacy /cc-overview page")
 	}
-	for _, href := range []string{`href="/agent-sessions"`, `href="/agent-sessions/list"`} {
+	for _, href := range []string{`href="/agent-sessions?agent=claude-code"`, `href="/agent-sessions?agent=codex"`} {
 		if n := strings.Count(sidebarRe.FindString(body), href); n != 1 {
 			t.Errorf("sidebar links %s = %d, want 1", href, n)
 		}
