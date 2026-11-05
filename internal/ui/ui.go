@@ -465,6 +465,7 @@ func Mount(mux *http.ServeMux, d Deps) {
 	mux.HandleFunc("GET /observations", memory(handleObservationsPage))
 	mux.HandleFunc("GET /observations/list", memory(handleObservationsListPartial))
 	mux.HandleFunc("GET /observations/{id}", memory(handleObservationDetailPartial))
+	mux.HandleFunc("GET /observations/{id}/history", memory(handleObservationHistoryPartial))
 
 	// Brain page (React island — Three.js graph).
 	mux.HandleFunc("GET /brain", memory(handleBrainPage))

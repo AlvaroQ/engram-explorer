@@ -498,6 +498,15 @@
       "copied": "{{label}} copied",
       "clipboardError": "clipboard error"
     },
+    "history": {
+      "title": "Revision history",
+      "loading": "Loading…",
+      "unavailable": "History is not available for this database.",
+      "none": "No earlier versions.",
+      "version": "Version {{version}}",
+      "capped": "Showing the {{shown}} most recent of {{total}} versions.",
+      "loadError": "Could not load the revision history."
+    },
     "search": {
       "matchedAny": "No exact matches. Showing memories that match any of the words."
     }

@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   date has passed, counted with the other active filters; `GET /api/observations?review=due` does the same.
 - **Revision history API** — `GET /api/observations/{id}/versions` exposes a memory's stored revisions (read-only;
   reports `available: false` on databases without history).
+- **Revision history panel** — the memory detail has a "Revision history" section that loads the stored earlier
+  versions when opened (newest first, capped at 50), and says when the database keeps no history.
 - **ESLint** — a flat config (typescript-eslint, react-hooks) runs in CI via `pnpm lint` over the frontend islands
   and the UI browser scripts. Frontend tests now fail when no test files are found.
 - **Brain-first overview** — the overview opens on a full-width knowledge-graph hero with the page title, an

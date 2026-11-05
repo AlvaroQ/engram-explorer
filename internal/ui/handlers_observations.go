@@ -224,3 +224,34 @@ func handleObservationDetailPartial(d Deps) http.HandlerFunc {
 		Render(w, r, ObservationDetailPartial(obs, revisions, fmt.Sprintf("#%d", obs.ID), lang))
 	}
 }
+
+// handleObservationHistoryPartial serves GET /observations/{id}/history, the
+// body of the detail drawer's Revision history section (read-only). A missing
+// history table or no stored versions render a notice; a failed query renders
+// a localized inline error (200, the drawer keeps the rest of the detail).
+func handleObservationHistoryPartial(d Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		lang := langForRequest(r)
+		idStr := r.PathValue("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			Render(w, r, ErrorPartial(T(lang, "errors.invalidObservationId", "id", idStr)))
+			return
+		}
+		if d.RoDB == nil {
+			http.NotFound(w, r)
+			return
+		}
+		res, found, err := services.ObservationVersions(r.Context(), d.RoDB, id)
+		if err != nil {
+			// ErrorMessage logs the detail and returns the generic message.
+			Render(w, r, ErrorPartial(T(lang, "observations.history.loadError")+" "+ErrorMessage(r, "", err)))
+			return
+		}
+		if !found {
+			http.NotFound(w, r)
+			return
+		}
+		Render(w, r, ObservationHistoryPartial(res, lang))
+	}
+}

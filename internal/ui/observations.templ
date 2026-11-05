@@ -494,6 +494,8 @@ templ ObservationDetailPartial(obs *services.ObservationRow, revisions []service
 				</ul>
 			</div>
 		}
+		<!-- Revision history (stored versions, loaded on first open) -->
+		@obsHistoryDisclosure(obs.ID, lang)
 		<!-- Go to session link -->
 		if obs.SessionID != nil && *obs.SessionID != "" {
 			<a

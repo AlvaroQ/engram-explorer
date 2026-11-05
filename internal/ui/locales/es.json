@@ -498,6 +498,15 @@
       "copied": "{{label}} copiado",
       "clipboardError": "error de portapapeles"
     },
+    "history": {
+      "title": "Historial de revisiones",
+      "loading": "Cargando…",
+      "unavailable": "El historial no está disponible en esta base de datos.",
+      "none": "No hay versiones anteriores.",
+      "version": "Versión {{version}}",
+      "capped": "Se muestran las {{shown}} más recientes de {{total}} versiones.",
+      "loadError": "No se pudo cargar el historial de revisiones."
+    },
     "search": {
       "matchedAny": "No hay coincidencias exactas. Se muestran memorias que contienen alguna de las palabras."
     }

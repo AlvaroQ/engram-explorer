@@ -1,0 +1,93 @@
+package ui
+
+import (
+	"fmt"
+
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+)
+
+// obsHistoryLimit caps the versions rendered in the drawer; the newest are kept.
+const obsHistoryLimit = 50
+
+// obsHistoryDisclosure renders the closed "Revision history" section of the
+// memory detail. Its body loads once, on the first toggle (opening it): a
+// plain event name with the once modifier, since htmx allowEval is false and
+// trigger filters are not available.
+templ obsHistoryDisclosure(id int64, lang string) {
+	<details
+		id="obs-history"
+		class="rounded-md border border-border bg-surface-2"
+		hx-get={ fmt.Sprintf("/observations/%d/history", id) }
+		hx-trigger="toggle once"
+		hx-target="#obs-history-body"
+		hx-swap="innerHTML"
+	>
+		<summary class="cursor-pointer p-2 text-xs uppercase tracking-wide text-fg-muted">{ T(lang, "observations.history.title") }</summary>
+		<div id="obs-history-body" class="p-2 text-xs" aria-live="polite">
+			<p class="text-fg-muted">{ T(lang, "observations.history.loading") }</p>
+		</div>
+	</details>
+}
+
+// ObservationHistoryPartial renders the body of the Revision history section:
+// the stored versions newest first (capped at obsHistoryLimit), or why there
+// are none. Titles and content are text nodes, escaped by templ.
+templ ObservationHistoryPartial(res services.ObservationVersionsResult, lang string) {
+	if !res.Available {
+		<p class="text-fg-muted">{ T(lang, "observations.history.unavailable") }</p>
+	} else if len(res.Versions) == 0 {
+		<p class="text-fg-muted">{ T(lang, "observations.history.none") }</p>
+	} else {
+		if obsHistoryCapped(res.Versions) {
+			<p class="mb-2 text-fg-muted">{ T(lang, "observations.history.capped", "shown", fmt.Sprintf("%d", obsHistoryLimit), "total", fmt.Sprintf("%d", len(res.Versions))) }</p>
+		}
+		<ol class="divide-y divide-border">
+			for _, v := range obsHistoryShown(res.Versions) {
+				<li class="py-2">
+					<details>
+						<summary class="cursor-pointer">
+							<span class="font-semibold text-fg">{ T(lang, "observations.history.version", "version", fmt.Sprintf("%d", v.Version)) }</span>
+							<span class="mono text-fg-muted">{ obsHistoryDate(v.CreatedAt) }</span>
+							<span class="text-fg">{ obsHistoryText(v.Title, T(lang, "common.untitled")) }</span>
+						</summary>
+						<pre class="mt-2 max-h-96 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-surface p-3 text-xs text-fg">{ obsHistoryText(v.Content, T(lang, "common.empty")) }</pre>
+					</details>
+				</li>
+			}
+		</ol>
+	}
+}
+
+// obsHistoryCapped reports whether vs has more versions than the drawer shows.
+func obsHistoryCapped(vs []services.ObservationVersion) bool {
+	return len(vs) > obsHistoryLimit
+}
+
+// obsHistoryShown returns at most obsHistoryLimit versions (newest first, as
+// the service orders them).
+func obsHistoryShown(vs []services.ObservationVersion) []services.ObservationVersion {
+	if obsHistoryCapped(vs) {
+		return vs[:obsHistoryLimit]
+	}
+	return vs
+}
+
+// obsHistoryDate formats a stored timestamp as "dd-mm-yyyy hh:mm" ("—" when unset).
+func obsHistoryDate(raw *string) string {
+	if raw == nil {
+		return "—"
+	}
+	d, c := splitDateClock(*raw)
+	if c == "" {
+		return d
+	}
+	return d + " " + c
+}
+
+// obsHistoryText returns *s, or fallback when s is nil or empty.
+func obsHistoryText(s *string, fallback string) string {
+	if s == nil || *s == "" {
+		return fallback
+	}
+	return *s
+}
