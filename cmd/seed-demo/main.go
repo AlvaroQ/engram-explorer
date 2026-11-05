@@ -18,6 +18,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -142,8 +143,19 @@ func run(args []string, stdout io.Writer) error {
 	fmt.Fprintf(stdout, "  Windows/pwsh: $env:ENGRAM_DATA_DIR=\"%s\"; $env:CLAUDE_PROJECTS_DIR=\"%s\"; $env:CODEX_HOME=\"%s\"; $env:ENGRAM_DASH_READONLY=\"true\"; .\\engram-explorer.exe\n",
 		absOut, claudeDir, codexDir)
 	fmt.Fprintln(stdout)
-	fmt.Fprintf(stdout, "Then open http://127.0.0.1:%d in your browser.\n", dashboardPort())
+	fmt.Fprintf(stdout, "Then open %s in your browser.\n", dashboardURL())
 	return nil
+}
+
+// dashboardURL is the address the binary will listen on, as config.Load
+// reads it: DASHBOARD_HOST (unset or empty → 127.0.0.1) and dashboardPort.
+// IPv6 literals are bracketed.
+func dashboardURL() string {
+	host := os.Getenv("DASHBOARD_HOST")
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	return "http://" + net.JoinHostPort(host, strconv.Itoa(dashboardPort()))
 }
 
 // dashboardPort mirrors how config.Load reads the listen port: DASHBOARD_PORT
