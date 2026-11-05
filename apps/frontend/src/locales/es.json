@@ -234,7 +234,6 @@
         "compatible": "compatibles"
       }
     },
-    "neighbors": "Vecinos",
     "retry": "Reintentar",
     "exitFocus": "Restaurar vista",
     "closeDetail": "Cerrar detalle",
