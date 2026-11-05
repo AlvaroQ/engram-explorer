@@ -276,3 +276,59 @@ func TestExportProjectSnapshot_MinimalSchema(t *testing.T) {
 		t.Errorf("rebuilt observations_fts match = %s, want [1]", got)
 	}
 }
+
+// A session of another project is kept only because a kept memory or prompt
+// belongs to it; its summary and directory describe the other project's work,
+// so they are blanked. The session's own project and its rows are untouched,
+// and the snapshot still merges with ImportMerge.
+func TestExportProjectSnapshot_BlanksForeignSessionDetails(t *testing.T) {
+	src, _ := openEngramDB(t, "engram.db")
+	seedTwoProjects(t, src)
+	for _, s := range []string{
+		`INSERT INTO sessions (id, project, directory, summary) VALUES
+			('s-y', 'beta', '/home/FOREIGNDIRMARK', 'FOREIGNSUMMARYMARK')`,
+		`INSERT INTO user_prompts (session_id, content, project, sync_id) VALUES ('s-y', 'alpha prompt two', 'alpha', 'p-a2')`,
+	} {
+		if _, err := src.Exec(s); err != nil {
+			t.Fatalf("seed: %v", err)
+		}
+	}
+
+	path, cleanup, err := services.ExportProjectSnapshot(context.Background(), src, "alpha")
+	if err != nil {
+		t.Fatalf("ExportProjectSnapshot: %v", err)
+	}
+	defer cleanup()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range []string{"FOREIGNDIRMARK", "FOREIGNSUMMARYMARK", "beta session holding an alpha memory"} {
+		if bytes.Contains(raw, []byte(m)) {
+			t.Errorf("snapshot bytes contain the foreign session detail %q", m)
+		}
+	}
+
+	snap := openSnapshot(t, path)
+	want := map[string]string{
+		`SELECT id || '|' || project || '|' || directory || '|' || COALESCE(summary, '<nil>') FROM sessions`: "[s-a|alpha|/a|alpha work s-x|beta||<nil> s-y|beta||<nil>]",
+	}
+	for q, w := range want {
+		if got := fmt.Sprint(column(t, snap, q)); got != w {
+			t.Errorf("%s = %s, want %s", q, got, w)
+		}
+	}
+	// The source keeps the details.
+	if got := fmt.Sprint(column(t, src, `SELECT summary FROM sessions WHERE id = 's-y'`)); got != "[FOREIGNSUMMARYMARK]" {
+		t.Errorf("source session changed: %s", got)
+	}
+
+	dst, _ := openEngramDB(t, "fresh.db")
+	res, err := services.ImportMerge(context.Background(), dst, path, t.TempDir())
+	if err != nil {
+		t.Fatalf("ImportMerge: %v", err)
+	}
+	if want := (services.MergeCounts{Observations: 3, Sessions: 3, Prompts: 2, Relations: 1}); res.Inserted != want {
+		t.Errorf("inserted %+v, want %+v", res.Inserted, want)
+	}
+}

@@ -20,7 +20,10 @@ import (
 //     memories of the project are kept.
 //   - sessions of the project, plus any other session that a kept memory or
 //     prompt belongs to (their foreign key needs it, and ImportMerge inserts
-//     sessions first).
+//     sessions first). Those other-project sessions keep only their id,
+//     project and times: summary is set to NULL and directory to the empty
+//     string (NOT NULL in the schema), so the backup carries no text about
+//     other projects' work.
 //   - observation_versions of kept memories; memory_relations whose source
 //     and target are both kept memories (superseded_by links to a dropped
 //     relation are cleared).
@@ -191,6 +194,11 @@ func deleteOtherProjects(ctx context.Context, tx *sql.Tx, tables []snapshotTable
 			return err
 		}
 	}
+	if has["sessions"] {
+		if err := blankForeignSessions(ctx, tx, project, exec); err != nil {
+			return err
+		}
+	}
 
 	// Every other plain table: filter by project, or empty it.
 	for _, t := range tables {
@@ -226,6 +234,26 @@ func deleteOtherProjects(ctx context.Context, tx *sql.Tx, tables []snapshotTable
 	}
 
 	return rebuildSnapshotFTS(ctx, tx, tables, exec)
+}
+
+// blankForeignSessions clears the summary and directory of the kept sessions
+// of other projects (columns missing from older schemas are skipped).
+func blankForeignSessions(ctx context.Context, tx *sql.Tx, project string, exec func(string, ...any) error) error {
+	cols, err := txColumns(ctx, tx, "sessions")
+	if err != nil {
+		return err
+	}
+	var set []string
+	if cols["summary"] {
+		set = append(set, "summary = NULL")
+	}
+	if cols["directory"] {
+		set = append(set, "directory = ''")
+	}
+	if len(set) == 0 {
+		return nil
+	}
+	return exec(`UPDATE sessions SET `+strings.Join(set, ", ")+` WHERE project IS NOT ?`, project)
 }
 
 // sessionsKeptByPrompts extends the sessions rule to keep sessions of kept
