@@ -235,13 +235,17 @@ type shellRequestKey struct{}
 
 type shellRequest struct {
 	path, agent string
+	// lang is the display language of the request; components without a
+	// lang parameter (ErrorPartial, the doctor partials) read it through
+	// LangFromContext.
+	lang string
 	// agents holds the agent kinds with a live source; nil means unknown
 	// (no Deps at render time), which shows every agent entry.
 	agents map[string]bool
 }
 
 func withShellRequest(ctx context.Context, r *http.Request, sources []agentsessions.Source) context.Context {
-	sr := shellRequest{path: r.URL.Path, agent: r.URL.Query().Get("agent")}
+	sr := shellRequest{path: r.URL.Path, agent: r.URL.Query().Get("agent"), lang: langForRequest(r)}
 	if len(sources) > 0 {
 		sr.agents = map[string]bool{}
 		for _, s := range sources {
@@ -254,6 +258,16 @@ func withShellRequest(ctx context.Context, r *http.Request, sources []agentsessi
 func shellRequestFrom(ctx context.Context) shellRequest {
 	sr, _ := ctx.Value(shellRequestKey{}).(shellRequest)
 	return sr
+}
+
+// LangFromContext returns the display language of the request being rendered
+// (set by Render and renderDeps), "en" when ctx carries none. Shared by the
+// doctor package, whose partials take no lang parameter.
+func LangFromContext(ctx context.Context) string {
+	if lang := shellRequestFrom(ctx).lang; lang != "" {
+		return lang
+	}
+	return "en"
 }
 
 // sidebarLinks drops the agent entries whose agent has no live source.

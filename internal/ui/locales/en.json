@@ -500,7 +500,12 @@
       "lifecycle": "Lifecycle",
       "lastEnqueued": "Last enqueued",
       "lastAcked": "Last acked",
-      "pending": "Pending"
+      "pending": "Pending",
+      "heading": "Global Target",
+      "targetKey": "Target Key",
+      "lastEnqueuedSeq": "Last Enqueued Seq",
+      "lastAckedSeq": "Last Acked Seq",
+      "pendingMutations": "Pending Mutations"
     },
     "projects": {
       "title": "Projects",
@@ -516,8 +521,14 @@
         "cloudSeq": "Cloud seq",
         "enrolledBadge": "enrolled",
         "notEnrolled": "not enrolled",
-        "detail": "Detail"
-      }
+        "detail": "Detail",
+        "observations": "Observations",
+        "actions": "Actions",
+        "delete": "Delete"
+      },
+      "loading": "Loading sync projects...",
+      "empty": "No sync projects found.",
+      "deleteConfirm": "Delete project \"{{project}}\"? Its prompts and empty sessions are removed; any session still holding observations moved to other projects is reassigned (not deleted), so nothing is lost. This cannot be undone."
     },
     "syncProject": {
       "notFound": "Project not found.",
@@ -557,7 +568,38 @@
         "op": "op",
         "key": "key",
         "occurredAt": "occurred_at"
+      },
+      "heading": "Project: {{project}}",
+      "lifecycleValue": "Lifecycle: {{value}}",
+      "enrolledLabel": "Enrolled:",
+      "enrolledAtValue": "Enrolled at: {{value}}",
+      "reasonCode": "Reason code: {{code}}",
+      "consecutiveFailuresValue": "Consecutive failures: {{count}}",
+      "pendingEmpty": "No pending mutations.",
+      "findings": "Findings",
+      "backToMaintenance": "Back to Maintenance",
+      "mutations": {
+        "seq": "Seq",
+        "entity": "Entity",
+        "op": "Op",
+        "entityKey": "Entity Key",
+        "occurredAt": "Occurred At"
       }
+    },
+    "issuesPanel": {
+      "title": "Sync Issues",
+      "loading": "Loading sync issues...",
+      "none": "No sync issues detected.",
+      "hint": "Hint: {{hint}}",
+      "project": "Project: {{project}}",
+      "generatedAt": "Generated at: {{time}}"
+    },
+    "status": {
+      "healthy": "healthy",
+      "degraded": "degraded",
+      "broken": "broken",
+      "notEnrolled": "not enrolled",
+      "idle": "idle"
     }
   },
   "projects": {

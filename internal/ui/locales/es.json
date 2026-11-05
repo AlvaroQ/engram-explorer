@@ -500,7 +500,12 @@
       "lifecycle": "Ciclo de vida",
       "lastEnqueued": "Último encolado",
       "lastAcked": "Último confirmado",
-      "pending": "Pendientes"
+      "pending": "Pendientes",
+      "heading": "Destino global",
+      "targetKey": "Clave del destino",
+      "lastEnqueuedSeq": "Última seq encolada",
+      "lastAckedSeq": "Última seq confirmada",
+      "pendingMutations": "Mutaciones pendientes"
     },
     "projects": {
       "title": "Proyectos",
@@ -516,8 +521,14 @@
         "cloudSeq": "Cloud seq",
         "enrolledBadge": "inscrito",
         "notEnrolled": "no inscrito",
-        "detail": "Detalle"
-      }
+        "detail": "Detalle",
+        "observations": "Observaciones",
+        "actions": "Acciones",
+        "delete": "Borrar"
+      },
+      "loading": "Cargando proyectos de sync...",
+      "empty": "No hay proyectos de sync.",
+      "deleteConfirm": "¿Borrar el proyecto \"{{project}}\"? Se eliminan sus prompts y sesiones vacías; las sesiones que aún tengan observaciones movidas a otros proyectos se reasignan (no se borran), así que no se pierde nada. Esta acción no se puede deshacer."
     },
     "syncProject": {
       "notFound": "Proyecto no encontrado.",
@@ -557,7 +568,38 @@
         "op": "op",
         "key": "clave",
         "occurredAt": "ocurrido en"
+      },
+      "heading": "Proyecto: {{project}}",
+      "lifecycleValue": "Ciclo de vida: {{value}}",
+      "enrolledLabel": "Inscrito:",
+      "enrolledAtValue": "Fecha de inscripción: {{value}}",
+      "reasonCode": "Código de motivo: {{code}}",
+      "consecutiveFailuresValue": "Fallos consecutivos: {{count}}",
+      "pendingEmpty": "Sin mutaciones pendientes.",
+      "findings": "Hallazgos",
+      "backToMaintenance": "Volver a Mantenimiento",
+      "mutations": {
+        "seq": "Seq",
+        "entity": "Entidad",
+        "op": "Op",
+        "entityKey": "Clave de entidad",
+        "occurredAt": "Ocurrido el"
       }
+    },
+    "issuesPanel": {
+      "title": "Problemas de sync",
+      "loading": "Cargando problemas de sync...",
+      "none": "No se detectaron problemas de sync.",
+      "hint": "Pista: {{hint}}",
+      "project": "Proyecto: {{project}}",
+      "generatedAt": "Generado el: {{time}}"
+    },
+    "status": {
+      "healthy": "sano",
+      "degraded": "degradado",
+      "broken": "roto",
+      "notEnrolled": "no inscrito",
+      "idle": "inactivo"
     }
   },
   "projects": {

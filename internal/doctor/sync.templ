@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"context"
 	"fmt"
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 	"github.com/AlvaroQ/engram-explorer/internal/ui"
@@ -29,7 +30,7 @@ templ syncShellContent() {
 		-->
 		<details class="issues-details">
 			<summary class="issues-summary">
-				<span class="issues-summary-title">Sync Issues</span>
+				<span class="issues-summary-title">{ tr(ctx, "syncHealth.issuesPanel.title") }</span>
 				<span id="sync-issues-count" class="badge">…</span>
 			</summary>
 			<div
@@ -42,7 +43,7 @@ templ syncShellContent() {
 				hx-target="#sync-issues"
 				hx-swap="innerHTML"
 			>
-				<p class="loading">Loading sync issues...</p>
+				<p class="loading">{ tr(ctx, "syncHealth.issuesPanel.loading") }</p>
 			</div>
 		</details>
 		<div
@@ -54,7 +55,7 @@ templ syncShellContent() {
 			hx-target="#sync-projects"
 			hx-swap="innerHTML"
 		>
-			<p class="loading">Loading sync projects...</p>
+			<p class="loading">{ tr(ctx, "syncHealth.projects.loading") }</p>
 		</div>
 	</div>
 }
@@ -66,37 +67,37 @@ templ SyncProjectsPartial(resp services.SyncProjectsResponse) {
 	<div id="sync-projects-content">
 		if resp.GlobalTarget != nil {
 			<div class="global-target-card">
-				<h3>Global Target</h3>
+				<h3>{ tr(ctx, "syncHealth.globalTarget.heading") }</h3>
 				<dl>
-					<div class="gt-stat"><dt>Target Key</dt><dd>{ resp.GlobalTarget.TargetKey }</dd></div>
+					<div class="gt-stat"><dt>{ tr(ctx, "syncHealth.globalTarget.targetKey") }</dt><dd>{ resp.GlobalTarget.TargetKey }</dd></div>
 					if resp.GlobalTarget.Lifecycle != nil {
-						<div class="gt-stat"><dt>Lifecycle</dt><dd>{ *resp.GlobalTarget.Lifecycle }</dd></div>
+						<div class="gt-stat"><dt>{ tr(ctx, "syncHealth.globalTarget.lifecycle") }</dt><dd>{ *resp.GlobalTarget.Lifecycle }</dd></div>
 					}
 					if resp.GlobalTarget.LastEnqueuedSeq != nil {
-						<div class="gt-stat"><dt>Last Enqueued Seq</dt><dd>{ fmt.Sprintf("%d", *resp.GlobalTarget.LastEnqueuedSeq) }</dd></div>
+						<div class="gt-stat"><dt>{ tr(ctx, "syncHealth.globalTarget.lastEnqueuedSeq") }</dt><dd>{ fmt.Sprintf("%d", *resp.GlobalTarget.LastEnqueuedSeq) }</dd></div>
 					}
 					if resp.GlobalTarget.LastAckedSeq != nil {
-						<div class="gt-stat"><dt>Last Acked Seq</dt><dd>{ fmt.Sprintf("%d", *resp.GlobalTarget.LastAckedSeq) }</dd></div>
+						<div class="gt-stat"><dt>{ tr(ctx, "syncHealth.globalTarget.lastAckedSeq") }</dt><dd>{ fmt.Sprintf("%d", *resp.GlobalTarget.LastAckedSeq) }</dd></div>
 					}
-					<div class="gt-stat"><dt>Pending Mutations</dt><dd>{ fmt.Sprintf("%d", resp.GlobalTarget.PendingMutations) }</dd></div>
+					<div class="gt-stat"><dt>{ tr(ctx, "syncHealth.globalTarget.pendingMutations") }</dt><dd>{ fmt.Sprintf("%d", resp.GlobalTarget.PendingMutations) }</dd></div>
 				</dl>
 			</div>
 		}
 		if len(resp.Projects) == 0 {
-			@ui.EmptyState("No sync projects found.")
+			@ui.EmptyState(tr(ctx, "syncHealth.projects.empty"))
 		} else {
 			<table class="sync-projects-table">
 				<thead>
 					<tr>
-						<th>Project</th>
-						<th>Observations</th>
-						<th>Last Activity</th>
-						<th>Enrolled</th>
-						<th>Status</th>
-						<th>Pending</th>
-						<th>Last Acked</th>
-						<th>Last Enqueued</th>
-						<th>Actions</th>
+						<th>{ tr(ctx, "syncHealth.projects.table.project") }</th>
+						<th>{ tr(ctx, "syncHealth.projects.table.observations") }</th>
+						<th>{ tr(ctx, "syncHealth.projects.table.lastActivity") }</th>
+						<th>{ tr(ctx, "syncHealth.projects.table.enrolled") }</th>
+						<th>{ tr(ctx, "syncHealth.projects.table.status") }</th>
+						<th>{ tr(ctx, "syncHealth.projects.table.pending") }</th>
+						<th>{ tr(ctx, "syncHealth.syncProject.lastAcked") }</th>
+						<th>{ tr(ctx, "syncHealth.syncProject.lastEnqueued") }</th>
+						<th>{ tr(ctx, "syncHealth.projects.table.actions") }</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -113,9 +114,9 @@ templ SyncProjectsPartial(resp services.SyncProjectsResponse) {
 							</td>
 							<td>
 								if p.Enrolled {
-									<span class="badge badge-enrolled">enrolled</span>
+									<span class="badge badge-enrolled">{ tr(ctx, "syncHealth.projects.table.enrolledBadge") }</span>
 								} else {
-									<span class="badge badge-not-enrolled">not enrolled</span>
+									<span class="badge badge-not-enrolled">{ tr(ctx, "syncHealth.projects.table.notEnrolled") }</span>
 								}
 							</td>
 							<td>
@@ -134,7 +135,7 @@ templ SyncProjectsPartial(resp services.SyncProjectsResponse) {
 							</td>
 							<td class="actions">
 								@syncProjectActions(p)
-								<a href={ templ.URL(syncProjectURL(p.Project, "")) } class="btn-link">Detail</a>
+								<a href={ templ.URL(syncProjectURL(p.Project, "")) } class="btn-link">{ tr(ctx, "syncHealth.projects.table.detail") }</a>
 							</td>
 						</tr>
 					}
@@ -156,9 +157,9 @@ templ syncProjectActions(p services.SyncProjectRow) {
 			hx-post={ syncProjectURL(p.Project, "delete") }
 			hx-target="#sync-projects"
 			hx-swap="innerHTML"
-			hx-confirm={ syncDeleteConfirm(p) }
+			hx-confirm={ syncDeleteConfirm(ctx, p) }
 			class="btn-danger"
-		>Delete</button>
+		>{ tr(ctx, "syncHealth.projects.table.delete") }</button>
 	}
 }
 
@@ -171,7 +172,7 @@ templ SyncIssuesPartial(resp services.SyncIssuesResponse) {
 		{ fmt.Sprintf("%d", len(resp.Issues)) }
 	</span>
 	if len(resp.Issues) == 0 {
-		<p class="no-issues">No sync issues detected.</p>
+		<p class="no-issues">{ tr(ctx, "syncHealth.issuesPanel.none") }</p>
 	} else {
 		<ul class="issues-list">
 			for _, issue := range resp.Issues {
@@ -180,15 +181,15 @@ templ SyncIssuesPartial(resp services.SyncIssuesResponse) {
 					<strong class="issue-code">{ issue.Code }</strong>
 					<span class="issue-message">{ issue.Message }</span>
 					if issue.Hint != nil {
-						<span class="issue-hint">Hint: { *issue.Hint }</span>
+						<span class="issue-hint">{ tr(ctx, "syncHealth.issuesPanel.hint", "hint", *issue.Hint) }</span>
 					}
 					if issue.Project != nil && *issue.Project != "" {
-						<span class="issue-project">Project: { *issue.Project }</span>
+						<span class="issue-project">{ tr(ctx, "syncHealth.issuesPanel.project", "project", *issue.Project) }</span>
 					}
 				</li>
 			}
 		</ul>
-		<p class="generated-at">Generated at: { resp.GeneratedAt }</p>
+		<p class="generated-at">{ tr(ctx, "syncHealth.issuesPanel.generatedAt", "time", resp.GeneratedAt) }</p>
 	}
 }
 
@@ -202,31 +203,31 @@ templ SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse, lang 
 	{{ slug := projectSlug(detail.Summary.Project) }}
 	<div class={ "sync-detail-" + slug } id={ "sync-detail-" + slug }>
 		<div class="detail-header">
-			<h2>Project: { detail.Summary.Project }</h2>
+			<h2>{ ui.T(lang, "syncHealth.syncProject.heading", "project", detail.Summary.Project) }</h2>
 		</div>
 		<div class="detail-cards">
 			<div class="detail-card">
-				<h4>Status</h4>
+				<h4>{ ui.T(lang, "syncHealth.syncProject.status") }</h4>
 				@syncStatusBadge(detail.Summary.Status)
 				if detail.Summary.Lifecycle != nil {
-					<p>Lifecycle: { *detail.Summary.Lifecycle }</p>
+					<p>{ ui.T(lang, "syncHealth.syncProject.lifecycleValue", "value", *detail.Summary.Lifecycle) }</p>
 				}
 				<p>
-					Enrolled:
+					{ ui.T(lang, "syncHealth.syncProject.enrolledLabel") }
 					if detail.Summary.Enrolled {
-						<span class="badge badge-enrolled">yes</span>
+						<span class="badge badge-enrolled">{ ui.T(lang, "common.yes") }</span>
 					} else {
-						<span class="badge badge-not-enrolled">no</span>
+						<span class="badge badge-not-enrolled">{ ui.T(lang, "common.no") }</span>
 					}
 				</p>
 				if detail.Summary.EnrolledAt != nil {
-					<p>Enrolled at: { *detail.Summary.EnrolledAt }</p>
+					<p>{ ui.T(lang, "syncHealth.syncProject.enrolledAtValue", "value", *detail.Summary.EnrolledAt) }</p>
 				}
 			</div>
 			<div class="detail-card">
-				<h4>Sequence</h4>
+				<h4>{ ui.T(lang, "syncHealth.syncProject.sequence") }</h4>
 				<dl>
-					<dt>Last Enqueued</dt>
+					<dt>{ ui.T(lang, "syncHealth.syncProject.lastEnqueued") }</dt>
 					<dd>
 						if detail.Summary.LastEnqueuedSeq != nil {
 							{ fmt.Sprintf("%d", *detail.Summary.LastEnqueuedSeq) }
@@ -234,7 +235,7 @@ templ SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse, lang 
 							—
 						}
 					</dd>
-					<dt>Last Acked</dt>
+					<dt>{ ui.T(lang, "syncHealth.syncProject.lastAcked") }</dt>
 					<dd>
 						if detail.Summary.LastAckedSeq != nil {
 							{ fmt.Sprintf("%d", *detail.Summary.LastAckedSeq) }
@@ -242,7 +243,7 @@ templ SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse, lang 
 							—
 						}
 					</dd>
-					<dt>Last Pulled</dt>
+					<dt>{ ui.T(lang, "syncHealth.syncProject.lastPulled") }</dt>
 					<dd>
 						if detail.Summary.LastPulledSeq != nil {
 							{ fmt.Sprintf("%d", *detail.Summary.LastPulledSeq) }
@@ -253,42 +254,42 @@ templ SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse, lang 
 				</dl>
 			</div>
 			<div class="detail-card">
-				<h4>Counts</h4>
+				<h4>{ ui.T(lang, "syncHealth.syncProject.counts") }</h4>
 				<dl>
-					<dt>Observations</dt><dd>{ fmt.Sprintf("%d", detail.Summary.ObsCount) }</dd>
-					<dt>Sessions</dt><dd>{ fmt.Sprintf("%d", detail.Summary.SessionsCount) }</dd>
-					<dt>Prompts</dt><dd>{ fmt.Sprintf("%d", detail.Summary.PromptsCount) }</dd>
-					<dt>Pending Mutations</dt><dd>{ fmt.Sprintf("%d", detail.Summary.PendingMutations) }</dd>
+					<dt>{ ui.T(lang, "syncHealth.syncProject.observations") }</dt><dd>{ fmt.Sprintf("%d", detail.Summary.ObsCount) }</dd>
+					<dt>{ ui.T(lang, "syncHealth.syncProject.sessions") }</dt><dd>{ fmt.Sprintf("%d", detail.Summary.SessionsCount) }</dd>
+					<dt>{ ui.T(lang, "syncHealth.syncProject.prompts") }</dt><dd>{ fmt.Sprintf("%d", detail.Summary.PromptsCount) }</dd>
+					<dt>{ ui.T(lang, "syncHealth.syncProject.pendingMutations") }</dt><dd>{ fmt.Sprintf("%d", detail.Summary.PendingMutations) }</dd>
 				</dl>
 			</div>
 		</div>
 		if detail.Summary.LastError != nil || detail.Summary.ReasonCode != nil {
 			<div class="error-card">
-				<h4>Last Error</h4>
+				<h4>{ ui.T(lang, "syncHealth.syncProject.lastError") }</h4>
 				if detail.Summary.LastError != nil {
 					<p>{ ui.T(lang, "maintenance.cloud.lastErrorGeneric") }</p>
 				}
 				if detail.Summary.ReasonCode != nil {
-					<p>Reason code: { *detail.Summary.ReasonCode }</p>
+					<p>{ ui.T(lang, "syncHealth.syncProject.reasonCode", "code", *detail.Summary.ReasonCode) }</p>
 				}
 				if detail.Summary.ConsecutiveFailures != nil {
-					<p>Consecutive failures: { fmt.Sprintf("%d", *detail.Summary.ConsecutiveFailures) }</p>
+					<p>{ ui.T(lang, "syncHealth.syncProject.consecutiveFailuresValue", "count", fmt.Sprintf("%d", *detail.Summary.ConsecutiveFailures)) }</p>
 				}
 			</div>
 		}
 		<div class="pending-mutations">
-			<h3>Pending Mutations <span class="badge">{ fmt.Sprintf("%d", len(detail.Pending)) }</span></h3>
+			<h3>{ ui.T(lang, "syncHealth.syncProject.pendingTitle") } <span class="badge">{ fmt.Sprintf("%d", len(detail.Pending)) }</span></h3>
 			if len(detail.Pending) == 0 {
-				@ui.EmptyState("No pending mutations.")
+				@ui.EmptyState(ui.T(lang, "syncHealth.syncProject.pendingEmpty"))
 			} else {
 				<table class="mutations-table">
 					<thead>
 						<tr>
-							<th>Seq</th>
-							<th>Entity</th>
-							<th>Op</th>
-							<th>Entity Key</th>
-							<th>Occurred At</th>
+							<th>{ ui.T(lang, "syncHealth.syncProject.mutations.seq") }</th>
+							<th>{ ui.T(lang, "syncHealth.syncProject.mutations.entity") }</th>
+							<th>{ ui.T(lang, "syncHealth.syncProject.mutations.op") }</th>
+							<th>{ ui.T(lang, "syncHealth.syncProject.mutations.entityKey") }</th>
+							<th>{ ui.T(lang, "syncHealth.syncProject.mutations.occurredAt") }</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -315,27 +316,27 @@ templ SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse, lang 
 		</div>
 		if detail.UpgradeState != nil {
 			<div class="upgrade-state-card">
-				<h4>Upgrade State</h4>
+				<h4>{ ui.T(lang, "syncHealth.syncProject.cloudUpgrade") }</h4>
 				<dl>
 					if detail.UpgradeState.Stage != nil {
-						<dt>Stage</dt><dd>{ *detail.UpgradeState.Stage }</dd>
+						<dt>{ ui.T(lang, "syncHealth.syncProject.stage") }</dt><dd>{ *detail.UpgradeState.Stage }</dd>
 					}
 					if detail.UpgradeState.RepairClass != nil {
-						<dt>Repair Class</dt><dd>{ *detail.UpgradeState.RepairClass }</dd>
+						<dt>{ ui.T(lang, "syncHealth.syncProject.repairClass") }</dt><dd>{ *detail.UpgradeState.RepairClass }</dd>
 					}
 					if detail.UpgradeState.UpdatedAt != nil {
-						<dt>Updated At</dt><dd>{ *detail.UpgradeState.UpdatedAt }</dd>
+						<dt>{ ui.T(lang, "syncHealth.syncProject.updated") }</dt><dd>{ *detail.UpgradeState.UpdatedAt }</dd>
 					}
 				</dl>
 				if detail.UpgradeState.Findings != nil {
 					<details>
-						<summary>Findings</summary>
+						<summary>{ ui.T(lang, "syncHealth.syncProject.findings") }</summary>
 						<pre>{ prettyJSON(detail.UpgradeState.Findings) }</pre>
 					</details>
 				}
 			</div>
 		}
-		<p><a href="/settings/maintenance#cloud">&larr; Back to Maintenance</a></p>
+		<p><a href="/settings/maintenance#cloud">&larr; { ui.T(lang, "syncHealth.syncProject.backToMaintenance") }</a></p>
 	</div>
 }
 
@@ -347,15 +348,15 @@ templ SyncProjectDetailPartial(detail *services.SyncProjectDetailResponse, lang 
 templ syncStatusBadge(status services.SyncStatus) {
 	switch status {
 		case services.SyncStatusHealthy:
-			<span class="badge badge-healthy">healthy</span>
+			<span class="badge badge-healthy">{ tr(ctx, "syncHealth.status.healthy") }</span>
 		case services.SyncStatusDegraded:
-			<span class="badge badge-degraded">degraded</span>
+			<span class="badge badge-degraded">{ tr(ctx, "syncHealth.status.degraded") }</span>
 		case services.SyncStatusBroken:
-			<span class="badge badge-broken">broken</span>
+			<span class="badge badge-broken">{ tr(ctx, "syncHealth.status.broken") }</span>
 		case services.SyncStatusNotEnrolled:
-			<span class="badge badge-not-enrolled">not_enrolled</span>
+			<span class="badge badge-not-enrolled">{ tr(ctx, "syncHealth.status.notEnrolled") }</span>
 		case services.SyncStatusIdle:
-			<span class="badge badge-idle">idle</span>
+			<span class="badge badge-idle">{ tr(ctx, "syncHealth.status.idle") }</span>
 		default:
 			<span class="badge">{ string(status) }</span>
 	}
@@ -389,9 +390,6 @@ func syncIssuesCountClass(issues []services.SyncIssue) string {
 // lossless: the project's own prompts and now-empty sessions are removed, but
 // sessions still holding observations that were reassigned to other projects
 // are moved to follow that content, not deleted.
-func syncDeleteConfirm(p services.SyncProjectRow) string {
-	return fmt.Sprintf(
-		"Delete project %q? Its prompts and empty sessions are removed; any session still holding observations moved to other projects is reassigned (not deleted), so nothing is lost. This cannot be undone.",
-		p.Project,
-	)
+func syncDeleteConfirm(ctx context.Context, p services.SyncProjectRow) string {
+	return tr(ctx, "syncHealth.projects.deleteConfirm", "project", p.Project)
 }
