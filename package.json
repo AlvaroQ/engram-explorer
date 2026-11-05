@@ -2,6 +2,7 @@
   "name": "engram-explorer",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Local web dashboard for exploring Engram memory database, sessions, prompts, and cloud sync diagnostics",
   "license": "MIT",
   "author": "Álvaro Quintana <alvaroquintanapalacios@gmail.com>",
@@ -32,11 +33,17 @@
     "build": "pnpm -F @engram-explorer/frontend build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\""
   },
   "devDependencies": {
-    "prettier": "^3.4.2"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "prettier": "^3.4.2",
+    "typescript-eslint": "^8.72.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
