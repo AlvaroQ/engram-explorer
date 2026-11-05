@@ -8,7 +8,8 @@
  * How it works:
  *   1. Scans all [data-island] divs in the document.
  *   2. Parses data-props as JSON (defaults to {} if absent/invalid).
- *   3. Dynamic-imports /islands/<name>.js.
+ *   3. Dynamic-imports /islands/<name>.js (names outside ^[a-z0-9-]+$ are
+ *      skipped, see islandModuleUrl).
  *   4. Calls the exported mount(el, props) function.
  *
  * Adding a new island:
@@ -17,6 +18,8 @@
  *   - Use @island("<name>", data) in your templ page.
  *   - No changes needed to this loader.
  */
+
+import { islandModuleUrl } from '../lib/island-url.ts';
 
 type IslandModule = {
   mount: (el: HTMLElement, props: unknown) => void;
@@ -41,7 +44,11 @@ async function mountIsland(el: HTMLElement): Promise<void> {
 
   // Dynamic import of the island bundle. Vite emits stable paths so the URL
   // is predictable at runtime without a manifest lookup.
-  const url = `/islands/${name}.js`;
+  const url = islandModuleUrl(name);
+  if (url === null) {
+    if (import.meta.env.DEV) console.warn(`[islands] Skipping island with invalid name "${name}".`);
+    return;
+  }
   let mod: IslandModule;
   try {
     mod = (await import(/* @vite-ignore */ url)) as IslandModule;
