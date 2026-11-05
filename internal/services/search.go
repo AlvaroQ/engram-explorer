@@ -1,5 +1,7 @@
 package services
 
+import "github.com/AlvaroQ/engram-explorer/internal/fts"
+
 // BM25 column weights. SQLite's bm25() returns lower-is-better scores, so the
 // searches ORDER BY the expression ascending, then id DESC as a stable
 // tie-break. The weights follow the FTS column order of each table:
@@ -21,3 +23,27 @@ const (
 	observationsBM25 = `bm25(observations_fts, 5.0, 1.0, 0.2, 0.2, 0.2, 3.0)`
 	promptsBM25      = `bm25(prompts_fts, 1.0, 0.2)`
 )
+
+// ftsQuery is the MATCH plan for one raw user query.
+type ftsQuery struct {
+	// all requires every term (the default, precise search). "" means the
+	// query has no usable term.
+	all string
+	// any requires at least one term. It is set only for 2+ terms, because a
+	// single term's OR query equals its AND query; "" means no fallback.
+	any string
+}
+
+// newFTSQuery sanitizes rawQ once and prepares both MATCH expressions.
+//
+// Fallback rule (shared by every search entry point): run all first; only
+// when it returns no rows on the first page and any is set, run any once. The
+// result then reports MatchedAny so callers can say the results match any word.
+func newFTSQuery(rawQ string) ftsQuery {
+	terms := fts.Terms(rawQ)
+	q := ftsQuery{all: fts.MatchAll(terms)}
+	if len(terms) >= 2 {
+		q.any = fts.MatchAny(terms)
+	}
+	return q
+}

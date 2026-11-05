@@ -76,6 +76,15 @@ type ObservationListParams struct {
 	Limit          int
 }
 
+// ObservationSearchResult is the result of ObservationsSearch. It serializes
+// as {"items": [...]} plus "matched_any": true only when the fallback ran.
+type ObservationSearchResult struct {
+	Items []ObservationWithSnippet `json:"items"`
+	// MatchedAny reports that Items come from the OR fallback: the AND query
+	// matched nothing, so rows matching any word are returned instead.
+	MatchedAny bool `json:"matched_any,omitempty"`
+}
+
 const obsCols = `
   o.id, o.session_id, o.type, o.title, o.content, o.tool_name,
   o.project, o.scope, o.topic_key, o.normalized_hash,
@@ -262,12 +271,23 @@ func ObservationsGetByID(db sqlite.Querier, id int64) (obs *ObservationRow, revi
 }
 
 // ObservationsSearch runs an FTS5 snippet search ranked by weighted BM25 (see
-// observationsBM25).
-func ObservationsSearch(db sqlite.Querier, rawQ string, limit int) ([]ObservationWithSnippet, error) {
-	sanitized := fts.SanitizeQuery(rawQ)
-	if sanitized == "" {
-		return []ObservationWithSnippet{}, nil
+// observationsBM25). When every term is required and nothing matches, it
+// retries once with any term and sets MatchedAny.
+func ObservationsSearch(db sqlite.Querier, rawQ string, limit int) (ObservationSearchResult, error) {
+	q := newFTSQuery(rawQ)
+	if q.all == "" {
+		return ObservationSearchResult{Items: []ObservationWithSnippet{}}, nil
 	}
+	items, err := searchObservations(db, q.all, limit)
+	if err != nil || len(items) > 0 || q.any == "" {
+		return ObservationSearchResult{Items: items}, err
+	}
+	items, err = searchObservations(db, q.any, limit)
+	return ObservationSearchResult{Items: items, MatchedAny: len(items) > 0}, err
+}
+
+// searchObservations runs one ranked FTS query for a MATCH expression.
+func searchObservations(db sqlite.Querier, match string, limit int) ([]ObservationWithSnippet, error) {
 	query := `SELECT ` + obsCols + `,
 		snippet(observations_fts, 0, '<mark>', '</mark>', '…', 16) AS snippet
 		FROM observations o
@@ -275,7 +295,7 @@ func ObservationsSearch(db sqlite.Querier, rawQ string, limit int) ([]Observatio
 		WHERE observations_fts MATCH ? AND o.deleted_at IS NULL
 		ORDER BY ` + observationsBM25 + `, o.id DESC
 		LIMIT ?`
-	return queryRows(db, query, []any{sanitized, limit}, scanObservationWithSnippet)
+	return queryRows(db, query, []any{match, limit}, scanObservationWithSnippet)
 }
 
 // ObservationsListTypes returns all distinct, non-empty observation types ordered

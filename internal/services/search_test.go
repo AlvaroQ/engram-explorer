@@ -124,9 +124,12 @@ func TestObservationsSearch_TitleOutranksContentOnly(t *testing.T) {
 		if err != nil {
 			t.Fatalf("search: %v", err)
 		}
-		got := searchIDs(res)
+		got := searchIDs(res.Items)
 		if len(got) != 2 || got[0] != titleID || got[1] != contentID {
 			t.Errorf("order: got %v, want [%d %d] (title match first)", got, titleID, contentID)
+		}
+		if res.MatchedAny {
+			t.Error("MatchedAny must be false for a single-term query")
 		}
 	})
 }
@@ -141,11 +144,73 @@ func TestObservationsSearch_TopicKeyOutranksContentOnly(t *testing.T) {
 		if err != nil {
 			t.Fatalf("search: %v", err)
 		}
-		got := searchIDs(res)
+		got := searchIDs(res.Items)
 		if len(got) != 2 || got[0] != topicID || got[1] != contentID {
 			t.Errorf("order: got %v, want [%d %d] (topic_key match first)", got, topicID, contentID)
 		}
 	})
+}
+
+func TestObservationsSearch_ORFallbackWhenANDFindsNothing(t *testing.T) {
+	forEachTokenizer(t, func(t *testing.T, db *sql.DB) {
+		a := addObs(t, db, "Auth bug in login", "token expired", "")
+		b := addObs(t, db, "Request timeout", "gateway slow", "")
+		addObs(t, db, "Unrelated", "nothing here", "")
+
+		res, err := services.ObservationsSearch(db, "auth timeout", 10)
+		if err != nil {
+			t.Fatalf("search: %v", err)
+		}
+		if !res.MatchedAny {
+			t.Error("MatchedAny: got false, want true after OR fallback")
+		}
+		got := searchIDs(res.Items)
+		if len(got) != 2 || !(contains(got, a) && contains(got, b)) {
+			t.Errorf("items: got %v, want ids %d and %d", got, a, b)
+		}
+	})
+}
+
+func TestObservationsSearch_NoFallbackWhenANDMatches(t *testing.T) {
+	forEachTokenizer(t, func(t *testing.T, db *sql.DB) {
+		a := addObs(t, db, "Auth bug in login", "token expired", "")
+		addObs(t, db, "Auth flow", "works", "")
+
+		res, err := services.ObservationsSearch(db, "auth bug", 10)
+		if err != nil {
+			t.Fatalf("search: %v", err)
+		}
+		if res.MatchedAny {
+			t.Error("MatchedAny: got true, want false when the AND query matches")
+		}
+		if got := searchIDs(res.Items); len(got) != 1 || got[0] != a {
+			t.Errorf("items: got %v, want [%d]", got, a)
+		}
+	})
+}
+
+func TestObservationsSearch_NoFallbackForSingleTerm(t *testing.T) {
+	db := newSearchDB(t, tokenizeDefault)
+	addObs(t, db, "Auth bug", "x", "")
+	res, err := services.ObservationsSearch(db, "missing", 10)
+	if err != nil {
+		t.Fatalf("search: %v", err)
+	}
+	if res.MatchedAny || len(res.Items) != 0 {
+		t.Errorf("got %d items, MatchedAny=%v; want 0 items and no fallback", len(res.Items), res.MatchedAny)
+	}
+}
+
+func TestObservationsSearch_EmptyQueryReturnsEmpty(t *testing.T) {
+	db := newSearchDB(t, tokenizeDefault)
+	addObs(t, db, "Auth bug", "x", "")
+	res, err := services.ObservationsSearch(db, `"" AND ()`, 10)
+	if err != nil {
+		t.Fatalf("search: %v", err)
+	}
+	if res.Items == nil || len(res.Items) != 0 || res.MatchedAny {
+		t.Errorf("got %#v, want non-nil empty items without fallback", res)
+	}
 }
 
 func TestPromptsSearch_ContentOutranksProject(t *testing.T) {
@@ -167,4 +232,13 @@ func TestPromptsSearch_ContentOutranksProject(t *testing.T) {
 			t.Errorf("order: got %v, want content match 101 first", ids)
 		}
 	})
+}
+
+func contains(ids []int64, id int64) bool {
+	for _, v := range ids {
+		if v == id {
+			return true
+		}
+	}
+	return false
 }

@@ -111,6 +111,13 @@ func handleObservationsSearch(c *Container) http.HandlerFunc {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
 		}
+		// The Engram searcher returns a services.ObservationSearchResult, which
+		// already serializes as {"items": [...]} plus "matched_any": true when
+		// the OR fallback ran.
+		if res, ok := items.(services.ObservationSearchResult); ok {
+			writeJSON(w, http.StatusOK, res)
+			return
+		}
 
 		type resp struct {
 			Items any `json:"items"`
