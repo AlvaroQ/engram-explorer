@@ -2308,3 +2308,136 @@ code {
   height: 100%;
   min-height: 0;
 }
+
+/* ---------- Overview collapsing hero (04-scroll-collapse) ----------
+   Driven by the overview-collapse island, which writes on .overview:
+   --ov-p (hero 0..1), --ov-k (KPI strip 0..1), --ov-s (px the hero slid
+   under the top) and the measured docking offsets. It sets
+   data-collapse-ready only on wide viewports once measured; without it the
+   page is a plain scrolling layout. */
+.overview {
+  --ov-p: 0;
+  --ov-k: 0;
+  --ov-s: 0px;
+}
+
+/* Focus and anchors land below the pinned bar + KPI strip. */
+.main-content:has(> .overview[data-collapse-ready]) {
+  scroll-padding-top: calc(72px + 44px + 16px);
+}
+
+.overview[data-collapse-ready] .ov-hero {
+  position: sticky;
+  top: calc(var(--ov-bar-h) - var(--ov-hero-h));
+}
+
+/* The layers follow the visible top while the band slides under it. */
+.overview[data-collapse-ready] .ov-hero-back,
+.overview[data-collapse-ready] .ov-hero-ui {
+  transform: translate3d(0, var(--ov-s), 0);
+}
+
+.overview[data-collapse-ready] .ov-hero-solid {
+  opacity: var(--ov-p);
+}
+
+/* Scale toward the top (to 0.55), lift into the bar's centre, fade to 0.35. */
+.overview[data-collapse-ready] .ov-hero-canvas {
+  transform-origin: 50% 0;
+  transform: translateY(calc(var(--ov-p) * var(--ov-cv-dy, -101.5px))) scale(calc(1 - 0.45 * var(--ov-p)));
+  opacity: calc(1 - 0.65 * var(--ov-p));
+}
+
+/* Bottom fade at rest; the bar divider appears as the band reaches 72px. */
+.overview[data-collapse-ready] .ov-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 1;
+  height: 90px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, hsl(var(--bg) / 0), hsl(var(--bg)) 96%);
+  opacity: calc(1 - var(--ov-p));
+}
+
+.overview[data-collapse-ready] .ov-hero::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 3;
+  height: 1px;
+  pointer-events: none;
+  background: hsl(var(--border));
+  opacity: clamp(0, calc(var(--ov-p) * 5 - 4), 1);
+}
+
+.overview[data-collapse-ready] [data-collapse-fade] {
+  opacity: clamp(0, calc(1 - var(--ov-p) * 2.5), 1);
+}
+
+/* Title stays, 20px -> 16px, centred on the bar; the search docks beside it. */
+.overview[data-collapse-ready] .ov-hero-head h1 {
+  transform-origin: 0 50%;
+  transform: translateY(calc(var(--ov-p) * var(--ov-h1-dy, 0px))) scale(calc(1 - 0.2 * var(--ov-p)));
+}
+
+.overview[data-collapse-ready] .ov-search {
+  transform: translate(calc(var(--ov-p) * var(--ov-sx, 0px)), calc(var(--ov-p) * var(--ov-sy, 0px)));
+}
+
+/* The KPI section is a fixed-height sticky slot; the cards shrink into the
+   44px strip pinned right under the bar. */
+.overview[data-collapse-ready] .ov-kpis {
+  position: sticky;
+  top: var(--ov-bar-h);
+  height: var(--ov-kpi-h, 116px);
+}
+
+.overview[data-collapse-ready] .ov-kpis::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -32px;
+  right: -32px;
+  height: var(--ov-strip-h);
+  background: hsl(var(--surface));
+  border-bottom: 1px solid hsl(var(--border));
+  box-shadow: var(--elevation-2);
+  opacity: var(--ov-k);
+  pointer-events: none;
+}
+
+.overview[data-collapse-ready] .ov-kpi {
+  height: calc(var(--ov-kpi-h, 116px) - (var(--ov-kpi-h, 116px) - (var(--ov-strip-h) - 8px)) * var(--ov-k));
+  margin-top: calc(4px * var(--ov-k));
+}
+
+.overview[data-collapse-ready] .ov-kpi-full {
+  opacity: clamp(0, calc(1 - var(--ov-k) * 2.2), 1);
+}
+
+.overview[data-collapse-ready] .ov-kpi-mini {
+  opacity: clamp(0, calc(var(--ov-k) * 2.2 - 1.2), 1);
+}
+
+/* Reduced motion: no collapse. The hero scrolls away and only the strip
+   pins, at the very top, switching state without a transition. */
+@media (prefers-reduced-motion: reduce) {
+  .overview[data-collapse-ready] .ov-hero {
+    position: relative;
+    top: auto;
+  }
+  .overview[data-collapse-ready] .ov-hero-back,
+  .overview[data-collapse-ready] .ov-hero-ui,
+  .overview[data-collapse-ready] .ov-hero-canvas,
+  .overview[data-collapse-ready] .ov-hero-head h1,
+  .overview[data-collapse-ready] .ov-search {
+    transform: none;
+  }
+  .overview[data-collapse-ready] .ov-kpis {
+    top: 0;
+  }
+  .main-content:has(> .overview[data-collapse-ready]) {
+    scroll-padding-top: calc(44px + 16px);
+  }
+}

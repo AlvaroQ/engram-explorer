@@ -10,6 +10,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Brain-first overview** — the overview opens on a full-width knowledge-graph hero with the page title, an
+  "Open Knowledge Graph" button and a memory search (`/observations?q=`). On wide screens the hero collapses into
+  a 72px bar as you scroll and the KPI cards fold into a 44px strip whose items stay links; under reduced motion
+  the hero scrolls away and only the strip pins. The graph pauses while collapsed or off-screen. KPIs: memories
+  saved (+ last 7 days), projects (most active in 30 days), AI conversations in the last 7 days per agent, and
+  agent spend this calendar month per agent (`~` marks a lower bound). Agent figures load after the page, so a
+  large transcript folder never delays it; with no agent connected the cards link to Settings → Data sources.
 - **Error toasts** — failed htmx requests (4xx/5xx and network errors) show a toast in an `aria-live` region
   (errors are `role="alert"`), with the server's message when the response carries one and a localized
   fallback otherwise. Toasts close by button or after 8 s, pause while hovered or focused, and skip motion under

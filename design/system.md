@@ -65,7 +65,10 @@ Every pair below is checked per theme by `internal/ui/tokens_contrast_test.go`: 
 | `--fail` | `--surface` | 4.5:1 | 6.62 | 6.49 | status pill (db error), form errors |
 | `--fail` | `--fail` at 0.18 over `--surface` | 4.5:1 | 4.84 | 4.84 | error badge, doctor banner |
 | `--info` | `--info` at 0.18 over `--surface` | 4.5:1 | 5.42 | 5.12 | doctor severity-low badge |
-| `--fg` | `--warn` at 0.10 over `--bg` | 4.5:1 | 10.62 | 9.45 | overview sync alert |
+| `--fg` | `--warn` at 0.15 over `--bg` | 4.5:1 | 9.37 | 8.77 | overview sync alert |
+| `--fg` | `--surface` at 0.72 over `--bg` | 4.5:1 | 12.51 | 11.44 | KPI values, search text on glass |
+| `--fg-muted` | `--surface` at 0.72 over `--bg` | 4.5:1 | 5.23 | 5.88 | KPI labels and captions on glass |
+| `--fg` | `--accent` at 0.22 over `--bg` | 4.5:1 | 8.95 | 7.82 | tonal CTA (hover layer) |
 | `--accent-fg` | `--accent` | 4.5:1 | 6.86 | 6.65 | primary button, active toggle button |
 | `--brand-cc` | `--surface` | 4.5:1 | 5.96 | 5.65 | Claude Code caption text |
 | `--brand-codex` | `--surface` | 4.5:1 | 7.60 | 6.51 | Codex caption text |
@@ -132,6 +135,10 @@ Hover and active states are built as `hsl(var(--fg) / var(--state-hover))` and `
 - **Sidebar**: brand block (title + uppercase label + settings gear 32px), grouped nav with group labels (dot or 18px brand icon), links 8px/12px padding, radius-sm, active = accent 14% layer + 3px accent bar on the left. Footer with status pill.
 - **Card**: `--surface`, 1px `--border`, radius-md, elevation-1, header with bottom border, body padding 16/20. React `.card` variant uses radius-lg and padding 20px.
 - **KPI tile**: card with label (11px uppercase) over value (24px/600) and an optional caption link.
+- **Overview hero** (02-brain-first + 04-scroll-collapse): 500px edge-to-edge band with the knowledge-graph preview (non-interactive; the tonal CTA opens `/brain`), title, and a `GET /observations?q=` search. On wide screens it is sticky at `top: calc(72px - 500px)` and collapses over scroll 37 → 465px (with the sync alert above it) into a 72px bar: the graph scales to 0.55 and fades to 0.35 over an opaque `--surface`, the title goes 20px → 16px and the search docks beside it. Reduced motion: the hero scrolls away.
+- **Glass**: `hsl(var(--surface) / 0.72)` with `backdrop-filter: blur(14px) saturate(1.15)` (0.95 without backdrop-filter support); used by the hero search and the KPI cards. Text on it is checked against `--surface` at 0.72 over `--bg`.
+- **Overview KPI cards**: four glass cards (Memories saved, Projects, AI conversations, Agent spend this month) overlapping the hero by 64px. Each also has a strip version (label + value, a link to the card's target) shown once the cards pin as a 44px strip under the bar; the hidden version is `inert` + `aria-hidden`. Agent splits are SVG rects in `--brand-cc` / `--brand-codex`.
+- **Tonal button** (`.btn-tonal`): `--fg` text on `--accent` at 0.14 (0.22 on hover) with an `--accent` 0.45 border; never white on accent.
 - **Buttons**: `.btn` 6px/14px, radius 6px, 13px/500, `--surface-2` with `--border`; `.btn-primary` accent background with `--accent-fg` text; `.btn-secondary` muted text; `.btn-sm` 4px/10px 12px. Focus ring: 2px accent outline, offset 2px.
 - **Badges**: 2px/7px, radius 4px, 11px/500; tinted variants use `color / 0.14` background and `color / 0.35` border for `ok`, `warn`, `fail`, `accent`; `neutral` uses `--surface-2` and `--border`.
 - **Inputs**: `--surface-2`, `--border`, radius 6px, 13px, padding 7/11, accent border on focus.

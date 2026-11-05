@@ -106,22 +106,22 @@ This is the centerpiece. **The Brain renders every observation in your database 
 
 14 views, all server-rendered, all in EN/ES + light/dark:
 
-| View                  | What you get                                                                                                              |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 🏠 **Overview**       | At-a-glance counts (projects, sessions, observations, prompts), activity-by-project chart, type distribution, sync health |
-| 🧠 **Brain**          | The 3D neural map above                                                                                                   |
-| 📁 **Projects**       | Per-project memory, activity, and sync state                                                                              |
-| 📄 **Project detail** | Full memory and session timeline for a single project                                                                     |
-| 💭 **Observations**   | Every memory, filterable, with full markdown + wikilinks                                                                  |
-| 🕑 **Sessions**       | Session timeline and per-session detail                                                                                   |
-| ✍️ **Prompts**        | Captured user prompts, searchable                                                                                         |
-| 🏷️ **Topics**         | Memory grouped by stable `topic_key`                                                                                      |
-| ☁️ **Sync Health**    | Read-only cloud sync diagnostics: enrolled / healthy / broken / pending mutations                                         |
-| 🔄 **Sync project**   | Per-project cloud sync detail and mutation queue (read-only)                                                              |
-| 🧹 **Orphans**        | Observations captured without a project — the capture bugs the CLI can't show                                             |
-| 🩺 **Diagnostics**    | Orphan projects, broken sync — a diagnostic engine across all views                                                       |
-| 🤖 **Agent sessions** | Claude Code and Codex sessions: usage overview, filterable list, transcript with tool calls                               |
-| ⚙️ **Settings**       | UI preferences, language, theme, Modules (provider toggles), Accounts (profiles)                                          |
+| View                  | What you get                                                                                                                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 🏠 **Overview**       | Knowledge-graph hero with memory search that collapses into a bar as you scroll; KPIs (memories, projects, AI conversations and agent spend this month per agent); activity, types and recent memories |
+| 🧠 **Brain**          | The 3D neural map above                                                                                                                                                                                |
+| 📁 **Projects**       | Per-project memory, activity, and sync state                                                                                                                                                           |
+| 📄 **Project detail** | Full memory and session timeline for a single project                                                                                                                                                  |
+| 💭 **Observations**   | Every memory, filterable, with full markdown + wikilinks                                                                                                                                               |
+| 🕑 **Sessions**       | Session timeline and per-session detail                                                                                                                                                                |
+| ✍️ **Prompts**        | Captured user prompts, searchable                                                                                                                                                                      |
+| 🏷️ **Topics**         | Memory grouped by stable `topic_key`                                                                                                                                                                   |
+| ☁️ **Sync Health**    | Read-only cloud sync diagnostics: enrolled / healthy / broken / pending mutations                                                                                                                      |
+| 🔄 **Sync project**   | Per-project cloud sync detail and mutation queue (read-only)                                                                                                                                           |
+| 🧹 **Orphans**        | Observations captured without a project — the capture bugs the CLI can't show                                                                                                                          |
+| 🩺 **Diagnostics**    | Orphan projects, broken sync — a diagnostic engine across all views                                                                                                                                    |
+| 🤖 **Agent sessions** | Claude Code and Codex sessions: usage overview, filterable list, transcript with tool calls                                                                                                            |
+| ⚙️ **Settings**       | UI preferences, language, theme, Modules (provider toggles), Accounts (profiles)                                                                                                                       |
 
 ---
 
