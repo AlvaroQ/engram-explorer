@@ -23,7 +23,12 @@ templ OverviewAgentKPIsFragment(k overviewAgentKPIs, lang string) {
 	</div>
 	<span id="kpi-conversations-mini-v" hx-swap-oob="innerHTML">{ fmt.Sprintf("%d", k.Conversations) }</span>
 	<div id="kpi-spend-body" hx-swap-oob="outerHTML">
-		<p class="kpi-value">{ ovFormatSpend(k.Spend) }</p>
+		<p
+			class="kpi-value"
+			if t := asCostTitle(k.Spend, nil, lang); t != "" {
+				title={ t }
+			}
+		>{ ovFormatSpend(k.Spend, lang) }</p>
 		@overviewAgentSplit(k.SpendByAgent, lang, true)
 		<p class="kpi-cap ov-agent-cap">
 			@overviewAgentCaption(k.SpendByAgent, lang, true)
@@ -32,7 +37,7 @@ templ OverviewAgentKPIsFragment(k overviewAgentKPIs, lang string) {
 		</p>
 		@overviewAgentSourceNote(k, lang)
 	</div>
-	<span id="kpi-spend-mini-v" hx-swap-oob="innerHTML">{ ovFormatSpend(k.Spend) }</span>
+	<span id="kpi-spend-mini-v" hx-swap-oob="innerHTML">{ ovFormatSpend(k.Spend, lang) }</span>
 }
 
 // overviewAgentSourceNote flags totals that miss an unreadable source.

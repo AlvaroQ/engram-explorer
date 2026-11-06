@@ -29,6 +29,15 @@ type AgentUsageLabels struct {
 	CostEstimateNote string `json:"costEstimateNote"`
 	TokenNote        string `json:"tokenNote"`
 	SourceError      string `json:"sourceError"` // "{{source}}" / "{{agent}}" placeholders
+	// Unpriced usage (every model without a known price) and the token
+	// fallback of the cost charts.
+	NotPriced           string `json:"notPriced"`
+	NotPricedHint       string `json:"notPricedHint"`
+	NotPricedHintModels string `json:"notPricedHintModels"` // "{{models}}" placeholder
+	TokensByProject     string `json:"tokensByProject"`
+	TokensByAgent       string `json:"tokensByAgent"`
+	TokensFallbackNote  string `json:"tokensFallbackNote"`
+	AgentSummary        string `json:"agentSummary"` // "{{sessions}}" / "{{tokens}}" / "{{cost}}" placeholders
 }
 
 // agentUsageChartsProps builds the island props localized for lang, scoped
@@ -41,8 +50,13 @@ func agentUsageChartsProps(lang, agent string) AgentUsageChartsProps {
 			OverTime: k("overTime"), TopSessions: k("topSessions"), Sessions: k("sessions"), Tokens: k("tokens"),
 			Cost: k("cost"), Loading: k("loading"), Empty: k("empty"), Error: k("error"), Others: k("others"),
 			Untitled: k("untitled"), CostEstimateNote: k("costEstimateNote"),
-			TokenNote:   T(lang, "agentSessions.tokenNote"),
-			SourceError: T(lang, "agentSessions.sourceError"),
+			TokenNote:           T(lang, "agentSessions.tokenNote"),
+			SourceError:         T(lang, "agentSessions.sourceError"),
+			NotPriced:           T(lang, "agentSessions.cost.notPriced"),
+			NotPricedHint:       T(lang, "agentSessions.cost.notPricedHint"),
+			NotPricedHintModels: T(lang, "agentSessions.cost.notPricedHintModels"),
+			TokensByProject:     k("tokensByProject"), TokensByAgent: k("tokensByAgent"),
+			TokensFallbackNote: k("tokensFallbackNote"), AgentSummary: k("agentSummary"),
 		},
 		Agents: map[string]string{
 			"claude-code": asAgentLabel(lang, "claude-code"),

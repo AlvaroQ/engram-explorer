@@ -253,8 +253,10 @@ All three are **Tier-1**: if not found at their default paths the UI keeps them 
 Token counts use **disjoint buckets**: uncached input, cache read, cache write and output add up to the total;
 reasoning tokens are part of output and shown apart. Codex reports cached tokens inside `input_tokens`, so the
 explorer subtracts them; usage is deduplicated by `response_id` (or by the cumulative `token_count` totals of
-older files), and a resumed or forked session never counts replayed usage twice. Costs use public list prices;
-a model without a published price counts as unknown (cost `0`, shown with `~`). The Codex module only reads the
+older files), and a resumed or forked session never counts replayed usage twice. Cost is estimated only for models
+with a known public list price; usage on other models is never guessed. When every model of a session, agent or
+scope is unpriced its cost reads "Not priced" (the tooltip names the models) and the usage charts plot tokens
+instead of cost; a partly priced total keeps a `~` (lower bound). The Codex module only reads the
 rollout files under `<CODEX_HOME>/sessions`: never your Codex configuration, credentials or history, and it
 never runs the `codex` CLI. Change its home in Settings → Modules (Codex row → path → Apply); `CODEX_HOME`, when
 set, still wins at startup. The old Claude Code URLs (`/cc-overview`, `/cc-sessions…`) redirect to these pages,

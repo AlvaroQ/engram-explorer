@@ -108,9 +108,20 @@ func asTruncate(s string, maxRunes int) string {
 	return string(r[:maxRunes]) + "… [truncated]"
 }
 
+// asUnpriced reports a usage whose models all lack a known price: tokens
+// were spent but no cost could be estimated (shown as "Not priced", never
+// as a misleading $0).
+func asUnpriced(u agentsessions.Usage) bool {
+	return u.CostUSD <= 0 && u.UnknownModel
+}
+
 // asFormatCost renders the USD cost; a trailing "~" marks a lower bound
-// (some tokens were on an unpriced model).
-func asFormatCost(u agentsessions.Usage) string {
+// (some tokens were on an unpriced model) and a fully unpriced usage reads
+// "Not priced" (localized).
+func asFormatCost(u agentsessions.Usage, lang string) string {
+	if asUnpriced(u) {
+		return T(lang, "agentSessions.cost.notPriced")
+	}
 	if u.CostUSD <= 0 {
 		return "—"
 	}
@@ -122,6 +133,18 @@ func asFormatCost(u agentsessions.Usage) string {
 		s += "~"
 	}
 	return s
+}
+
+// asCostTitle is the tooltip of an unpriced cost, naming models when known;
+// "" for any other usage (no tooltip).
+func asCostTitle(u agentsessions.Usage, models []string, lang string) string {
+	if !asUnpriced(u) {
+		return ""
+	}
+	if len(models) == 0 {
+		return T(lang, "agentSessions.cost.notPricedHint")
+	}
+	return T(lang, "agentSessions.cost.notPricedHintModels", "models", strings.Join(models, ", "))
 }
 
 // asUsageBreakdown is the token tooltip: the disjoint buckets, then

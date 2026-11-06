@@ -82,6 +82,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Agent cost on unpriced models** — usage on models without a known price (for example newer Codex models)
+  read as `$0.00`, and the "Cost by project" and "Usage over time" charts drew no bars. Such costs now read
+  "Not priced" (with a tooltip naming the models) on the agent sessions overview, list, detail and the overview
+  spend card; a scope with no priced cost plots tokens per project, agent and day with a short note, and the
+  per-agent summary is labelled ("586 sessions · 8,060.45M tokens · $6,613.07", localized number formats).
 - **Disabled-module page** — opening a disabled module's page directly shows the full app layout (sidebar,
   account switcher) with the notice and status `503`, instead of an unstyled fragment.
 - **Module toggles and profile switches during requests** — a module disabled, re-opened or switched while

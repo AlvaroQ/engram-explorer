@@ -952,6 +952,11 @@
     },
     "tokenNote": "Los tokens se cuentan en grupos disjuntos: entrada sin caché, lectura de caché, escritura de caché y salida. El razonamiento forma parte de la salida.",
     "sourceError": "No se pudo leer {{source}} ({{agent}}); sus sesiones no se muestran.",
+    "cost": {
+      "notPriced": "Sin precio",
+      "notPricedHint": "No se conoce el precio de estos modelos.",
+      "notPricedHintModels": "No se conoce el precio de estos modelos ({{models}})."
+    },
     "list": {
       "title": "Sesiones",
       "count": "{{count}} de {{total}}",
@@ -1055,7 +1060,11 @@
       "error": "No se pudieron cargar las estadísticas de uso.",
       "others": "Otros",
       "untitled": "(sin título)",
-      "costEstimateNote": "El coste excluye turnos con modelos sin precio: el gasto real puede ser mayor."
+      "costEstimateNote": "El coste excluye turnos con modelos sin precio: el gasto real puede ser mayor.",
+      "tokensByProject": "Tokens por proyecto",
+      "tokensByAgent": "Tokens por agente",
+      "tokensFallbackNote": "No se conocen precios para estos modelos: se muestran tokens.",
+      "agentSummary": "{{sessions}} sesiones · {{tokens}} tokens · {{cost}}"
     }
   },
   "placeholder": {

@@ -168,3 +168,36 @@ func TestOverviewAgentsPartial_CollectFailed(t *testing.T) {
 		}
 	}
 }
+
+// TestOverviewAgentsPartial_UnpricedAgent: an agent whose sessions all ran on
+// unpriced models reads "Not priced" in the spend card (never "$0.00"), and
+// the total keeps the "~" lower bound of the priced agent.
+func TestOverviewAgentsPartial_UnpricedAgent(t *testing.T) {
+	sources := []agentsessions.Source{
+		ovSource{agent: "claude-code", sessions: []agentsessions.Session{ovNow(1, 2.5, false)}},
+		ovSource{agent: "codex", sessions: []agentsessions.Session{ovNow(1, 0, true)}},
+	}
+	d := ui.Deps{RoDB: openProjectsDB(t), AgentSessions: sources}
+	frag := ovGet(t, d, "/partials/overview-agents", "en")
+	for _, want := range []string{
+		`class="kv ov-agent-codex">Codex Not priced</span>`,
+		`<p class="kpi-value">$2.50~</p>`,
+	} {
+		if !strings.Contains(frag, want) {
+			t.Errorf("agent fragment lacks %s\n%s", want, frag)
+		}
+	}
+	if strings.Contains(frag, "$0.00") {
+		t.Error("an unpriced agent must not read $0.00")
+	}
+	codexOnly := ui.Deps{RoDB: openProjectsDB(t), AgentSessions: []agentsessions.Source{
+		ovSource{agent: "codex", sessions: []agentsessions.Session{ovNow(1, 0, true)}},
+	}}
+	es := ovGet(t, codexOnly, "/partials/overview-agents", "es")
+	if !strings.Contains(es, `<p class="kpi-value" title="No se conoce el precio de estos modelos.">Sin precio</p>`) {
+		t.Errorf("codex-only spend must read Sin precio with a tooltip\n%s", es)
+	}
+	if !strings.Contains(es, `<span id="kpi-spend-mini-v" hx-swap-oob="innerHTML">Sin precio</span>`) {
+		t.Errorf("codex-only strip spend must read Sin precio\n%s", es)
+	}
+}

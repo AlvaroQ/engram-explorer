@@ -368,3 +368,55 @@ func TestAgentSessionsList_AgentFilterKeepsOverviewTab(t *testing.T) {
 		t.Error("?agent=codex list: want the Overview tab scoped to codex and only Codex rows")
 	}
 }
+
+// TestAgentSessionsList_UnpricedCost: a session whose models have no known
+// price shows a localized "Not priced" (with a tooltip naming the models)
+// instead of a cost; a priced session keeps its amount.
+func TestAgentSessionsList_UnpricedCost(t *testing.T) {
+	sources := []agentsessions.Source{
+		fakeSource{id: "codex", agent: "codex", sessions: []agentsessions.Session{{
+			Key: "2026/01/01/rollout-u.jsonl", ID: "u1", Project: "proj",
+			Models: []string{"gpt-5.6-sol"}, FirstPrompt: "unpriced run",
+			StartedAt: day("2026-01-01T10:00:00Z"), EndedAt: day("2026-01-01T10:30:00Z"),
+			Usage: agentsessions.Usage{Input: 600, Output: 200, UnknownModel: true},
+		}}},
+		agentSources()[0],
+	}
+	mux := agentMux(t, sources)
+	body := get(mux, "/agent-sessions/list", false).Body.String()
+	for _, want := range []string{
+		`title="No price is known for these models (gpt-5.6-sol)."`,
+		">Not priced</td>",
+		">$2.00</td>",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("list lacks %q", want)
+		}
+	}
+	if strings.Contains(body, ">—</td>") && !strings.Contains(body, "Not priced") {
+		t.Error("the unpriced session must not read as an empty cost")
+	}
+	req := httptest.NewRequest(http.MethodGet, "/agent-sessions/list", nil)
+	req.AddCookie(&http.Cookie{Name: "lang", Value: "es"})
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if !strings.Contains(w.Body.String(), ">Sin precio</td>") {
+		t.Error("es list must read Sin precio for the unpriced session")
+	}
+}
+
+// TestAgentSessionsOverview_UnpricedLabels: the charts island receives the
+// localized "Not priced" text and the token-fallback labels.
+func TestAgentSessionsOverview_UnpricedLabels(t *testing.T) {
+	mux := agentMux(t, agentSources())
+	req := httptest.NewRequest(http.MethodGet, "/agent-sessions?agent=codex", nil)
+	req.AddCookie(&http.Cookie{Name: "lang", Value: "es"})
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	body := w.Body.String()
+	for _, want := range []string{"Sin precio", "Tokens por proyecto", "Tokens por agente", "{{sessions}} sesiones", "se muestran tokens"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("es overview island props lack %q", want)
+		}
+	}
+}
