@@ -254,7 +254,13 @@ Token counts use **disjoint buckets**: uncached input, cache read, cache write a
 reasoning tokens are part of output and shown apart. Codex reports cached tokens inside `input_tokens`, so the
 explorer subtracts them; usage is deduplicated by `response_id` (or by the cumulative `token_count` totals of
 older files), and a resumed or forked session never counts replayed usage twice. Cost is estimated only for models
-with a known public list price; usage on other models is never guessed. When every model of a session, agent or
+with a known public list price; usage on other models is never guessed. Codex prices come from the
+[OpenAI pricing page](https://developers.openai.com/api/docs/pricing) (standard tier, checked 2026-11-06) for
+`gpt-5`, `gpt-5-codex`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5.1`, `gpt-5.2`, `gpt-5.3-codex`, `gpt-5.4`,
+`gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.5` and `gpt-5.6-sol` / `-terra` / `-luna` (dated snapshots such as
+`gpt-5.6-sol-2026-07-09` included); `gpt-5.6-sol` uses its promotional rate, valid until 2026-11-30. A request
+above 272K input tokens is billed at the long-context rate where one is published (`gpt-5.4`, `gpt-5.5`,
+`gpt-5.6-*`); other models keep the standard rate there, a lower bound. When every model of a session, agent or
 scope is unpriced its cost reads "Not priced" (the tooltip names the models) and the usage charts plot tokens
 instead of cost; a partly priced total keeps a `~` (lower bound). The Codex module only reads the
 rollout files under `<CODEX_HOME>/sessions`: never your Codex configuration, credentials or history, and it
