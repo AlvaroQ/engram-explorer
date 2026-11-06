@@ -31,11 +31,11 @@ func TestOverviewCollapse_StylesGeometry(t *testing.T) {
 	}
 	css := strings.Join(strings.Fields(string(raw)), " ")
 	for _, want := range []string{
-		"--ov-hero-h: 500px;", "--ov-bar-h: 72px;", "--ov-strip-h: 44px;",
-		// sticky hero at top: calc(72px - 500px)
+		"--ov-hero-h: 420px;", "--ov-bar-h: 72px;", "--ov-strip-h: 44px;",
+		// sticky hero at top: calc(72px - 420px)
 		".overview[data-collapse-ready] .ov-hero { position: sticky; top: calc(var(--ov-bar-h) - var(--ov-hero-h));",
 		// canvas scale 0.55 and opacity 0.35 at --ov-p = 1, behind the solid bar
-		"scale(calc(1 - 0.45 * var(--ov-p)))", "opacity: calc(1 - 0.65 * var(--ov-p));",
+		"translateY(calc(var(--ov-p) * var(--ov-cv-dy, -79.5px))) scale(calc(1 - 0.45 * var(--ov-p)))", "opacity: calc(1 - 0.65 * var(--ov-p));",
 		".overview[data-collapse-ready] .ov-hero-solid { opacity: var(--ov-p);",
 		// title 20px -> 16px, KPI strip pinned under the bar
 		"scale(calc(1 - 0.2 * var(--ov-p)))",
