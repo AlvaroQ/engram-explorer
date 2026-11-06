@@ -91,6 +91,7 @@ var prices = map[string]Price{
 	"gpt-5.4-nano":  {InputPerMTok: 0.20, CachedInputPerMTok: 0.02, OutputPerMTok: 1.25},
 	"gpt-5.5":       {InputPerMTok: 5, CachedInputPerMTok: 0.50, OutputPerMTok: 30},
 	"gpt-5.6-sol":   {InputPerMTok: 4, CachedInputPerMTok: 0.40, OutputPerMTok: 20},
+	"gpt-6-astra":   {InputPerMTok: 10, CachedInputPerMTok: 1, OutputPerMTok: 50},
 	"gpt-5.6-terra": {InputPerMTok: 2, CachedInputPerMTok: 0.20, OutputPerMTok: 12},
 	"gpt-5.6-luna":  {InputPerMTok: 0.20, CachedInputPerMTok: 0.02, OutputPerMTok: 1.20},
 }
@@ -106,6 +107,7 @@ var longContextPrices = map[string]Price{
 	"gpt-5.4":       {InputPerMTok: 5, CachedInputPerMTok: 0.50, OutputPerMTok: 22.50},
 	"gpt-5.5":       {InputPerMTok: 10, CachedInputPerMTok: 1, OutputPerMTok: 45},
 	"gpt-5.6-sol":   {InputPerMTok: 8, CachedInputPerMTok: 0.80, OutputPerMTok: 30},
+	"gpt-6-astra":   {InputPerMTok: 20, CachedInputPerMTok: 2, OutputPerMTok: 75},
 	"gpt-5.6-terra": {InputPerMTok: 4, CachedInputPerMTok: 0.40, OutputPerMTok: 18},
 	"gpt-5.6-luna":  {InputPerMTok: 0.40, CachedInputPerMTok: 0.04, OutputPerMTok: 1.80},
 }
