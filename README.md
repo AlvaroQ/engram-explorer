@@ -257,7 +257,7 @@ older files), and a resumed or forked session never counts replayed usage twice.
 with a known public list price; usage on other models is never guessed. Codex prices come from the
 [OpenAI pricing page](https://developers.openai.com/api/docs/pricing) (standard tier, checked 2026-11-06) for
 `gpt-5`, `gpt-5-codex`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5.1`, `gpt-5.2`, `gpt-5.3-codex`, `gpt-5.4`,
-`gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.5` and `gpt-5.6-sol` / `-terra` / `-luna` (dated snapshots such as
+`gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.5`, `gpt-5.6-sol` / `-terra` / `-luna` and `gpt-6-astra` (dated snapshots such as
 `gpt-5.6-sol-2026-07-09` included); `gpt-5.6-sol` uses its promotional rate, valid until 2026-11-30. A request
 above 272K input tokens is billed at the long-context rate where one is published (`gpt-5.4`, `gpt-5.5`,
 `gpt-5.6-*`); other models keep the standard rate there, a lower bound. When every model of a session, agent or

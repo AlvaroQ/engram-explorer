@@ -85,7 +85,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Agent cost on unpriced models** — usage on models without a known price (for example newer Codex models)
   read as `$0.00`, and the "Cost by project" and "Usage over time" charts drew no bars. Such costs now read
   "Not priced" on the agent sessions overview, list, detail and the overview spend card, with a visible note
-  naming the models ("No known price for gpt-6-astra, codex-auto-review"; a tooltip in list rows). A partially
+  naming the models ("No known price for codex-auto-review"; a tooltip in list rows). A partially
   priced total notes that it excludes unpriced turns, and a scope with no priced cost plots tokens per
   project, agent and day with a short note. The overview drops the per-agent summary card, which repeated
   the sessions, tokens and cost cards.
@@ -93,7 +93,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   toggle) swapped its accent fill for a dark surface and left dark text on it; it now keeps the accent fill with
   a light state layer and readable text in both themes.
 - **Codex cost for newer models** — Codex sessions on `gpt-5.1`, `gpt-5.2`, `gpt-5.3-codex`, `gpt-5.4`
-  (`-mini`, `-nano`), `gpt-5.5` and `gpt-5.6-sol` / `-terra` / `-luna` now have a cost, from the OpenAI pricing
+  (`-mini`, `-nano`), `gpt-5.5`, `gpt-5.6-sol` / `-terra` / `-luna` and `gpt-6-astra` now have a cost, from the OpenAI pricing
   page (standard tier, checked 2026-11-06; `gpt-5.6-sol` at its promotional rate until 2026-11-30). Requests
   above 272K input tokens use the long-context rate where published. Other variants stay "Not priced".
 - **Disabled-module page** — opening a disabled module's page directly shows the full app layout (sidebar,

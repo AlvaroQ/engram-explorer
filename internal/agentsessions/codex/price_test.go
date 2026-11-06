@@ -44,7 +44,7 @@ func TestLookupPrice(t *testing.T) {
 		{"gpt-5.6", codex.Price{}, false},
 		{"gpt-5.6-sol-pro", codex.Price{}, false},
 		{"gpt-5.1-codex-max", codex.Price{}, false},
-		{"gpt-6-astra", codex.Price{}, false},
+		{"gpt-6-astra", codex.Price{InputPerMTok: 10, CachedInputPerMTok: 1, OutputPerMTok: 50}, true},
 		{"codex-auto-review", codex.Price{}, false},
 		{"gpt-5-codex-mini", codex.Price{}, false},
 		{"gpt-5-pro", codex.Price{}, false},
@@ -98,6 +98,7 @@ func TestCodexCostShortContext(t *testing.T) {
 		{"gpt-5.6-terra", cost(2, 0.20, 12)},
 		{"gpt-5.6-luna", cost(0.20, 0.02, 1.20)},
 		{"gpt-5.5", cost(5, 0.50, 30)},
+		{"gpt-6-astra", cost(10, 1, 50)},
 		{"gpt-5.4", cost(2.50, 0.25, 15)},
 		{"gpt-5.4-mini", cost(0.75, 0.075, 4.50)},
 		{"gpt-5.4-nano", cost(0.20, 0.02, 1.25)},
@@ -126,6 +127,7 @@ func TestCodexCostLongContext(t *testing.T) {
 		{"gpt-5.6-terra", short(2, 0.20, 12) + long(4, 0.40, 18)},
 		{"gpt-5.6-luna", short(0.20, 0.02, 1.20) + long(0.40, 0.04, 1.80)},
 		{"gpt-5.5", short(5, 0.50, 30) + long(10, 1, 45)},
+		{"gpt-6-astra", short(10, 1, 50) + long(20, 2, 75)},
 		{"gpt-5.4", short(2.50, 0.25, 15) + long(5, 0.50, 22.50)},
 		// No published long-context rate in the table: short-context rate (lower bound).
 		{"gpt-5.1", short(1.25, 0.125, 10) + long(1.25, 0.125, 10)},
@@ -146,7 +148,7 @@ func TestCodexCostLongContext(t *testing.T) {
 }
 
 func TestCodexCostUnknownVariantsStayUnpriced(t *testing.T) {
-	for _, m := range []string{"gpt-5.6-cyber", "gpt-5.7-sol", "gpt-6-astra", "codex-auto-review"} {
+	for _, m := range []string{"gpt-5.6-cyber", "gpt-5.7-sol", "gpt-6.1-astra", "codex-auto-review"} {
 		if got, unknown := listOne(t, m, [3]int64{100_000, 60_000, 10_000}); !unknown || got != 0 {
 			t.Errorf("%s: cost = %v unknown=%v, want 0 and unknown", m, got, unknown)
 		}
