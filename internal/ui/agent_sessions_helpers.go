@@ -147,6 +147,26 @@ func asCostTitle(u agentsessions.Usage, models []string, lang string) string {
 	return T(lang, "agentSessions.cost.notPricedHintModels", "models", strings.Join(models, ", "))
 }
 
+// asCostCaptionModels is how many model ids a visible caption names before
+// folding the rest into "+N".
+const asCostCaptionModels = 3
+
+// asCostCaption is the visible explanation under an unpriced cost, naming up
+// to three models then "+N"; "" for any other usage.
+func asCostCaption(u agentsessions.Usage, models []string, lang string) string {
+	if !asUnpriced(u) {
+		return ""
+	}
+	if len(models) == 0 {
+		return T(lang, "agentSessions.cost.notPricedHint")
+	}
+	list := strings.Join(models[:min(len(models), asCostCaptionModels)], ", ")
+	if extra := len(models) - asCostCaptionModels; extra > 0 {
+		list += fmt.Sprintf(" +%d", extra)
+	}
+	return T(lang, "agentSessions.cost.notPricedCaption", "models", list)
+}
+
 // asUsageBreakdown is the token tooltip: the disjoint buckets, then
 // reasoning as part of output.
 func asUsageBreakdown(u agentsessions.Usage, lang string) string {

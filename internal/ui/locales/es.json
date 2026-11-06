@@ -874,7 +874,8 @@
     "cost": {
       "notPriced": "Sin precio",
       "notPricedHint": "No se conoce el precio de estos modelos.",
-      "notPricedHintModels": "No se conoce el precio de estos modelos ({{models}})."
+      "notPricedHintModels": "No se conoce el precio de estos modelos ({{models}}).",
+      "notPricedCaption": "Sin precio conocido para {{models}}"
     },
     "list": {
       "title": "Sesiones",
@@ -982,8 +983,7 @@
       "costEstimateNote": "El coste excluye turnos con modelos sin precio: el gasto real puede ser mayor.",
       "tokensByProject": "Tokens por proyecto",
       "tokensByAgent": "Tokens por agente",
-      "tokensFallbackNote": "No se conocen precios para estos modelos: se muestran tokens.",
-      "agentSummary": "{{sessions}} sesiones · {{tokens}} tokens · {{cost}}"
+      "tokensFallbackNote": "No se conocen precios para estos modelos: se muestran tokens."
     }
   },
   "placeholder": {

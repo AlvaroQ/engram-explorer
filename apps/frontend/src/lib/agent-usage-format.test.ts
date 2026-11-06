@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentDayStat, AgentGroupStat, AgentUsageDTO } from './api.ts';
 import {
-  agentSummaryText,
   costText,
   formatCost,
   formatTokens,
   isUnpriced,
+  notPricedCaption,
   notPricedHint,
   overTimeRows,
   projectBars,
@@ -97,18 +97,28 @@ describe('unpricedModels and notPricedHint', () => {
   });
 });
 
-describe('agentSummaryText', () => {
-  it('labels sessions, tokens and cost (en)', () => {
-    const tpl = '{{sessions}} sessions · {{tokens}} tokens · {{cost}}';
+describe('notPricedCaption', () => {
+  it('names the unpriced models in a visible caption (en/es)', () => {
     expect(
-      agentSummaryText(tpl, 1586, usage(8_060_450_000, 6613.07, false), 'en', 'Not priced'),
-    ).toBe('1,586 sessions · 8,060.45M tokens · $6,613.07');
+      notPricedCaption('No known price for {{models}}', 'fallback', [
+        'gpt-5.6-sol',
+        'gpt-5.6-terra',
+      ]),
+    ).toBe('No known price for gpt-5.6-sol, gpt-5.6-terra');
+    expect(
+      notPricedCaption('Sin precio conocido para {{models}}', 'fallback', ['gpt-5.6-sol']),
+    ).toBe('Sin precio conocido para gpt-5.6-sol');
   });
-  it('labels sessions, tokens and cost (es), "Sin precio" when unpriced', () => {
-    const tpl = '{{sessions}} sesiones · {{tokens}} tokens · {{cost}}';
-    expect(agentSummaryText(tpl, 95, usage(312_400_000, 0, true), 'es', 'Sin precio')).toBe(
-      '95 sesiones · 312,40M tokens · Sin precio',
+  it('shows three names then "+N" for the rest', () => {
+    expect(notPricedCaption('No known price for {{models}}', 'f', ['a', 'b', 'c'])).toBe(
+      'No known price for a, b, c',
     );
+    expect(notPricedCaption('No known price for {{models}}', 'f', ['a', 'b', 'c', 'd', 'e'])).toBe(
+      'No known price for a, b, c +2',
+    );
+  });
+  it('falls back when no model is known', () => {
+    expect(notPricedCaption('No known price for {{models}}', 'fallback', [])).toBe('fallback');
   });
 });
 

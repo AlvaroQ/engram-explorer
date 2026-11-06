@@ -29,6 +29,9 @@ templ OverviewAgentKPIsFragment(k overviewAgentKPIs, lang string) {
 				title={ t }
 			}
 		>{ ovFormatSpend(k.Spend, lang) }</p>
+		if c := asCostCaption(k.Spend, nil, lang); c != "" {
+			<p class="kpi-cap">{ c }</p>
+		}
 		@overviewAgentSplit(k.SpendByAgent, lang, true)
 		<p class="kpi-cap ov-agent-cap">
 			@overviewAgentCaption(k.SpendByAgent, lang, true)

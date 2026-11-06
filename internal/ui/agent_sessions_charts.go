@@ -37,7 +37,7 @@ type AgentUsageLabels struct {
 	TokensByProject     string `json:"tokensByProject"`
 	TokensByAgent       string `json:"tokensByAgent"`
 	TokensFallbackNote  string `json:"tokensFallbackNote"`
-	AgentSummary        string `json:"agentSummary"` // "{{sessions}}" / "{{tokens}}" / "{{cost}}" placeholders
+	NotPricedCaption    string `json:"notPricedCaption"` // "{{models}}" placeholder
 }
 
 // agentUsageChartsProps builds the island props localized for lang, scoped
@@ -56,7 +56,8 @@ func agentUsageChartsProps(lang, agent string) AgentUsageChartsProps {
 			NotPricedHint:       T(lang, "agentSessions.cost.notPricedHint"),
 			NotPricedHintModels: T(lang, "agentSessions.cost.notPricedHintModels"),
 			TokensByProject:     k("tokensByProject"), TokensByAgent: k("tokensByAgent"),
-			TokensFallbackNote: k("tokensFallbackNote"), AgentSummary: k("agentSummary"),
+			TokensFallbackNote: k("tokensFallbackNote"),
+			NotPricedCaption:   T(lang, "agentSessions.cost.notPricedCaption"),
 		},
 		Agents: map[string]string{
 			"claude-code": asAgentLabel(lang, "claude-code"),
