@@ -1078,13 +1078,25 @@ code {
   border-color: hsl(var(--accent));
 }
 
-.btn-primary:hover {
-  opacity: 0.85;
-}
-
 .btn-secondary {
   background: hsl(var(--surface-2));
   color: hsl(var(--fg-muted));
+}
+
+/* Selected and primary buttons keep their accent fill on hover. The generic
+   .btn:hover (surface fill) used to out-rank them and left --accent-fg text on
+   a neutral fill (dark on dark, white on white). Hover is a Material state
+   layer of the on-color over the fill, so the text stays AA. */
+.btn-primary:hover,
+.btn.btn-primary:hover,
+.btn.is-active:hover {
+  background-color: hsl(var(--accent));
+  background-image: linear-gradient(
+    hsl(var(--accent-fg) / var(--state-hover)),
+    hsl(var(--accent-fg) / var(--state-hover))
+  );
+  border-color: hsl(var(--accent));
+  color: hsl(var(--accent-fg));
 }
 
 /* ---------- Settings page ----------
@@ -1183,7 +1195,7 @@ code {
 
 .preference-controls .btn-primary:hover {
   background: hsl(var(--accent) / 0.08);
-  opacity: 1;
+  color: hsl(var(--accent));
 }
 
 /* Info rows (settings system section) */
