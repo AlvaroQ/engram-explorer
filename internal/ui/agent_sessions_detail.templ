@@ -54,7 +54,15 @@ templ asDetailContent(d *agentsessions.Detail, lang string) {
 							<span class="cc-detail-label">{ T(lang, "agentSessions.fields.tokens") }</span>
 							<span class="cc-detail-val">{ ccsFormatTokens(d.Session.Usage.Total()) }</span>
 						</div>
-						@ccsDetailField(T(lang, "agentSessions.fields.cost"), asFormatCost(d.Session.Usage))
+						<div
+							class="cc-detail-field"
+							if t := asCostTitle(d.Session.Usage, d.Session.Models, lang); t != "" {
+								title={ t }
+							}
+						>
+							<span class="cc-detail-label">{ T(lang, "agentSessions.fields.cost") }</span>
+							<span class="cc-detail-val">{ asFormatCost(d.Session.Usage, lang) }</span>
+						</div>
 					</div>
 				</div>
 			</div>

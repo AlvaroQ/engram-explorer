@@ -176,7 +176,12 @@ templ asRow(s agentsessions.Session, lang string) {
 			</a>
 		</td>
 		<td class="px-4 py-2 mono text-xs text-fg-muted text-right whitespace-nowrap" title={ asUsageBreakdown(s.Usage, lang) }>{ ccsFormatTokens(s.Usage.Total()) }</td>
-		<td class="px-4 py-2 mono text-xs text-right whitespace-nowrap">{ asFormatCost(s.Usage) }</td>
+		<td
+			class="px-4 py-2 mono text-xs text-right whitespace-nowrap"
+			if t := asCostTitle(s.Usage, s.Models, lang); t != "" {
+				title={ t }
+			}
+		>{ asFormatCost(s.Usage, lang) }</td>
 		<td class="px-4 py-2 mono text-xs text-fg-muted text-right whitespace-nowrap">{ ccsFormatSize(s.SizeBytes) }</td>
 		<td class="px-4 py-2 text-fg-muted text-xs whitespace-nowrap">
 			if s.Project != "" {

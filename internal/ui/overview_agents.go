@@ -110,21 +110,19 @@ func overviewProjectHref(project string) string {
 }
 
 // ovFormatSpend is the spend value: a real $0.00 for no spend (not "—"),
-// otherwise asFormatCost, whose "~" marks a lower bound (unpriced model).
-func ovFormatSpend(u agentsessions.Usage) string {
-	if u.CostUSD <= 0 {
-		if u.UnknownModel {
-			return "$0.00~"
-		}
+// "Not priced" when every session ran on unpriced models, otherwise
+// asFormatCost, whose "~" marks a lower bound (some unpriced model).
+func ovFormatSpend(u agentsessions.Usage, lang string) string {
+	if u.CostUSD <= 0 && !u.UnknownModel {
 		return "$0.00"
 	}
-	return asFormatCost(u)
+	return asFormatCost(u, lang)
 }
 
 // ovShareText is "Claude Code 4" or "Claude Code $3.75".
 func ovShareText(sh agentShare, lang string, cost bool) string {
 	if cost {
-		return asAgentLabel(lang, sh.Agent) + " " + ovFormatSpend(sh.Usage)
+		return asAgentLabel(lang, sh.Agent) + " " + ovFormatSpend(sh.Usage, lang)
 	}
 	return asAgentLabel(lang, sh.Agent) + " " + strconv.Itoa(sh.Sessions)
 }

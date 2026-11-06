@@ -871,6 +871,11 @@
     },
     "tokenNote": "Tokens are counted in disjoint buckets: uncached input, cache read, cache write and output. Reasoning is part of output.",
     "sourceError": "Could not read {{source}} ({{agent}}); its sessions are not shown.",
+    "cost": {
+      "notPriced": "Not priced",
+      "notPricedHint": "No price is known for these models.",
+      "notPricedHintModels": "No price is known for these models ({{models}})."
+    },
     "list": {
       "title": "Sessions",
       "count": "{{count}} of {{total}}",
@@ -974,7 +979,11 @@
       "error": "Failed to load usage stats.",
       "others": "Others",
       "untitled": "(untitled)",
-      "costEstimateNote": "Cost excludes turns on unpriced models — actual spend may be higher."
+      "costEstimateNote": "Cost excludes turns on unpriced models — actual spend may be higher.",
+      "tokensByProject": "Tokens by project",
+      "tokensByAgent": "Tokens by agent",
+      "tokensFallbackNote": "No prices known for these models — showing tokens.",
+      "agentSummary": "{{sessions}} sessions · {{tokens}} tokens · {{cost}}"
     }
   },
   "placeholder": {
