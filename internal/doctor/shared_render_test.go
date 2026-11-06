@@ -101,7 +101,7 @@ func TestDoctorRendering_ShellBehaviourPreserved(t *testing.T) {
 			if w.Code != http.StatusOK {
 				t.Fatalf("status = %d, want 200", w.Code)
 			}
-			want := `<div class="inline-error" role="alert"><strong>Error:</strong> ` + tc.want + `</div>`
+			want := `<div class="inline-error" role="alert"><strong>Error:</strong> <span class="inline-error-message">` + tc.want + `</span></div>`
 			if body := w.Body.String(); body != want {
 				t.Errorf("body = %q, want %q", body, want)
 			}

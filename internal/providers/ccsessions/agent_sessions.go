@@ -13,8 +13,9 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-// Agent is the agent kind of every Claude Code source.
-const Agent = "claude-code"
+// Agent is the agent kind of every Claude Code source; it is the key of the
+// Claude Code marker set the services layer registers with agentsessions.
+const Agent = services.CCAgent
 
 // sourcePrefix prefixes the account ID in a source ID ("claude-code/<account>").
 const sourcePrefix = Agent + "/"

@@ -275,7 +275,7 @@ templ settingsContent(d settingsData) {
 					method="post"
 					action="/api/db/import"
 					enctype="multipart/form-data"
-					data-submit-confirm="Import database? Only new memories are added — nothing is overwritten. A backup is taken first."
+					data-submit-confirm={ T(d.Lang, "settings.db.importConfirm") }
 				>
 					<label class="btn btn-sm">
 						{ T(d.Lang, "settings.db.import") }

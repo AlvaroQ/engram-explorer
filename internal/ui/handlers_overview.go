@@ -85,14 +85,15 @@ func handleOverviewPage(d Deps) http.HandlerFunc {
 
 		data, err := loadOverview(d)
 		if err != nil {
-			renderDeps(w, r, d, ErrorPartial(ErrorMessage(r, "Failed to load overview: ", err)))
+			renderDeps(w, r, d, ErrorPartial(ErrorMessage(r, "errors.loadOverview", err)))
 			return
 		}
 
+		v := overviewView{Data: data.Overview, Issues: data.Issues, Lang: lang, AgentsLive: len(d.AgentSessions) > 0}
 		if IsHTMX(r) {
-			renderDeps(w, r, d, OverviewPartial(data.Overview, data.Issues, lang))
+			renderDeps(w, r, d, OverviewPartial(v))
 		} else {
-			renderDeps(w, r, d, OverviewPage(data.Overview, data.Issues, lang, theme, sidebarState))
+			renderDeps(w, r, d, OverviewPage(v, theme, sidebarState))
 		}
 	}
 }
@@ -163,22 +164,6 @@ func groupSyncIssues(issues []services.SyncIssue) []issueGroup {
 	})
 
 	return result
-}
-
-// overviewBrokenTone returns the CSS tone class for the broken count.
-func overviewBrokenTone(count int64) string {
-	if count > 0 {
-		return "text-fail"
-	}
-	return "text-fg"
-}
-
-// overviewPendingTone returns the CSS tone class for pending mutations.
-func overviewPendingTone(count int64) string {
-	if count > 100 {
-		return "text-warn"
-	}
-	return "text-fg"
 }
 
 // overviewSeverityBadgeClass returns a badge CSS class for a severity level.

@@ -91,7 +91,7 @@ export function WebGLUnavailableDialog({
             ref={reloadBtnRef}
             type="button"
             onClick={() => window.location.reload()}
-            className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+            className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-fg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
           >
             {t('brain.webglDialogReload')}
           </button>

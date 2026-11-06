@@ -12,7 +12,10 @@
     "orphans": "Huérfanos",
     "agentSessions": "Sesiones de agentes",
     "agentSessionsOverview": "Resumen",
-    "agentSessionsList": "Sesiones"
+    "agentSessionsList": "Sesiones",
+    "agents": "Agentes",
+    "agentClaudeCode": "Claude Code",
+    "agentCodex": "Codex"
   },
   "common": {
     "errorGeneric": "Algo salió mal. Revisa el registro del servidor para más detalles.",
@@ -36,7 +39,9 @@
     "no": "no",
     "all": "todos",
     "none": "—",
-    "language": "Idioma"
+    "language": "Idioma",
+    "skipToContent": "Saltar al contenido",
+    "errorLabel": "Error:"
   },
   "sidebar": {
     "brand": "Explorer",
@@ -60,18 +65,32 @@
       "dbError": "error de BD",
       "daemonOffline": "daemon offline",
       "allOk": "Estado correcto"
-    }
+    },
+    "switchAccount": "Cambiar de cuenta"
   },
   "overview": {
     "kpi": {
       "observations": "Memorias guardadas",
       "browseAll": "Ver todas",
-      "sessions": "Conversaciones IA",
+      "sessions": "Conversaciones con IA",
       "seeTimeline": "Ver línea de tiempo",
       "projects": "Proyectos",
       "drillProject": "Explorar un proyecto",
       "prompts": "Prompts",
-      "searchPrompts": "Buscar prompts"
+      "searchPrompts": "Buscar prompts",
+      "keyFigures": "Cifras clave",
+      "last7d": "+{{count}} en los últimos 7 días",
+      "browse": "Ver",
+      "mostActive": "Más activo:",
+      "drillIn": "Explorar",
+      "spend": "Gasto en agentes este mes",
+      "window7d": "últimos 7 días",
+      "viewSessions": "Ver sesiones",
+      "spendDetails": "Detalles",
+      "agentsEmpty": "Aún no hay ningún agente conectado.",
+      "agentsSetup": "Conecta uno en Ajustes → Fuentes de datos",
+      "agentsError": "No se pudieron cargar las cifras de los agentes.",
+      "agentsPartial": "No se pudieron leer algunas sesiones"
     },
     "alert": {
       "syncIssues": "{{count}} problema(s) de sincronización requieren atención",
@@ -129,7 +148,7 @@
       }
     },
     "recent": {
-      "title": "Observaciones recientes",
+      "title": "Memorias recientes",
       "description": "Las 10 más recientes en todos los proyectos",
       "empty": "Aún no hay observaciones.",
       "col": {
@@ -137,7 +156,13 @@
         "title": "Título",
         "project": "Proyecto",
         "created": "Creado"
-      }
+      },
+      "viewAll": "Ver todas"
+    },
+    "hero": {
+      "subtitle": "La memoria a largo plazo de tus agentes, de un vistazo.",
+      "openGraph": "Abrir el grafo de conocimiento",
+      "searchLabel": "Buscar memorias"
     }
   },
   "brain": {
@@ -324,16 +349,6 @@
       }
     }
   },
-  "syncSummary": {
-    "title": "Salud del sync",
-    "description": "Estado del sync en la nube",
-    "open": "Abrir",
-    "openSyncHealth": "Abrir Salud del Sync",
-    "enrolled": "Inscritos",
-    "healthy": "Saludables",
-    "broken": "Rotos",
-    "pendingMutations": "Mutaciones pendientes"
-  },
   "sessions": {
     "title": "Sesiones",
     "description": "Una fila por sesión. Haz clic para ver la línea de tiempo y estadísticas.",
@@ -400,7 +415,8 @@
     "tabs": {
       "memories": "Memorias",
       "threads": "Hilos",
-      "conversations": "Conversaciones"
+      "conversations": "Conversaciones",
+      "ariaLabel": "Pestañas de memoria"
     },
     "advancedView": {
       "label": "Vista avanzada"
@@ -495,7 +511,12 @@
       "lifecycle": "Ciclo de vida",
       "lastEnqueued": "Último encolado",
       "lastAcked": "Último confirmado",
-      "pending": "Pendientes"
+      "pending": "Pendientes",
+      "heading": "Destino global",
+      "targetKey": "Clave del destino",
+      "lastEnqueuedSeq": "Última seq encolada",
+      "lastAckedSeq": "Última seq confirmada",
+      "pendingMutations": "Mutaciones pendientes"
     },
     "projects": {
       "title": "Proyectos",
@@ -511,8 +532,14 @@
         "cloudSeq": "Cloud seq",
         "enrolledBadge": "inscrito",
         "notEnrolled": "no inscrito",
-        "detail": "Detalle"
-      }
+        "detail": "Detalle",
+        "observations": "Observaciones",
+        "actions": "Acciones",
+        "delete": "Borrar"
+      },
+      "loading": "Cargando proyectos de sync...",
+      "empty": "No hay proyectos de sync.",
+      "deleteConfirm": "¿Borrar el proyecto \"{{project}}\"? Se eliminan sus prompts y sesiones vacías; las sesiones que aún tengan observaciones movidas a otros proyectos se reasignan (no se borran), así que no se pierde nada. Esta acción no se puede deshacer."
     },
     "syncProject": {
       "notFound": "Proyecto no encontrado.",
@@ -552,7 +579,38 @@
         "op": "op",
         "key": "clave",
         "occurredAt": "ocurrido en"
+      },
+      "heading": "Proyecto: {{project}}",
+      "lifecycleValue": "Ciclo de vida: {{value}}",
+      "enrolledLabel": "Inscrito:",
+      "enrolledAtValue": "Fecha de inscripción: {{value}}",
+      "reasonCode": "Código de motivo: {{code}}",
+      "consecutiveFailuresValue": "Fallos consecutivos: {{count}}",
+      "pendingEmpty": "Sin mutaciones pendientes.",
+      "findings": "Hallazgos",
+      "backToMaintenance": "Volver a Mantenimiento",
+      "mutations": {
+        "seq": "Seq",
+        "entity": "Entidad",
+        "op": "Op",
+        "entityKey": "Clave de entidad",
+        "occurredAt": "Ocurrido el"
       }
+    },
+    "issuesPanel": {
+      "title": "Problemas de sync",
+      "loading": "Cargando problemas de sync...",
+      "none": "No se detectaron problemas de sync.",
+      "hint": "Pista: {{hint}}",
+      "project": "Proyecto: {{project}}",
+      "generatedAt": "Generado el: {{time}}"
+    },
+    "status": {
+      "healthy": "sano",
+      "degraded": "degradado",
+      "broken": "roto",
+      "notEnrolled": "no inscrito",
+      "idle": "inactivo"
     }
   },
   "projects": {
@@ -776,7 +834,8 @@
       "confirmTitle": "¿Importar base de datos?",
       "confirmBody": "Se fusionará el contenido del archivo en tu base actual: solo se agregan memorias nuevas, nada se sobrescribe. Antes se guarda un backup automático de tu base actual.",
       "imported": "Importado: {{observations}} observaciones, {{sessions}} sesiones, {{prompts}} prompts, {{relations}} relaciones nuevas.",
-      "backupSaved": "Backup guardado en {{path}}"
+      "backupSaved": "Backup guardado en {{path}}",
+      "importConfirm": "¿Importar la base de datos? Solo se añaden memorias nuevas; no se sobrescribe nada. Antes se hace una copia de seguridad."
     },
     "row": {
       "path": "Ruta",
@@ -812,13 +871,20 @@
     },
     "tokenNote": "Los tokens se cuentan en grupos disjuntos: entrada sin caché, lectura de caché, escritura de caché y salida. El razonamiento forma parte de la salida.",
     "sourceError": "No se pudo leer {{source}} ({{agent}}); sus sesiones no se muestran.",
+    "cost": {
+      "notPriced": "Sin precio",
+      "notPricedHint": "No se conoce el precio de estos modelos.",
+      "notPricedHintModels": "No se conoce el precio de estos modelos ({{models}}).",
+      "notPricedCaption": "Sin precio conocido para {{models}}"
+    },
     "list": {
       "title": "Sesiones",
       "count": "{{count}} de {{total}}",
       "noMatch": "Ninguna sesión coincide con estos filtros.",
       "page": "Página {{page}} de {{pages}}",
       "prev": "Anterior",
-      "next": "Siguiente"
+      "next": "Siguiente",
+      "total": "{{total}} sesiones"
     },
     "filter": {
       "agent": "Agente",
@@ -914,7 +980,10 @@
       "error": "No se pudieron cargar las estadísticas de uso.",
       "others": "Otros",
       "untitled": "(sin título)",
-      "costEstimateNote": "El coste excluye turnos con modelos sin precio: el gasto real puede ser mayor."
+      "costEstimateNote": "El coste excluye turnos con modelos sin precio: el gasto real puede ser mayor.",
+      "tokensByProject": "Tokens por proyecto",
+      "tokensByAgent": "Tokens por agente",
+      "tokensFallbackNote": "No se conocen precios para estos modelos: se muestran tokens."
     }
   },
   "placeholder": {
@@ -964,7 +1033,15 @@
       "content": "Contenido",
       "actions": "Acciones",
       "assign": "Asignar",
-      "delete": "Borrar"
+      "delete": "Borrar",
+      "topicKey": "Clave de tema",
+      "updatedAt": "Actualizado el",
+      "startedAt": "Inicio",
+      "endedAt": "Fin",
+      "contentPreview": "Contenido (vista previa)",
+      "sessionId": "ID de sesión",
+      "createdAt": "Creado el",
+      "updated": "Actualizado"
     },
     "deleteConfirm": {
       "title": "¿Borrar este registro?",
@@ -972,6 +1049,31 @@
       "descSession": "La sesión se eliminará permanentemente de la BD. Esta acción no se puede deshacer.",
       "descPrompt": "El prompt se eliminará permanentemente de la BD. Esta acción no se puede deshacer.",
       "confirm": "Borrar"
+    },
+    "emptyAll": "No hay elementos sin proyecto. Todas las observaciones, sesiones y prompts tienen un proyecto asignado.",
+    "heading": {
+      "observations": "Observaciones",
+      "sessions": "Sesiones",
+      "prompts": "Prompts"
+    },
+    "viewDetails": "Ver detalles para ayudar a asignar un proyecto",
+    "assignSelected": "Asignar al proyecto seleccionado",
+    "assignPlaceholder": "— asignar proyecto —",
+    "deleteLabel": {
+      "observation": "Borrar esta observación sin proyecto",
+      "session": "Borrar esta sesión sin proyecto",
+      "prompt": "Borrar este prompt sin proyecto"
+    },
+    "deleteConfirmText": {
+      "observation": "¿Borrar esta observación sin proyecto? Esta acción no se puede deshacer.",
+      "session": "¿Borrar esta sesión sin proyecto? Esta acción no se puede deshacer.",
+      "prompt": "¿Borrar este prompt sin proyecto? Esta acción no se puede deshacer."
+    },
+    "dialog": {
+      "observationTitle": "Observación #{{id}}",
+      "sessionDir": "Directorio de trabajo de la sesión",
+      "sessionDirUnknown": "— desconocido (la sesión no registró directorio)",
+      "noContent": "Esta observación no tiene contenido."
     }
   },
   "assign": {
@@ -1005,5 +1107,38 @@
     },
     "settingsHint": "¿Necesitas más opciones? Ve a ",
     "settingsLink": "Configuración → Fuentes de datos"
+  },
+  "toast": {
+    "generic": "La solicitud falló. Revisa el registro del servidor para más detalles.",
+    "network": "No se pudo contactar con el servidor. Comprueba que está en marcha.",
+    "unavailable": "Esta función no está disponible ahora.",
+    "close": "Cerrar aviso"
+  },
+  "errors": {
+    "loadSession": "No se pudo cargar la sesión: ",
+    "loadAgentSessions": "No se pudieron cargar las sesiones de agentes: ",
+    "loadTopics": "No se pudieron cargar los temas: ",
+    "loadPrompts": "No se pudieron cargar los prompts: ",
+    "loadObservations": "No se pudieron cargar las observaciones: ",
+    "loadObservation": "No se pudo cargar la observación: ",
+    "loadOverview": "No se pudo cargar el resumen: ",
+    "loadProject": "No se pudo cargar el proyecto: ",
+    "badRequest": "Solicitud no válida: ",
+    "loadProjects": "No se pudieron cargar los proyectos: ",
+    "loadSessions": "No se pudieron cargar las sesiones: ",
+    "loadOrphans": "No se pudieron cargar los elementos sin proyecto: ",
+    "invalidForm": "Datos del formulario no válidos: ",
+    "assignFailed": "No se pudo asignar: ",
+    "deleteFailed": "No se pudo borrar: ",
+    "reloadFailed": "No se pudo recargar: ",
+    "loadSyncProjects": "No se pudieron cargar los proyectos de sync: ",
+    "computeSyncIssues": "No se pudieron calcular los problemas de sync: ",
+    "loadProjectDetail": "No se pudo cargar el detalle del proyecto: ",
+    "invalidObservationId": "Id de observación no válido: {{id}}",
+    "invalidId": "Id no válido: {{id}}",
+    "readOnly": "Las operaciones de escritura no están disponibles en modo de solo lectura.",
+    "noDatabase": "La base de datos no está disponible.",
+    "observationNotFound": "No se encontró la observación {{id}}.",
+    "projectRequired": "Elige un proyecto."
   }
 }

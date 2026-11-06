@@ -3,10 +3,11 @@ package ui
 // Transcript components shared by the agent-session pages (moved from the
 // former Claude Code session detail template).
 
-// ccsRenderTextSegments splits text into marker/plain segments and renders each
-// appropriately: markers become compact chips, plain text is shown as a <pre>.
-templ ccsRenderTextSegments(text string) {
-	for _, seg := range ccsSplitMarkers(text) {
+// ccsRenderTextSegments splits text into marker/plain segments with the marker
+// set of agent and renders each appropriately: markers become compact chips,
+// plain text is shown as a <pre>.
+templ ccsRenderTextSegments(agent, text string) {
+	for _, seg := range asSplitMarkers(agent, text) {
 		if seg.IsMarker {
 			@ccsAttachChip(seg.Tag, seg.Text)
 		} else {

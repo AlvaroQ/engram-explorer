@@ -1,23 +1,26 @@
 // Main R3F canvas: demand frameloop, instanced nodes, merged tunnel edges.
-// C4: Level-aware scene driven by BrainModel + use-brain-navigation.
 // Spawns the force-layout worker, wires positions to GraphNodes + TunnelFlow.
-// M3 lifecycle: dim → re-derive → post worker → gate tweens on layoutReady
-//               → fire camera fly-to + staggered node entrance concurrently.
+// The canvas always uses frameloop="demand"; TweenDriver keeps frames coming
+// only while a tween runs or the ambient particle flow is allowed (S9).
+//
+// S9 decision: the former BrainModel-driven branch (BrainModelScene, level
+// drill-in) was removed. No caller ever passed `brainModel` and no BrainModel
+// implementation exists in the app, so that branch was unreachable.
 import { Canvas, invalidate, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Stats } from '@react-three/drei';
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
 import type { GraphNode, GraphEdge } from '../../lib/api.ts';
-import { GraphNodes, BrainLevelNodes } from './graph-nodes.tsx';
+import { CANVAS_RESIZE } from '../../lib/canvas-resize.ts';
+import { GraphNodes } from './graph-nodes.tsx';
 import { ProjectTitleOverlay } from './project-title-overlay.tsx';
 import { TunnelFlow } from './tunnel-flow.tsx';
-import { BrainTunnelFlow } from './brain-tunnel-flow.tsx';
 import type { ColorBy } from './node-colors.ts';
 import { TweenDriver } from './motion/use-tween.ts';
 import { tween, easeOutExpo, DURATIONS, useReducedMotion } from './motion/interpolator.ts';
 import { motionStore } from './motion/motion-store.ts';
-import type { BrainModel, BrainLevel, BrainNavigation, BrainNode } from './types.ts';
+import { useAmbientMotion } from './motion/use-ambient-motion.ts';
+import { RIM_LIGHT_FALLBACK, RIM_LIGHT_TOKEN, readThemeColor } from './theme-colors.ts';
 
 interface WorkerResult {
   positions: Float32Array;
@@ -255,129 +258,10 @@ function CameraFocus({
 }
 
 // ---------------------------------------------------------------------------
-// Level-aware camera focus: flies to centroid of the current level's nodes
-// after layoutReady (M3 step 6).
-//
-// useFrame is guarded by tweenActiveRef so it only overrides the camera while
-// the fly-to is in progress. Once it completes, OrbitControls can orbit freely.
-// ---------------------------------------------------------------------------
-function LevelCameraFocus({
-  positions,
-  nodeCount,
-  trigger,
-}: {
-  positions: Float32Array | null;
-  nodeCount: number;
-  /** Increment to trigger a new fly-to (changes when level changes + layout ready). */
-  trigger: number;
-}) {
-  const camera = useThree((s) => s.camera);
-  const controls = useThree((s) => s.controls) as {
-    target: THREE.Vector3;
-    update: () => void;
-  } | null;
-
-  const camPosRef = useRef<THREE.Vector3>(camera.position.clone());
-  const targetRef = useRef<THREE.Vector3>(controls?.target.clone() ?? DEFAULT_TARGET.clone());
-  // True only while the fly-to tween is in progress.
-  const tweenActiveRef = useRef(false);
-  // This component's own camera tween handles — cancelled individually on a new
-  // fly-to so we never wipe sibling tweens (node burst, cross-fade) via cancelAll.
-  const posHandleRef = useRef<ReturnType<typeof tween> | null>(null);
-  const tgtHandleRef = useRef<ReturnType<typeof tween> | null>(null);
-  // Hoist useReducedMotion to component top level (React hygiene: W4a)
-  const reducedMotion = useReducedMotion();
-
-  // Fly to centroid of current level's layout
-  useEffect(() => {
-    if (!positions || nodeCount === 0 || trigger === 0) return;
-
-    const center = new THREE.Vector3();
-    for (let i = 0; i < nodeCount; i++) {
-      center.x += positions[i * 3] ?? 0;
-      center.y += positions[i * 3 + 1] ?? 0;
-      center.z += positions[i * 3 + 2] ?? 0;
-    }
-    center.multiplyScalar(1 / nodeCount);
-
-    // Compute bounding radius
-    let radius = 0;
-    for (let i = 0; i < nodeCount; i++) {
-      const dx = (positions[i * 3] ?? 0) - center.x;
-      const dy = (positions[i * 3 + 1] ?? 0) - center.y;
-      const dz = (positions[i * 3 + 2] ?? 0) - center.z;
-      radius = Math.max(radius, Math.hypot(dx, dy, dz));
-    }
-
-    const fov = ((camera as THREE.PerspectiveCamera).fov ?? 50) * (Math.PI / 180);
-    const distance = Math.max(25, (radius / Math.tan(fov / 2)) * 1.5);
-
-    const currentTarget = controls?.target ?? DEFAULT_TARGET;
-    const dir = camera.position.clone().sub(currentTarget);
-    if (dir.lengthSq() < 1e-6) dir.set(0, 0, 1);
-    dir.normalize();
-
-    const goalCamPos = center.clone().add(dir.multiplyScalar(distance));
-    const fromPos = camera.position.clone();
-    const fromTarget = controls?.target.clone() ?? DEFAULT_TARGET.clone();
-
-    // Initialise refs to current values so useFrame starts from the right place.
-    camPosRef.current = fromPos.clone();
-    targetRef.current = fromTarget.clone();
-    tweenActiveRef.current = true;
-
-    // Cancel only THIS component's previous camera tweens — never cancelAll(),
-    // which would also kill the concurrent node burst / cross-fade tweens.
-    posHandleRef.current?.cancel();
-    tgtHandleRef.current?.cancel();
-
-    const posHandle = tween<THREE.Vector3>(
-      { from: fromPos, to: goalCamPos, durationMs: DURATIONS.cameraFlyTo, easing: easeOutExpo },
-      (pos) => {
-        camPosRef.current = pos;
-      },
-      undefined,
-      reducedMotion,
-    );
-    posHandleRef.current = posHandle;
-    motionStore.register(posHandle);
-
-    const tgtHandle = tween<THREE.Vector3>(
-      { from: fromTarget, to: center, durationMs: DURATIONS.cameraFlyTo, easing: easeOutExpo },
-      (t) => {
-        targetRef.current = t;
-      },
-      // When the tween finishes, release the camera so OrbitControls can take over.
-      () => {
-        tweenActiveRef.current = false;
-      },
-      reducedMotion,
-    );
-    tgtHandleRef.current = tgtHandle;
-    motionStore.register(tgtHandle);
-  }, [trigger, positions, nodeCount, camera, controls, reducedMotion]);
-
-  // Apply tween-driven values ONLY while the fly-to is active.
-  // Skipping this block when tweenActiveRef is false lets OrbitControls orbit freely.
-  useFrame(() => {
-    if (!tweenActiveRef.current) return;
-    camera.position.copy(camPosRef.current);
-    if (controls) {
-      controls.target.copy(targetRef.current);
-      controls.update();
-    } else {
-      camera.lookAt(targetRef.current);
-    }
-  });
-
-  return null;
-}
-
-// ---------------------------------------------------------------------------
-// Props for legacy mode (flat graph, no BrainModel)
+// Props
 // ---------------------------------------------------------------------------
 
-interface LegacyProps {
+interface GraphSceneProps {
   nodes: GraphNode[];
   edges: GraphEdge[];
   debug?: boolean | undefined;
@@ -419,8 +303,9 @@ interface LegacyProps {
    */
   focusInsetRight?: number | null | undefined;
   /**
-   * Run the continuous edge-particle animation (frameloop="always"). Off for the
-   * small preview cards so the overview page doesn't drive several 60fps canvases.
+   * Allow the continuous edge-particle animation. The frameloop stays "demand";
+   * frames are requested only while the canvas is on screen, the tab is visible
+   * and the user has not asked for reduced motion.
    */
   animate?: boolean | undefined;
   /**
@@ -429,44 +314,13 @@ interface LegacyProps {
    * graph becomes visible, instead of guessing. Stable callback expected.
    */
   onReady?: (() => void) | undefined;
-  /** BrainModel is NOT provided in legacy mode. */
-  brainModel?: undefined;
-  navigation?: undefined;
 }
 
 // ---------------------------------------------------------------------------
-// Props for BrainModel-driven mode (C4.3)
+// Inner scene
 // ---------------------------------------------------------------------------
 
-interface BrainModelProps {
-  brainModel: BrainModel;
-  navigation: BrainNavigation;
-  debug?: boolean | undefined;
-  colorBy?: ColorBy | undefined;
-  onNodeClick?: ((node: BrainNode) => void) | undefined;
-  /** Called when the pointer enters/moves over a new node; null when leaving. */
-  onNodeHover?: ((node: BrainNode | null, x: number, y: number) => void) | undefined;
-  selected?: BrainNode | null | undefined;
-  /** Ids passing the active filters/search; others are dimmed. null = no filter. */
-  matchedIds?: Set<string> | null | undefined;
-  animate?: boolean | undefined;
-  /** Loading state from TanStack Query */
-  isLoading?: boolean | undefined;
-  /** Error from TanStack Query */
-  queryError?: unknown;
-  /** Whether the graph was truncated at the server. */
-  truncated?: boolean | undefined;
-  nodes?: undefined;
-  edges?: undefined;
-}
-
-type Props = LegacyProps | BrainModelProps;
-
-// ---------------------------------------------------------------------------
-// Inner scene (legacy mode)
-// ---------------------------------------------------------------------------
-
-function LegacyScene({
+function SceneContents({
   nodes,
   edges,
   positions,
@@ -481,16 +335,22 @@ function LegacyScene({
   matchedIds,
   focusNodeId,
   focusInsetRight,
-}: LegacyProps & { positions: Float32Array | null }) {
+  animate = true,
+}: GraphSceneProps & { positions: Float32Array | null }) {
   // True while the user is actively orbiting/panning (OrbitControls start→end).
   // Passed to GraphNodes so hover raycasting is skipped during a drag — raycasting
   // the full InstancedMesh on every pointermove is what makes orbiting feel choppy.
   const draggingRef = useRef(false);
+  // Ambient particle flow: on only when animating, visible, on screen and not
+  // reduced-motion. Drives TweenDriver, the canvas's single invalidator.
+  const ambient = useAmbientMotion(animate);
+  // Rim light follows the theme token (read once per mount).
+  const rimLight = useMemo(() => readThemeColor(RIM_LIGHT_TOKEN, RIM_LIGHT_FALLBACK), []);
   return (
     <>
       <ambientLight intensity={0.55} />
       <directionalLight position={[2, 3, 2]} intensity={1.7} />
-      <directionalLight position={[-2, -1, -1]} intensity={0.45} color="#c4a7e7" />
+      <directionalLight position={[-2, -1, -1]} intensity={0.45} color={rimLight} />
       <GraphNodes
         nodes={nodes}
         positions={positions}
@@ -546,85 +406,7 @@ function LegacyScene({
         focusInsetRight={focusInsetRight}
       />
       {/* Single master invalidator — the only useFrame that calls invalidate() */}
-      <TweenDriver />
-      {debug ? <Stats /> : null}
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Inner scene (BrainModel-driven mode, C4.3)
-// ---------------------------------------------------------------------------
-
-interface BrainSceneProps {
-  level: BrainLevel;
-  positions: Float32Array | null;
-  levelKey: string;
-  cameraTrigger: number;
-  /** Drill-in focal point (world coords) — children burst out from here; null = no burst. */
-  burstOrigin: THREE.Vector3 | null;
-  colorBy: ColorBy;
-  onNodeClick?: ((node: BrainNode) => void) | undefined;
-  onNodeHover?: ((node: BrainNode | null, x: number, y: number) => void) | undefined;
-  selected?: BrainNode | null | undefined;
-  matchedIds?: Set<string> | null | undefined;
-  debug?: boolean | undefined;
-}
-
-function BrainScene({
-  level,
-  positions,
-  levelKey,
-  cameraTrigger,
-  burstOrigin,
-  colorBy,
-  onNodeClick,
-  onNodeHover,
-  selected,
-  matchedIds,
-  debug,
-}: BrainSceneProps) {
-  return (
-    <>
-      <ambientLight intensity={0.55} />
-      <directionalLight position={[2, 3, 2]} intensity={1.7} />
-      <directionalLight position={[-2, -1, -1]} intensity={0.45} color="#c4a7e7" />
-
-      {/* Level-aware instanced nodes with cross-fade + drill-in burst (C4.1 / C4.2).
-          The committed level is always a complete (level, positions) pair, so the
-          previous level stays visible while the next layout is computed — no blanking. */}
-      <BrainLevelNodes
-        level={level}
-        positions={positions}
-        colorBy={colorBy}
-        onNodeClick={onNodeClick}
-        onNodeHover={onNodeHover}
-        selectedId={selected?.id ?? null}
-        matchedIds={matchedIds}
-        levelKey={levelKey}
-        burstOrigin={burstOrigin}
-      />
-
-      {/* Edges — C5: BrainTunnelFlow consumes BrainLevel.edges (BrainEdge[]) from the model.
-          Positions indexed in same order as level.nodes (worker output). */}
-      <BrainTunnelFlow
-        level={level}
-        positions={positions}
-        hoveredId={null}
-        selectedId={selected?.id ?? null}
-      />
-
-      <OrbitControls makeDefault enableDamping dampingFactor={0.08} onChange={() => invalidate()} />
-
-      {/* Level-aware camera fly-to (C4.3 / M3 step 6) */}
-      <LevelCameraFocus
-        positions={positions}
-        nodeCount={level.nodes.length}
-        trigger={cameraTrigger}
-      />
-
-      {/* Single master invalidator */}
-      <TweenDriver />
+      <TweenDriver ambient={ambient} />
       {debug ? <Stats /> : null}
     </>
   );
@@ -646,317 +428,51 @@ function buildIndexMap(values: (string | null | undefined)[]): Map<string | null
 }
 
 // ---------------------------------------------------------------------------
-// Loading state canvas (S9.1): dim sphere cloud skeleton
-// ---------------------------------------------------------------------------
-function LoadingScene() {
-  // Render a small set of dim spheres as a skeleton brain
-  const count = 30;
-  const ref = useRef<THREE.InstancedMesh>(null!);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-
-  useEffect(() => {
-    if (!ref.current) return;
-    const mesh = ref.current;
-    for (let i = 0; i < count; i++) {
-      const t = i * 2.399963;
-      const r = (i % 10) * 3;
-      dummy.position.set(Math.cos(t) * r, Math.sin(t) * r, (i % 5) - 2);
-      dummy.scale.setScalar(0.6 + Math.random() * 0.6);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-    }
-    mesh.instanceMatrix.needsUpdate = true;
-    invalidate();
-  }, [dummy]);
-
-  return (
-    <>
-      <ambientLight intensity={0.3} />
-      <instancedMesh ref={ref} args={[undefined, undefined, count]}>
-        <sphereGeometry args={[1.5, 8, 8]} />
-        <meshStandardMaterial color="#26233a" roughness={0.8} transparent opacity={0.4} />
-      </instancedMesh>
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Public GraphScene component
 // ---------------------------------------------------------------------------
 
-export function GraphScene(props: Props) {
-  // ---- LEGACY MODE (no brainModel) ----
-  if (!props.brainModel) {
-    const {
-      nodes,
-      edges,
-      debug = false,
-      colorBy = 'project',
-      onNodeClick,
-      onNodeHover,
-      onUserCameraStart,
-      selected,
-      hovered,
-      detailOpen,
-      matchedIds,
-      focusNodeId,
-      focusInsetRight,
-      animate = true,
-      onReady,
-    } = props;
-
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [positions, setPositions] = useState<Float32Array | null>(null);
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const workerRef = useRef<Worker | null>(null);
-
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffect(() => {
-      if (nodes.length === 0) return;
-
-      const idToIndex = new Map<number, number>();
-      nodes.forEach((n, i) => idToIndex.set(n.id, i));
-
-      const projectMap = buildIndexMap(nodes.map((n) => n.project));
-      const topicMap = buildIndexMap(nodes.map((n) => n.topicKey));
-
-      const workerNodes = nodes.map((n, i) => ({
-        id: i,
-        cluster: projectMap.get(n.project ?? null) ?? 0,
-        subCluster: topicMap.get(n.topicKey ?? null) ?? 0,
-      }));
-
-      const workerEdges = edges
-        .map((e) => {
-          const s = idToIndex.get(e.source);
-          const t = idToIndex.get(e.target);
-          return s !== undefined && t !== undefined ? { source: s, target: t } : null;
-        })
-        .filter((e): e is { source: number; target: number } => e !== null);
-
-      const worker = new Worker(new URL('./force-layout.worker.ts', import.meta.url), {
-        type: 'module',
-      });
-      workerRef.current = worker;
-
-      worker.onmessage = (e: MessageEvent<WorkerResult>) => {
-        setPositions(e.data.positions);
-        // Nodes are about to render — let the page dismiss its loading overlay.
-        onReady?.();
-        invalidate();
-      };
-
-      worker.postMessage({ nodes: workerNodes, edges: workerEdges });
-
-      return () => {
-        worker.terminate();
-        workerRef.current = null;
-      };
-    }, [nodes, edges, onReady]);
-
-    return (
-      <Canvas
-        frameloop={animate ? 'always' : 'demand'}
-        camera={{ position: [0, 0, 60], far: 5000 }}
-        dpr={[1, 2]}
-        gl={{ antialias: true }}
-      >
-        <LegacyScene
-          nodes={nodes}
-          edges={edges}
-          positions={positions}
-          debug={debug}
-          colorBy={colorBy}
-          onNodeClick={onNodeClick}
-          onNodeHover={onNodeHover}
-          onUserCameraStart={onUserCameraStart}
-          selected={selected}
-          hovered={hovered}
-          detailOpen={detailOpen}
-          matchedIds={matchedIds}
-          focusNodeId={focusNodeId}
-          focusInsetRight={focusInsetRight}
-          animate={animate}
-        />
-      </Canvas>
-    );
-  }
-
-  // ---- BRAIN MODEL MODE (C4.3) ----
-  return <BrainModelScene {...props} />;
-}
-
-// ---------------------------------------------------------------------------
-// BrainModelScene — level-aware scene with "node opens" drill lifecycle (C4.3)
-// ---------------------------------------------------------------------------
-
-/**
- * A fully-resolved level on screen: nodes + their layout positions committed
- * atomically. Holding the previous CommittedLevel until the next one is ready is
- * what keeps the canvas populated during the drill transition (no blank frame).
- */
-interface CommittedLevel {
-  level: BrainLevel;
-  positions: Float32Array | null;
-  /** Cross-fade key (view + path) — a change drives the outgoing/incoming swap. */
-  key: string;
-  /** Drill-in focal point (world coords); null for first load / pop / view change. */
-  burstOrigin: THREE.Vector3 | null;
-  /** navigation.path.length at commit time — used to detect push vs pop. */
-  depth: number;
-}
-
-/**
- * Translate an origin-centered layout so its centroid sits at `origin`, so the
- * children of a drilled-into node appear where that node was ("opens in place").
- */
-function recenterPositions(
-  positions: Float32Array,
-  count: number,
-  origin: THREE.Vector3,
-): Float32Array {
-  if (count === 0) return positions;
-  let cx = 0,
-    cy = 0,
-    cz = 0;
-  for (let i = 0; i < count; i++) {
-    cx += positions[i * 3] ?? 0;
-    cy += positions[i * 3 + 1] ?? 0;
-    cz += positions[i * 3 + 2] ?? 0;
-  }
-  cx /= count;
-  cy /= count;
-  cz /= count;
-  const ox = origin.x - cx,
-    oy = origin.y - cy,
-    oz = origin.z - cz;
-  const out = positions.slice();
-  for (let i = 0; i < count; i++) {
-    out[i * 3] = (positions[i * 3] ?? 0) + ox;
-    out[i * 3 + 1] = (positions[i * 3 + 1] ?? 0) + oy;
-    out[i * 3 + 2] = (positions[i * 3 + 2] ?? 0) + oz;
-  }
-  return out;
-}
-
-function BrainModelScene({
-  brainModel,
-  navigation,
+export function GraphScene({
+  nodes,
+  edges,
   debug = false,
   colorBy = 'project',
   onNodeClick,
   onNodeHover,
+  onUserCameraStart,
   selected,
+  hovered,
+  detailOpen,
   matchedIds,
-  animate: _animate = true,
-  isLoading = false,
-  queryError,
-  truncated = false,
-}: BrainModelProps) {
-  const { t } = useTranslation();
-
-  // Target level derived from the navigation path (what we WANT to show).
-  // Used only for empty-state detection — rendering uses the committed level.
-  const targetLevel = useMemo(() => {
-    const path = navigation.path;
-    if (path.length === 0) {
-      return brainModel.root({});
-    }
-    const top = path[path.length - 1];
-    return top ? brainModel.children(top.id, {}) : brainModel.root({});
-  }, [brainModel, navigation.path]);
-
-  // Level key includes the view so switching views (at any depth) still drives a
-  // cross-fade even when the navigation path is unchanged.
-  const levelKey = useMemo(() => {
-    const path = navigation.path;
-    return `${brainModel.view}:${path.map((r) => r.id).join('/') || 'root'}`;
-  }, [brainModel, navigation.path]);
-
-  // Committed level = what is actually rendered. It updates (atomically with its
-  // positions) only once the worker layout is ready, so the previous level stays
-  // on screen during computation — the canvas is never blanked.
-  const [committed, setCommitted] = useState<CommittedLevel | null>(null);
-  const committedRef = useRef<CommittedLevel | null>(null);
-  const [cameraTrigger, setCameraTrigger] = useState(0);
+  focusNodeId,
+  focusInsetRight,
+  animate = true,
+  onReady,
+}: GraphSceneProps) {
+  const [positions, setPositions] = useState<Float32Array | null>(null);
   const workerRef = useRef<Worker | null>(null);
 
-  // Drill lifecycle: capture focal point P (drill-in) → post worker → on layout
-  // ready, re-center children around P and commit atomically + fire camera fly-to.
   useEffect(() => {
-    // CB4: re-derive level INSIDE the effect from captured brainModel + path so the
-    // posted node/edge data and levelKey are always in lockstep.
-    const path = navigation.path;
-    const derivedLevel =
-      path.length === 0
-        ? brainModel.root({})
-        : (() => {
-            const top = path[path.length - 1];
-            return top ? brainModel.children(top.id, {}) : brainModel.root({});
-          })();
+    if (nodes.length === 0) return;
 
-    const depth = path.length;
-    const prev = committedRef.current;
+    const idToIndex = new Map<number, number>();
+    nodes.forEach((n, i) => idToIndex.set(n.id, i));
 
-    // Empty level — commit immediately (nothing to lay out).
-    if (derivedLevel.nodes.length === 0) {
-      const next: CommittedLevel = {
-        level: derivedLevel,
-        positions: null,
-        key: levelKey,
-        burstOrigin: null,
-        depth,
-      };
-      committedRef.current = next;
-      setCommitted(next);
-      return;
-    }
-
-    // Drill-in detection: deeper than the committed level → burst the children out
-    // from the parent node's current world position ("the node opens").
-    let burstOrigin: THREE.Vector3 | null = null;
-    if (prev && prev.positions && depth > prev.depth) {
-      const parentRef = path[path.length - 1];
-      if (parentRef) {
-        const idx = prev.level.nodes.findIndex((n) => n.id === parentRef.id);
-        if (idx >= 0) {
-          burstOrigin = new THREE.Vector3(
-            prev.positions[idx * 3] ?? 0,
-            prev.positions[idx * 3 + 1] ?? 0,
-            prev.positions[idx * 3 + 2] ?? 0,
-          );
-        }
-      }
-    }
-
-    // Post node/edge data to the layout worker.
-    const nodes = derivedLevel.nodes;
-
-    // I13: derive cluster from node.kind (strong separation by node type)
-    // and subCluster from node.meta.project (soft separation by project).
-    const kindMap = buildIndexMap(nodes.map((n) => n.kind));
-    const projectMap = buildIndexMap(
-      nodes.map((n) => (typeof n.meta['project'] === 'string' ? n.meta['project'] : null)),
-    );
+    const projectMap = buildIndexMap(nodes.map((n) => n.project));
+    const topicMap = buildIndexMap(nodes.map((n) => n.topicKey));
 
     const workerNodes = nodes.map((n, i) => ({
       id: i,
-      cluster: kindMap.get(n.kind) ?? 0,
-      subCluster:
-        projectMap.get(typeof n.meta['project'] === 'string' ? n.meta['project'] : null) ?? 0,
+      cluster: projectMap.get(n.project ?? null) ?? 0,
+      subCluster: topicMap.get(n.topicKey ?? null) ?? 0,
     }));
-    const workerEdges = derivedLevel.edges
+
+    const workerEdges = edges
       .map((e) => {
-        const si = nodes.findIndex((n) => n.id === e.source);
-        const ti = nodes.findIndex((n) => n.id === e.target);
-        return si >= 0 && ti >= 0 ? { source: si, target: ti } : null;
+        const s = idToIndex.get(e.source);
+        const t = idToIndex.get(e.target);
+        return s !== undefined && t !== undefined ? { source: s, target: t } : null;
       })
       .filter((e): e is { source: number; target: number } => e !== null);
-
-    if (workerRef.current) {
-      workerRef.current.terminate();
-      workerRef.current = null;
-    }
 
     const worker = new Worker(new URL('./force-layout.worker.ts', import.meta.url), {
       type: 'module',
@@ -964,25 +480,9 @@ function BrainModelScene({
     workerRef.current = worker;
 
     worker.onmessage = (e: MessageEvent<WorkerResult>) => {
-      // Re-center the new level on the drill origin so the children appear where
-      // the parent node was; first load / pop / view change stay origin-centered.
-      const positions = burstOrigin
-        ? recenterPositions(e.data.positions, derivedLevel.nodes.length, burstOrigin)
-        : e.data.positions;
-
-      const next: CommittedLevel = {
-        level: derivedLevel,
-        positions,
-        key: levelKey,
-        burstOrigin,
-        depth,
-      };
-      committedRef.current = next;
-      setCommitted(next);
-
-      // Camera fly-to (concurrent with the node burst). For a drill-in the new
-      // centroid is the burst origin, so the camera zooms into the opened node.
-      setCameraTrigger((c) => c + 1);
+      setPositions(e.data.positions);
+      // Nodes are about to render — let the page dismiss its loading overlay.
+      onReady?.();
       invalidate();
     };
 
@@ -992,86 +492,33 @@ function BrainModelScene({
       worker.terminate();
       workerRef.current = null;
     };
-    // levelKey encodes view + path; brainModel is captured to re-derive the level.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [levelKey, brainModel]);
-
-  // S9.1 Loading state
-  if (isLoading) {
-    return (
-      <div className="relative w-full h-full">
-        <Canvas
-          frameloop="demand"
-          camera={{ position: [0, 0, 80], far: 5000 }}
-          dpr={[1, 2]}
-          gl={{ antialias: true }}
-        >
-          <LoadingScene />
-          <TweenDriver />
-          <OrbitControls makeDefault />
-        </Canvas>
-        {/* Panel skeleton overlay */}
-        <div className="absolute inset-0 pointer-events-none flex items-end justify-center pb-8">
-          <div className="h-6 w-48 rounded bg-slate-700/40 animate-pulse" />
-        </div>
-      </div>
-    );
-  }
-
-  // S9.5 Error state (delegate to TanStack Query error UI — just render nothing here)
-  if (queryError) {
-    return null;
-  }
-
-  // S9.2 Empty state — only at the root when there is genuinely nothing to show.
-  if (!isLoading && targetLevel.nodes.length === 0 && navigation.path.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center w-full h-full text-slate-400">
-        <p className="text-lg font-medium">{t('brain.emptyBrain')}</p>
-        <p className="text-sm mt-2 text-slate-500">{t('brain.emptyBrainHint')}</p>
-      </div>
-    );
-  }
+  }, [nodes, edges, onReady]);
 
   return (
-    <div className="relative w-full h-full">
-      {/* S9.4 Truncation notice — non-blocking banner */}
-      {truncated && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded bg-amber-900/60 text-amber-200 text-xs pointer-events-none select-none">
-          {t('brain.truncatedNotice')}
-        </div>
-      )}
-
-      {/* frameloop="always": the brain "breathes" continuously — synapse particles
-          flow without needing an interaction to wake the loop, matching the live
-          feel of the overview preview. Background tabs are paused via the
-          document.hidden guards in the particle/tween useFrames. */}
-      <Canvas
-        frameloop="always"
-        camera={{ position: [0, 0, 80], far: 5000 }}
-        dpr={[1, 2]}
-        gl={{ antialias: true }}
-      >
-        {committed ? (
-          <BrainScene
-            level={committed.level}
-            positions={committed.positions}
-            levelKey={committed.key}
-            cameraTrigger={cameraTrigger}
-            burstOrigin={committed.burstOrigin}
-            colorBy={colorBy}
-            onNodeClick={onNodeClick}
-            onNodeHover={onNodeHover}
-            selected={selected}
-            matchedIds={matchedIds}
-            debug={debug}
-          />
-        ) : (
-          /* Data is loaded but the first layout hasn't committed yet — show the
-             skeleton brain instead of a blank canvas. */
-          <LoadingScene />
-        )}
-      </Canvas>
-    </div>
+    <Canvas
+      frameloop="demand"
+      camera={{ position: [0, 0, 60], far: 5000 }}
+      dpr={[1, 2]}
+      gl={{ antialias: true }}
+      resize={CANVAS_RESIZE}
+    >
+      <SceneContents
+        nodes={nodes}
+        edges={edges}
+        positions={positions}
+        debug={debug}
+        colorBy={colorBy}
+        onNodeClick={onNodeClick}
+        onNodeHover={onNodeHover}
+        onUserCameraStart={onUserCameraStart}
+        selected={selected}
+        hovered={hovered}
+        detailOpen={detailOpen}
+        matchedIds={matchedIds}
+        focusNodeId={focusNodeId}
+        focusInsetRight={focusInsetRight}
+        animate={animate}
+      />
+    </Canvas>
   );
 }

@@ -11,6 +11,12 @@ templ AgentSessionsListPage(v agentListView, theme, sidebarState string) {
 	@Layout(T(v.Lang, "agentSessions.title"), "agent-sessions-list", v.Lang, theme, sidebarState, asListContent(v))
 }
 
+// AgentSessionsListRows renders one page of rows plus the load-more sentinel
+// (append=true responses): it replaces the clicked sentinel row.
+templ AgentSessionsListRows(v agentListView) {
+	@asRows(v)
+}
+
 // AgentSessionsListPartial renders the list body for HTMX swaps.
 templ AgentSessionsListPartial(v agentListView) {
 	@asListContent(v)
@@ -18,7 +24,7 @@ templ AgentSessionsListPartial(v agentListView) {
 
 templ asListContent(v agentListView) {
 	<div class="flex flex-col gap-4">
-		@asTabBar("list", v.Lang)
+		@asTabBar("list", v.Query.Agent, v.Lang)
 		<div class="page-header">
 			<h1>{ T(v.Lang, "agentSessions.title") }</h1>
 			<p>{ T(v.Lang, "agentSessions.description") }</p>
@@ -28,7 +34,7 @@ templ asListContent(v agentListView) {
 		}
 		<div class="card">
 			<div class="card-header card-header-flex">
-				<h2>{ T(v.Lang, "agentSessions.list.title") }: <span class="cc-list-count">{ T(v.Lang, "agentSessions.list.count", "count", fmt.Sprintf("%d", len(v.Result.Items)), "total", fmt.Sprintf("%d", v.Result.Total)) }</span></h2>
+				<h2>{ T(v.Lang, "agentSessions.list.title") }: <span class="cc-list-count">{ T(v.Lang, "agentSessions.list.total", "total", fmt.Sprintf("%d", v.Result.Total)) }</span></h2>
 			</div>
 			<div class="card-body">
 				@asFilterForm(v)
@@ -36,8 +42,8 @@ templ asListContent(v agentListView) {
 			<div class="card-body p-0">
 				@asTable(v)
 			</div>
-			if v.Result.Pages > 1 {
-				@asPager(v)
+			if v.Result.Page > 1 {
+				@asPrevPage(v)
 			}
 		</div>
 		<p class="muted text-xs">{ T(v.Lang, "agentSessions.tokenNote") }</p>
@@ -135,9 +141,7 @@ templ asTable(v agentListView) {
 					</tr>
 				</thead>
 				<tbody class="table-divide">
-					for _, s := range v.Result.Items {
-						@asRow(s, v.Lang)
-					}
+					@asRows(v)
 				</tbody>
 			</table>
 		</div>
@@ -155,7 +159,7 @@ templ asRow(s agentsessions.Session, lang string) {
 		</td>
 		<td class="px-4 py-2">
 			<a href={ templ.SafeURL(agentsessions.DetailPath(s.Source, s.Key)) } class="text-sm text-fg hover:text-accent">
-				if clean, hasAttach := ccsStripAttachments(s.FirstPrompt); hasAttach {
+				if clean, hasAttach := asStripMarkers(s.Agent, s.FirstPrompt); hasAttach {
 					<span class="cc-prompt-clip" title={ T(lang, "agentSessions.attachment") }>
 						@ccsPaperclip()
 					</span>
@@ -172,7 +176,12 @@ templ asRow(s agentsessions.Session, lang string) {
 			</a>
 		</td>
 		<td class="px-4 py-2 mono text-xs text-fg-muted text-right whitespace-nowrap" title={ asUsageBreakdown(s.Usage, lang) }>{ ccsFormatTokens(s.Usage.Total()) }</td>
-		<td class="px-4 py-2 mono text-xs text-right whitespace-nowrap">{ asFormatCost(s.Usage) }</td>
+		<td
+			class="px-4 py-2 mono text-xs text-right whitespace-nowrap"
+			if t := asCostTitle(s.Usage, s.Models, lang); t != "" {
+				title={ t }
+			}
+		>{ asFormatCost(s.Usage, lang) }</td>
 		<td class="px-4 py-2 mono text-xs text-fg-muted text-right whitespace-nowrap">{ ccsFormatSize(s.SizeBytes) }</td>
 		<td class="px-4 py-2 text-fg-muted text-xs whitespace-nowrap">
 			if s.Project != "" {
@@ -191,14 +200,41 @@ templ asRow(s agentsessions.Session, lang string) {
 	</tr>
 }
 
-templ asPager(v agentListView) {
+// asRows renders the rows of the page and, while more remain, the load-more
+// sentinel row.
+templ asRows(v agentListView) {
+	for _, s := range v.Result.Items {
+		@asRow(s, v.Lang)
+	}
+	if v.Result.HasMore {
+		@asLoadMoreRow(v)
+	}
+}
+
+// asLoadMoreRow is the load-more sentinel (same pattern as the Memory list):
+// its button replaces its OWN row (outerHTML on the closest <tr>) with the
+// next page, itself "rows + a fresh sentinel", so exactly one sentinel stays
+// at the end. The href is the numbered page, the no-JS fallback. The running
+// count lives here so it is never stale after an append.
+templ asLoadMoreRow(v agentListView) {
+	<tr id="as-load-more-row">
+		<td colspan="8" class="px-4 py-3">
+			<a
+				class="btn btn-secondary btn-sm"
+				href={ templ.SafeURL(v.Query.pageURL(v.Result.Page + 1)) }
+				hx-get={ v.Query.appendURL(v.Result.Page + 1) }
+				hx-target="closest tr"
+				hx-swap="outerHTML"
+			>{ T(v.Lang, "common.loadMore") }</a>
+			<span class="muted text-xs">{ T(v.Lang, "agentSessions.list.count", "count", fmt.Sprintf("%d", v.shown()), "total", fmt.Sprintf("%d", v.Result.Total)) }</span>
+		</td>
+	</tr>
+}
+
+// asPrevPage links a bookmarked numbered page (?page=N) back to the previous
+// one; load-more continues forward from there.
+templ asPrevPage(v agentListView) {
 	<nav class="agent-pager" aria-label={ T(v.Lang, "agentSessions.list.title") }>
-		if v.Result.Page > 1 {
-			<a class="btn btn-secondary btn-sm" href={ templ.SafeURL(v.Query.pageURL(v.Result.Page - 1)) }>{ T(v.Lang, "agentSessions.list.prev") }</a>
-		}
-		<span class="muted text-xs">{ T(v.Lang, "agentSessions.list.page", "page", fmt.Sprintf("%d", v.Result.Page), "pages", fmt.Sprintf("%d", v.Result.Pages)) }</span>
-		if v.Result.HasMore {
-			<a class="btn btn-secondary btn-sm" href={ templ.SafeURL(v.Query.pageURL(v.Result.Page + 1)) }>{ T(v.Lang, "agentSessions.list.next") }</a>
-		}
+		<a class="btn btn-secondary btn-sm" href={ templ.SafeURL(v.Query.pageURL(v.Result.Page - 1)) }>{ T(v.Lang, "agentSessions.list.prev") }</a>
 	</nav>
 }

@@ -118,16 +118,16 @@ func themeForRequest(r *http.Request) string {
 }
 
 // sidebarStateForRequest resolves the initial sidebar state from the request.
-// Cookie "sidebar" ("collapsed"|"expanded"), default "expanded".
-// On narrow viewports the JS overrides this, but the server-rendered initial
-// state avoids a flash on wider screens.
+// Cookie "sidebar" ("collapsed"|"expanded"), default "collapsed" (the 64px
+// icon rail). On narrow viewports the JS overrides this, but the
+// server-rendered initial state avoids a flash on wider screens.
 func sidebarStateForRequest(r *http.Request) string {
 	if c, err := r.Cookie("sidebar"); err == nil {
 		if c.Value == "collapsed" || c.Value == "expanded" {
 			return c.Value
 		}
 	}
-	return "expanded"
+	return "collapsed"
 }
 
 // LangForRequest is the exported wrapper around langForRequest, for sibling
@@ -142,12 +142,3 @@ func ThemeForRequest(r *http.Request) string { return themeForRequest(r) }
 // SidebarStateForRequest is the exported wrapper around sidebarStateForRequest,
 // for sibling modules that render inside the shared app shell.
 func SidebarStateForRequest(r *http.Request) string { return sidebarStateForRequest(r) }
-
-// sidebarExpandedAttr returns the aria-expanded attribute value ("true"/"false")
-// for the sidebar toggle button based on the current sidebar state.
-func sidebarExpandedAttr(sidebarState string) string {
-	if sidebarState == "collapsed" {
-		return "false"
-	}
-	return "true"
-}

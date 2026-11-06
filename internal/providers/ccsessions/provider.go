@@ -244,6 +244,3 @@ func (i *ccInstance) Close(ctx context.Context) error {
 // RuntimePaths returns the RuntimePaths held by this instance. Used by WU-5
 // (container wiring) to construct the DiskProjectsReader for route handlers.
 func (i *ccInstance) RuntimePaths() *config.RuntimePaths { return i.runtimePaths }
-
-// Config returns the app config held by this instance. Used by WU-5.
-func (i *ccInstance) Config() config.Config { return i.cfg }

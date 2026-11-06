@@ -106,22 +106,22 @@ This is the centerpiece. **The Brain renders every observation in your database 
 
 14 views, all server-rendered, all in EN/ES + light/dark:
 
-| View                  | What you get                                                                                                              |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 🏠 **Overview**       | At-a-glance counts (projects, sessions, observations, prompts), activity-by-project chart, type distribution, sync health |
-| 🧠 **Brain**          | The 3D neural map above                                                                                                   |
-| 📁 **Projects**       | Per-project memory, activity, and sync state                                                                              |
-| 📄 **Project detail** | Full memory and session timeline for a single project                                                                     |
-| 💭 **Observations**   | Every memory, filterable, with full markdown + wikilinks                                                                  |
-| 🕑 **Sessions**       | Session timeline and per-session detail                                                                                   |
-| ✍️ **Prompts**        | Captured user prompts, searchable                                                                                         |
-| 🏷️ **Topics**         | Memory grouped by stable `topic_key`                                                                                      |
-| ☁️ **Sync Health**    | Read-only cloud sync diagnostics: enrolled / healthy / broken / pending mutations                                         |
-| 🔄 **Sync project**   | Per-project cloud sync detail and mutation queue (read-only)                                                              |
-| 🧹 **Orphans**        | Observations captured without a project — the capture bugs the CLI can't show                                             |
-| 🩺 **Diagnostics**    | Orphan projects, broken sync — a diagnostic engine across all views                                                       |
-| 🤖 **Agent sessions** | Claude Code and Codex sessions: usage overview, filterable list, transcript with tool calls                               |
-| ⚙️ **Settings**       | UI preferences, language, theme, Modules (provider toggles), Accounts (profiles)                                          |
+| View                  | What you get                                                                                                                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 🏠 **Overview**       | Knowledge-graph hero with memory search that collapses into a bar as you scroll; KPIs (memories, projects, AI conversations and agent spend this month per agent); activity, types and recent memories |
+| 🧠 **Brain**          | The 3D neural map above                                                                                                                                                                                |
+| 📁 **Projects**       | Per-project memory, activity, and sync state                                                                                                                                                           |
+| 📄 **Project detail** | Full memory and session timeline for a single project                                                                                                                                                  |
+| 💭 **Observations**   | Every memory, filterable, with full markdown + wikilinks                                                                                                                                               |
+| 🕑 **Sessions**       | Session timeline and per-session detail                                                                                                                                                                |
+| ✍️ **Prompts**        | Captured user prompts, searchable                                                                                                                                                                      |
+| 🏷️ **Topics**         | Memory grouped by stable `topic_key`                                                                                                                                                                   |
+| ☁️ **Sync Health**    | Read-only cloud sync diagnostics: enrolled / healthy / broken / pending mutations                                                                                                                      |
+| 🔄 **Sync project**   | Per-project cloud sync detail and mutation queue (read-only)                                                                                                                                           |
+| 🧹 **Orphans**        | Observations captured without a project — the capture bugs the CLI can't show                                                                                                                          |
+| 🩺 **Diagnostics**    | Orphan projects, broken sync — a diagnostic engine across all views                                                                                                                                    |
+| 🤖 **Agent sessions** | Claude Code and Codex sessions: usage overview, filterable list, transcript with tool calls                                                                                                            |
+| ⚙️ **Settings**       | UI preferences, language, theme, Modules (provider toggles), Accounts (profiles)                                                                                                                       |
 
 ---
 
@@ -194,7 +194,7 @@ go run ./cmd/engram-explorer
 
 Engram Explorer is a **single Go binary** (`cmd/engram-explorer`) serving all views on one port (default `127.0.0.1:8787`). It opens the Engram SQLite database with two `modernc.org/sqlite` handles (pure-Go, no CGo): a **read-only** pool (`mode=ro` + `query_only`) that serves every view and coexists safely with the live WAL written by the daemon, and a single-connection **read-write** pool that powers a small set of explicit, user-confirmed mutations. API routes (`/api/*`) run on an `internal/httpapi` mux built on Go's standard `net/http`. The backend proxies the daemon's GET telemetry endpoints (`/health`, `/sync/status`, `/stats`); cloud sync is read-only and the dashboard never spawns the `engram` CLI. Set `ENGRAM_DASH_READONLY=true` to disable the write path entirely.
 
-**The primary UI is server-rendered** using [templ](https://templ.guide) and [HTMX](https://htmx.org) in `internal/ui`. Go handlers load data via the services layer → render templ templates (full-page on navigation, partial fragment on HTMX requests via the `HX-Request` header). Interactivity (filters, pagination, drawers) is driven by `hx-get`/`hx-post`/`hx-swap`. Long lists use server-side cursor-based pagination with `hx-trigger="revealed"` — no client-side virtualization.
+**The primary UI is server-rendered** using [templ](https://templ.guide) and [HTMX](https://htmx.org) in `internal/ui`. Go handlers load data via the services layer → render templ templates (full-page on navigation, partial fragment on HTMX requests via the `HX-Request` header). Interactivity (filters, pagination, drawers) is driven by `hx-get`/`hx-post`/`hx-swap`. A 4xx/5xx response never replaces page content: `static/toasts.js` shows it as a toast instead (the `.inline-error-message` of an `ErrorPartial`, or `error.message` of a JSON error). Long lists use server-side cursor-based pagination with `hx-trigger="revealed"` — no client-side virtualization.
 
 **React islands** handle the two surfaces not portable to HTMX: the 3D brain graph (React Three Fiber + Three.js + a Web Worker for force layout) and the activity/type charts (Recharts). Islands live in `apps/frontend/src/islands/`, each exporting a `mount(el, props)` function, built by Vite (multi-entry) to stable paths (`/islands/<name>.js`) and embedded via `go:embed` in `internal/web/`.
 
@@ -240,21 +240,29 @@ All three are **Tier-1**: if not found at their default paths the UI keeps them 
 **Limits:** that grace is bounded. A superseded data source waits at most **30 s** (the drain timeout) for the requests still using it, then it is closed and a request still running on it fails. The HTTP server's write timeout is also **30 s**, but it only stops the response: the handler is not cancelled, so a database import that needs more time can still complete on the server while the client sees a connection error. Reload to check the result before retrying.
 
 **Agent sessions (Claude Code + Codex).** Both session modules feed one set of vendor-neutral pages, under a
-single "Agent sessions" sidebar group:
+"Agents" sidebar group with one entry per live agent (`/agent-sessions?agent=<kind>`):
 
-| Route                                                    | What it shows                                                                                                      |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `/agent-sessions`                                        | Usage overview: totals, cost per agent / project / day, tokens per model, most expensive sessions                  |
-| `/agent-sessions/list`                                   | Every session; filters `agent`, `source`, `project`, `model`, `q`, `from`/`to` (days, UTC), `sort`/`order`, `page` |
-| `/agent-sessions/claude-code/<account>/<project>/<id>`   | One Claude Code session (served by the Claude Code module, one source per enabled account)                         |
-| `/agent-sessions/codex/<YYYY>/<MM>/<DD>/<rollout>.jsonl` | One Codex session (served by the Codex module)                                                                     |
-| `GET /api/agent-sessions/stats`                          | The same aggregate as JSON, cached until a session file changes                                                    |
+| Route                                                    | What it shows                                                                                                                                                                        |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/agent-sessions`                                        | Usage overview: totals, cost per agent / project / day, tokens per model, most expensive sessions; `?agent=<kind>` (tabs: All agents, one per live agent) scopes it to one agent     |
+| `/agent-sessions/list`                                   | Every session; filters `agent`, `source`, `project`, `model`, `q`, `from`/`to` (days, UTC), `sort`/`order`; 50 rows per page with **Load more** (`page` still links a numbered page) |
+| `/agent-sessions/claude-code/<account>/<project>/<id>`   | One Claude Code session (served by the Claude Code module, one source per enabled account)                                                                                           |
+| `/agent-sessions/codex/<YYYY>/<MM>/<DD>/<rollout>.jsonl` | One Codex session (served by the Codex module)                                                                                                                                       |
+| `GET /api/agent-sessions/stats`                          | The same aggregate as JSON, cached until a session file changes                                                                                                                      |
 
 Token counts use **disjoint buckets**: uncached input, cache read, cache write and output add up to the total;
 reasoning tokens are part of output and shown apart. Codex reports cached tokens inside `input_tokens`, so the
 explorer subtracts them; usage is deduplicated by `response_id` (or by the cumulative `token_count` totals of
-older files), and a resumed or forked session never counts replayed usage twice. Costs use public list prices;
-a model without a published price counts as unknown (cost `0`, shown with `~`). The Codex module only reads the
+older files), and a resumed or forked session never counts replayed usage twice. Cost is estimated only for models
+with a known public list price; usage on other models is never guessed. Codex prices come from the
+[OpenAI pricing page](https://developers.openai.com/api/docs/pricing) (standard tier, checked 2026-11-06) for
+`gpt-5`, `gpt-5-codex`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5.1`, `gpt-5.2`, `gpt-5.3-codex`, `gpt-5.4`,
+`gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.5`, `gpt-5.6-sol` / `-terra` / `-luna` and `gpt-6-astra` (dated snapshots such as
+`gpt-5.6-sol-2026-07-09` included); `gpt-5.6-sol` uses its promotional rate, valid until 2026-11-30. A request
+above 272K input tokens is billed at the long-context rate where one is published (`gpt-5.4`, `gpt-5.5`,
+`gpt-5.6-*`); other models keep the standard rate there, a lower bound. When every model of a session, agent or
+scope is unpriced its cost reads "Not priced" (the tooltip names the models) and the usage charts plot tokens
+instead of cost; a partly priced total keeps a `~` (lower bound). The Codex module only reads the
 rollout files under `<CODEX_HOME>/sessions`: never your Codex configuration, credentials or history, and it
 never runs the `codex` CLI. Change its home in Settings → Modules (Codex row → path → Apply); `CODEX_HOME`, when
 set, still wins at startup. The old Claude Code URLs (`/cc-overview`, `/cc-sessions…`) redirect to these pages,

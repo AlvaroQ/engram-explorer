@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { agentSessionDetailPath, api } from './api.ts';
+import { agentSessionDetailPath, agentSessionsStatsQueryKey, api } from './api.ts';
 
 // Regression guard for the singular/plural mismatch that caused a 405 on
 // move-project and delete: the backend write routes are PLURAL
@@ -77,6 +77,28 @@ describe('agent sessions client', () => {
   it('agentSessionsStats fetches the neutral endpoint', async () => {
     await api.agentSessionsStats();
     expect(String(fetchMock.mock.calls.at(-1)?.[0])).toBe('/api/agent-sessions/stats');
+  });
+
+  it('agentSessionsStats scopes to one agent when given (escaped)', async () => {
+    await api.agentSessionsStats('codex');
+    expect(String(fetchMock.mock.calls.at(-1)?.[0])).toBe('/api/agent-sessions/stats?agent=codex');
+    await api.agentSessionsStats('claude code&x');
+    expect(String(fetchMock.mock.calls.at(-1)?.[0])).toBe(
+      '/api/agent-sessions/stats?agent=claude%20code%26x',
+    );
+  });
+
+  it('agentSessionsStats sends no agent param for an empty or absent agent', async () => {
+    await api.agentSessionsStats('');
+    expect(String(fetchMock.mock.calls.at(-1)?.[0])).toBe('/api/agent-sessions/stats');
+    await api.agentSessionsStats(undefined);
+    expect(String(fetchMock.mock.calls.at(-1)?.[0])).toBe('/api/agent-sessions/stats');
+  });
+
+  it('agentSessionsStatsQueryKey includes the agent and is neutral without one', () => {
+    expect(agentSessionsStatsQueryKey()).toEqual(['agent-sessions-stats', null]);
+    expect(agentSessionsStatsQueryKey('')).toEqual(['agent-sessions-stats', null]);
+    expect(agentSessionsStatsQueryKey('codex')).toEqual(['agent-sessions-stats', 'codex']);
   });
 
   it('agentSessionDetailPath escapes each segment of the source and key', () => {

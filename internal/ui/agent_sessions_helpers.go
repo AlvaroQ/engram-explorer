@@ -29,14 +29,14 @@ func asTurnText(t agentsessions.Turn) string {
 	return ""
 }
 
-// asFirstUserPrompt returns the first user text without IDE/harness markers,
-// skipping marker-only turns (the page title).
-func asFirstUserPrompt(turns []agentsessions.Turn) string {
+// asFirstUserPrompt returns the first user text without the IDE/harness
+// markers of agent, skipping marker-only turns (the page title).
+func asFirstUserPrompt(agent string, turns []agentsessions.Turn) string {
 	for _, t := range turns {
 		if t.Role != "user" {
 			continue
 		}
-		if clean := ccsPlainFromSegments(ccsSplitMarkers(asTurnText(t))); clean != "" {
+		if clean := ccsPlainFromSegments(asSplitMarkers(agent, asTurnText(t))); clean != "" {
 			return clean
 		}
 	}
@@ -62,13 +62,18 @@ func asClock(t agentsessions.Turn) string {
 	return t.Timestamp.UTC().Format("15:04:05")
 }
 
-// asTurnPreview summarizes a turn for its collapsed summary line.
-func asTurnPreview(t agentsessions.Turn) string {
+// asTurnPreview summarizes a turn with the Claude Code marker set
+// (asTurnPreviewFor).
+func asTurnPreview(t agentsessions.Turn) string { return asTurnPreviewFor(claudeAgent, t) }
+
+// asTurnPreviewFor summarizes a turn for its collapsed summary line, hiding
+// the IDE/harness markers of agent.
+func asTurnPreviewFor(agent string, t agentsessions.Turn) string {
 	var parts []string
 	for _, b := range t.Blocks {
 		switch b.Kind {
 		case agentsessions.BlockText:
-			if plain := ccsPlainFromSegments(ccsSplitMarkers(b.Text)); plain != "" {
+			if plain := ccsPlainFromSegments(asSplitMarkers(agent, b.Text)); plain != "" {
 				parts = append(parts, ccsPromptPreview(plain))
 			} else if b.Text != "" {
 				parts = append(parts, "📎 attachment")
@@ -103,9 +108,20 @@ func asTruncate(s string, maxRunes int) string {
 	return string(r[:maxRunes]) + "… [truncated]"
 }
 
+// asUnpriced reports a usage whose models all lack a known price: tokens
+// were spent but no cost could be estimated (shown as "Not priced", never
+// as a misleading $0).
+func asUnpriced(u agentsessions.Usage) bool {
+	return u.CostUSD <= 0 && u.UnknownModel
+}
+
 // asFormatCost renders the USD cost; a trailing "~" marks a lower bound
-// (some tokens were on an unpriced model).
-func asFormatCost(u agentsessions.Usage) string {
+// (some tokens were on an unpriced model) and a fully unpriced usage reads
+// "Not priced" (localized).
+func asFormatCost(u agentsessions.Usage, lang string) string {
+	if asUnpriced(u) {
+		return T(lang, "agentSessions.cost.notPriced")
+	}
 	if u.CostUSD <= 0 {
 		return "—"
 	}
@@ -117,6 +133,38 @@ func asFormatCost(u agentsessions.Usage) string {
 		s += "~"
 	}
 	return s
+}
+
+// asCostTitle is the tooltip of an unpriced cost, naming models when known;
+// "" for any other usage (no tooltip).
+func asCostTitle(u agentsessions.Usage, models []string, lang string) string {
+	if !asUnpriced(u) {
+		return ""
+	}
+	if len(models) == 0 {
+		return T(lang, "agentSessions.cost.notPricedHint")
+	}
+	return T(lang, "agentSessions.cost.notPricedHintModels", "models", strings.Join(models, ", "))
+}
+
+// asCostCaptionModels is how many model ids a visible caption names before
+// folding the rest into "+N".
+const asCostCaptionModels = 3
+
+// asCostCaption is the visible explanation under an unpriced cost, naming up
+// to three models then "+N"; "" for any other usage.
+func asCostCaption(u agentsessions.Usage, models []string, lang string) string {
+	if !asUnpriced(u) {
+		return ""
+	}
+	if len(models) == 0 {
+		return T(lang, "agentSessions.cost.notPricedHint")
+	}
+	list := strings.Join(models[:min(len(models), asCostCaptionModels)], ", ")
+	if extra := len(models) - asCostCaptionModels; extra > 0 {
+		list += fmt.Sprintf(" +%d", extra)
+	}
+	return T(lang, "agentSessions.cost.notPricedCaption", "models", list)
 }
 
 // asUsageBreakdown is the token tooltip: the disjoint buckets, then

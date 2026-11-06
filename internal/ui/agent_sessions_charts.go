@@ -6,6 +6,9 @@ package ui
 type AgentUsageChartsProps struct {
 	Labels AgentUsageLabels  `json:"labels"`
 	Agents map[string]string `json:"agents"` // agent kind → display name
+	// Agent is the selected agent kind (?agent= on the page); the island
+	// forwards it to /api/agent-sessions/stats. Omitted for all agents.
+	Agent string `json:"agent,omitempty"`
 }
 
 // AgentUsageLabels mirrors the AgentUsageLabels interface of the island.
@@ -26,10 +29,20 @@ type AgentUsageLabels struct {
 	CostEstimateNote string `json:"costEstimateNote"`
 	TokenNote        string `json:"tokenNote"`
 	SourceError      string `json:"sourceError"` // "{{source}}" / "{{agent}}" placeholders
+	// Unpriced usage (every model without a known price) and the token
+	// fallback of the cost charts.
+	NotPriced           string `json:"notPriced"`
+	NotPricedHint       string `json:"notPricedHint"`
+	NotPricedHintModels string `json:"notPricedHintModels"` // "{{models}}" placeholder
+	TokensByProject     string `json:"tokensByProject"`
+	TokensByAgent       string `json:"tokensByAgent"`
+	TokensFallbackNote  string `json:"tokensFallbackNote"`
+	NotPricedCaption    string `json:"notPricedCaption"` // "{{models}}" placeholder
 }
 
-// agentUsageChartsProps builds the island props localized for lang.
-func agentUsageChartsProps(lang string) AgentUsageChartsProps {
+// agentUsageChartsProps builds the island props localized for lang, scoped
+// to agent ("" = all agents).
+func agentUsageChartsProps(lang, agent string) AgentUsageChartsProps {
 	k := func(key string) string { return T(lang, "agentSessions.charts."+key) }
 	return AgentUsageChartsProps{
 		Labels: AgentUsageLabels{
@@ -37,12 +50,19 @@ func agentUsageChartsProps(lang string) AgentUsageChartsProps {
 			OverTime: k("overTime"), TopSessions: k("topSessions"), Sessions: k("sessions"), Tokens: k("tokens"),
 			Cost: k("cost"), Loading: k("loading"), Empty: k("empty"), Error: k("error"), Others: k("others"),
 			Untitled: k("untitled"), CostEstimateNote: k("costEstimateNote"),
-			TokenNote:   T(lang, "agentSessions.tokenNote"),
-			SourceError: T(lang, "agentSessions.sourceError"),
+			TokenNote:           T(lang, "agentSessions.tokenNote"),
+			SourceError:         T(lang, "agentSessions.sourceError"),
+			NotPriced:           T(lang, "agentSessions.cost.notPriced"),
+			NotPricedHint:       T(lang, "agentSessions.cost.notPricedHint"),
+			NotPricedHintModels: T(lang, "agentSessions.cost.notPricedHintModels"),
+			TokensByProject:     k("tokensByProject"), TokensByAgent: k("tokensByAgent"),
+			TokensFallbackNote: k("tokensFallbackNote"),
+			NotPricedCaption:   T(lang, "agentSessions.cost.notPricedCaption"),
 		},
 		Agents: map[string]string{
 			"claude-code": asAgentLabel(lang, "claude-code"),
 			"codex":       asAgentLabel(lang, "codex"),
 		},
+		Agent: agent,
 	}
 }

@@ -16,24 +16,24 @@ templ OrphansList(data *services.OrphansResponse, projects []services.ProjectSta
 templ orphansContent(data *services.OrphansResponse, projects []services.ProjectStats) {
 	<div id="orphans-list">
 		<!-- Host for the observation-detail dialog. HTMX swaps the rendered
-		     <dialog> into here; the dialog's close button clears it again. -->
+		     <dialog> into here; closing the dialog clears it again. -->
 		<div id="orphan-dialog-host"></div>
 		if data.Totals.Observations == 0 && data.Totals.Sessions == 0 && data.Totals.Prompts == 0 {
-			@ui.EmptyState("No orphaned entities found. All observations, sessions, and prompts are assigned to a project.")
+			@ui.EmptyState(tr(ctx, "orphans.emptyAll"))
 		} else {
 			if data.Totals.Observations > 0 {
 				<section class="orphans-section">
-					<h2>Observations <span class="badge">{ fmt.Sprintf("%d", data.Totals.Observations) }</span></h2>
+					<h2>{ tr(ctx, "orphans.heading.observations") } <span class="badge">{ fmt.Sprintf("%d", data.Totals.Observations) }</span></h2>
 					<table>
 						<thead>
 							<tr>
 								<th>ID</th>
-								<th>Title</th>
-								<th>Type</th>
-								<th>Topic Key</th>
-								<th>Session</th>
-								<th>Updated At</th>
-								<th>Actions</th>
+								<th>{ tr(ctx, "orphans.table.title") }</th>
+								<th>{ tr(ctx, "orphans.table.type") }</th>
+								<th>{ tr(ctx, "orphans.table.topicKey") }</th>
+								<th>{ tr(ctx, "orphans.table.session") }</th>
+								<th>{ tr(ctx, "orphans.table.updatedAt") }</th>
+								<th>{ tr(ctx, "orphans.table.actions") }</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -46,7 +46,7 @@ templ orphansContent(data *services.OrphansResponse, projects []services.Project
 											hx-get={ fmt.Sprintf("/doctor/orphans/observations/%d/detail", obs.ID) }
 											hx-target="#orphan-dialog-host"
 											hx-swap="innerHTML"
-											title="View details to help assign a project"
+											title={ tr(ctx, "orphans.viewDetails") }
 										>{ fmt.Sprintf("%d", obs.ID) }</button>
 									</td>
 									<td>
@@ -81,16 +81,16 @@ templ orphansContent(data *services.OrphansResponse, projects []services.Project
 			}
 			if data.Totals.Sessions > 0 {
 				<section class="orphans-section">
-					<h2>Sessions <span class="badge">{ fmt.Sprintf("%d", data.Totals.Sessions) }</span></h2>
+					<h2>{ tr(ctx, "orphans.heading.sessions") } <span class="badge">{ fmt.Sprintf("%d", data.Totals.Sessions) }</span></h2>
 					<table>
 						<thead>
 							<tr>
 								<th>ID</th>
-								<th>Directory</th>
-								<th>Summary</th>
-								<th>Started At</th>
-								<th>Ended At</th>
-								<th>Actions</th>
+								<th>{ tr(ctx, "orphans.table.directory") }</th>
+								<th>{ tr(ctx, "orphans.table.summary") }</th>
+								<th>{ tr(ctx, "orphans.table.startedAt") }</th>
+								<th>{ tr(ctx, "orphans.table.endedAt") }</th>
+								<th>{ tr(ctx, "orphans.table.actions") }</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -126,15 +126,15 @@ templ orphansContent(data *services.OrphansResponse, projects []services.Project
 			}
 			if data.Totals.Prompts > 0 {
 				<section class="orphans-section">
-					<h2>Prompts <span class="badge">{ fmt.Sprintf("%d", data.Totals.Prompts) }</span></h2>
+					<h2>{ tr(ctx, "orphans.heading.prompts") } <span class="badge">{ fmt.Sprintf("%d", data.Totals.Prompts) }</span></h2>
 					<table>
 						<thead>
 							<tr>
 								<th>ID</th>
-								<th>Content (preview)</th>
-								<th>Session ID</th>
-								<th>Created At</th>
-								<th>Actions</th>
+								<th>{ tr(ctx, "orphans.table.contentPreview") }</th>
+								<th>{ tr(ctx, "orphans.table.sessionId") }</th>
+								<th>{ tr(ctx, "orphans.table.createdAt") }</th>
+								<th>{ tr(ctx, "orphans.table.actions") }</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -175,7 +175,7 @@ templ orphanRowActions(entity, id, label string, projects []services.ProjectStat
 	<td class="actions">
 		<form hx-post={ orphanActionURL(entity, id, "project") } hx-target="#orphans-list" hx-swap="outerHTML">
 			@projectSelect(projects)
-			<button type="submit" class="btn-action btn-icon" title="Assign to selected project" aria-label="Assign to selected project">
+			<button type="submit" class="btn-action btn-icon" title={ tr(ctx, "orphans.assignSelected") } aria-label={ tr(ctx, "orphans.assignSelected") }>
 				@iconCheck()
 			</button>
 		</form>
@@ -183,10 +183,10 @@ templ orphanRowActions(entity, id, label string, projects []services.ProjectStat
 			hx-delete={ orphanActionURL(entity, id, "") }
 			hx-target="#orphans-list"
 			hx-swap="outerHTML"
-			hx-confirm={ "Delete this orphaned " + label + "? This action cannot be undone." }
+			hx-confirm={ tr(ctx, "orphans.deleteConfirmText."+label) }
 			class="btn-danger btn-icon"
-			title={ "Delete this orphaned " + label }
-			aria-label={ "Delete this orphaned " + label }
+			title={ tr(ctx, "orphans.deleteLabel."+label) }
+			aria-label={ tr(ctx, "orphans.deleteLabel."+label) }
 		>
 			@iconTrash()
 		</button>
@@ -216,7 +216,7 @@ templ iconTrash() {
 // orphan row. Empty project keys are skipped.
 templ projectSelect(projects []services.ProjectStats) {
 	<select name="project" required>
-		<option value="">— assign project —</option>
+		<option value="">{ tr(ctx, "orphans.assignPlaceholder") }</option>
 		for _, p := range projects {
 			if p.Project != "" {
 				<option value={ p.Project }>{ p.Project }</option>
@@ -238,40 +238,42 @@ templ OrphansListWithError(data *services.OrphansResponse, projects []services.P
 // observation content, and embeds the same assign-to-project dropdown and delete
 // action used in the row so the user can act without leaving the dialog.
 // Assigning/deleting refreshes #orphans-list (outerHTML), which removes the
-// dialog along with the rest of the list markup. The backdrop and close button
-// clear the host via data-clear-target (/static/ui-actions.js). All strings stay in English to match the doctor view.
+// dialog along with the rest of the list markup.
+//
+// data-modal-dialog makes /static/ui-actions.js open it with showModal() once
+// swapped in: focus moves inside and stays there (the rest of the page is
+// inert), Esc closes it natively, and on close the host is cleared and focus
+// returns to the button that opened it. The backdrop and close button call
+// close() through data-dialog-close.
 templ OrphanObservationDetailDialog(d *services.OrphanObservationDetail, projects []services.ProjectStats) {
-	<!-- Esc-to-close: native <dialog open> (attribute, not showModal) does not
-	     handle Esc; data-escape-clear-target makes /static/ui-actions.js clear
-	     the host on Escape while this dialog is in the DOM. -->
-	<dialog class="orphan-dialog" open aria-modal="true" aria-labelledby="orphan-dialog-title" data-escape-clear-target="orphan-dialog-host">
-		<div class="orphan-dialog-backdrop" data-clear-target="orphan-dialog-host" aria-hidden="true"></div>
+	<dialog class="orphan-dialog" aria-labelledby="orphan-dialog-title" data-modal-dialog="orphan-dialog-host">
+		<div class="orphan-dialog-backdrop" data-dialog-close aria-hidden="true"></div>
 		<article class="orphan-dialog-card">
 			<header class="orphan-dialog-header">
 				<h3 id="orphan-dialog-title">
 					if d.Title != nil && *d.Title != "" {
 						{ *d.Title }
 					} else {
-						Observation #{ fmt.Sprintf("%d", d.ID) }
+						{ tr(ctx, "orphans.dialog.observationTitle", "id", fmt.Sprintf("%d", d.ID)) }
 					}
 				</h3>
 				<button
 					type="button"
 					class="orphan-dialog-close"
-					aria-label="Close"
-					data-clear-target="orphan-dialog-host"
+					aria-label={ tr(ctx, "common.close") }
+					data-dialog-close
 				>&times;</button>
 			</header>
 			<div class="orphan-dialog-body">
 				if d.SessionDirectory != nil && *d.SessionDirectory != "" {
 					<div class="orphan-dialog-dir">
-						<span class="orphan-dialog-dir-label">Session working directory</span>
+						<span class="orphan-dialog-dir-label">{ tr(ctx, "orphans.dialog.sessionDir") }</span>
 						<code class="orphan-dialog-dir-value">{ *d.SessionDirectory }</code>
 					</div>
 				} else {
 					<div class="orphan-dialog-dir orphan-dialog-dir-empty">
-						<span class="orphan-dialog-dir-label">Session working directory</span>
-						<span class="orphan-dialog-dir-value">— unknown (no session directory recorded)</span>
+						<span class="orphan-dialog-dir-label">{ tr(ctx, "orphans.dialog.sessionDir") }</span>
+						<span class="orphan-dialog-dir-value">{ tr(ctx, "orphans.dialog.sessionDirUnknown") }</span>
 					</div>
 				}
 				<dl class="orphan-dialog-meta">
@@ -280,11 +282,11 @@ templ OrphanObservationDetailDialog(d *services.OrphanObservationDetail, project
 						<dd>{ fmt.Sprintf("%d", d.ID) }</dd>
 					</div>
 					<div>
-						<dt>Type</dt>
+						<dt>{ tr(ctx, "orphans.table.type") }</dt>
 						<dd>{ d.Type }</dd>
 					</div>
 					<div>
-						<dt>Topic Key</dt>
+						<dt>{ tr(ctx, "orphans.table.topicKey") }</dt>
 						<dd>
 							if d.TopicKey != nil && *d.TopicKey != "" {
 								{ *d.TopicKey }
@@ -294,7 +296,7 @@ templ OrphanObservationDetailDialog(d *services.OrphanObservationDetail, project
 						</dd>
 					</div>
 					<div>
-						<dt>Tool</dt>
+						<dt>{ tr(ctx, "orphans.table.tool") }</dt>
 						<dd>
 							if d.ToolName != nil && *d.ToolName != "" {
 								{ *d.ToolName }
@@ -304,7 +306,7 @@ templ OrphanObservationDetailDialog(d *services.OrphanObservationDetail, project
 						</dd>
 					</div>
 					<div>
-						<dt>Session</dt>
+						<dt>{ tr(ctx, "orphans.table.session") }</dt>
 						<dd>
 							if d.SessionID != nil && *d.SessionID != "" {
 								{ *d.SessionID }
@@ -314,7 +316,7 @@ templ OrphanObservationDetailDialog(d *services.OrphanObservationDetail, project
 						</dd>
 					</div>
 					<div>
-						<dt>Created</dt>
+						<dt>{ tr(ctx, "orphans.table.created") }</dt>
 						<dd>
 							if d.CreatedAt != nil {
 								{ *d.CreatedAt }
@@ -324,7 +326,7 @@ templ OrphanObservationDetailDialog(d *services.OrphanObservationDetail, project
 						</dd>
 					</div>
 					<div>
-						<dt>Updated</dt>
+						<dt>{ tr(ctx, "orphans.table.updated") }</dt>
 						<dd>
 							if d.UpdatedAt != nil {
 								{ *d.UpdatedAt }
@@ -335,11 +337,11 @@ templ OrphanObservationDetailDialog(d *services.OrphanObservationDetail, project
 					</div>
 				</dl>
 				<div class="orphan-dialog-content-block">
-					<span class="orphan-dialog-content-label">Content</span>
+					<span class="orphan-dialog-content-label">{ tr(ctx, "orphans.table.content") }</span>
 					if d.Content != nil && *d.Content != "" {
 						<pre class="orphan-dialog-content">{ *d.Content }</pre>
 					} else {
-						<p class="orphan-dialog-content-empty">No content recorded for this observation.</p>
+						<p class="orphan-dialog-content-empty">{ tr(ctx, "orphans.dialog.noContent") }</p>
 					}
 				</div>
 			</div>
@@ -351,15 +353,15 @@ templ OrphanObservationDetailDialog(d *services.OrphanObservationDetail, project
 					class="orphan-dialog-assign"
 				>
 					@projectSelect(projects)
-					<button type="submit">Assign</button>
+					<button type="submit">{ tr(ctx, "orphans.table.assign") }</button>
 				</form>
 				<button
 					hx-delete={ orphanActionURL("observations", fmt.Sprintf("%d", d.ID), "") }
 					hx-target="#orphans-list"
 					hx-swap="outerHTML"
-					hx-confirm="Delete this orphaned observation? This action cannot be undone."
+					hx-confirm={ tr(ctx, "orphans.deleteConfirmText.observation") }
 					class="btn-danger"
-				>Delete</button>
+				>{ tr(ctx, "orphans.table.delete") }</button>
 			</footer>
 		</article>
 	</dialog>

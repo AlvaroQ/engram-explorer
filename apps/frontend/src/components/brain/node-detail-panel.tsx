@@ -8,9 +8,6 @@ import { TypeEditControl } from './type-edit-control.tsx';
 import { InlineEditField } from './inline-edit-field.tsx';
 import { termFrequencies, topKeywords } from '../../lib/tfidf.ts';
 import { Skeleton } from '../ui/skeleton.tsx';
-import type { BrainLevel, BrainNode } from './types.ts';
-import { resolveNeighbors, type NeighborEntry } from './neighbors.ts';
-import { SYNAPSE_COLORS } from './brain-tunnel-flow.ts';
 
 // Markdown renderer (react-markdown + remark-gfm) is lazy-loaded so the parser
 // stays out of the initial bundle — it only loads when a node is expanded.
@@ -99,27 +96,6 @@ export interface NodeDetailPanelProps {
    * where wikilinks render as static pills.
    */
   onWikilink?: ((topicKey: string) => void) | undefined;
-  /**
-   * The BrainNode representation of the selected node (if in brain model mode).
-   * Used for neighbor resolution (M9).
-   */
-  brainNode?: BrainNode | undefined;
-  /**
-   * The current brain level (for neighbor resolution).
-   * Required for the Neighbors section (S7.1 / M9).
-   */
-  currentLevel?: BrainLevel | undefined;
-  /**
-   * The parent brain level (for M9 leaf fallback).
-   * When selected is a leaf and current level has no incident edges,
-   * neighbors are resolved from parentLevel.
-   */
-  parentLevel?: BrainLevel | null | undefined;
-  /**
-   * Called when the user clicks a neighbor entry to select/enter that node.
-   * Receives the neighbor's BrainNode id.
-   */
-  onNeighborSelect?: ((nodeId: string) => void) | undefined;
 }
 
 export function NodeDetailPanel({
@@ -130,10 +106,6 @@ export function NodeDetailPanel({
   variant = 'overlay',
   color,
   onWikilink,
-  brainNode,
-  currentLevel,
-  parentLevel,
-  onNeighborSelect,
 }: NodeDetailPanelProps): JSX.Element {
   const { t } = useTranslation();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -150,7 +122,7 @@ export function NodeDetailPanel({
     function handlePointerUp(e: PointerEvent): void {
       const target = e.target as Element | null;
       // Ignore if the pointer-up happened inside a brain canvas wrapper.
-      if (target?.closest?.('[data-brain-canvas]')) return;
+      if (target?.closest?.('[data-brain-canvas], [data-brain-node-list]')) return;
       if (panelRef.current && !panelRef.current.contains(target)) {
         onClose();
       }
@@ -323,121 +295,8 @@ export function NodeDetailPanel({
             />
           )}
         </section>
-
-        {/* Neighbors / Synapses section (S7.1 / M9) — only in brain model mode */}
-        {brainNode && currentLevel ? (
-          <NeighborsSection
-            brainNode={brainNode}
-            currentLevel={currentLevel}
-            parentLevel={parentLevel ?? null}
-            onNeighborSelect={onNeighborSelect}
-          />
-        ) : null}
       </div>
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// NeighborsSection — S7.1 / M9
-// ---------------------------------------------------------------------------
-
-/** Color badge for an edge relation. */
-function RelationBadge({ relation }: { relation?: string | undefined }): JSX.Element {
-  const color =
-    relation === 'related'
-      ? SYNAPSE_COLORS.related
-      : relation === 'compatible'
-        ? SYNAPSE_COLORS.compatible
-        : relation === 'scoped'
-          ? SYNAPSE_COLORS.scoped
-          : SYNAPSE_COLORS.neutral;
-
-  return (
-    <span
-      className="shrink-0 rounded px-1 py-0.5 text-[9px] font-medium uppercase"
-      style={{
-        color,
-        backgroundColor: `color-mix(in srgb, ${color} 18%, transparent)`,
-      }}
-    >
-      {relation ?? 'edge'}
-    </span>
-  );
-}
-
-/**
- * Neighbors / Synapses section in the detail panel.
- *
- * Resolves incident edges using M9 (leaf fallback to parent level).
- * Each neighbor entry shows the label, relation color badge, and is
- * clickable to select/enter the target node (S7.1).
- *
- * M9-B: neighbors whose node is not in the loaded graph render as
- * disabled items with "[not loaded]" label.
- */
-function NeighborsSection({
-  brainNode,
-  currentLevel,
-  parentLevel,
-  onNeighborSelect,
-}: {
-  brainNode: BrainNode;
-  currentLevel: BrainLevel;
-  parentLevel: BrainLevel | null;
-  onNeighborSelect?: ((nodeId: string) => void) | undefined;
-}): JSX.Element | null {
-  const { t } = useTranslation();
-  const neighbors: NeighborEntry[] = resolveNeighbors(brainNode.id, currentLevel, parentLevel);
-
-  // Build a map of id → label from both levels for display
-  const idToLabel = new Map<string, string>();
-  for (const n of currentLevel.nodes) idToLabel.set(n.id, n.label);
-  if (parentLevel) {
-    for (const n of parentLevel.nodes) {
-      if (!idToLabel.has(n.id)) idToLabel.set(n.id, n.label);
-    }
-  }
-
-  if (neighbors.length === 0) return null;
-
-  return (
-    <section className="mt-3 border-t border-border pt-3">
-      <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-fg-muted">
-        {t('brain.neighbors')}
-      </p>
-      <ul className="flex flex-col gap-1">
-        {neighbors.map(({ neighborId, edge, loaded }) => {
-          const label = idToLabel.get(neighborId) ?? neighborId;
-          return (
-            <li key={neighborId}>
-              {loaded && onNeighborSelect ? (
-                <button
-                  type="button"
-                  onClick={() => onNeighborSelect(neighborId)}
-                  className="group flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left hover:bg-surface-2"
-                >
-                  <RelationBadge relation={edge.relation ?? undefined} />
-                  <span className="min-w-0 flex-1 truncate text-xs text-fg transition-colors group-hover:text-accent">
-                    {label}
-                  </span>
-                </button>
-              ) : (
-                <div
-                  className="flex items-center gap-1.5 rounded px-1 py-0.5 opacity-50"
-                  aria-disabled="true"
-                >
-                  <RelationBadge relation={edge.relation ?? undefined} />
-                  <span className="min-w-0 flex-1 truncate text-xs text-fg-muted">
-                    {loaded ? label : '[not loaded]'}
-                  </span>
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
   );
 }
 

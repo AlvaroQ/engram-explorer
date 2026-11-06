@@ -3,6 +3,7 @@ package ui
 import (
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -16,30 +17,69 @@ import (
 
 // handleAgentSessionsOverview serves GET /agent-sessions: the usage charts
 // island, which fetches /api/agent-sessions/stats on its own so the full
-// transcript scan never blocks the page.
+// transcript scan never blocks the page. ?agent=<kind> scopes the page to one
+// agent (tab row: "All agents" plus one tab per live agent). Like the list and
+// the stats API, an unknown agent is not an error: the filter passes through
+// and matches nothing.
 func handleAgentSessionsOverview(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		lang := langForRequest(r)
+		v := agentOverviewView{
+			Lang:   langForRequest(r),
+			Agent:  r.URL.Query().Get("agent"),
+			Agents: liveAgents(d.AgentSessions),
+		}
 		if IsHTMX(r) {
-			renderDeps(w, r, d, AgentSessionsOverviewPartial(lang))
+			renderDeps(w, r, d, AgentSessionsOverviewPartial(v))
 			return
 		}
-		renderDeps(w, r, d, AgentSessionsOverviewPage(lang, themeForRequest(r), sidebarStateForRequest(r)))
+		renderDeps(w, r, d, AgentSessionsOverviewPage(v, themeForRequest(r), sidebarStateForRequest(r)))
 	}
+}
+
+// agentOverviewView is the data of the overview page.
+type agentOverviewView struct {
+	Lang   string
+	Agent  string   // selected agent kind ("" = all agents)
+	Agents []string // agent kinds of the live sources, first-seen order
+}
+
+// liveAgents returns the distinct agent kinds of sources, in source order.
+func liveAgents(sources []agentsessions.Source) []string {
+	var out []string
+	for _, src := range sources {
+		if a := src.Agent(); a != "" && !slices.Contains(out, a) {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+// agentScopedURL is path with ?agent=<kind> when an agent is selected.
+func agentScopedURL(path, agent string) string {
+	if agent == "" {
+		return path
+	}
+	return path + "?" + url.Values{"agent": {agent}}.Encode()
 }
 
 // handleAgentSessionsList serves GET /agent-sessions/list: every live source
 // merged, filtered, sorted and paginated (agentsessions.ListSessions).
+// append=true is the load-more request: it answers only the rows of the page
+// plus the next load-more sentinel, which replace the clicked sentinel row.
 func handleAgentSessionsList(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lang := langForRequest(r)
 		q := agentListQueryFrom(r)
 		res, err := agentsessions.ListSessions(r.Context(), d.AgentSessions, q.params())
 		if err != nil {
-			RenderError(w, r, "Failed to load agent sessions: ", err)
+			RenderError(w, r, "errors.loadAgentSessions", err)
 			return
 		}
 		v := agentListView{Result: res, Query: q, Lang: lang}
+		if r.URL.Query().Get("append") == "true" {
+			renderDeps(w, r, d, AgentSessionsListRows(v))
+			return
+		}
 		if IsHTMX(r) {
 			renderDeps(w, r, d, AgentSessionsListPartial(v))
 			return
@@ -80,8 +120,21 @@ func (q agentListQuery) params() agentsessions.ListParams {
 	return p
 }
 
-// pageURL is the list URL of page n with the same filters.
+// pageURL is the list URL of page n with the same filters (the no-JS
+// fallback and bookmarkable form of a page).
 func (q agentListQuery) pageURL(n int) string {
+	return listURL(q.pageValues(n))
+}
+
+// appendURL is the load-more URL of page n: the same filters and sort plus
+// append=true, so the handler answers only the rows.
+func (q agentListQuery) appendURL(n int) string {
+	v := q.pageValues(n)
+	v.Set("append", "true")
+	return listURL(v)
+}
+
+func (q agentListQuery) pageValues(n int) url.Values {
 	v := url.Values{}
 	for k, val := range map[string]string{
 		"agent": q.Agent, "source": q.Source, "project": q.Project, "model": q.Model,
@@ -94,6 +147,10 @@ func (q agentListQuery) pageURL(n int) string {
 	if n > 1 {
 		v.Set("page", strconv.Itoa(n))
 	}
+	return v
+}
+
+func listURL(v url.Values) string {
 	if len(v) == 0 {
 		return agentsessions.RoutePrefix + "/list"
 	}
@@ -105,6 +162,11 @@ type agentListView struct {
 	Result agentsessions.ListResult
 	Query  agentListQuery
 	Lang   string
+}
+
+// shown is the number of rows listed up to and including the current page.
+func (v agentListView) shown() int {
+	return (v.Result.Page-1)*v.Result.PageSize + len(v.Result.Items)
 }
 
 // ---------------------------------------------------------------------------
@@ -126,7 +188,8 @@ func redirectCCOverview(w http.ResponseWriter, r *http.Request) {
 
 // redirectCCList serves GET /cc-sessions and /cc-sessions/list: the Claude
 // list with the same project filter; ?account=<id> becomes the source filter.
-// Load-more paging (cursor/append) has no neutral equivalent and is dropped.
+// The legacy cursor paging (cursor/append) is dropped: the neutral list
+// pages by number (its own load-more uses ?page=N&append=true).
 func redirectCCList(w http.ResponseWriter, r *http.Request) {
 	old := r.URL.Query()
 	v := url.Values{"agent": {claudeAgent}}

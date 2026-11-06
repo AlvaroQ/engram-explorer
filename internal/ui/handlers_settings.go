@@ -291,6 +291,7 @@ func buildSettingsData(d Deps, r *http.Request, lang, theme string) settingsData
 	}
 
 	return settingsData{
+		SidebarState:     sidebarStateForRequest(r),
 		DBPath:           d.Paths.EngramDB(),
 		DBOk:             dbOk,
 		ClaudePath:       claudePath,

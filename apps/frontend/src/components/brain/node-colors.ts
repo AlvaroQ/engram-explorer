@@ -2,11 +2,15 @@
 // (as THREE.Color), the detail-panel badge, and the legend (as CSS hex/hsl).
 // C6: Also exports buildLegendMap for the segmentation panel legend strip.
 import type { GraphNode } from '../../lib/api.ts';
+import { NULL_COLOR_FALLBACK, NULL_COLOR_TOKEN, readThemeColor } from './theme-colors.ts';
 
 export type ColorBy = 'project' | 'type';
 
-// Muted gray used for null/unknown values in dynamic palettes.
-export const NULL_HEX = '#6e6a86'; // RP overlay
+// Muted color used for null/unknown values in dynamic palettes. Resolved once
+// from the --fg-muted theme token when the brain bundle loads (after the page
+// stylesheets), falling back to the former Rosé Pine #6e6a86. Despite the
+// legacy name it may be an hsl() string; every consumer accepts any CSS color.
+export const NULL_HEX = readThemeColor(NULL_COLOR_TOKEN, NULL_COLOR_FALLBACK);
 
 // Stable key used to group / filter nodes that have no value under the active
 // colorBy (e.g. observations with no project). Kept distinct from any real value.

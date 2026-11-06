@@ -19,6 +19,7 @@ export default {
         fg: 'hsl(var(--fg))',
         'fg-muted': 'hsl(var(--fg-muted))',
         accent: 'hsl(var(--accent))',
+        'accent-fg': 'hsl(var(--accent-fg))',
         ok: 'hsl(var(--ok))',
         warn: 'hsl(var(--warn))',
         fail: 'hsl(var(--fail))',

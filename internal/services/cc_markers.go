@@ -1,15 +1,12 @@
 package services
 
-import (
-	"regexp"
-	"strings"
-)
+import "github.com/AlvaroQ/engram-explorer/internal/agentsessions"
 
 // CCMarkerTags is the canonical list of IDE/harness wrapper tags injected into
 // Claude Code session transcripts (e.g. <ide_opened_file>…</ide_opened_file>).
-// It is the single source of truth shared by the services layer (stripping
-// markers out of one-line prompt previews) and the ui layer (rendering markers
-// as paperclip chips in the transcript detail view).
+// It is the single source of truth for the services layer (stripping markers
+// out of one-line prompt previews) and, through the agentsessions marker
+// registry, for the ui layer (paperclip chips in the transcript detail view).
 var CCMarkerTags = []string{
 	"ide_opened_file",
 	"ide_selection",
@@ -22,38 +19,19 @@ var CCMarkerTags = []string{
 	"local-command-stdout",
 }
 
-// ccMarkerReList holds one compiled regexp per marker tag. RE2 has no
-// backreferences, so we compile one (?s)<tag\b[^>]*>.*?</tag> per tag.
-// The slice is index-aligned with CCMarkerTags.
-var ccMarkerReList = buildCCMarkerReList()
+// CCAgent is the agent kind of Claude Code sessions in the neutral
+// agentsessions model.
+const CCAgent = "claude-code"
 
-func buildCCMarkerReList() []*regexp.Regexp {
-	res := make([]*regexp.Regexp, 0, len(CCMarkerTags))
-	for _, tag := range CCMarkerTags {
-		res = append(res, regexp.MustCompile(`(?s)<`+tag+`\b[^>]*>.*?</`+tag+`>`))
-	}
-	return res
-}
-
-// CCMarkerReList returns the compiled marker regexps, one per CCMarkerTags
-// entry and index-aligned with it. The ui layer reuses these for positional
-// marker splitting instead of recompiling the identical patterns; callers must
-// treat the returned slice as read-only.
-func CCMarkerReList() []*regexp.Regexp {
-	return ccMarkerReList
-}
+// ccMarkers registers CCMarkerTags as the Claude Code marker set of the
+// neutral model, so the host UI renders and strips them per agent without
+// importing this list; the compiled patterns are shared with StripCCMarkers.
+var ccMarkers = agentsessions.RegisterMarkers(CCAgent, CCMarkerTags...)
 
 // StripCCMarkers removes every marker span from s and returns the remaining
 // plain text (whitespace-normalised) plus whether any marker was present.
 func StripCCMarkers(s string) (plain string, hadMarker bool) {
-	out := s
-	for _, re := range ccMarkerReList {
-		if re.MatchString(out) {
-			hadMarker = true
-			out = re.ReplaceAllString(out, " ")
-		}
-	}
-	return strings.Join(strings.Fields(out), " "), hadMarker
+	return ccMarkers.Strip(s)
 }
 
 // IsMarkerOnly reports whether s collapses to nothing once IDE/harness markers

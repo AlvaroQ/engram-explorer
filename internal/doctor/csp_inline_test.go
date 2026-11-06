@@ -118,8 +118,8 @@ func TestCSP_DoctorViewsHaveNoInlineScriptCode(t *testing.T) {
 		}},
 		{"/doctor/orphans/list", true, map[string]int{`id="orphan-dialog-host"`: 1}},
 		{fmt.Sprintf("/doctor/orphans/observations/%d/detail", id), true, map[string]int{
-			`data-clear-target="orphan-dialog-host"`:        2, // backdrop + close button
-			`data-escape-clear-target="orphan-dialog-host"`: 1,
+			`data-modal-dialog="orphan-dialog-host"`: 1, // showModal on swap, clears the host on close
+			"data-dialog-close":                      2, // backdrop + close button
 		}},
 	}
 	for _, tc := range cases {

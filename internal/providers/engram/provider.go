@@ -416,10 +416,6 @@ func (i *engramInstance) Stats(_ context.Context) (any, error) {
 	return services.OverviewBuild(i.deps.RoDB)
 }
 
-// Deps returns the ui.Deps struct held by this instance. Used by WU-5
-// (container wiring) to mount routes without an import cycle.
-func (i *engramInstance) Deps() ui.Deps { return i.deps }
-
 // ContainerDeps satisfies the httpapi.engramDepsAccessor interface. It returns
 // the DB queriers and RuntimePaths that httpapi.Container populates its own
 // fields from when operating in registry-backed mode (WU-5+). This keeps

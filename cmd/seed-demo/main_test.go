@@ -167,6 +167,7 @@ func TestRun_HintUsesDashboardPort(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			pinClock(t)
+			t.Setenv("DASHBOARD_HOST", "")
 			t.Setenv("DASHBOARD_PORT", tc.env)
 			var out strings.Builder
 			if err := run([]string{"--out", filepath.Join(t.TempDir(), "demo")}, &out); err != nil {
@@ -188,5 +189,28 @@ func TestRun_RefusesEngramHome(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(home, ".engram")); !os.IsNotExist(err) {
 		t.Errorf("~/.engram was created (stat err %v)", err)
+	}
+}
+
+// TestDashboardURL: the closing hint honors DASHBOARD_HOST like config.Load
+// (unset or empty → 127.0.0.1) and brackets IPv6 literals.
+func TestDashboardURL(t *testing.T) {
+	cases := []struct {
+		name, host, port, want string
+	}{
+		{"defaults", "", "", "http://127.0.0.1:8787"},
+		{"custom host", "localhost", "9191", "http://localhost:9191"},
+		{"ipv6 loopback", "::1", "", "http://[::1]:8787"},
+		{"ipv6 any", "::", "8080", "http://[::]:8080"},
+		{"ipv4 any", "0.0.0.0", "", "http://0.0.0.0:8787"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("DASHBOARD_HOST", tc.host)
+			t.Setenv("DASHBOARD_PORT", tc.port)
+			if got := dashboardURL(); got != tc.want {
+				t.Errorf("DASHBOARD_HOST=%q DASHBOARD_PORT=%q: got %q, want %q", tc.host, tc.port, got, tc.want)
+			}
+		})
 	}
 }

@@ -1,7 +1,8 @@
 // sidebar.js — Material 3 responsive navigation drawer behavior.
 //
 // Two interaction modes, chosen by viewport width:
-//   • >= 640px: the toggle collapses the drawer to an icon-only rail and back.
+//   • >= 640px: the toggle switches between the 64px icon rail (default) and
+//     the 236px drawer.
 //     The preference is persisted in the "sidebar" cookie so the server can
 //     render the correct initial state with no flash on reload.
 //   • <  640px: the sidebar is a fixed rail; the toggle expands it to an
@@ -34,6 +35,16 @@
 
     var lastFocus = null;
 
+    // Keep the toggle named by the action it performs next (labels are
+    // rendered localized on the button as data-label-expand/-collapse).
+    function setExpanded(expanded) {
+      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      var label = toggle.getAttribute(expanded ? 'data-label-collapse' : 'data-label-expand');
+      if (label) {
+        toggle.setAttribute('aria-label', label);
+      }
+    }
+
     function onKeydown(e) {
       if (e.key === 'Escape') {
         closeModal();
@@ -45,7 +56,7 @@
       if (scrim) {
         scrim.classList.add('is-visible');
       }
-      toggle.setAttribute('aria-expanded', 'true');
+      setExpanded(true);
       lastFocus = document.activeElement;
       var first = sidebar.querySelector('.sidebar-nav a');
       if (first) {
@@ -59,7 +70,7 @@
       if (scrim) {
         scrim.classList.remove('is-visible');
       }
-      toggle.setAttribute('aria-expanded', 'false');
+      setExpanded(false);
       document.removeEventListener('keydown', onKeydown);
       if (lastFocus && typeof lastFocus.focus === 'function') {
         lastFocus.focus();
@@ -70,7 +81,7 @@
       var collapsed = shell.classList.toggle('sidebar-collapsed');
       sidebar.classList.toggle('sidebar--collapsed', collapsed);
       setCookie(collapsed ? 'collapsed' : 'expanded');
-      toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      setExpanded(!collapsed);
     }
 
     toggle.addEventListener('click', function () {

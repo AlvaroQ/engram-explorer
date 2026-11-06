@@ -10,6 +10,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Brain-first overview** — the overview opens on a full-width knowledge-graph hero with the page title, an
+  "Open Knowledge Graph" button and a memory search (`/observations?q=`). On wide screens the hero collapses into
+  a 72px bar as you scroll and the KPI cards fold into a 44px strip whose items stay links; under reduced motion
+  the hero scrolls away and only the strip pins. The graph pauses while collapsed or off-screen. KPIs: memories
+  saved (+ last 7 days), projects (most active in 30 days), AI conversations in the last 7 days per agent, and
+  agent spend this calendar month per agent (`~` marks a lower bound). Agent figures load after the page, so a
+  large transcript folder never delays it; when they cannot be loaded both cards say so instead of loading
+  forever, and a note flags totals that miss a source that could not be read. With no agent connected the
+  cards link to Settings → Data sources.
+- **Error toasts** — failed htmx requests (4xx/5xx and network errors) show a toast in an `aria-live` region
+  (errors are `role="alert"`), with the server's message when the response carries one and a localized
+  fallback otherwise. Toasts close by button or after 8 s, pause while hovered or focused, and skip motion under
+  reduced motion. The htmx `responseHandling` is pinned so error responses never replace page content; polled
+  widgets (status pill, sync panels) opt out with `data-no-error-toast`.
 - **Codex sessions provider** — a new `codex-sessions` module ("Codex") reads the local Codex CLI rollouts under
   `$CODEX_HOME/sessions` (default `~/.codex/sessions`), read-only. Token counts are normalized to disjoint
   buckets (cached tokens are a subset of Codex's `input_tokens`), usage is deduplicated by `response_id` (or by
@@ -35,6 +49,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Agent cost on unpriced models** — usage on models without a known price (for example newer Codex models)
+  read as `$0.00`, and the "Cost by project" and "Usage over time" charts drew no bars. Such costs now read
+  "Not priced" on the agent sessions overview, list, detail and the overview spend card, with a visible note
+  naming the models ("No known price for codex-auto-review"; a tooltip in list rows). A partially
+  priced total notes that it excludes unpriced turns, and a scope with no priced cost plots tokens per
+  project, agent and day with a short note. The overview drops the per-agent summary card, which repeated
+  the sessions, tokens and cost cards.
+- **Hover on selected buttons** — hovering a selected or primary button (agent tabs, the conversation filter
+  toggle) swapped its accent fill for a dark surface and left dark text on it; it now keeps the accent fill with
+  a light state layer and readable text in both themes.
+- **Codex cost for newer models** — Codex sessions on `gpt-5.1`, `gpt-5.2`, `gpt-5.3-codex`, `gpt-5.4`
+  (`-mini`, `-nano`), `gpt-5.5`, `gpt-5.6-sol` / `-terra` / `-luna` and `gpt-6-astra` now have a cost, from the OpenAI pricing
+  page (standard tier, checked 2026-11-06; `gpt-5.6-sol` at its promotional rate until 2026-11-30). Requests
+  above 272K input tokens use the long-context rate where published. Other variants stay "Not priced".
 - **Disabled-module page** — opening a disabled module's page directly shows the full app layout (sidebar,
   account switcher) with the notice and status `503`, instead of an unstyled fragment.
 - **Module toggles and profile switches during requests** — a module disabled, re-opened or switched while
@@ -144,6 +172,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Faster knowledge-graph layout** — large graphs (up to the 5000-node cap) lay out about 4× faster: repulsion
+  above 255 nodes uses a Barnes–Hut approximation instead of comparing every pair. Every graph size keeps the full
+  200 simulation steps, so project clusters stay as clearly separated as before.
+- **Icon rail shell** — the sidebar starts as a 64px icon rail (labels show as chips on hover and keyboard
+  focus) and expands to 236px; the choice is kept in the `sidebar` cookie, so the first paint is right. Every page
+  starts with a "Skip to content" link, the current entry has `aria-current="page"`, and the agent pages are an
+  "Agents" group with one entry per live agent (`/agent-sessions?agent=claude-code`, `?agent=codex`) instead of
+  the neutral Overview / Sessions pair, which stays reachable as the page's "All agents" tab.
+- **Accessible dialogs and account menu** — the orphan detail dialog opens with `showModal()` (focus stays inside,
+  Esc closes it, focus returns to the row that opened it); the sidebar account switcher is a keyboard menu button
+  (Enter, Space or arrows open it; arrows, Home and End move; Esc closes it and returns focus).
+- **Maintenance pages in Spanish** — the orphans list, its detail dialog and the cloud sync panels no longer
+  hard-code English; every user-visible string in the templ sources goes through the locale catalogs (guarded by
+  `TestTemplSources_NoEnglishLiterals`). Inline errors built in Go handlers (orphan detail and assign errors,
+  read-only writes, invalid ids, the "Failed to load …" prefixes) and the project-combine confirmation follow
+  the language too (guarded by `TestGoSources_NoEnglishErrorLiterals`).
+- **Design tokens meet WCAG AA** — colors live only in `internal/ui/static/tokens.css` (linked before `app.css`
+  and `styles.css`; the doctor stylesheet now uses them instead of its own hex palette), every text/background
+  pair passes AA in light and dark (guarded by `tokens_contrast_test.go`), and new `--accent-fg`, `--info` and
+  `--brand-codex` tokens cover button text, info badges and the Codex agent.
 - **Claude Code URLs moved** — `/cc-overview` now answers `301` to `/agent-sessions`; `/cc-sessions`,
   `/cc-sessions/list` and `/cc-overview?tab=sessions` answer `301` to `/agent-sessions/list?agent=claude-code`
   (the project filter is kept and `account=<id>` becomes `source=claude-code/<id>`); `/cc-sessions/<project>/<id>`

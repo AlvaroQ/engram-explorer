@@ -6,123 +6,185 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
+// overviewView is the data of the overview page.
+type overviewView struct {
+	Data   services.OverviewResponse
+	Issues services.SyncIssuesResponse
+	Lang   string
+	// AgentsLive reports a live agent-session source: the agent KPI cards
+	// then load lazily from /partials/overview-agents; otherwise they show
+	// the empty state.
+	AgentsLive bool
+}
+
 // OverviewPage renders the full overview page shell.
-templ OverviewPage(data services.OverviewResponse, issues services.SyncIssuesResponse, lang, theme, sidebarState string) {
-	@Layout(T(lang, "sidebar.overview"), "overview", lang, theme, sidebarState, overviewContent(data, issues, lang))
+templ OverviewPage(v overviewView, theme, sidebarState string) {
+	@Layout(T(v.Lang, "sidebar.overview"), "overview", v.Lang, theme, sidebarState, overviewContent(v))
 }
 
 // OverviewPartial renders only the overview content (no HTML shell).
 // Used when HTMX requests a partial update.
-templ OverviewPartial(data services.OverviewResponse, issues services.SyncIssuesResponse, lang string) {
-	@overviewContent(data, issues, lang)
+templ OverviewPartial(v overviewView) {
+	@overviewContent(v)
 }
 
-// overviewContent is the shared overview body.
-templ overviewContent(data services.OverviewResponse, issues services.SyncIssuesResponse, lang string) {
-	<div class="flex flex-col gap-6">
+// overviewContent is the shared overview body (02-brain-first artboard):
+// the sync alert, the hero (title, CTA, search), the KPI cards and, below
+// the fold, the charts and the recent memories.
+templ overviewContent(v overviewView) {
+	<div class="overview" id="overview">
 		<!-- Sync issues alert bar — rendered only when issues are present.
 		     Links straight to /settings/maintenance (no #cloud fragment) so the
 		     page opens at the top instead of jumping down to the cloud section. -->
-		if len(issues.Issues) > 0 {
-			<div class="flex items-center gap-3 rounded-lg border border-warn/40 bg-warn/10 px-4 py-2.5 text-sm" id="overview-sync-alert">
-				<span class="text-warn">⚠</span>
-				<span class="flex-1 text-fg">{ T(lang, "overview.alert.syncIssues", "count", fmt.Sprintf("%d", len(issues.Issues))) }</span>
-				<a href="/settings/maintenance" class="font-medium text-warn hover:underline">{ T(lang, "overview.alert.review") }</a>
+		if len(v.Issues.Issues) > 0 {
+			<div class="ov-alert" id="overview-sync-alert">
+				<span class="text-warn" aria-hidden="true">⚠</span>
+				<span class="flex-1 text-fg">{ T(v.Lang, "overview.alert.syncIssues", "count", fmt.Sprintf("%d", len(v.Issues.Issues))) }</span>
+				<a href="/settings/maintenance" class="font-medium text-fg underline">{ T(v.Lang, "overview.alert.review") }</a>
 			</div>
 		}
-		<!-- KPI row — 3 cards: Projects, AI conversations, Memories saved -->
-		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
-			@overviewKPICard("/projects", T(lang, "overview.kpi.projects"), T(lang, "overview.kpi.drillProject"), fmt.Sprintf("%d", data.KPIs.Projects))
-			@overviewKPICard("/sessions", T(lang, "overview.kpi.sessions"), T(lang, "overview.kpi.seeTimeline"), fmt.Sprintf("%d", data.KPIs.Sessions))
-			@overviewKPICard("/observations", T(lang, "overview.kpi.observations"), T(lang, "overview.kpi.browseAll"), fmt.Sprintf("%d", data.KPIs.Observations))
-		</div>
-		<!-- Charts row: activity (span-2) + type breakdown -->
-		<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-			<!-- Activity by project — React island (fetches /api/activity on its own) -->
-			<div class="card flex flex-col lg:col-span-2">
-				<div class="card-header">
-					<div>
-						<h2>{ T(lang, "overview.activity.title") }</h2>
-						<p>{ T(lang, "overview.activity.description") }</p>
+		@overviewHero(v.Lang)
+		@overviewKPIs(v)
+		<!-- Collapsing hero runtime (/islands/overview-collapse.js): scroll →
+		     CSS custom properties on .overview; see styles.css. -->
+		<div hidden data-island="overview-collapse" data-props="{}"></div>
+		<div class="ov-below">
+			<!-- Charts row: activity (span-2) + type breakdown -->
+			<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+				<!-- Activity by project — React island (fetches /api/activity on its own) -->
+				<div class="card flex flex-col lg:col-span-2">
+					<div class="card-header">
+						<div>
+							<h2>{ T(v.Lang, "overview.activity.title") }</h2>
+							<p>{ T(v.Lang, "overview.activity.description") }</p>
+						</div>
+					</div>
+					<div class="card-body chart-h-300">
+						@Island("activity-by-project-chart", struct{}{})
 					</div>
 				</div>
-				<div class="card-body chart-h-300">
-					@Island("activity-by-project-chart", struct{}{})
-				</div>
-			</div>
-			<!-- Type breakdown — React island (data passed via props) -->
-			<div class="card flex flex-col">
-				<div class="card-header">
-					<div>
-						<h2>{ T(lang, "overview.byType.title") }</h2>
-						<p>{ T(lang, "overview.byType.description") }</p>
+				<!-- Type breakdown — React island (data passed via props) -->
+				<div class="card flex flex-col">
+					<div class="card-header">
+						<div>
+							<h2>{ T(v.Lang, "overview.byType.title") }</h2>
+							<p>{ T(v.Lang, "overview.byType.description") }</p>
+						</div>
+					</div>
+					<div class="card-body chart-h-280">
+						@Island("type-breakdown", TypeBreakdownIslandProps{ByType: toTypeBreakdownEntries(v.Data.ByType)})
 					</div>
 				</div>
-				<div class="card-body chart-h-280">
-					@Island("type-breakdown", TypeBreakdownIslandProps{ByType: toTypeBreakdownEntries(data.ByType)})
-				</div>
 			</div>
-		</div>
-		<!-- Recent observations table — server-rendered -->
-		<div class="card">
-			<div class="card-header">
-				<div>
-					<h2>{ T(lang, "overview.recent.title") }</h2>
-					<p>{ T(lang, "overview.recent.description") }</p>
+			<!-- Recent memories — server-rendered, newest by creation (the same
+			     created_at day the activity chart buckets by) -->
+			<div class="card">
+				<div class="card-header">
+					<div>
+						<h2>{ T(v.Lang, "overview.recent.title") }</h2>
+						<p>{ T(v.Lang, "overview.recent.description") }</p>
+					</div>
+					<a href="/observations" class="btn btn-sm">{ T(v.Lang, "overview.recent.viewAll") }</a>
 				</div>
-			</div>
-			<div class="card-body p-0">
-				@overviewRecentTable(data.RecentObservations, lang)
+				<div class="card-body p-0">
+					@overviewRecentTable(v.Data.RecentObservations, v.Lang)
+				</div>
 			</div>
 		</div>
 	</div>
 }
 
-// overviewKPICard renders one KPI tile linking to a drill-down page.
-templ overviewKPICard(href, label, sublabel, value string) {
-	<a
-		href={ templ.SafeURL(href) }
-		class="group block rounded-lg border border-border bg-surface transition-colors hover:border-accent/40 hover:bg-surface-2"
-	>
-		<div class="flex items-start justify-between gap-3 px-5 py-4">
-			<div>
-				<p class="text-xs uppercase tracking-wide text-fg-muted">{ label }</p>
-				<p class="mt-1 text-2xl font-semibold text-fg">{ value }</p>
-				<p class="mt-1 inline-flex items-center gap-1 text-xs text-fg-muted group-hover:text-accent">
-					{ sublabel }
+// overviewHero is the hero band: page title, CTA to the Knowledge Graph and
+// the memory search (a plain GET /observations?q= form).
+templ overviewHero(lang string) {
+	<section class="ov-hero" id="ov-hero" aria-labelledby="ov-title">
+		<div class="ov-hero-back">
+			<!-- The graph island labels itself (role="img"); the solid bar
+			     layer is decoration. -->
+			<div class="ov-hero-canvas">
+				@Island("brain-preview-hero", struct{}{})
+			</div>
+			<div class="ov-hero-solid" aria-hidden="true"></div>
+		</div>
+		<div class="ov-hero-ui" id="ov-hero-ui">
+			<header class="ov-hero-head">
+				<p class="ov-eyebrow" data-collapse-fade>Engram</p>
+				<h1 id="ov-title">{ T(lang, "sidebar.overview") }</h1>
+				<p class="ov-sub" data-collapse-fade>{ T(lang, "overview.hero.subtitle") }</p>
+				<p class="ov-cta" data-collapse-fade>
+					<a class="btn btn-tonal" href="/brain">{ T(lang, "overview.hero.openGraph") }</a>
 				</p>
-			</div>
+			</header>
+			<form class="ov-search glass" id="ov-search" role="search" action="/observations" method="get">
+				<label class="sr-only" for="ov-q">{ T(lang, "overview.hero.searchLabel") }</label>
+				<input id="ov-q" type="search" name="q" autocomplete="off" placeholder={ T(lang, "overview.hero.searchLabel") }/>
+			</form>
 		</div>
-	</a>
+	</section>
 }
 
-// overviewSyncSummaryCard renders the sync health summary card (server-rendered).
-templ overviewSyncSummaryCard(s services.SyncSummary, lang string) {
-	<div class="card flex flex-col">
-		<div class="card-header">
-			<div>
-				<h2>{ T(lang, "syncSummary.title") }</h2>
-				<p>{ T(lang, "syncSummary.description") }</p>
-			</div>
-			<a href="/doctor/sync" class="text-xs text-fg-muted transition-colors hover:text-accent">
-				{ T(lang, "syncSummary.open") }
-			</a>
+// overviewKPIs renders the four KPI cards. Each card has two versions: the
+// full card and the strip link shown once the cards pin under the collapsed
+// hero (S4: the strip keeps the card's target reachable). The strip starts
+// inert + aria-hidden; the collapse script swaps which version is exposed.
+templ overviewKPIs(v overviewView) {
+	<section class="ov-kpis" id="ov-kpis" aria-labelledby="ov-kpi-h">
+		<h2 id="ov-kpi-h" class="sr-only">{ T(v.Lang, "overview.kpi.keyFigures") }</h2>
+		@overviewKPI("memories", T(v.Lang, "overview.kpi.observations"), "/observations", fmt.Sprintf("%d", v.Data.KPIs.Observations)) {
+			<p class="kpi-value">{ fmt.Sprintf("%d", v.Data.KPIs.Observations) }</p>
+			<p class="kpi-cap">
+				{ T(v.Lang, "overview.kpi.last7d", "count", fmt.Sprintf("%d", v.Data.KPIs.ObservationsLast7d)) } · <a href="/observations">{ T(v.Lang, "overview.kpi.browse") }</a>
+			</p>
+		}
+		@overviewKPI("projects", T(v.Lang, "overview.kpi.projects"), overviewProjectHref(v.Data.KPIs.MostActiveProject), fmt.Sprintf("%d", v.Data.KPIs.Projects)) {
+			<p class="kpi-value">{ fmt.Sprintf("%d", v.Data.KPIs.Projects) }</p>
+			<p class="kpi-cap">
+				if v.Data.KPIs.MostActiveProject != "" {
+					{ T(v.Lang, "overview.kpi.mostActive") } <span class="mono">{ v.Data.KPIs.MostActiveProject }</span> ·
+				}
+				<a href={ templ.SafeURL(overviewProjectHref(v.Data.KPIs.MostActiveProject)) }>{ T(v.Lang, "overview.kpi.drillIn") }</a>
+			</p>
+		}
+		@overviewAgentKPI(v, "conversations", T(v.Lang, "overview.kpi.sessions"), "/agent-sessions/list")
+		@overviewAgentKPI(v, "spend", T(v.Lang, "overview.kpi.spend"), "/agent-sessions")
+		if v.AgentsLive {
+			<div hidden hx-get="/partials/overview-agents" hx-trigger="load" hx-swap="none"></div>
+		}
+	</section>
+}
+
+// overviewKPI is one KPI: the full card (children after the label) and the
+// strip link. The trailing comment marks the card end for tests.
+templ overviewKPI(id, label, href, miniValue string) {
+	<div class="ov-kpi glass" id={ "kpi-" + id }>
+		<div class="ov-kpi-full">
+			<p class="kpi-label">{ label }</p>
+			{ children... }
 		</div>
-		<ul class="divide-y divide-border/50 px-5 pt-2">
-			@overviewSyncRow(T(lang, "syncSummary.enrolled"), fmt.Sprintf("%d", s.EnrolledCount), "")
-			@overviewSyncRow(T(lang, "syncSummary.healthy"), fmt.Sprintf("%d", s.HealthyCount), "text-ok")
-			@overviewSyncRow(T(lang, "syncSummary.broken"), fmt.Sprintf("%d", s.BrokenCount), overviewBrokenTone(s.BrokenCount))
-			@overviewSyncRow(T(lang, "syncSummary.pendingMutations"), fmt.Sprintf("%d", s.PendingMutationsTotal), overviewPendingTone(s.PendingMutationsTotal))
-		</ul>
+		<a class="ov-kpi-mini" href={ templ.SafeURL(href) } aria-hidden="true" inert>
+			<span class="kpi-label">{ label }</span>
+			<span class="ov-kpi-mini-v" id={ "kpi-" + id + "-mini-v" }>{ miniValue }</span>
+		</a>
 	</div>
+	<!-- /kpi -->
 }
 
-// overviewSyncRow renders a single row in the sync summary card.
-templ overviewSyncRow(label, value, toneClass string) {
-	<li class="flex h-10 items-center justify-between">
-		<span class="text-sm text-fg-muted">{ label }</span>
-		<span class={ "font-mono text-sm font-semibold tabular-nums", toneClass }>{ value }</span>
-	</li>
+// overviewAgentKPI is an agent card: the empty state without a live agent,
+// otherwise a loading body filled out of band by /partials/overview-agents.
+templ overviewAgentKPI(v overviewView, id, label, href string) {
+	if v.AgentsLive {
+		@overviewKPI(id, label, href, "…") {
+			<div id={ "kpi-" + id + "-body" } aria-busy="true">
+				<p class="kpi-value">…</p>
+				<p class="kpi-cap">{ T(v.Lang, "common.loading") }</p>
+			</div>
+		}
+	} else {
+		@overviewKPI(id, label, "/settings#settings-modules", "—") {
+			<p class="kpi-cap">{ T(v.Lang, "overview.kpi.agentsEmpty") }</p>
+			<p class="kpi-cap"><a href="/settings#settings-modules">{ T(v.Lang, "overview.kpi.agentsSetup") }</a></p>
+		}
+	}
 }
 
 // overviewRecentTable renders the "recent observations" table (server-side).

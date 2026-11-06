@@ -17,7 +17,7 @@ func handleTopicsPage(d Deps) http.HandlerFunc {
 
 		topics, err := loadTopics(r, d, q)
 		if err != nil {
-			RenderError(w, r, "Failed to load topics: ", err)
+			RenderError(w, r, "errors.loadTopics", err)
 			return
 		}
 
@@ -38,7 +38,7 @@ func handleTopicsListPartial(d Deps) http.HandlerFunc {
 
 		topics, err := loadTopics(r, d, q)
 		if err != nil {
-			RenderError(w, r, "Failed to load topics: ", err)
+			RenderError(w, r, "errors.loadTopics", err)
 			return
 		}
 

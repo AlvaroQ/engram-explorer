@@ -3,7 +3,10 @@
  *
  * Design contracts (C5, ADR-2, ADR-3):
  * - Exactly ONE useFrame in the entire R3F scene calls invalidate().
- * - invalidate() is called ONLY while motionStore.hasActive() is true.
+ * - invalidate() is called ONLY while motionStore.hasActive() is true, or
+ *   while the caller allows ambient motion (`ambient` prop, see
+ *   frame-demand.ts / use-ambient-motion.ts) — the canvas frameloop is always
+ *   "demand", so this is what keeps the edge particles flowing (S9).
  * - No setState call anywhere in this file.
  * - Consumers register tweens via motionStore.register(handle); this hook
  *   takes care of ticking the store and invalidating the frame demand loop.
@@ -16,6 +19,7 @@
 
 import { useFrame, invalidate } from '@react-three/fiber';
 import { motionStore } from './motion-store';
+import { shouldInvalidateFrame } from './frame-demand.ts';
 
 /**
  * R3F component that provides the single master animation driver.
@@ -23,19 +27,20 @@ import { motionStore } from './motion-store';
  *
  * Returns null — purely a side-effect component.
  */
-export function TweenDriver(): null {
+export function TweenDriver({ ambient = false }: { ambient?: boolean } = {}): null {
   useFrame((_state, delta) => {
+    const hidden = typeof document !== 'undefined' && document.hidden;
     // Skip advancing or invalidating when the tab is hidden (CB3 guard).
-    if (typeof document !== 'undefined' && document.hidden) return;
+    if (hidden) return;
 
     // delta is in seconds; motion-store.tick() expects milliseconds.
     motionStore.tick(delta * 1000);
 
-    if (motionStore.hasActive()) {
-      // Keep the demand frameloop running while tweens are active.
+    // Keep the demand frameloop running while tweens are active or ambient
+    // motion is allowed; otherwise do nothing and the frameloop goes idle.
+    if (shouldInvalidateFrame({ tweensActive: motionStore.hasActive(), ambient, hidden })) {
       invalidate();
     }
-    // When hasActive() returns false we do nothing — frameloop goes idle.
   });
 
   return null;

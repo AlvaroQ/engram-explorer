@@ -17,7 +17,7 @@ func handleSessionsListPage(d Deps) http.HandlerFunc {
 
 		result, err := loadSessions(d, params)
 		if err != nil {
-			RenderError(w, r, "Failed to load sessions: ", err)
+			RenderError(w, r, "errors.loadSessions", err)
 			return
 		}
 
@@ -38,7 +38,7 @@ func handleSessionsListPartial(d Deps) http.HandlerFunc {
 
 		result, err := loadSessions(d, params)
 		if err != nil {
-			RenderError(w, r, "Failed to load sessions: ", err)
+			RenderError(w, r, "errors.loadSessions", err)
 			return
 		}
 

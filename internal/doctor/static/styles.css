@@ -1,30 +1,17 @@
 /* styles.css — engram-explorer doctor module
- * Original minimal stylesheet, dark theme. Aligned 1:1 with the classes the
+ * Original minimal stylesheet; follows the app light/dark theme. Aligned 1:1 with the classes the
  * templ templates actually emit (orphans.templ, sync.templ, components.templ,
  * layout.templ). NOT copied from upstream engram.
  *
- * Color system: a single set of semantic tokens drives every badge / banner /
- * card so status colors stay consistent across the module.
+ * Color system: every color comes from the shared design tokens in
+ * /static/tokens.css (linked by the app layout), consumed as hsl(var(--token)).
+ * Status mapping: success = --ok, warning = --warn, danger = --fail,
+ * info = --info, idle = --fg-muted. No hex values live here.
  */
 
 :root {
-  --doc-green: #9ccfd8;   /* foam (success) */
-  --doc-amber: #f6c177;   /* gold (warning) */
-  --doc-red:   #eb6f92;   /* love (danger) */
-  --doc-blue:  #c4a7e7;   /* iris (info) */
-  --doc-gray:  #6e6a86;   /* overlay (idle) */
   --doc-radius: 6px;
-
-  /* Pico is no longer loaded — alias the --pico-* names this stylesheet still
-     references to the shared app design tokens (defined in /static/styles.css
-     as bare HSL triplets) so the doctor module matches the rest of the UI. */
-  --pico-color: hsl(var(--fg));
-  --pico-muted-color: hsl(var(--fg-muted));
-  --pico-muted-border-color: hsl(var(--border));
-  --pico-primary: hsl(var(--accent));
-  --pico-primary-background: hsl(var(--accent) / 0.15);
-  --pico-border-radius: 6px;
-  --pico-font-family-monospace: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --doc-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 /* ── Base elements (Pico removed; styled with app tokens) ─────────────
@@ -82,7 +69,7 @@
   display: flex;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--pico-muted-border-color, #333);
+  border-bottom: 1px solid hsl(var(--border));
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
 }
@@ -92,16 +79,16 @@
   border-radius: var(--doc-radius);
   text-decoration: none;
   font-size: 0.875rem;
-  color: var(--pico-color, #eee);
+  color: hsl(var(--fg));
   border: 1px solid transparent;
   transition: background 0.15s, border-color 0.15s;
 }
 
 .doctor-nav a:hover,
 .doctor-nav a.active {
-  background: var(--pico-primary-background, #1d3a5f);
-  border-color: var(--pico-primary, #3b82f6);
-  color: var(--pico-primary, #3b82f6);
+  background: hsl(var(--accent) / 0.15);
+  border-color: hsl(var(--accent));
+  color: hsl(var(--accent));
 }
 
 /* ── Badges ───────────────────────────────────────────────────────── */
@@ -113,46 +100,46 @@
   font-weight: 600;
   white-space: nowrap;
   line-height: 1.4;
-  background: color-mix(in srgb, var(--doc-gray) 18%, transparent);
-  color: #a1a1aa;
-  border: 1px solid color-mix(in srgb, var(--doc-gray) 60%, transparent);
+  background: hsl(var(--surface-2));
+  color: hsl(var(--fg-muted));
+  border: 1px solid hsl(var(--border));
 }
 
 /* Status badges (syncStatusBadge) + enrollment badges share the palette. */
 .badge-healthy,
 .badge-enrolled {
-  background: color-mix(in srgb, var(--doc-green) 18%, transparent);
-  color: var(--doc-green);
-  border-color: var(--doc-green);
+  background: hsl(var(--ok) / 0.18);
+  color: hsl(var(--ok));
+  border-color: hsl(var(--ok));
 }
 .badge-degraded {
-  background: color-mix(in srgb, var(--doc-amber) 18%, transparent);
-  color: var(--doc-amber);
-  border-color: var(--doc-amber);
+  background: hsl(var(--warn) / 0.18);
+  color: hsl(var(--warn));
+  border-color: hsl(var(--warn));
 }
 .badge-broken {
-  background: color-mix(in srgb, var(--doc-red) 18%, transparent);
-  color: var(--doc-red);
-  border-color: var(--doc-red);
+  background: hsl(var(--fail) / 0.18);
+  color: hsl(var(--fail));
+  border-color: hsl(var(--fail));
 }
 .badge-idle,
 .badge-not-enrolled {
-  background: color-mix(in srgb, var(--doc-gray) 18%, transparent);
-  color: #a1a1aa;
-  border-color: color-mix(in srgb, var(--doc-gray) 60%, transparent);
+  background: hsl(var(--surface-2));
+  color: hsl(var(--fg-muted));
+  border-color: hsl(var(--border));
 }
 
 /* ── Empty state ──────────────────────────────────────────────────── */
 .empty-state {
   text-align: center;
   padding: 3rem 1rem;
-  color: var(--pico-muted-color, #888);
+  color: hsl(var(--fg-muted));
 }
 .empty-state p { margin: 0; font-size: 0.95rem; }
 
 /* ── Loading placeholder ──────────────────────────────────────────── */
 .loading {
-  color: var(--pico-muted-color, #888);
+  color: hsl(var(--fg-muted));
   font-style: italic;
   padding: 1rem 0;
 }
@@ -161,9 +148,9 @@
 .inline-error {
   padding: 0.75rem 1rem;
   border-radius: var(--doc-radius);
-  background: color-mix(in srgb, var(--doc-red) 14%, transparent);
-  border: 1px solid var(--doc-red);
-  color: #f87171;
+  background: hsl(var(--fail) / 0.14);
+  border: 1px solid hsl(var(--fail));
+  color: hsl(var(--fail));
   margin: 0.5rem 0;
   font-size: 0.875rem;
 }
@@ -187,18 +174,18 @@
   border: 1px solid transparent;
 }
 .btn-action {
-  background: var(--pico-primary-background, #1d3a5f);
-  color: var(--pico-primary, #60a5fa);
-  border-color: var(--pico-primary, #60a5fa);
+  background: hsl(var(--accent) / 0.15);
+  color: hsl(var(--accent));
+  border-color: hsl(var(--accent));
 }
 .btn-danger {
-  background: color-mix(in srgb, var(--doc-red) 14%, transparent);
-  color: var(--doc-red);
-  border-color: var(--doc-red);
+  background: hsl(var(--fail) / 0.14);
+  color: hsl(var(--fail));
+  border-color: hsl(var(--fail));
 }
 .btn-link {
   background: transparent;
-  color: var(--pico-primary, #60a5fa);
+  color: hsl(var(--accent));
   text-decoration: none;
 }
 .btn-action:hover  { filter: brightness(1.2); }
@@ -226,8 +213,8 @@
    button. Recolour the icon-only Assign with the success token so it clearly
    signals a safe, non-destructive action. */
 .btn-action.btn-icon {
-  background: color-mix(in srgb, var(--doc-green) 14%, transparent);
-  color: var(--doc-green);
+  background: hsl(var(--ok) / 0.14);
+  color: hsl(var(--ok));
 }
 
 /* The shared .settings-page shell caps content at 860px, which suits the
@@ -303,15 +290,15 @@
 .detail-card,
 .error-card,
 .upgrade-state-card {
-  border: 1px solid var(--pico-muted-border-color, #333);
+  border: 1px solid hsl(var(--border));
   border-radius: var(--doc-radius);
   padding: 1rem;
   margin-bottom: 1rem;
-  background: color-mix(in srgb, var(--doc-gray) 8%, transparent);
+  background: hsl(var(--fg-muted) / 0.08);
 }
 .error-card {
-  border-color: var(--doc-red);
-  background: color-mix(in srgb, var(--doc-red) 10%, transparent);
+  border-color: hsl(var(--fail));
+  background: hsl(var(--fail) / 0.1);
 }
 
 .detail-cards {
@@ -331,7 +318,7 @@
   margin: 0;
 }
 .detail-card dt,
-.global-target-card dt { color: var(--pico-muted-color, #888); font-size: 0.8rem; }
+.global-target-card dt { color: hsl(var(--fg-muted)); font-size: 0.8rem; }
 .detail-card dd,
 .global-target-card dd { margin: 0; font-variant-numeric: tabular-nums; }
 
@@ -408,7 +395,7 @@
 /* ── Sync: issues banner ──────────────────────────────────────────── */
 /* Collapsible sync-issues panel (collapsed by default). */
 .issues-details {
-  border: 1px solid var(--pico-muted-border-color, #333);
+  border: 1px solid hsl(var(--border));
   border-radius: var(--doc-radius);
   margin-bottom: 1rem;
   background: hsl(var(--surface));
@@ -434,7 +421,7 @@
 .issues-summary-title { flex: 1; }
 .issues-body { padding: 0 1rem 1rem; }
 .issues-body .loading { padding: 0 0 0.5rem; }
-.no-issues { margin: 0; color: #4ade80; }
+.no-issues { margin: 0; color: hsl(var(--ok)); }
 .issues-list { list-style: none; margin: 0.5rem 0 0; padding: 0; }
 .issue-item {
   display: flex;
@@ -442,13 +429,13 @@
   gap: 0.5rem;
   flex-wrap: wrap;
   padding: 0.4rem 0;
-  border-top: 1px solid var(--pico-muted-border-color, #2a2a2a);
+  border-top: 1px solid hsl(var(--border));
 }
-.issue-code { font-family: var(--pico-font-family-monospace, monospace); }
+.issue-code { font-family: var(--doc-mono); }
 .issue-message { flex: 1; }
 .issue-hint,
-.issue-project { font-size: 0.78rem; color: var(--pico-muted-color, #888); }
-.generated-at { margin: 0.75rem 0 0; font-size: 0.75rem; color: var(--pico-muted-color, #888); }
+.issue-project { font-size: 0.78rem; color: hsl(var(--fg-muted)); }
+.generated-at { margin: 0.75rem 0 0; font-size: 0.75rem; color: hsl(var(--fg-muted)); }
 
 /* Severity badges (issue list) reuse the status palette. */
 .severity-badge {
@@ -458,9 +445,9 @@
   font-weight: 700;
   text-transform: uppercase;
 }
-.severity-high   { background: color-mix(in srgb, var(--doc-red) 18%, transparent);   color: var(--doc-red);   border: 1px solid var(--doc-red); }
-.severity-medium { background: color-mix(in srgb, var(--doc-amber) 18%, transparent); color: var(--doc-amber); border: 1px solid var(--doc-amber); }
-.severity-low    { background: color-mix(in srgb, var(--doc-blue) 18%, transparent);  color: var(--doc-blue);  border: 1px solid var(--doc-blue); }
+.severity-high   { background: hsl(var(--fail) / 0.18);   color: hsl(var(--fail));   border: 1px solid hsl(var(--fail)); }
+.severity-medium { background: hsl(var(--warn) / 0.18); color: hsl(var(--warn)); border: 1px solid hsl(var(--warn)); }
+.severity-low    { background: hsl(var(--info) / 0.18);  color: hsl(var(--info));  border: 1px solid hsl(var(--info)); }
 
 /* ── Sync: pending mutations + upgrade ────────────────────────────── */
 .pending-mutations { margin-top: 1.5rem; }
@@ -485,7 +472,7 @@
   padding: 0;
   margin: 0;
   font: inherit;
-  color: var(--pico-primary, #60a5fa);
+  color: hsl(var(--accent));
   cursor: pointer;
   text-decoration: none;
   font-variant-numeric: tabular-nums;
@@ -503,10 +490,18 @@
   padding: 0;
   border: none;
   background: transparent;
+  z-index: 1000;
+}
+/* Only lay out the dialog while open: display:flex on the closed element
+   would override the UA's dialog:not([open]) { display: none }. */
+.orphan-dialog[open] {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+}
+/* showModal() adds a native ::backdrop; the card brings its own scrim. */
+.orphan-dialog::backdrop {
+  background: transparent;
 }
 .orphan-dialog-backdrop {
   position: fixed;
@@ -581,7 +576,7 @@
 }
 .orphan-dialog-dir-value {
   display: block;
-  font-family: var(--pico-font-family-monospace, monospace);
+  font-family: var(--doc-mono);
   font-size: 0.82rem;
   color: hsl(var(--fg));
   word-break: break-all;
@@ -623,7 +618,7 @@
   border: 1px solid hsl(var(--border));
   border-radius: 8px;
   padding: 12px 14px;
-  font-family: var(--pico-font-family-monospace, monospace);
+  font-family: var(--doc-mono);
   font-size: 0.8rem;
   line-height: 1.5;
   color: hsl(var(--fg));

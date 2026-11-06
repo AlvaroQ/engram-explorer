@@ -1,0 +1,91 @@
+/* tokens.css — the single source of design tokens for engram-explorer.
+ *
+ * Linked from the shared layout before app.css and styles.css, so the
+ * server-rendered shell, the doctor module, the Tailwind utilities in app.css
+ * and the React islands all read the same values. Nothing else may redefine
+ * these custom properties.
+ *
+ * Colors are bare HSL triplets (H S% L%), NOT wrapped in hsl(), so consumers
+ * can add alpha: hsl(var(--token)) or hsl(var(--token) / 0.14). Wrapping the
+ * token value itself would produce the invalid hsl(hsl(...)).
+ *
+ * Every text/background pair the UI uses is held to WCAG AA by
+ * internal/ui/tokens_contrast_test.go; see design/system.md for the table.
+ */
+
+/* ---------- Color tokens (dark default) ---------- */
+:root {
+  --bg: 249 22% 12%;
+  --surface: 247 23% 15%;
+  --surface-2: 248 25% 18%;
+  --border: 249 15% 28%;
+  --fg: 245 50% 91%;
+  --fg-muted: 248 15% 61%;
+  --accent: 343 80% 72%;
+  --accent-fg: 249 22% 12%; /* text on a filled --accent background */
+  --ok: 189 43% 73%;
+  --warn: 35 88% 72%;
+  --fail: 4 78% 72%;
+  --info: 267 57% 78%;
+  --brand-engram: 343 80% 72%;
+  --brand-cc: 18 72% 62%;
+  --brand-codex: 212 70% 72%;
+  color-scheme: dark;
+}
+
+:root.light {
+  --bg: 32 57% 95%;
+  --surface: 35 100% 98%;
+  --surface-2: 28 40% 92%;
+  --border: 10 9% 86%;
+  --fg: 248 24% 26%;
+  --fg-muted: 248 12% 42%;
+  --accent: 343 45% 42%;
+  --accent-fg: 0 0% 100%;
+  --ok: 189 45% 30%;
+  --warn: 33 90% 28%;
+  --fail: 355 60% 42%;
+  --info: 267 40% 45%;
+  --brand-engram: 343 45% 42%;
+  --brand-cc: 16 65% 40%;
+  --brand-codex: 212 60% 38%;
+  color-scheme: light;
+}
+
+/* ---------- Material-discipline design primitives ----------
+   Spacing rhythm (4/8px scale), radii, and a consistent elevation/shadow
+   scale layered on top of the HSL color tokens. */
+:root {
+  /* 4px-based spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Elevation scale (Material-like). Dark theme uses deeper, softer shadows. */
+  --elevation-1: 0 1px 2px hsl(222 47% 4% / 0.35), 0 1px 1px hsl(222 47% 4% / 0.25);
+  --elevation-2: 0 2px 6px hsl(222 47% 4% / 0.40), 0 1px 2px hsl(222 47% 4% / 0.30);
+  --elevation-3: 0 6px 16px hsl(222 47% 4% / 0.45), 0 2px 6px hsl(222 47% 4% / 0.35);
+
+  /* State-layer opacities (Material state layers via background-color alpha). */
+  --state-hover: 0.08;
+  --state-active: 0.14;
+}
+
+:root.light {
+  /* Light theme: shadows are tinted to the cool slate background, not pure black. */
+  --elevation-1: 0 1px 2px hsl(222 47% 30% / 0.08), 0 1px 1px hsl(222 47% 30% / 0.06);
+  --elevation-2: 0 2px 6px hsl(222 47% 30% / 0.10), 0 1px 2px hsl(222 47% 30% / 0.08);
+  --elevation-3: 0 8px 24px hsl(222 47% 30% / 0.12), 0 2px 8px hsl(222 47% 30% / 0.08);
+
+  --state-hover: 0.06;
+  --state-active: 0.10;
+}

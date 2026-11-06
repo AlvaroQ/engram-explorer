@@ -1,82 +1,6 @@
-/* engram-explorer ui shell — HSL design tokens + minimal layout */
-
-/* ---------- Design tokens (dark default, mirrored from apps/frontend/src/styles.css) ---------- */
-/* Tokens are stored as bare HSL triplets (H S% L%) — NOT wrapped in hsl() —
-   so they match apps/frontend/src/styles.css and the compiled app.css.
-   Consumers below (and Tailwind utilities / React islands) wrap them with
-   hsl(var(--token)). Wrapping the token value itself would produce the
-   invalid hsl(hsl(...)) and silently fall back to currentColor / black. */
-:root {
-  --bg: 249 22% 12%;
-  --surface: 247 23% 15%;
-  --surface-2: 248 25% 18%;
-  --border: 249 15% 28%;
-  --fg: 245 50% 91%;
-  --fg-muted: 248 15% 61%;
-  --accent: 343 76% 68%;
-  --ok: 189 43% 73%;
-  --warn: 35 88% 72%;
-  --fail: 343 35% 55%;
-  --brand-engram: 343 76% 68%;
-  --brand-cc: 18 72% 62%;
-  color-scheme: dark;
-}
-
-:root.light {
-  --bg: 32 57% 95%;
-  --surface: 35 100% 98%;
-  --surface-2: 28 40% 92%;
-  --border: 10 9% 86%;
-  --fg: 248 19% 40%;
-  --fg-muted: 248 12% 52%;
-  --accent: 343 35% 55%;
-  --ok: 189 30% 48%;
-  --warn: 35 81% 56%;
-  --fail: 343 35% 55%;
-  --brand-engram: 343 35% 55%;
-  --brand-cc: 16 60% 50%;
-  color-scheme: light;
-}
-
-/* ---------- Material-discipline design primitives ----------
-   Spacing rhythm (4/8px scale), radii, and a consistent elevation/shadow
-   scale layered on top of the existing HSL token system. These are used by
-   sidebar, cards, settings, and the sync footer so spacing and depth stay
-   coherent instead of ad-hoc per-component values. */
-:root {
-  /* 4px-based spacing scale */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-
-  /* Radii */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-
-  /* Elevation scale (Material-like). Dark theme uses deeper, softer shadows. */
-  --elevation-1: 0 1px 2px hsl(222 47% 4% / 0.35), 0 1px 1px hsl(222 47% 4% / 0.25);
-  --elevation-2: 0 2px 6px hsl(222 47% 4% / 0.40), 0 1px 2px hsl(222 47% 4% / 0.30);
-  --elevation-3: 0 6px 16px hsl(222 47% 4% / 0.45), 0 2px 6px hsl(222 47% 4% / 0.35);
-
-  /* State-layer opacities (Material state layers via background-color alpha). */
-  --state-hover: 0.08;
-  --state-active: 0.14;
-}
-
-:root.light {
-  /* Light theme: shadows are tinted to the cool slate background, not pure black. */
-  --elevation-1: 0 1px 2px hsl(222 47% 30% / 0.08), 0 1px 1px hsl(222 47% 30% / 0.06);
-  --elevation-2: 0 2px 6px hsl(222 47% 30% / 0.10), 0 1px 2px hsl(222 47% 30% / 0.08);
-  --elevation-3: 0 8px 24px hsl(222 47% 30% / 0.12), 0 2px 8px hsl(222 47% 30% / 0.08);
-
-  --state-hover: 0.06;
-  --state-active: 0.10;
-}
+/* engram-explorer ui shell — minimal layout and components.
+   Design tokens (colors, spacing, radii, elevation, state layers) live in
+   tokens.css, linked before this file; consume them as hsl(var(--token)). */
 
 /* ---------- Reset & base ---------- */
 *, *::before, *::after {
@@ -105,6 +29,34 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+/* ---------- Skip link ----------
+   First focusable element of every page; slides in on keyboard focus and
+   jumps to <main id="main-content" tabindex="-1">. */
+.skip-link {
+  position: absolute;
+  left: var(--space-2);
+  top: -48px;
+  z-index: 100;
+  padding: var(--space-2) 14px;
+  border-radius: var(--radius-sm);
+  background: hsl(var(--surface-2));
+  color: hsl(var(--fg));
+  border: 1px solid hsl(var(--accent));
+  font-size: 13px;
+  font-weight: 600;
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+  top: var(--space-2);
+  text-decoration: none;
+}
+
+/* The main landmark takes programmatic focus from the skip link only. */
+#main-content:focus {
+  outline: none;
 }
 
 /* ---------- App shell layout ---------- */
@@ -251,6 +203,19 @@ a:hover {
   background: hsl(var(--brand-cc));
 }
 
+.sidebar-group-agent-sessions .sidebar-group-dot {
+  background: hsl(var(--fg-muted));
+}
+
+/* Agent entries carry their brand color on the icon. */
+.nav-icon-claude-code {
+  color: hsl(var(--brand-cc));
+}
+
+.nav-icon-codex {
+  color: hsl(var(--brand-codex));
+}
+
 /* Divider between the Engram and Claude Code groups — tighten the gap before
    the following group heading so the separation reads as one boundary. */
 .sidebar-divider + .sidebar-group-label {
@@ -314,20 +279,57 @@ a:hover {
   display: inline-flex;
 }
 
-.account-switcher > .sidebar-brand-label {
+/* Menu-button trigger: looks like the brand label it replaces. */
+.account-switcher-trigger {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  cursor: default;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
-.account-switcher > .sidebar-brand-label::after {
+.account-switcher-trigger:hover {
+  background: hsl(var(--fg) / var(--state-hover));
+}
+
+.account-switcher-trigger:focus-visible {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 1px;
+}
+
+.account-switcher-trigger > .sidebar-brand-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.account-switcher-trigger > .sidebar-brand-label::after {
   content: "";
   width: 0;
   height: 0;
   border-left: 3px solid transparent;
   border-right: 3px solid transparent;
   border-top: 4px solid hsl(var(--fg-muted));
+}
+
+/* Initial of the active profile; only shown in the collapsed rail. */
+.account-avatar {
+  display: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  background: hsl(var(--accent) / 0.14);
+  color: hsl(var(--accent));
+  box-shadow: inset 0 0 0 1px hsl(var(--accent) / 0.35);
 }
 
 .account-switcher-menu {
@@ -347,8 +349,8 @@ a:hover {
   box-shadow: var(--elevation-3);
 }
 
-.account-switcher:hover .account-switcher-menu,
-.account-switcher:focus-within .account-switcher-menu {
+/* Opened by ui-actions.js (data-menu-button), which drops [hidden]. */
+.account-switcher-menu:not([hidden]) {
   display: flex;
 }
 
@@ -927,6 +929,13 @@ a:hover {
 .cc-detail-val.muted {
   color: hsl(var(--fg-muted));
 }
+/* Visible explanation under a value (e.g. why a cost is not priced); wraps. */
+.cc-detail-cap {
+  font-size: 11px;
+  line-height: 1.3;
+  color: hsl(var(--fg-muted));
+  overflow-wrap: anywhere;
+}
 
 /* Descriptive detail title (first user prompt) — wrap fully, no truncation. */
 .cc-detail-title {
@@ -974,7 +983,7 @@ a:hover {
 .btn.is-active {
   background: hsl(var(--accent));
   border-color: hsl(var(--accent));
-  color: #fff;
+  color: hsl(var(--accent-fg));
 }
 
 /* Hide block groups when the wrapper carries the matching class. */
@@ -1065,17 +1074,29 @@ code {
 
 .btn-primary {
   background: hsl(var(--accent));
-  color: hsl(220, 25%, 98%);
+  color: hsl(var(--accent-fg));
   border-color: hsl(var(--accent));
-}
-
-.btn-primary:hover {
-  opacity: 0.85;
 }
 
 .btn-secondary {
   background: hsl(var(--surface-2));
   color: hsl(var(--fg-muted));
+}
+
+/* Selected and primary buttons keep their accent fill on hover. The generic
+   .btn:hover (surface fill) used to out-rank them and left --accent-fg text on
+   a neutral fill (dark on dark, white on white). Hover is a Material state
+   layer of the on-color over the fill, so the text stays AA. */
+.btn-primary:hover,
+.btn.btn-primary:hover,
+.btn.is-active:hover {
+  background-color: hsl(var(--accent));
+  background-image: linear-gradient(
+    hsl(var(--accent-fg) / var(--state-hover)),
+    hsl(var(--accent-fg) / var(--state-hover))
+  );
+  border-color: hsl(var(--accent));
+  color: hsl(var(--accent-fg));
 }
 
 /* ---------- Settings page ----------
@@ -1174,7 +1195,7 @@ code {
 
 .preference-controls .btn-primary:hover {
   background: hsl(var(--accent) / 0.08);
-  opacity: 1;
+  color: hsl(var(--accent));
 }
 
 /* Info rows (settings system section) */
@@ -1418,11 +1439,11 @@ code {
   padding: 6px 10px 10px;
 }
 
-/* Goal 3: agent "thinking" is de-emphasized (lighter gray, italic);
+/* Goal 3: agent "thinking" is de-emphasized (muted, italic; no extra alpha so it keeps AA);
    user prompts and the agent's final text keep the normal tone. */
 .cc-thinking .event-content,
 .cc-thinking .cc-tool-summary {
-  color: hsl(var(--fg-muted) / 0.7);
+  color: hsl(var(--fg-muted));
   font-style: italic;
 }
 
@@ -1501,21 +1522,43 @@ code {
   display: none;
 }
 
-/* ===== >= 640px: collapsed = icon-only rail ===== */
+/* ===== >= 640px: collapsed = 64px icon rail (default) ===== */
 @media (min-width: 640px) {
   .app-shell.sidebar-collapsed .sidebar {
-    width: 72px;
+    position: relative;
+    z-index: 30;
+    width: 64px;
     padding-left: var(--space-2);
     padding-right: var(--space-2);
+    /* Let the label chips float over the main content. */
+    overflow: visible;
   }
-  .app-shell.sidebar-collapsed .nav-label,
-  .app-shell.sidebar-collapsed .sidebar-group-text,
-  .app-shell.sidebar-collapsed .sidebar-brand-text,
   .app-shell.sidebar-collapsed .sidebar-sync-label,
-  .app-shell.sidebar-collapsed .status-pill-label {
+  .app-shell.sidebar-collapsed .status-pill-label,
+  .app-shell.sidebar-collapsed .account-switcher-trigger > .sidebar-brand-label {
     display: none;
   }
+  /* Hidden visually, kept for assistive tech. */
+  .app-shell.sidebar-collapsed .sidebar-group-text,
+  .app-shell.sidebar-collapsed .sidebar-brand-title,
+  .app-shell.sidebar-collapsed .sidebar-brand-text > .sidebar-brand-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .app-shell.sidebar-collapsed .account-avatar {
+    display: grid;
+  }
+  .app-shell.sidebar-collapsed .account-switcher-menu {
+    top: 0;
+    left: calc(100% + var(--space-2));
+    margin-top: 0;
+  }
   .app-shell.sidebar-collapsed .sidebar-brand {
+    flex-direction: column;
     justify-content: center;
   }
   .app-shell.sidebar-collapsed .sidebar-brand-actions {
@@ -1537,6 +1580,29 @@ code {
   .app-shell.sidebar-collapsed .sidebar-nav a.active::before {
     left: 0;
   }
+  /* Labels become a floating chip, shown on hover and keyboard focus. */
+  .app-shell.sidebar-collapsed .nav-label {
+    position: absolute;
+    left: calc(100% + 14px);
+    top: 50%;
+    transform: translate(-4px, -50%);
+    padding: 6px 10px;
+    white-space: nowrap;
+    background: hsl(var(--surface-2));
+    color: hsl(var(--fg));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius-sm);
+    box-shadow: var(--elevation-2);
+    font-weight: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease, transform 0.15s ease;
+  }
+  .app-shell.sidebar-collapsed .sidebar-nav a:hover .nav-label,
+  .app-shell.sidebar-collapsed .sidebar-nav a:focus-visible .nav-label {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
 }
 
 /* ===== < 640px: fixed rail that expands to an overlay drawer ===== */
@@ -1547,17 +1613,17 @@ code {
     left: 0;
     bottom: 0;
     z-index: 50;
-    width: 72px;
+    width: 64px;
     padding-left: var(--space-2);
     padding-right: var(--space-2);
   }
   /* Keep content clear of the fixed rail. */
   .main-content,
   .main-content-full {
-    padding-left: calc(72px + var(--space-4));
+    padding-left: calc(64px + var(--space-4));
   }
   .main-content-full {
-    padding-left: 72px;
+    padding-left: 64px;
   }
   /* Rail (closed): icon-only. */
   .app-shell:not(.sidebar-open) .nav-label,
@@ -1865,4 +1931,532 @@ code {
   justify-content: flex-end;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
+}
+
+/* ---------- Toasts (htmx error feedback, toasts.js) ----------
+   Fixed stack in the bottom-right corner; each toast is an error card with a
+   close button. The entrance animation only runs without reduced motion. */
+.toast-region {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: min(360px, calc(100vw - 2 * var(--space-4)));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border: 1px solid hsl(var(--border));
+  border-left: 3px solid hsl(var(--fail));
+  border-radius: var(--radius-md);
+  background: hsl(var(--surface-2));
+  color: hsl(var(--fg));
+  box-shadow: var(--elevation-3);
+  font-size: 13px;
+  pointer-events: auto;
+}
+
+.toast-message {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: hsl(var(--fg-muted));
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toast-close:hover {
+  background: hsl(var(--fg) / var(--state-hover));
+  color: hsl(var(--fg));
+}
+
+.toast-close:focus-visible {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .toast {
+    animation: toast-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- Overview (02-brain-first) ----------
+   The page is edge to edge: the hero band carries the knowledge-graph
+   preview, the KPI cards float over its lower edge, and the charts and
+   recent memories follow below the fold. */
+.main-content:has(> .overview) {
+  padding: 0;
+}
+
+.overview {
+  --ov-hero-h: 420px;
+  --ov-bar-h: 72px;
+  --ov-strip-h: 44px;
+  position: relative;
+}
+
+.ov-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-2) 32px;
+  font-size: 13px;
+  background: hsl(var(--warn) / 0.15);
+  border-bottom: 1px solid hsl(var(--warn) / 0.3);
+}
+
+.ov-hero {
+  position: relative;
+  z-index: 3;
+  isolation: isolate;
+  overflow: hidden;
+  height: var(--ov-hero-h);
+  background:
+    radial-gradient(ellipse 34% 48% at 52% 50%, hsl(var(--accent) / 0.16) 0%, transparent 72%),
+    hsl(var(--bg));
+}
+
+.ov-hero-back {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+/* Opaque bar background revealed as the hero collapses (AA for its text);
+   it sits under the graph, which fades to 0.35 over it. */
+.ov-hero-solid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: hsl(var(--surface));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ov-hero-ui {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 440px) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-6);
+  padding: var(--space-6) 32px;
+  pointer-events: none;
+}
+
+.ov-hero-ui > * {
+  pointer-events: auto;
+}
+
+.ov-hero-head {
+  max-width: 310px;
+}
+
+.ov-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-muted));
+}
+
+.ov-hero-head h1 {
+  margin-top: var(--space-2);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.ov-sub {
+  margin-top: var(--space-1);
+  font-size: 13px;
+  color: hsl(var(--fg-muted));
+}
+
+.ov-cta {
+  margin-top: var(--space-4);
+}
+
+/* Tonal primary: fg text on an accent 14% layer. */
+.btn-tonal {
+  background: hsl(var(--accent) / 0.14);
+  border-color: hsl(var(--accent) / 0.45);
+  color: hsl(var(--fg));
+  font-weight: 600;
+}
+
+.btn-tonal:hover {
+  background: hsl(var(--accent) / 0.22);
+  text-decoration: none;
+}
+
+.glass {
+  background: hsl(var(--surface) / 0.72);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  backdrop-filter: blur(14px) saturate(1.15);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: hsl(var(--surface) / 0.95);
+  }
+}
+
+.ov-search {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-3);
+}
+
+.ov-search:focus-within {
+  border-color: hsl(var(--accent));
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 2px;
+}
+
+.ov-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: none;
+  outline: none;
+  font: inherit;
+  font-size: 14px;
+  color: hsl(var(--fg));
+}
+
+.ov-search input::placeholder {
+  color: hsl(var(--fg-muted));
+  opacity: 1;
+}
+
+/* KPI cards over the hero's lower edge. */
+.ov-kpis {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+  margin: -64px 32px 0;
+}
+
+.ov-kpi {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 16px;
+  border: 1px solid hsl(var(--border) / 0.85);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-3);
+}
+
+.ov-kpi .kpi-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: hsl(var(--fg-muted));
+}
+
+.ov-kpi .kpi-value {
+  margin-top: var(--space-1);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-kpi .kpi-cap {
+  margin-top: 6px;
+  font-size: 12px;
+  color: hsl(var(--fg-muted));
+}
+
+.ov-kpi .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Strip version: hidden at rest, exposed by the collapse script. */
+.ov-kpi-mini {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 14px;
+  color: hsl(var(--fg));
+  opacity: 0;
+}
+
+.ov-kpi-mini[inert] {
+  pointer-events: none;
+}
+
+.ov-kpi-mini:hover {
+  text-decoration: none;
+}
+
+.ov-kpi-mini .kpi-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ov-kpi-mini-v {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-split {
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin-top: 10px;
+  border-radius: 999px;
+}
+
+.ov-fill-claude-code {
+  fill: hsl(var(--brand-cc));
+}
+
+.ov-fill-codex {
+  fill: hsl(var(--brand-codex));
+}
+
+.kv {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.kv::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: hsl(var(--fg-muted));
+}
+
+.ov-agent-cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 6px;
+}
+
+.ov-agent-claude-code::before {
+  background: hsl(var(--brand-cc));
+}
+
+.ov-agent-codex::before {
+  background: hsl(var(--brand-codex));
+}
+
+.ov-below {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: 28px 32px;
+}
+
+.ov-below .card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+@media (max-width: 1023px) {
+  .ov-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov-hero-ui {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Hero graph: full bleed, non-interactive (the CTA opens /brain), so the
+   wheel scrolls the page instead of zooming the camera. */
+.ov-hero-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.ov-hero-canvas > .island-mount {
+  height: 100%;
+  min-height: 0;
+}
+
+/* ---------- Overview collapsing hero (04-scroll-collapse) ----------
+   Driven by the overview-collapse island, which writes on .overview:
+   --ov-p (hero 0..1), --ov-k (KPI strip 0..1), --ov-s (px the hero slid
+   under the top) and the measured docking offsets. It sets
+   data-collapse-ready only on wide viewports once measured; without it the
+   page is a plain scrolling layout. */
+.overview {
+  --ov-p: 0;
+  --ov-k: 0;
+  --ov-s: 0px;
+}
+
+/* Focus and anchors land below the pinned bar + KPI strip. */
+.main-content:has(> .overview[data-collapse-ready]) {
+  scroll-padding-top: calc(72px + 44px + 16px);
+}
+
+.overview[data-collapse-ready] .ov-hero {
+  position: sticky;
+  top: calc(var(--ov-bar-h) - var(--ov-hero-h));
+}
+
+/* The layers follow the visible top while the band slides under it. */
+.overview[data-collapse-ready] .ov-hero-back,
+.overview[data-collapse-ready] .ov-hero-ui {
+  transform: translate3d(0, var(--ov-s), 0);
+}
+
+.overview[data-collapse-ready] .ov-hero-solid {
+  opacity: var(--ov-p);
+}
+
+/* Scale toward the top (to 0.55), lift into the bar's centre, fade to 0.35. */
+.overview[data-collapse-ready] .ov-hero-canvas {
+  transform-origin: 50% 0;
+  transform: translateY(calc(var(--ov-p) * var(--ov-cv-dy, -79.5px))) scale(calc(1 - 0.45 * var(--ov-p)));
+  opacity: calc(1 - 0.65 * var(--ov-p));
+}
+
+/* Bottom fade at rest; the bar divider appears as the band reaches 72px. */
+.overview[data-collapse-ready] .ov-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 1;
+  height: 90px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, hsl(var(--bg) / 0), hsl(var(--bg)) 96%);
+  opacity: calc(1 - var(--ov-p));
+}
+
+.overview[data-collapse-ready] .ov-hero::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 3;
+  height: 1px;
+  pointer-events: none;
+  background: hsl(var(--border));
+  opacity: clamp(0, calc(var(--ov-p) * 5 - 4), 1);
+}
+
+.overview[data-collapse-ready] [data-collapse-fade] {
+  opacity: clamp(0, calc(1 - var(--ov-p) * 2.5), 1);
+}
+
+/* Title stays, 20px -> 16px, centred on the bar; the search docks beside it. */
+.overview[data-collapse-ready] .ov-hero-head h1 {
+  transform-origin: 0 50%;
+  transform: translateY(calc(var(--ov-p) * var(--ov-h1-dy, 0px))) scale(calc(1 - 0.2 * var(--ov-p)));
+}
+
+.overview[data-collapse-ready] .ov-search {
+  transform: translate(calc(var(--ov-p) * var(--ov-sx, 0px)), calc(var(--ov-p) * var(--ov-sy, 0px)));
+}
+
+/* The KPI section is a fixed-height sticky slot; the cards shrink into the
+   44px strip pinned right under the bar. */
+.overview[data-collapse-ready] .ov-kpis {
+  position: sticky;
+  top: var(--ov-bar-h);
+  height: var(--ov-kpi-h, 116px);
+}
+
+.overview[data-collapse-ready] .ov-kpis::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -32px;
+  right: -32px;
+  height: var(--ov-strip-h);
+  background: hsl(var(--surface));
+  border-bottom: 1px solid hsl(var(--border));
+  box-shadow: var(--elevation-2);
+  opacity: var(--ov-k);
+  pointer-events: none;
+}
+
+.overview[data-collapse-ready] .ov-kpi {
+  height: calc(var(--ov-kpi-h, 116px) - (var(--ov-kpi-h, 116px) - (var(--ov-strip-h) - 8px)) * var(--ov-k));
+  margin-top: calc(4px * var(--ov-k));
+}
+
+.overview[data-collapse-ready] .ov-kpi-full {
+  opacity: clamp(0, calc(1 - var(--ov-k) * 2.2), 1);
+}
+
+.overview[data-collapse-ready] .ov-kpi-mini {
+  opacity: clamp(0, calc(var(--ov-k) * 2.2 - 1.2), 1);
+}
+
+/* Reduced motion: no collapse. The hero scrolls away and only the strip
+   pins, at the very top, switching state without a transition. */
+@media (prefers-reduced-motion: reduce) {
+  .overview[data-collapse-ready] .ov-hero {
+    position: relative;
+    top: auto;
+  }
+  .overview[data-collapse-ready] .ov-hero-back,
+  .overview[data-collapse-ready] .ov-hero-ui,
+  .overview[data-collapse-ready] .ov-hero-canvas,
+  .overview[data-collapse-ready] .ov-hero-head h1,
+  .overview[data-collapse-ready] .ov-search {
+    transform: none;
+  }
+  .overview[data-collapse-ready] .ov-kpis {
+    top: 0;
+  }
+  .main-content:has(> .overview[data-collapse-ready]) {
+    scroll-padding-top: calc(44px + 16px);
+  }
 }

@@ -12,7 +12,10 @@
     "orphans": "Orphans",
     "agentSessions": "Agent sessions",
     "agentSessionsOverview": "Overview",
-    "agentSessionsList": "Sessions"
+    "agentSessionsList": "Sessions",
+    "agents": "Agents",
+    "agentClaudeCode": "Claude Code",
+    "agentCodex": "Codex"
   },
   "common": {
     "errorGeneric": "Something went wrong. Check the server log for details.",
@@ -36,7 +39,9 @@
     "no": "no",
     "all": "all",
     "none": "—",
-    "language": "Language"
+    "language": "Language",
+    "skipToContent": "Skip to content",
+    "errorLabel": "Error:"
   },
   "sidebar": {
     "brand": "Explorer",
@@ -60,7 +65,8 @@
       "dbError": "DB error",
       "daemonOffline": "daemon offline",
       "allOk": "Status ok"
-    }
+    },
+    "switchAccount": "Switch account"
   },
   "overview": {
     "kpi": {
@@ -71,7 +77,20 @@
       "projects": "Projects",
       "drillProject": "Drill into a project",
       "prompts": "Prompts",
-      "searchPrompts": "Search prompts"
+      "searchPrompts": "Search prompts",
+      "keyFigures": "Key figures",
+      "last7d": "+{{count}} in the last 7 days",
+      "browse": "Browse",
+      "mostActive": "Most active:",
+      "drillIn": "Drill in",
+      "spend": "Agent spend this month",
+      "window7d": "last 7 days",
+      "viewSessions": "View sessions",
+      "spendDetails": "Details",
+      "agentsEmpty": "No coding agent connected yet.",
+      "agentsSetup": "Connect one in Settings → Data sources",
+      "agentsError": "Could not load the agent figures.",
+      "agentsPartial": "Some sessions could not be read"
     },
     "alert": {
       "syncIssues": "{{count}} sync issue(s) need attention",
@@ -129,7 +148,7 @@
       }
     },
     "recent": {
-      "title": "Recent observations",
+      "title": "Recent memories",
       "description": "Newest 10 across all projects",
       "empty": "No observations yet.",
       "col": {
@@ -137,7 +156,13 @@
         "title": "Title",
         "project": "Project",
         "created": "Created"
-      }
+      },
+      "viewAll": "View all"
+    },
+    "hero": {
+      "subtitle": "Your agents' long-term memory at a glance.",
+      "openGraph": "Open Knowledge Graph",
+      "searchLabel": "Search memories"
     }
   },
   "brain": {
@@ -324,16 +349,6 @@
       }
     }
   },
-  "syncSummary": {
-    "title": "Sync health",
-    "description": "Cloud sync state",
-    "open": "Open",
-    "openSyncHealth": "Open Sync Health",
-    "enrolled": "Enrolled",
-    "healthy": "Healthy",
-    "broken": "Broken",
-    "pendingMutations": "Pending mutations"
-  },
   "sessions": {
     "title": "Sessions",
     "description": "One row per session. Click to inspect the timeline and stats.",
@@ -400,7 +415,8 @@
     "tabs": {
       "memories": "Memories",
       "threads": "Threads",
-      "conversations": "Conversations"
+      "conversations": "Conversations",
+      "ariaLabel": "Memory tabs"
     },
     "advancedView": {
       "label": "Advanced view"
@@ -495,7 +511,12 @@
       "lifecycle": "Lifecycle",
       "lastEnqueued": "Last enqueued",
       "lastAcked": "Last acked",
-      "pending": "Pending"
+      "pending": "Pending",
+      "heading": "Global Target",
+      "targetKey": "Target Key",
+      "lastEnqueuedSeq": "Last Enqueued Seq",
+      "lastAckedSeq": "Last Acked Seq",
+      "pendingMutations": "Pending Mutations"
     },
     "projects": {
       "title": "Projects",
@@ -511,8 +532,14 @@
         "cloudSeq": "Cloud seq",
         "enrolledBadge": "enrolled",
         "notEnrolled": "not enrolled",
-        "detail": "Detail"
-      }
+        "detail": "Detail",
+        "observations": "Observations",
+        "actions": "Actions",
+        "delete": "Delete"
+      },
+      "loading": "Loading sync projects...",
+      "empty": "No sync projects found.",
+      "deleteConfirm": "Delete project \"{{project}}\"? Its prompts and empty sessions are removed; any session still holding observations moved to other projects is reassigned (not deleted), so nothing is lost. This cannot be undone."
     },
     "syncProject": {
       "notFound": "Project not found.",
@@ -552,7 +579,38 @@
         "op": "op",
         "key": "key",
         "occurredAt": "occurred_at"
+      },
+      "heading": "Project: {{project}}",
+      "lifecycleValue": "Lifecycle: {{value}}",
+      "enrolledLabel": "Enrolled:",
+      "enrolledAtValue": "Enrolled at: {{value}}",
+      "reasonCode": "Reason code: {{code}}",
+      "consecutiveFailuresValue": "Consecutive failures: {{count}}",
+      "pendingEmpty": "No pending mutations.",
+      "findings": "Findings",
+      "backToMaintenance": "Back to Maintenance",
+      "mutations": {
+        "seq": "Seq",
+        "entity": "Entity",
+        "op": "Op",
+        "entityKey": "Entity Key",
+        "occurredAt": "Occurred At"
       }
+    },
+    "issuesPanel": {
+      "title": "Sync Issues",
+      "loading": "Loading sync issues...",
+      "none": "No sync issues detected.",
+      "hint": "Hint: {{hint}}",
+      "project": "Project: {{project}}",
+      "generatedAt": "Generated at: {{time}}"
+    },
+    "status": {
+      "healthy": "healthy",
+      "degraded": "degraded",
+      "broken": "broken",
+      "notEnrolled": "not enrolled",
+      "idle": "idle"
     }
   },
   "projects": {
@@ -776,7 +834,8 @@
       "confirmTitle": "Import database?",
       "confirmBody": "The file's content will be merged into your current database: only new memories are added, nothing is overwritten. An automatic backup of your current database is taken first.",
       "imported": "Imported: {{observations}} observations, {{sessions}} sessions, {{prompts}} prompts, {{relations}} relations.",
-      "backupSaved": "Backup saved to {{path}}"
+      "backupSaved": "Backup saved to {{path}}",
+      "importConfirm": "Import database? Only new memories are added — nothing is overwritten. A backup is taken first."
     },
     "row": {
       "path": "Path",
@@ -812,13 +871,20 @@
     },
     "tokenNote": "Tokens are counted in disjoint buckets: uncached input, cache read, cache write and output. Reasoning is part of output.",
     "sourceError": "Could not read {{source}} ({{agent}}); its sessions are not shown.",
+    "cost": {
+      "notPriced": "Not priced",
+      "notPricedHint": "No price is known for these models.",
+      "notPricedHintModels": "No price is known for these models ({{models}}).",
+      "notPricedCaption": "No known price for {{models}}"
+    },
     "list": {
       "title": "Sessions",
       "count": "{{count}} of {{total}}",
       "noMatch": "No sessions match these filters.",
       "page": "Page {{page}} of {{pages}}",
       "prev": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "total": "{{total}} sessions"
     },
     "filter": {
       "agent": "Agent",
@@ -914,7 +980,10 @@
       "error": "Failed to load usage stats.",
       "others": "Others",
       "untitled": "(untitled)",
-      "costEstimateNote": "Cost excludes turns on unpriced models — actual spend may be higher."
+      "costEstimateNote": "Cost excludes turns on unpriced models — actual spend may be higher.",
+      "tokensByProject": "Tokens by project",
+      "tokensByAgent": "Tokens by agent",
+      "tokensFallbackNote": "No prices known for these models — showing tokens."
     }
   },
   "placeholder": {
@@ -964,7 +1033,15 @@
       "content": "Content",
       "actions": "Actions",
       "assign": "Assign",
-      "delete": "Delete"
+      "delete": "Delete",
+      "topicKey": "Topic Key",
+      "updatedAt": "Updated At",
+      "startedAt": "Started At",
+      "endedAt": "Ended At",
+      "contentPreview": "Content (preview)",
+      "sessionId": "Session ID",
+      "createdAt": "Created At",
+      "updated": "Updated"
     },
     "deleteConfirm": {
       "title": "Delete this row?",
@@ -972,6 +1049,31 @@
       "descSession": "The session will be permanently removed from the DB. This cannot be undone.",
       "descPrompt": "The prompt will be permanently removed from the DB. This cannot be undone.",
       "confirm": "Delete"
+    },
+    "emptyAll": "No orphaned entities found. All observations, sessions, and prompts are assigned to a project.",
+    "heading": {
+      "observations": "Observations",
+      "sessions": "Sessions",
+      "prompts": "Prompts"
+    },
+    "viewDetails": "View details to help assign a project",
+    "assignSelected": "Assign to selected project",
+    "assignPlaceholder": "— assign project —",
+    "deleteLabel": {
+      "observation": "Delete this orphaned observation",
+      "session": "Delete this orphaned session",
+      "prompt": "Delete this orphaned prompt"
+    },
+    "deleteConfirmText": {
+      "observation": "Delete this orphaned observation? This action cannot be undone.",
+      "session": "Delete this orphaned session? This action cannot be undone.",
+      "prompt": "Delete this orphaned prompt? This action cannot be undone."
+    },
+    "dialog": {
+      "observationTitle": "Observation #{{id}}",
+      "sessionDir": "Session working directory",
+      "sessionDirUnknown": "— unknown (no session directory recorded)",
+      "noContent": "No content recorded for this observation."
     }
   },
   "assign": {
@@ -1005,5 +1107,38 @@
     },
     "settingsHint": "Need more options? Visit ",
     "settingsLink": "Settings → Data sources"
+  },
+  "toast": {
+    "generic": "The request failed. Check the server log for details.",
+    "network": "Could not reach the server. Check that it is running.",
+    "unavailable": "This feature is not available right now.",
+    "close": "Dismiss notification"
+  },
+  "errors": {
+    "loadSession": "Failed to load session: ",
+    "loadAgentSessions": "Failed to load agent sessions: ",
+    "loadTopics": "Failed to load topics: ",
+    "loadPrompts": "Failed to load prompts: ",
+    "loadObservations": "Failed to load observations: ",
+    "loadObservation": "Failed to load observation: ",
+    "loadOverview": "Failed to load overview: ",
+    "loadProject": "Failed to load project: ",
+    "badRequest": "Bad request: ",
+    "loadProjects": "Failed to load projects: ",
+    "loadSessions": "Failed to load sessions: ",
+    "loadOrphans": "Failed to load orphans: ",
+    "invalidForm": "Invalid form data: ",
+    "assignFailed": "Assign failed: ",
+    "deleteFailed": "Delete failed: ",
+    "reloadFailed": "Reload failed: ",
+    "loadSyncProjects": "Failed to load sync projects: ",
+    "computeSyncIssues": "Failed to compute sync issues: ",
+    "loadProjectDetail": "Failed to load project detail: ",
+    "invalidObservationId": "Invalid observation id: {{id}}",
+    "invalidId": "Invalid id: {{id}}",
+    "readOnly": "Write operations are not available in read-only mode.",
+    "noDatabase": "Database is not available.",
+    "observationNotFound": "Observation {{id}} not found.",
+    "projectRequired": "Choose a project."
   }
 }
