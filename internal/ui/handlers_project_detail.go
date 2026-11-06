@@ -74,9 +74,9 @@ func handleProjectDetailPage(d Deps) http.HandlerFunc {
 		others := otherProjectNames(d, project)
 
 		if IsHTMX(r) {
-			Render(w, r, ProjectDetailPartial(*overview, syncRow, lang, others))
+			Render(w, r, ProjectDetailPartial(*overview, syncRow, lang, others, d.RWDB != nil))
 		} else {
-			renderDeps(w, r, d, ProjectDetailPage(*overview, syncRow, lang, theme, sidebarState, others))
+			renderDeps(w, r, d, ProjectDetailPage(*overview, syncRow, lang, theme, sidebarState, others, d.RWDB != nil))
 		}
 	}
 }

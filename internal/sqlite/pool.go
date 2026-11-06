@@ -14,7 +14,7 @@ import (
 // the Node backend message so callers get actionable guidance.
 func OpenReadOnly(path string) (*sql.DB, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf(
+		return nil, fmt.Errorf( //nolint:staticcheck // ST1005: user-facing message that starts with the product name
 			"Engram database not found at %s. Set ENGRAM_DATA_DIR or install/run engram first",
 			path,
 		)
@@ -40,7 +40,7 @@ func OpenReadOnly(path string) (*sql.DB, error) {
 	db.SetMaxIdleConns(4)
 
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close() // the ping error is the one worth reporting
 		return nil, fmt.Errorf("ping read-only db: %w", err)
 	}
 	return db, nil
@@ -50,7 +50,7 @@ func OpenReadOnly(path string) (*sql.DB, error) {
 // writes, matching Node's better-sqlite3 synchronous behaviour).
 func OpenReadWrite(path string) (*sql.DB, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf(
+		return nil, fmt.Errorf( //nolint:staticcheck // ST1005: user-facing message that starts with the product name
 			"Engram database not found at %s. Set ENGRAM_DATA_DIR or install/run engram first",
 			path,
 		)
@@ -67,7 +67,7 @@ func OpenReadWrite(path string) (*sql.DB, error) {
 	db.SetMaxOpenConns(1)
 
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close() // the ping error is the one worth reporting
 		return nil, fmt.Errorf("ping read-write db: %w", err)
 	}
 	return db, nil

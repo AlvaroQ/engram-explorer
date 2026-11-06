@@ -18,6 +18,7 @@ func observationsRoutes(mux routeMux, c *Container) {
 	mux.HandleFunc("GET /api/observations/types", handleObservationsTypes(c))
 	mux.HandleFunc("GET /api/observations/search", handleObservationsSearch(c))
 	mux.HandleFunc("GET /api/observations/{id}", handleObservationsGetByID(c))
+	mux.HandleFunc("GET /api/observations/{id}/versions", handleObservationVersions(c))
 }
 
 // expandList splits a comma-separated value or accepts multiple occurrences.
@@ -58,13 +59,18 @@ func handleObservationsList(c *Container) http.HandlerFunc {
 			OnlyDeleted:    parseBool(q.Get("only_deleted")),
 			Cursor:         q.Get("cursor"),
 			Limit:          limit,
+			// match=any keeps later pages of an OR-fallback result in OR mode.
+			MatchAny: q.Get("match") == "any",
+			// review=due keeps memories whose review date has passed (additive).
+			ReviewDue: q.Get("review") == "due",
 		}
 
-		items, nextCursor, err := services.ObservationsList(c.ro(r), params)
+		page, err := services.ObservationsListPage(c.ro(r), params)
 		if err != nil {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
 		}
+		items := page.Items
 		if items == nil {
 			items = []services.ObservationRow{}
 		}
@@ -73,8 +79,12 @@ func handleObservationsList(c *Container) http.HandlerFunc {
 			Items      []services.ObservationRow `json:"items"`
 			NextCursor *string                   `json:"nextCursor"`
 			Total      *int                      `json:"total"` // always null (Node parity)
+			// MatchedAny (additive, omitted when false): no row matched every
+			// word of q, so rows matching any word are returned. Pass match=any
+			// with nextCursor to fetch the following pages.
+			MatchedAny bool `json:"matched_any,omitempty"`
 		}
-		writeJSON(w, http.StatusOK, resp{Items: items, NextCursor: nextCursor, Total: nil})
+		writeJSON(w, http.StatusOK, resp{Items: items, NextCursor: page.NextCursor, Total: nil, MatchedAny: page.MatchedAny})
 	}
 }
 
@@ -111,6 +121,13 @@ func handleObservationsSearch(c *Container) http.HandlerFunc {
 			writeDBError(w, err, c.Config.ExposeDetails)
 			return
 		}
+		// The Engram searcher returns a services.ObservationSearchResult, which
+		// already serializes as {"items": [...]} plus "matched_any": true when
+		// the OR fallback ran.
+		if res, ok := items.(services.ObservationSearchResult); ok {
+			writeJSON(w, http.StatusOK, res)
+			return
+		}
 
 		type resp struct {
 			Items any `json:"items"`
@@ -143,5 +160,29 @@ func handleObservationsGetByID(c *Container) http.HandlerFunc {
 			Revisions   []services.ObservationRow `json:"revisions"`
 		}
 		writeJSON(w, http.StatusOK, resp{Observation: obs, Revisions: revisions})
+	}
+}
+
+// handleObservationVersions serves the read-only revision history of one
+// observation: {"available": bool, "versions": [...]} newest first.
+// available is false (with 200) when the database has no history table.
+func handleObservationVersions(c *Container) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := r.PathValue("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "BAD_INPUT", "id must be an integer", nil, c.Config.ExposeDetails)
+			return
+		}
+		res, found, err := services.ObservationVersions(r.Context(), c.ro(r), id)
+		if err != nil {
+			writeDBError(w, err, c.Config.ExposeDetails)
+			return
+		}
+		if !found {
+			writeError(w, http.StatusNotFound, "NOT_FOUND", "observation "+idStr+" not found", nil, c.Config.ExposeDetails)
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
 	}
 }

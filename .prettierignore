@@ -16,3 +16,6 @@ design/
 
 # Local ODD task documents
 odd/
+
+# Local worker scratch directories
+.scratch-*/

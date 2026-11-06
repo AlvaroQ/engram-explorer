@@ -30,6 +30,22 @@ var sameOriginOnlyGETs = map[string]bool{
 	"/api/db/export": true,
 }
 
+// sameOriginOnlyGET reports whether r targets a data export: GET /api/db/export
+// or GET /api/projects/{project}/export. Both the decoded path (so %65xport is
+// still "export") and the escaped path (so a project name containing %2F stays
+// one segment, as in ServeMux routing) are checked.
+func sameOriginOnlyGET(r *http.Request) bool {
+	if sameOriginOnlyGETs[path.Clean("/"+r.URL.Path)] {
+		return true
+	}
+	return isProjectExportPath(r.URL.Path) || isProjectExportPath(r.URL.EscapedPath())
+}
+
+func isProjectExportPath(p string) bool {
+	segs := strings.Split(strings.TrimPrefix(path.Clean("/"+p), "/"), "/")
+	return len(segs) == 4 && segs[0] == "api" && segs[1] == "projects" && segs[2] != "" && segs[3] == "export"
+}
+
 // Guard protects every route, including the embedded bundles, against DNS
 // rebinding and cross-site request forgery. The dashboard has no
 // authentication, so the browser's same-origin policy is the security boundary:
@@ -40,8 +56,8 @@ var sameOriginOnlyGETs = map[string]bool{
 //   - Unsafe methods (POST, PUT, PATCH, DELETE) must be same-origin according
 //     to Sec-Fetch-Site or Origin (net/http CrossOriginProtection). Requests
 //     without either header (curl, scripts) are not browser CSRF and pass.
-//   - GET /api/db/export additionally refuses cross-site and same-site fetches
-//     and navigations.
+//   - GET /api/db/export and GET /api/projects/{project}/export additionally
+//     refuse cross-site and same-site fetches and navigations.
 //   - trustedOrigins (the Vite dev server, development only) count as
 //     same-origin for both checks.
 //   - Security headers are set on every response.
@@ -69,7 +85,7 @@ func Guard(next http.Handler, configuredHost string, trustedOrigins map[string]b
 			writeError(w, http.StatusForbidden, "HOST_NOT_ALLOWED", "host not allowed", nil, false)
 			return
 		}
-		if sameOriginOnlyGETs[path.Clean("/"+r.URL.Path)] && !sameOriginRequest(r, trustedOrigins) {
+		if sameOriginOnlyGET(r) && !sameOriginRequest(r, trustedOrigins) {
 			deny(w, r)
 			return
 		}

@@ -1,0 +1,78 @@
+package doctor
+
+import (
+	"strconv"
+
+	"github.com/AlvaroQ/engram-explorer/internal/services"
+	"github.com/AlvaroQ/engram-explorer/internal/ui"
+)
+
+// DataQualityPartial renders the body of the Maintenance "Data quality"
+// section: memories with an empty title and groups of exact duplicates. It is
+// read-only: each memory opens the Memory detail (GET /observations/{id}) in
+// the section's #obs-detail drawer, and nothing is deleted from here.
+templ DataQualityPartial(rep services.DataQualityReport) {
+	<h3 class="maintenance-subtitle">{ tr(ctx, "maintenance.dataQuality.emptyTitles.title") }</h3>
+	if rep.EmptyTitleTotal == 0 {
+		@ui.EmptyState(tr(ctx, "maintenance.dataQuality.emptyTitles.none"))
+	} else {
+		<p class="maintenance-count">{ trCount(ctx, "maintenance.dataQuality.emptyTitles.count", rep.EmptyTitleTotal) }</p>
+		<ul class="maintenance-list">
+			for _, m := range rep.EmptyTitles {
+				<li>
+					@dataQualityMemory(m)
+				</li>
+			}
+		</ul>
+		if len(rep.EmptyTitles) < rep.EmptyTitleTotal {
+			@dataQualityShowing(len(rep.EmptyTitles), rep.EmptyTitleTotal)
+		}
+	}
+	<h3 class="maintenance-subtitle">{ tr(ctx, "maintenance.dataQuality.duplicates.title") }</h3>
+	if rep.DuplicateGroupTotal == 0 {
+		@ui.EmptyState(tr(ctx, "maintenance.dataQuality.duplicates.none"))
+	} else {
+		<p class="maintenance-count">{ trCount(ctx, "maintenance.dataQuality.duplicates.count", rep.DuplicateGroupTotal, "memories", strconv.Itoa(rep.DuplicateMemoryTotal)) }</p>
+		for _, g := range rep.Duplicates {
+			<div class="maintenance-group">
+				<p class="maintenance-group-title">
+					{ dataQualityTitle(ctx, g.Title) }
+					<span class="badge">{ tr(ctx, "maintenance.dataQuality.duplicates.copies", "count", strconv.Itoa(g.Count)) }</span>
+				</p>
+				<ul class="maintenance-list">
+					for _, m := range g.Memories {
+						<li>
+					@dataQualityMemory(m)
+				</li>
+					}
+				</ul>
+				if len(g.Memories) < g.Count {
+					@dataQualityShowing(len(g.Memories), g.Count)
+				}
+			</div>
+		}
+		if len(rep.Duplicates) < rep.DuplicateGroupTotal {
+			@dataQualityShowing(len(rep.Duplicates), rep.DuplicateGroupTotal)
+		}
+	}
+	<p class="maintenance-hint">{ tr(ctx, "maintenance.dataQuality.hint") }</p>
+}
+
+// dataQualityMemory renders one memory as a button that opens its detail.
+templ dataQualityMemory(m services.DataQualityMemory) {
+	<button
+		type="button"
+		class="btn-link"
+		hx-get={ "/observations/" + strconv.FormatInt(m.ID, 10) }
+		hx-target="#obs-detail"
+		hx-swap="innerHTML"
+	>
+		<span class="mono">#{ strconv.FormatInt(m.ID, 10) }</span>
+		{ dataQualityTitle(ctx, m.Title) }
+	</button>
+	<span class="maintenance-meta">{ m.Project } · { m.Type } · { m.CreatedAt }</span>
+}
+
+templ dataQualityShowing(shown, total int) {
+	<p class="maintenance-hint">{ tr(ctx, "maintenance.dataQuality.showing", "shown", strconv.Itoa(shown), "total", strconv.Itoa(total)) }</p>
+}

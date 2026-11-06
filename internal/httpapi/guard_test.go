@@ -230,3 +230,30 @@ func TestGuard_ViteOriginsOnlyInDevelopment(t *testing.T) {
 		})
 	}
 }
+
+// TestGuard_ProjectExportRequiresSameOrigin: GET /api/projects/{project}/export
+// downloads a project's data, so Guard itself refuses cross-site and same-site
+// fetches, like /api/db/export; other project routes keep the default rule.
+func TestGuard_ProjectExportRequiresSameOrigin(t *testing.T) {
+	ok := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
+	h := httpapi.Guard(ok, "", nil, nil)
+	const host = "127.0.0.1:8787"
+	crossSite := map[string]string{"Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate"}
+	for _, p := range []string{"/api/projects/foo/export", "/api/projects/a%2Fb/export", "//api/projects/foo/export", "/api/projects/foo/%65xport"} {
+		rec := serveGuard(t, h, guardReq{method: http.MethodGet, path: p, host: host, headers: crossSite})
+		if rec.Code != http.StatusForbidden {
+			t.Errorf("GET %s cross-site: got %d, want 403", p, rec.Code)
+		}
+	}
+	for _, p := range []string{"/api/projects/foo", "/api/projects/foo/export/extra"} {
+		rec := serveGuard(t, h, guardReq{method: http.MethodGet, path: p, host: host, headers: crossSite})
+		if rec.Code != http.StatusOK {
+			t.Errorf("GET %s cross-site: got %d, want 200 (not an export)", p, rec.Code)
+		}
+	}
+	rec := serveGuard(t, h, guardReq{method: http.MethodGet, path: "/api/projects/foo/export", host: host,
+		headers: map[string]string{"Sec-Fetch-Site": "same-origin"}})
+	if rec.Code != http.StatusOK {
+		t.Errorf("same-origin project export: got %d, want 200", rec.Code)
+	}
+}

@@ -92,7 +92,7 @@ func validateHome(home string) error {
 	if err != nil {
 		return usererr.New(fmt.Sprintf("cannot read codex sessions directory: %s", dir))
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if _, err := f.Readdirnames(1); err != nil && !errors.Is(err, io.EOF) {
 		return usererr.New(fmt.Sprintf("cannot read codex sessions directory: %s", dir))
 	}

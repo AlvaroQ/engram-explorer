@@ -7,19 +7,20 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-// ProjectDetailPage renders the full project-detail page shell.
-templ ProjectDetailPage(data services.ProjectOverview, sync *services.SyncProjectRow, lang, theme, sidebarState string, otherProjects []string) {
-	@Layout(data.Project, "projects", lang, theme, sidebarState, projectDetailContent(data, sync, lang, otherProjects))
+// ProjectDetailPage renders the full project-detail page shell. writable
+// offers the project backup download (its route needs the read-write pool).
+templ ProjectDetailPage(data services.ProjectOverview, sync *services.SyncProjectRow, lang, theme, sidebarState string, otherProjects []string, writable bool) {
+	@Layout(data.Project, "projects", lang, theme, sidebarState, projectDetailContent(data, sync, lang, otherProjects, writable))
 }
 
 // ProjectDetailPartial renders only the project-detail content (no HTML shell).
 // Used when HTMX requests a partial update.
-templ ProjectDetailPartial(data services.ProjectOverview, sync *services.SyncProjectRow, lang string, otherProjects []string) {
-	@projectDetailContent(data, sync, lang, otherProjects)
+templ ProjectDetailPartial(data services.ProjectOverview, sync *services.SyncProjectRow, lang string, otherProjects []string, writable bool) {
+	@projectDetailContent(data, sync, lang, otherProjects, writable)
 }
 
 // projectDetailContent is the shared project-detail body.
-templ projectDetailContent(data services.ProjectOverview, sync *services.SyncProjectRow, lang string, otherProjects []string) {
+templ projectDetailContent(data services.ProjectOverview, sync *services.SyncProjectRow, lang string, otherProjects []string, writable bool) {
 	<div class="flex flex-col gap-5">
 		<!-- Page header -->
 		<div class="page-header">
@@ -49,6 +50,16 @@ templ projectDetailContent(data services.ProjectOverview, sync *services.SyncPro
 						class="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-xs text-fg-muted hover:text-fg"
 					>
 						{ T(lang, "projectDetail.syncDetail") }
+					</a>
+				}
+				if writable {
+					<!-- A snapshot with only this project's rows; Settings → import merges it back. -->
+					<a
+						href={ templ.SafeURL("/api/projects/" + url.PathEscape(data.Project) + "/export") }
+						download
+						class="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-xs text-fg-muted hover:text-fg"
+					>
+						{ T(lang, "projectDetail.backup") }
 					</a>
 				}
 			</div>

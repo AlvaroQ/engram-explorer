@@ -10,6 +10,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Weighted search** — memory and conversation search rank results with column-weighted BM25; a several-word
+  search that finds nothing retries once matching any word, and the Memory list says when it did.
+- **Trigram-aware search** — on Engram databases indexed with the trigram tokenizer, words under 3 characters no
+  longer empty an all-words search, and a query of only short words matches memory titles.
+- **Review due filter** — the Memory list shows a "Review due (N)" toggle that lists only memories whose review
+  date has passed, counted with the other active filters; `GET /api/observations?review=due` does the same.
+- **Revision history API** — `GET /api/observations/{id}/versions` exposes a memory's stored revisions (read-only;
+  reports `available: false` on databases without history).
+- **Revision history panel** — the memory detail has a "Revision history" section that loads the stored earlier
+  versions when opened (newest first, capped at 50), and says when the database keeps no history.
+- **Project backup** — `GET /api/projects/{project}/export` (and "Download project backup" on the project page and in
+  Maintenance → Possibly fragmented projects) downloads a full-schema snapshot holding only that project's rows,
+  which the existing import merges back. Sessions of other projects that the project's rows belong to are kept
+  without their summary and directory.
+- **ESLint** — a flat config (typescript-eslint, react-hooks) runs in CI via `pnpm lint` over the frontend islands
+  and the UI browser scripts. Frontend tests now fail when no test files are found.
+- **golangci-lint** — CI lints the Go backend with golangci-lint v2.15.0 (`.golangci.yml`: the standard linters plus
+  bodyclose, errorlint and unconvert); the existing findings are fixed and unused code is removed.
 - **Brain-first overview** — the overview opens on a full-width knowledge-graph hero with the page title, an
   "Open Knowledge Graph" button and a memory search (`/observations?q=`). On wide screens the hero collapses into
   a 72px bar as you scroll and the KPI cards fold into a 44px strip whose items stay links; under reduced motion
@@ -44,6 +62,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **CI hardening** — CI now also runs on `develop`, uses least-privilege permissions and SHA-pinned actions,
   runs `go test -race` and `govulncheck`, and fails when generated templ code or the Tailwind CSS bundle is
   stale. Dependabot keeps Go modules, npm packages and GitHub Actions up to date.
+- **Maintenance: empty sessions** — Settings → Maintenance lists sessions with no memories (soft-deleted ones
+  count as content), no prompts, no summary (whitespace only counts as none) and no memory relation or prompt
+  tombstone pointing at them, and deletes them in bulk after a confirmation. The delete takes
+  no id list: it re-checks the rule inside one transaction, so a session that gained content in the meantime is
+  kept. Sessions of cloud-enrolled projects and sessions started in the last 24 hours are never deleted; read-only
+  mode hides the button. JSON: `GET /api/maintenance/empty-sessions`, `POST /api/maintenance/empty-sessions/delete`
+  (`503 RW_UNAVAILABLE` in read-only mode).
+- **Maintenance: possibly fragmented projects** — Settings → Maintenance suggests project names that probably
+  mean the same project (letter case, surrounding whitespace, trailing separators, or a path vs its last folder;
+  no generic prefix matching). Each group shows memory and session counts, a backup link and a confirmed
+  "Combine into <target>" that reuses the project merge. Suggestions only: nothing is merged automatically,
+  cloud-enrolled projects cannot be combined and read-only mode hides the action.
+- **Maintenance: data quality** — Settings → Maintenance lists live memories with an empty title and groups of
+  exact duplicates (same `normalized_hash`), capped at 50 entries with full counts. Each memory opens its detail;
+  the checks are read-only and never delete anything.
 - **Design specs** — `design/` (design system reference and overview shell directions) is now versioned.
 - **Code of Conduct** — `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1).
 

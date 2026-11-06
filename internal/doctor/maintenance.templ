@@ -39,6 +39,54 @@ templ maintenanceContent(lang string) {
 			</div>
 		</section>
 
+		<!-- Empty sessions: detection + guarded bulk delete. Deferred via HTMX. -->
+		<section class="settings-group" id="empty-sessions">
+			<h2 class="settings-group-title">{ ui.T(lang, "maintenance.emptySessions.title") }</h2>
+			<p class="settings-group-desc">{ ui.T(lang, "maintenance.emptySessions.description") }</p>
+			<div
+				id="empty-sessions-container"
+				hx-get="/doctor/maintenance/empty-sessions"
+				hx-trigger="load"
+				hx-target="#empty-sessions-container"
+				hx-swap="innerHTML"
+			>
+				<p class="loading">{ ui.T(lang, "common.loading") }</p>
+			</div>
+		</section>
+
+		<!-- Possibly fragmented projects: suggestions + confirmed combine. -->
+		<section class="settings-group" id="fragmented-projects">
+			<h2 class="settings-group-title">{ ui.T(lang, "maintenance.fragmented.title") }</h2>
+			<p class="settings-group-desc">{ ui.T(lang, "maintenance.fragmented.description") }</p>
+			<div
+				id="fragmented-projects-container"
+				hx-get="/doctor/maintenance/fragmented-projects"
+				hx-trigger="load"
+				hx-target="#fragmented-projects-container"
+				hx-swap="innerHTML"
+			>
+				<p class="loading">{ ui.T(lang, "common.loading") }</p>
+			</div>
+		</section>
+
+		<!-- Data quality: read-only checks; memories open in the drawer below. -->
+		<section class="settings-group" id="data-quality">
+			<h2 class="settings-group-title">{ ui.T(lang, "maintenance.dataQuality.title") }</h2>
+			<p class="settings-group-desc">{ ui.T(lang, "maintenance.dataQuality.description") }</p>
+			<div
+				id="data-quality-container"
+				hx-get="/doctor/maintenance/data-quality"
+				hx-trigger="load"
+				hx-target="#data-quality-container"
+				hx-swap="innerHTML"
+			>
+				<p class="loading">{ ui.T(lang, "common.loading") }</p>
+			</div>
+			<!-- Memory detail (GET /observations/{id}); data-show-on-swap: ui-actions.js
+			     shows it when HTMX swaps content in, its close button hides it. -->
+			<aside id="obs-detail" class="card maintenance-detail" hidden data-show-on-swap></aside>
+		</section>
+
 		<!-- Cloud backup (was /doctor/sync). Read-only diagnostics; content polled via HTMX. -->
 		<section class="settings-group" id="cloud">
 			<h2 class="settings-group-title">{ ui.T(lang, "maintenance.cloud.title") }</h2>

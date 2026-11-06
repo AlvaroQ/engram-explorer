@@ -238,7 +238,7 @@ func CCSessionsStats(reader CCProjectsReader) (*CCStatsResult, error) {
 				continue
 			}
 			scan := scanSessionForStats(f)
-			f.Close()
+			_ = f.Close()
 
 			display := projectDisplayName(scan.cwd)
 			if display == "" {

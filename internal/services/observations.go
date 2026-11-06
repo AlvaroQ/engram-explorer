@@ -3,11 +3,11 @@ package services
 
 import (
 	"database/sql"
+	"errors"
 	"strings"
 	"time"
 
 	"github.com/AlvaroQ/engram-explorer/internal/cursor"
-	"github.com/AlvaroQ/engram-explorer/internal/fts"
 	"github.com/AlvaroQ/engram-explorer/internal/sqlite"
 )
 
@@ -74,6 +74,30 @@ type ObservationListParams struct {
 	OnlyDeleted    bool
 	Cursor         string
 	Limit          int
+	// MatchAny forces the OR-joined query for Q. Callers set it on later pages
+	// after a first page reported MatchedAny, so pagination stays in OR mode.
+	MatchAny bool
+	// ReviewDue keeps only memories whose review date has passed, the same
+	// rows ObservationRow.ReviewDue reports (see reviewDueCondition).
+	ReviewDue bool
+}
+
+// ObservationListPage is one keyset page of the list query.
+type ObservationListPage struct {
+	Items      []ObservationRow
+	NextCursor *string
+	// MatchedAny reports that Items come from the OR fallback: the AND query
+	// for Q matched nothing, so rows matching any word are returned instead.
+	MatchedAny bool
+}
+
+// ObservationSearchResult is the result of ObservationsSearch. It serializes
+// as {"items": [...]} plus "matched_any": true only when the fallback ran.
+type ObservationSearchResult struct {
+	Items []ObservationWithSnippet `json:"items"`
+	// MatchedAny reports that Items come from the OR fallback (see
+	// ObservationListPage.MatchedAny).
+	MatchedAny bool `json:"matched_any,omitempty"`
 }
 
 const obsCols = `
@@ -127,10 +151,105 @@ func scanObservationWithSnippet(s scanner) (ObservationWithSnippet, error) {
 	return r, err
 }
 
-// ObservationsList executes the keyset-paginated list query.
+// ObservationsList executes the keyset-paginated list query. It is
+// ObservationsListPage without the MatchedAny flag.
 func ObservationsList(db sqlite.Querier, p ObservationListParams) (items []ObservationRow, nextCursor *string, err error) {
+	page, err := ObservationsListPage(db, p)
+	if err != nil {
+		return nil, nil, err
+	}
+	return page.Items, page.NextCursor, nil
+}
+
+// ObservationsListPage executes the keyset-paginated list query, sorted by
+// date. With Q it applies the OR fallback, but only on the first page (no
+// Cursor): a later page of an AND result set is never topped up with OR rows.
+func ObservationsListPage(db sqlite.Querier, p ObservationListParams) (ObservationListPage, error) {
+	strict, fallback := newFTSQuery(db, "observations_fts", p.Q).filters("o.title")
+	if p.MatchAny && !fallback.none() {
+		items, next, err := listObservations(db, p, fallback)
+		return ObservationListPage{Items: items, NextCursor: next, MatchedAny: true}, err
+	}
+	items, next, err := listObservations(db, p, strict)
+	if err != nil || len(items) > 0 || p.Cursor != "" || fallback.none() {
+		return ObservationListPage{Items: items, NextCursor: next}, err
+	}
+	items, next, err = listObservations(db, p, fallback)
+	return ObservationListPage{Items: items, NextCursor: next, MatchedAny: len(items) > 0}, err
+}
+
+// listObservations runs the list query; text is the full-text filter (zero
+// for none).
+func listObservations(db sqlite.Querier, p ObservationListParams, text textFilter) (items []ObservationRow, nextCursor *string, err error) {
+	whereClause, ftsJoin, params := observationFilters(p, text)
+
+	var cursorClause string
+	if p.Cursor != "" {
+		dec := cursor.Decode(p.Cursor)
+		if dec != nil {
+			connector := "AND"
+			if whereClause == "" {
+				connector = "WHERE"
+			}
+			cursorClause = connector + ` (
+				COALESCE(o.updated_at, o.created_at, '') < ?
+				OR (COALESCE(o.updated_at, o.created_at, '') = ? AND o.id < ?)
+			)`
+			params = append(params, dec.OrderKey, dec.OrderKey, dec.ID)
+		}
+	}
+
+	query := `SELECT ` + obsCols + `
+		FROM observations o
+		` + ftsJoin + `
+		` + whereClause + `
+		` + cursorClause + `
+		ORDER BY COALESCE(o.updated_at, o.created_at, '') DESC, o.id DESC
+		LIMIT ?`
+	params = append(params, p.Limit+1)
+
+	all, err := queryRows(db, query, params, scanObservation)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(all) > p.Limit {
+		items = all[:p.Limit]
+	} else {
+		items = all
+	}
+
+	if len(all) > p.Limit && len(items) > 0 {
+		last := items[len(items)-1]
+		orderKey := coalesceStr(last.UpdatedAt, coalesceStr(last.CreatedAt, ""))
+		c := cursor.Encode(orderKey, last.ID)
+		nextCursor = &c
+	}
+	return items, nextCursor, nil
+}
+
+// reviewDueCondition matches the rows ObservationRow.ReviewDue reports as
+// due: review_after in the stored "YYYY-MM-DD HH:MM:SS" layout (the GLOB
+// rejects other formats, which ReviewDue cannot parse either), a real date
+// and time, and not later than now in UTC. datetime() returns NULL for an
+// impossible month or second and normalizes an impossible day (Feb 30 → Mar
+// 2), so the round trip rejects both; it keeps hour 24, which time.Parse
+// rejects, hence the hour check. The stored layout sorts lexically, so <=
+// compares dates.
+const reviewDueCondition = `o.review_after GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]'
+	AND datetime(o.review_after) = o.review_after
+	AND substr(o.review_after, 12, 2) < '24'
+	AND o.review_after <= ?`
+
+// observationFilters builds the WHERE clause, the optional FTS join and their
+// positional params (FTS param first) for every list filter except the cursor.
+func observationFilters(p ObservationListParams, text textFilter) (whereClause, ftsJoin string, params []any) {
 	conditions := []string{}
-	params := []any{}
+
+	if text.like != "" {
+		conditions = append(conditions, text.like)
+		params = append(params, text.likeArgs...)
+	}
 
 	if !p.IncludeDeleted && !p.OnlyDeleted {
 		conditions = append(conditions, "o.deleted_at IS NULL")
@@ -172,73 +291,45 @@ func ObservationsList(db sqlite.Querier, p ObservationListParams) (items []Obser
 		conditions = append(conditions, "o.created_at <= ?")
 		params = append(params, p.To)
 	}
+	if p.ReviewDue {
+		conditions = append(conditions, reviewDueCondition)
+		params = append(params, time.Now().UTC().Format(sqliteTimeLayout))
+	}
 
-	var whereClause string
 	if len(conditions) > 0 {
 		whereClause = "WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	var cursorClause string
-	if p.Cursor != "" {
-		dec := cursor.Decode(p.Cursor)
-		if dec != nil {
-			connector := "AND"
-			if whereClause == "" {
-				connector = "WHERE"
-			}
-			cursorClause = connector + ` (
-				COALESCE(o.updated_at, o.created_at, '') < ?
-				OR (COALESCE(o.updated_at, o.created_at, '') = ? AND o.id < ?)
-			)`
-			params = append(params, dec.OrderKey, dec.OrderKey, dec.ID)
-		}
+	// FTS join — prepend its param so it becomes the first positional arg.
+	if text.match != "" {
+		ftsJoin = `JOIN observations_fts fts ON fts.rowid = o.id AND observations_fts MATCH ?`
+		params = append([]any{text.match}, params...)
 	}
+	return whereClause, ftsJoin, params
+}
 
-	// FTS join — prepend fts param so it becomes the first positional arg.
-	var ftsJoin string
-	if p.Q != "" {
-		sanitized := fts.SanitizeQuery(p.Q)
-		if sanitized != "" {
-			ftsJoin = `JOIN observations_fts fts ON fts.rowid = o.id AND observations_fts MATCH ?`
-			// Prepend so FTS param comes before WHERE params.
-			params = append([]any{sanitized}, params...)
-		}
+// ObservationsReviewDueCount counts the memories that would be listed with
+// ReviewDue set: every other filter of p applies (deleted rows only when p
+// asks for them), the cursor does not. Q uses the same mode as the list page
+// (p.MatchAny selects the OR fallback).
+func ObservationsReviewDueCount(db sqlite.Querier, p ObservationListParams) (int, error) {
+	strict, fallback := newFTSQuery(db, "observations_fts", p.Q).filters("o.title")
+	text := strict
+	if p.MatchAny && !fallback.none() {
+		text = fallback
 	}
-
-	query := `SELECT ` + obsCols + `
-		FROM observations o
-		` + ftsJoin + `
-		` + whereClause + `
-		` + cursorClause + `
-		ORDER BY COALESCE(o.updated_at, o.created_at, '') DESC, o.id DESC
-		LIMIT ?`
-	params = append(params, p.Limit+1)
-
-	all, err := queryRows(db, query, params, scanObservation)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if len(all) > p.Limit {
-		items = all[:p.Limit]
-	} else {
-		items = all
-	}
-
-	if len(all) > p.Limit && len(items) > 0 {
-		last := items[len(items)-1]
-		orderKey := coalesceStr(last.UpdatedAt, coalesceStr(last.CreatedAt, ""))
-		c := cursor.Encode(orderKey, last.ID)
-		nextCursor = &c
-	}
-	return items, nextCursor, nil
+	p.ReviewDue = true
+	whereClause, ftsJoin, params := observationFilters(p, text)
+	var n int
+	err := db.QueryRow(`SELECT COUNT(*) FROM observations o `+ftsJoin+` `+whereClause, params...).Scan(&n)
+	return n, err
 }
 
 // ObservationsGetByID returns the observation and its topic revisions, or nil if not found.
 func ObservationsGetByID(db sqlite.Querier, id int64) (obs *ObservationRow, revisions []ObservationRow, err error) {
 	query := `SELECT ` + obsCols + ` FROM observations o WHERE o.id = ?`
 	r, err := scanObservation(db.QueryRow(query, id))
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil, nil
 	} else if err != nil {
 		return nil, nil, err
@@ -261,20 +352,42 @@ func ObservationsGetByID(db sqlite.Querier, id int64) (obs *ObservationRow, revi
 	return obs, revisions, nil
 }
 
-// ObservationsSearch runs an FTS5 snippet search.
-func ObservationsSearch(db sqlite.Querier, rawQ string, limit int) ([]ObservationWithSnippet, error) {
-	sanitized := fts.SanitizeQuery(rawQ)
-	if sanitized == "" {
-		return []ObservationWithSnippet{}, nil
+// ObservationsSearch runs an FTS5 snippet search ranked by weighted BM25 (see
+// observationsBM25). When every term is required and nothing matches, it
+// retries once with any term and sets MatchedAny. On a trigram index a query
+// of only short terms searches titles by substring instead (see newFTSQuery).
+func ObservationsSearch(db sqlite.Querier, rawQ string, limit int) (ObservationSearchResult, error) {
+	strict, fallback := newFTSQuery(db, "observations_fts", rawQ).filters("o.title")
+	if strict.none() {
+		return ObservationSearchResult{Items: []ObservationWithSnippet{}}, nil
+	}
+	items, err := searchObservations(db, strict, limit)
+	if err != nil || len(items) > 0 || fallback.none() {
+		return ObservationSearchResult{Items: items}, err
+	}
+	items, err = searchObservations(db, fallback, limit)
+	return ObservationSearchResult{Items: items, MatchedAny: len(items) > 0}, err
+}
+
+// searchObservations runs one search step: a BM25-ranked FTS query for a
+// MATCH filter, or a newest-first title LIKE whose snippet is the plain title.
+func searchObservations(db sqlite.Querier, text textFilter, limit int) ([]ObservationWithSnippet, error) {
+	if text.like != "" {
+		query := `SELECT ` + obsCols + `, COALESCE(o.title, '') AS snippet
+			FROM observations o
+			WHERE ` + text.like + ` AND o.deleted_at IS NULL
+			ORDER BY COALESCE(o.updated_at, o.created_at, '') DESC, o.id DESC
+			LIMIT ?`
+		return queryRows(db, query, append(append([]any{}, text.likeArgs...), limit), scanObservationWithSnippet)
 	}
 	query := `SELECT ` + obsCols + `,
 		snippet(observations_fts, 0, '<mark>', '</mark>', '…', 16) AS snippet
 		FROM observations o
 		JOIN observations_fts ON observations_fts.rowid = o.id
 		WHERE observations_fts MATCH ? AND o.deleted_at IS NULL
-		ORDER BY rank, o.id DESC
+		ORDER BY ` + observationsBM25 + `, o.id DESC
 		LIMIT ?`
-	return queryRows(db, query, []any{sanitized, limit}, scanObservationWithSnippet)
+	return queryRows(db, query, []any{text.match, limit}, scanObservationWithSnippet)
 }
 
 // ObservationsListTypes returns all distinct, non-empty observation types ordered

@@ -320,6 +320,18 @@ Provider paths and account profiles are stored at `$ENGRAM_DATA_DIR/config.json`
 
 **Precedence** (highest wins): **1.** environment variable (`ENGRAM_DATA_DIR`, `CLAUDE_PROJECTS_DIR`, `CODEX_HOME`, `ENGRAM_DAEMON_URL`), applied in memory at startup and never saved → **2.** the active profile in `config.json`, the only file the explorer writes → **3.** built-in default. The legacy `explorer-settings.json` is read once, only to create `config.json` on first run, and is never written. While an environment variable is set it wins over a path saved in Settings; the saved value applies again once the variable is unset. `CLAUDE_PROJECTS_DIR` applies to the `default` Claude Code account. A profile without a saved Codex path uses the built-in `~/.codex`.
 
+### 🗂️ Memory filters
+
+- **Review due** — when memories have a review date that has passed, the Memory list shows a "Review due (N)" toggle. N counts the memories that match the other active filters (project, type, visibility, thread, deleted rows, search); turning it on lists only those memories and keeps every other filter, also when you load more rows. The same filter is available as `GET /api/observations?review=due` (only the value `due` filters).
+
+### 🔎 Search and revision history
+
+- **Ranking** — memory search orders results with BM25 weighted by column (title and `topic_key` count more than the body), newest first on ties. Conversation search weights prompt text over the project name.
+- **Any-word fallback** — when a search with several words finds nothing that contains all of them, it runs once more matching any word, and the Memory list says so ("No exact matches. Showing memories that match any of the words.").
+- **Trigram indexes** — on databases indexed with Engram's trigram tokenizer, words shorter than 3 characters are ignored by full-text search; if every word is that short, Memory search and the Memory list match titles containing the words instead (all words first, then any word).
+- **Revision history in the detail** — the memory detail has a closed "Revision history" section. Opening it loads the stored earlier versions once, newest first (version number, date, title; expand one to read its content), capped at the 50 newest with a note when there are more. It says "History is not available for this database" on Engram databases without history, and "No earlier versions" when a memory was never revised.
+- **Revision history** — `GET /api/observations/{id}/versions` returns a memory's stored revisions, newest first: `{"available": true, "versions": [{"version", "title", "content", "created_at"}]}`. `available` is `false` (with an empty list) when the database has no `observation_versions` table (older Engram versions); 404 for an unknown memory, 400 for a non-integer id. Read-only.
+
 ---
 
 ## ✏️ Editing your memory
@@ -331,12 +343,23 @@ Engram Explorer is **read-first**: every view works against the read-only pool a
 - **Delete** — soft-delete an observation, or remove an empty session/prompt.
 - **Rename / merge a project** — re-tag every row from one project name to another.
 - **Import / export** — download a SQLite snapshot, or merge another Engram DB in (a safety backup is written next to your DB first).
+- **Project backup** — "Download project backup" on a project page (and "Back up this project" next to each name in Maintenance → Possibly fragmented projects) downloads `GET /api/projects/{project}/export`: a SQLite snapshot with the full schema but only that project's rows — its memories (including deleted ones), prompts, sessions, revision history, the relations between its own memories, and its sync records. A session of another project is kept only when one of the project's memories or prompts belongs to it, and then without its summary and directory (only its id, project and times remain). Tables the explorer does not know and other projects' sync queues are left empty, the search index is rebuilt and the file is compacted, so nothing of other projects remains in it. Import it with Settings → import (`POST /api/db/import`), which merges it and skips rows you already have. The route answers like `GET /api/db/export` (same-origin only, `503` in read-only mode) and `404` for an unknown project; the file is named `engram-backup-<project>-<timestamp>.db`, with characters other than letters, digits, `.`, `_` and `-` replaced by `-`.
 
 Every mutation is confirmed in the UI, goes through a guarded write path, and runs inside a transaction. Because `engram serve` is the authoritative owner:
 
 > The read path is always safe alongside a running daemon. For **destructive or bulk** edits (project rename/merge, DB import) prefer stopping the daemon first, and keep a backup.
 
 For a strict viewer with **no** write capability, start with `ENGRAM_DASH_READONLY=true` — the read-write pool is never opened and every mutating endpoint returns `503`. Cloud sync is read-only in every mode, so no cloud operation bypasses this switch. See [SECURITY.md](./SECURITY.md) for the full concurrency contract.
+
+### 🧹 Maintenance checks
+
+**Settings → Maintenance** collects data-cleanup checks. Each one explains what it found; nothing runs on its own.
+
+- **Empty sessions** — sessions with no memories, no prompts and no summary (a summary of only spaces, tabs or line breaks counts as none). A session whose only memories are soft-deleted is _not_ empty, nor is a session that a memory relation or a deleted-prompt record still points at. "Delete all N empty sessions" asks for confirmation, then deletes, in one transaction, only the sessions that are still empty at that moment. Sessions of cloud-enrolled projects and sessions started in the last 24 hours (they may belong to an agent that is still running) are always kept. Also available as `GET /api/maintenance/empty-sessions` and `POST /api/maintenance/empty-sessions/delete`.
+- **Possibly fragmented projects** — project names that probably mean the same project because Engram derived them from different working directories: the same name in a different letter case, with extra spaces or trailing slashes, or a full folder path whose last folder is the other name (`/Users/me/code/foo` and `foo`). Nothing broader is matched: `api` and `API-docs`, or two different paths that only share their last folder, are never suggested. Each group lists every name with its memory and session counts and a suggested target (a plain name before a path, then the one with most memories). "Combine into <target>" asks for confirmation and runs the same merge as the project page; the server re-checks that the pair is still related. Cloud-enrolled projects are listed but cannot be combined (unenroll them with the engram CLI first).
+- **Data quality** — two exact, read-only checks over live memories: memories whose title is empty or whitespace only, and groups of memories stored more than once with exactly the same content (same `normalized_hash`; memories without a hash are never grouped, and near-duplicates are out of scope). Lists are capped at 50 entries, with the full count shown. Each memory opens its Memory detail in place; nothing is changed or deleted from this section, so it works the same in read-only mode.
+
+Cleanup is permanent: download a backup first (Settings → export, `GET /api/db/export`). In read-only mode (`ENGRAM_DASH_READONLY=true`) the checks still show their findings, but every cleanup action is hidden and its route answers `503`.
 
 ---
 

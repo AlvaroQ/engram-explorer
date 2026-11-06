@@ -8,7 +8,7 @@
     "build": "vite build",
     "build:ui-css": "tailwindcss -c tailwind.config.ts -i src/styles.css -o ../../internal/ui/static/app.css --minify",
     "preview": "vite preview --port 5173",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json"
   },
   "dependencies": {

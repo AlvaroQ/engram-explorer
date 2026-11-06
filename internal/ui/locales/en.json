@@ -458,6 +458,9 @@
     "badge": {
       "reviewDue": "Review due"
     },
+    "reviewDue": {
+      "filter": "Review due ({{count}})"
+    },
     "table": {
       "created": "Created",
       "project": "Project",
@@ -494,6 +497,18 @@
       "goToSession": "Go to session",
       "copied": "{{label}} copied",
       "clipboardError": "clipboard error"
+    },
+    "history": {
+      "title": "Revision history",
+      "loading": "Loading…",
+      "unavailable": "History is not available for this database.",
+      "none": "No earlier versions.",
+      "version": "Version {{version}}",
+      "capped": "Showing the {{shown}} most recent of {{total}} versions.",
+      "loadError": "Could not load the revision history."
+    },
+    "search": {
+      "matchedAny": "No exact matches. Showing memories that match any of the words."
     }
   },
   "syncHealth": {
@@ -662,6 +677,7 @@
     "allObservations": "All observations →",
     "allSessions": "All sessions →",
     "syncDetail": "Sync detail →",
+    "backup": "Download project backup",
     "notFound": "Project not found.",
     "kpi": {
       "observations": "Observations",
@@ -737,6 +753,71 @@
       "title": "Cloud backup",
       "description": "Read-only sync diagnostics. Enroll, unenroll and sync projects with the engram CLI.",
       "lastErrorGeneric": "The sync daemon recorded an error for this project. Check the Engram daemon log for details."
+    },
+    "readOnly": "Read-only mode: cleanup actions are disabled.",
+    "emptySessions": {
+      "title": "Empty sessions",
+      "description": "Sessions with no memories, no prompts and no summary. They only add noise to session lists. Sessions of cloud-enrolled projects and sessions started in the last 24 hours are never deleted here.",
+      "none": "No empty sessions found.",
+      "count": "{{count}} empty sessions",
+      "countOne": "{{count}} empty session",
+      "showing": "Showing the oldest {{shown}} of {{total}}.",
+      "table": {
+        "session": "Session",
+        "project": "Project",
+        "started": "Started"
+      },
+      "skippedEnrolled": "Kept because the project is cloud-enrolled: {{count}}.",
+      "skippedRecent": "Kept because they started in the last 24 hours: {{count}}.",
+      "delete": "Delete all {{count}} empty sessions",
+      "deleteOne": "Delete the empty session",
+      "confirm": "Delete {{count}} empty sessions? Only sessions that are still empty are deleted. This cannot be undone.",
+      "confirmOne": "Delete {{count}} empty session? It is deleted only if it is still empty. This cannot be undone.",
+      "deleted": "Deleted {{count}} empty sessions.",
+      "deletedOne": "Deleted {{count}} empty session."
+    },
+    "fragmented": {
+      "title": "Possibly fragmented projects",
+      "description": "Project names that probably mean the same project: the same name in different letter case, with extra spaces or trailing slashes, or a full folder path whose last folder is the other name. These are suggestions only; nothing is combined automatically.",
+      "none": "No possibly fragmented projects found.",
+      "backup": "Combining cannot be undone.",
+      "backupLink": "Download a backup first",
+      "backupProject": "Back up this project",
+      "table": {
+        "project": "Project",
+        "memories": "Memories",
+        "sessions": "Sessions",
+        "action": "Action"
+      },
+      "target": "Suggested target",
+      "enrolledBadge": "Cloud-enrolled",
+      "enrolled": "Cloud-enrolled projects cannot be combined here: it would leave the cloud copy out of step. Unenroll the project with the engram CLI first.",
+      "combine": "Combine into {{target}}",
+      "confirm": "Combine \"{{source}}\" into \"{{target}}\"? Its memories, sessions and prompts move to \"{{target}}\" and \"{{source}}\" disappears. This cannot be undone.",
+      "combined": "Combined \"{{source}}\" into \"{{target}}\".",
+      "error": {
+        "notSuggested": "These projects are no longer suggested as the same project. Reload the list."
+      }
+    },
+    "dataQuality": {
+      "title": "Data quality",
+      "description": "Exact checks over live memories: memories with an empty title, and memories stored more than once with exactly the same content. Nothing is changed here: open a memory to review it, then edit or delete it from Memory.",
+      "noTitle": "(no title)",
+      "emptyTitles": {
+        "title": "Empty titles",
+        "none": "No memories with an empty title.",
+        "count": "{{count}} memories have an empty title.",
+        "countOne": "{{count}} memory has an empty title."
+      },
+      "duplicates": {
+        "title": "Exact duplicates",
+        "none": "No exact duplicates.",
+        "count": "{{count}} groups of exact duplicates ({{memories}} memories).",
+        "countOne": "{{count}} group of exact duplicates ({{memories}} memories).",
+        "copies": "{{count}} copies"
+      },
+      "showing": "Showing {{shown}} of {{total}}.",
+      "hint": "Only exact matches are reported. Nothing is deleted automatically."
     }
   },
   "settings": {
@@ -1139,6 +1220,9 @@
     "readOnly": "Write operations are not available in read-only mode.",
     "noDatabase": "Database is not available.",
     "observationNotFound": "Observation {{id}} not found.",
-    "projectRequired": "Choose a project."
+    "projectRequired": "Choose a project.",
+    "loadEmptySessions": "Could not load empty sessions: ",
+    "loadFragmentedProjects": "Could not load possibly fragmented projects: ",
+    "loadDataQuality": "Could not load the data quality checks: "
   }
 }

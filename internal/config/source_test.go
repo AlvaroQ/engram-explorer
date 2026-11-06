@@ -20,7 +20,6 @@ func TestEnsureConfig_LegacySettingsSeedNewConfigOnce(t *testing.T) {
 	if err := config.SaveOverrides(home, config.Overrides{EngramDbPath: legacyDB, ClaudeProjectsDir: legacyClaude}); err != nil {
 		t.Fatalf("SaveOverrides: %v", err)
 	}
-	legacyBytes, _ := os.ReadFile(config.OverridesPath(home))
 
 	// Built-in defaults, as config.Load resolves them with no env vars set.
 	resolved := config.Config{
@@ -45,7 +44,7 @@ func TestEnsureConfig_LegacySettingsSeedNewConfigOnce(t *testing.T) {
 	if err := config.SaveOverrides(home, config.Overrides{EngramDbPath: filepath.Join(home, "x.db")}); err != nil {
 		t.Fatalf("SaveOverrides: %v", err)
 	}
-	legacyBytes, _ = os.ReadFile(config.OverridesPath(home))
+	legacyBytes, _ := os.ReadFile(config.OverridesPath(home))
 	if _, err := config.EnsureConfig(home, resolved); err != nil {
 		t.Fatalf("EnsureConfig (second): %v", err)
 	}

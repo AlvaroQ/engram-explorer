@@ -127,7 +127,7 @@ func CCSessionsListMulti(accounts []CCAccountSource, p CCSessionListParams) (CCS
 			continue
 		}
 		page[i].Usage = computeSessionUsage(rc)
-		rc.Close()
+		_ = rc.Close()
 	}
 
 	// Build sorted project union from all scanned accounts (not filtered).
@@ -202,7 +202,7 @@ func headScanAccount(reader CCProjectsReader, projectFilter string) ([]CCSession
 				continue
 			}
 			head, _ := parseSessionHead(f)
-			f.Close()
+			_ = f.Close()
 
 			sessionID := strings.TrimSuffix(name, ".jsonl")
 			display := projectDisplayName(head.cwd)

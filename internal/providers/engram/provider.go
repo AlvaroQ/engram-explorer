@@ -77,7 +77,7 @@ func ValidateDBFile(path string) error {
 	}
 	header := make([]byte, len(sqliteMagic))
 	_, err = io.ReadFull(f, header)
-	f.Close()
+	_ = f.Close()
 	if err != nil || string(header) != sqliteMagic {
 		return usererr.New(fmt.Sprintf("not an SQLite database: %s", path))
 	}
@@ -88,7 +88,7 @@ func ValidateDBFile(path string) error {
 	if err != nil {
 		return usererr.New(fmt.Sprintf("cannot open database: %s", path))
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	if !SchemaValid(db) {
 		return usererr.New(fmt.Sprintf("not an Engram database (missing observations or sessions tables): %s", path))
 	}
@@ -166,7 +166,7 @@ func (p *engramProvider) Detect(ctx context.Context, cfg providers.ProviderConfi
 		return providers.Detection{Available: false, Reason: "schema-invalid", Path: path}
 	}
 	valid := SchemaValid(db)
-	db.Close()
+	_ = db.Close()
 
 	if !valid {
 		return providers.Detection{Available: false, Reason: "schema-invalid", Path: path}

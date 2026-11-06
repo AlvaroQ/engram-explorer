@@ -318,7 +318,7 @@ func RequireRW(writable bool, h http.HandlerFunc) http.HandlerFunc {
 // for provider-owned routes.
 func RenderModuleDisabled(w http.ResponseWriter, r *http.Request, d Deps) {
 	lang := langForRequest(r)
-	var c templ.Component = ErrorPartial(T(lang, "common.moduleDisabled"))
+	c := ErrorPartial(T(lang, "common.moduleDisabled"))
 	if !IsHTMX(r) {
 		c = Layout(T(lang, "common.moduleDisabledTitle"), "", lang,
 			themeForRequest(r), sidebarStateForRequest(r), c)
@@ -465,6 +465,7 @@ func Mount(mux *http.ServeMux, d Deps) {
 	mux.HandleFunc("GET /observations", memory(handleObservationsPage))
 	mux.HandleFunc("GET /observations/list", memory(handleObservationsListPartial))
 	mux.HandleFunc("GET /observations/{id}", memory(handleObservationDetailPartial))
+	mux.HandleFunc("GET /observations/{id}/history", memory(handleObservationHistoryPartial))
 
 	// Brain page (React island — Three.js graph).
 	mux.HandleFunc("GET /brain", memory(handleBrainPage))

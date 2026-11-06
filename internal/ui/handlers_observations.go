@@ -40,6 +40,10 @@ func observationListParamsFromQuery(r *http.Request) services.ObservationListPar
 		OnlyDeleted:    onlyDeleted,
 		Cursor:         q.Get("cursor"),
 		Limit:          limit,
+		// match=any is set by the load-more URL of an OR-fallback page.
+		MatchAny: q.Get("match") == "any",
+		// review=due keeps memories whose review date has passed.
+		ReviewDue: q.Get("review") == "due",
 	}
 }
 
@@ -55,12 +59,34 @@ func dropEmpty(ss []string) []string {
 }
 
 // loadObservations fetches observations via the service. Returns empty result
-// when RoDB is nil.
-func loadObservations(d Deps, p services.ObservationListParams) ([]services.ObservationRow, *string, error) {
+// when RoDB is nil. When the service fell back to matching any word of the
+// search, it sets p.MatchAny so the table shows the notice and the load-more
+// URL keeps OR mode.
+func loadObservations(d Deps, p *services.ObservationListParams) ([]services.ObservationRow, *string, error) {
 	if d.RoDB == nil {
 		return []services.ObservationRow{}, nil, nil
 	}
-	return services.ObservationsList(d.RoDB, p)
+	page, err := services.ObservationsListPage(d.RoDB, *p)
+	if err != nil {
+		return nil, nil, err
+	}
+	p.MatchAny = page.MatchedAny
+	return page.Items, page.NextCursor, nil
+}
+
+// loadReviewDueCount returns the "Review due" chip count for the list filters
+// in p (after loadObservations, so the search mode matches the list). It is
+// best-effort: 0 when RoDB is nil or the count fails, which hides the chip
+// unless the filter is on.
+func loadReviewDueCount(d Deps, p services.ObservationListParams) int {
+	if d.RoDB == nil {
+		return 0
+	}
+	n, err := services.ObservationsReviewDueCount(d.RoDB, p)
+	if err != nil {
+		return 0
+	}
+	return n
 }
 
 // loadProjectNames fetches the distinct project names for the filter dropdown.
@@ -122,16 +148,17 @@ func handleObservationsPage(d Deps) http.HandlerFunc {
 		default:
 			advanced := d.AdvancedView != nil && d.AdvancedView()
 			params := observationListParamsFromQuery(r)
-			items, nextCursor, err := loadObservations(d, params)
+			items, nextCursor, err := loadObservations(d, &params)
 			if err != nil {
 				RenderError(w, r, "errors.loadObservations", err)
 				return
 			}
 			projects := loadProjectNames(d)
+			reviewDue := loadReviewDueCount(d, params)
 			if IsHTMX(r) {
-				Render(w, r, ObservationsPartial(items, nextCursor, params, projects, lang, advanced))
+				Render(w, r, ObservationsPartial(items, nextCursor, params, projects, lang, advanced, reviewDue))
 			} else {
-				renderDeps(w, r, d, ObservationsPage(items, nextCursor, params, projects, lang, theme, sidebarState, advanced))
+				renderDeps(w, r, d, ObservationsPage(items, nextCursor, params, projects, lang, theme, sidebarState, advanced, reviewDue))
 			}
 		}
 	}
@@ -151,7 +178,7 @@ func handleObservationsListPartial(d Deps) http.HandlerFunc {
 		}
 		params := observationListParamsFromQuery(r)
 
-		items, nextCursor, err := loadObservations(d, params)
+		items, nextCursor, err := loadObservations(d, &params)
 		if err != nil {
 			RenderError(w, r, "errors.loadObservations", err)
 			return
@@ -161,7 +188,7 @@ func handleObservationsListPartial(d Deps) http.HandlerFunc {
 		if r.URL.Query().Get("append") == "true" {
 			Render(w, r, ObservationsRowsPartial(items, nextCursor, params, lang, advanced))
 		} else {
-			Render(w, r, ObservationsTablePartial(items, nextCursor, params, lang, advanced))
+			Render(w, r, ObservationsTablePartial(items, nextCursor, params, lang, advanced, loadReviewDueCount(d, params)))
 		}
 	}
 }
@@ -195,5 +222,36 @@ func handleObservationDetailPartial(d Deps) http.HandlerFunc {
 		}
 
 		Render(w, r, ObservationDetailPartial(obs, revisions, fmt.Sprintf("#%d", obs.ID), lang))
+	}
+}
+
+// handleObservationHistoryPartial serves GET /observations/{id}/history, the
+// body of the detail drawer's Revision history section (read-only). A missing
+// history table or no stored versions render a notice; a failed query renders
+// a localized inline error (200, the drawer keeps the rest of the detail).
+func handleObservationHistoryPartial(d Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		lang := langForRequest(r)
+		idStr := r.PathValue("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			Render(w, r, ErrorPartial(T(lang, "errors.invalidObservationId", "id", idStr)))
+			return
+		}
+		if d.RoDB == nil {
+			http.NotFound(w, r)
+			return
+		}
+		res, found, err := services.ObservationVersions(r.Context(), d.RoDB, id)
+		if err != nil {
+			// ErrorMessage logs the detail and returns the generic message.
+			Render(w, r, ErrorPartial(T(lang, "observations.history.loadError")+" "+ErrorMessage(r, "", err)))
+			return
+		}
+		if !found {
+			http.NotFound(w, r)
+			return
+		}
+		Render(w, r, ObservationHistoryPartial(res, lang))
 	}
 }

@@ -157,4 +157,26 @@ func Mount(mux Registrar, d Deps) {
 	// POST /doctor/sync/{project}/delete — permanently delete an unenrolled,
 	// observation-free project (removes its sessions and prompts).
 	mux.HandleFunc("POST /doctor/sync/{project}/delete", writeGuard(handleSyncDeleteProject))
+
+	// -----------------------------------------------------------------------
+	// Maintenance checks (Phase 5)
+	// -----------------------------------------------------------------------
+
+	// GET /doctor/maintenance/empty-sessions — empty sessions section body.
+	mux.HandleFunc("GET /doctor/maintenance/empty-sessions", live(handleEmptySessionsList))
+
+	// POST /doctor/maintenance/empty-sessions/delete — bulk delete of the
+	// sessions that are still empty (predicate re-checked server-side).
+	mux.HandleFunc("POST /doctor/maintenance/empty-sessions/delete", writeGuard(handleEmptySessionsDelete))
+
+	// GET /doctor/maintenance/fragmented-projects — suggestion groups.
+	mux.HandleFunc("GET /doctor/maintenance/fragmented-projects", live(handleFragmentedProjectsList))
+
+	// POST /doctor/maintenance/fragmented-projects/combine — merge one
+	// suggested name into its group's target (services.RenameProject merge).
+	mux.HandleFunc("POST /doctor/maintenance/fragmented-projects/combine", writeGuard(handleFragmentedProjectsCombine))
+
+	// GET /doctor/maintenance/data-quality — empty titles and exact
+	// duplicates (read-only; no write route).
+	mux.HandleFunc("GET /doctor/maintenance/data-quality", live(handleDataQuality))
 }

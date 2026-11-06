@@ -154,12 +154,12 @@ func SaveProfileStore(configHome string, store *ProfileStore) error {
 	}
 	tmp := f.Name()
 	if _, err := f.Write(data); err != nil {
-		f.Close()
-		os.Remove(tmp)
+		_ = f.Close()
+		_ = os.Remove(tmp)
 		return err
 	}
 	if err := f.Close(); err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return err
 	}
 	return os.Rename(tmp, configFilePath(configHome))

@@ -3,6 +3,7 @@ package services_test
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -110,6 +111,14 @@ var writeTestSchema = []string{
 		acked_at    TEXT,
 		project     TEXT NOT NULL DEFAULT ''
 	)`,
+}
+
+// mustExec runs a fixture statement and fails the test when it errors.
+func mustExec(t *testing.T, db *sql.DB, query string) {
+	t.Helper()
+	if _, err := db.Exec(query); err != nil {
+		t.Fatalf("fixture %q: %v", query, err)
+	}
 }
 
 func seedObs(t *testing.T, db *sql.DB) int64 {
@@ -253,7 +262,9 @@ func TestAssignProject_ObsSuccess_WithEnroll_SyncMutation(t *testing.T) {
 	}
 	// Verify nowSqlite timestamp format in occurred_at.
 	var occurredAt string
-	db.QueryRow(`SELECT occurred_at FROM sync_mutations WHERE seq = ?`, *result.MutationSeq).Scan(&occurredAt)
+	if err := db.QueryRow(`SELECT occurred_at FROM sync_mutations WHERE seq = ?`, *result.MutationSeq).Scan(&occurredAt); err != nil {
+		t.Fatalf("read back: %v", err)
+	}
 	if len(occurredAt) != 19 {
 		t.Errorf("occurred_at format wrong: %q (want YYYY-MM-DD HH:MM:SS)", occurredAt)
 	}
@@ -283,7 +294,9 @@ func TestUpdateObservation_SetType(t *testing.T) {
 		t.Errorf("updated.type: got %v, want decision", result.Updated["type"])
 	}
 	var typ string
-	db.QueryRow(`SELECT type FROM observations WHERE id = ?`, id).Scan(&typ)
+	if err := db.QueryRow(`SELECT type FROM observations WHERE id = ?`, id).Scan(&typ); err != nil {
+		t.Fatalf("read back: %v", err)
+	}
 	if typ != "decision" {
 		t.Errorf("DB type: got %q, want decision", typ)
 	}
@@ -337,7 +350,9 @@ func TestDeleteObservation_SoftDelete(t *testing.T) {
 	}
 
 	var deletedAt *string
-	db.QueryRow(`SELECT deleted_at FROM observations WHERE id = ?`, id).Scan(&deletedAt)
+	if err := db.QueryRow(`SELECT deleted_at FROM observations WHERE id = ?`, id).Scan(&deletedAt); err != nil {
+		t.Fatalf("read back: %v", err)
+	}
 	if deletedAt == nil {
 		t.Error("deleted_at should be set after soft delete")
 	}
@@ -356,8 +371,8 @@ func TestDeleteObservation_AlreadyDeleted(t *testing.T) {
 
 func TestDeleteSession_HAS_PROMPTS(t *testing.T) {
 	db, _ := newWriteDB(t)
-	db.Exec(`INSERT INTO sessions (id, project, directory) VALUES ('sp1', 'proj', '/tmp')`)
-	db.Exec(`INSERT INTO user_prompts (session_id, content) VALUES ('sp1', 'some prompt')`)
+	mustExec(t, db, `INSERT INTO sessions (id, project, directory) VALUES ('sp1', 'proj', '/tmp')`)
+	mustExec(t, db, `INSERT INTO user_prompts (session_id, content) VALUES ('sp1', 'some prompt')`)
 
 	_, err := services.DeleteEntity(context.Background(), db, services.EntityKindSession, "sp1")
 	assertWriteErrorCode(t, err, "HAS_PROMPTS")
@@ -365,8 +380,8 @@ func TestDeleteSession_HAS_PROMPTS(t *testing.T) {
 
 func TestDeleteSession_HAS_OBSERVATIONS(t *testing.T) {
 	db, _ := newWriteDB(t)
-	db.Exec(`INSERT INTO sessions (id, project, directory) VALUES ('so1', 'proj', '/tmp')`)
-	db.Exec(`INSERT INTO observations (session_id, type, title, content, scope, created_at, updated_at) VALUES ('so1', 'note', 'T', 'C', 'project', '2026-01-01 10:00:00', '2026-01-01 10:00:00')`)
+	mustExec(t, db, `INSERT INTO sessions (id, project, directory) VALUES ('so1', 'proj', '/tmp')`)
+	mustExec(t, db, `INSERT INTO observations (session_id, type, title, content, scope, created_at, updated_at) VALUES ('so1', 'note', 'T', 'C', 'project', '2026-01-01 10:00:00', '2026-01-01 10:00:00')`)
 
 	_, err := services.DeleteEntity(context.Background(), db, services.EntityKindSession, "so1")
 	assertWriteErrorCode(t, err, "HAS_OBSERVATIONS")
@@ -374,7 +389,7 @@ func TestDeleteSession_HAS_OBSERVATIONS(t *testing.T) {
 
 func TestDeleteSession_Success(t *testing.T) {
 	db, _ := newWriteDB(t)
-	db.Exec(`INSERT INTO sessions (id, project, directory) VALUES ('sc1', 'proj', '/tmp')`)
+	mustExec(t, db, `INSERT INTO sessions (id, project, directory) VALUES ('sc1', 'proj', '/tmp')`)
 
 	result, err := services.DeleteEntity(context.Background(), db, services.EntityKindSession, "sc1")
 	if err != nil {
@@ -407,8 +422,8 @@ func TestRenameProject_SOURCE_NOT_FOUND(t *testing.T) {
 
 func TestRenameProject_ENROLLED_SOURCE_UNSUPPORTED(t *testing.T) {
 	db, _ := newWriteDB(t)
-	db.Exec(`INSERT INTO sessions (id, project, directory) VALUES ('r1', 'enrolled_src', '/tmp')`)
-	db.Exec(`INSERT INTO sync_enrolled_projects (project) VALUES ('enrolled_src')`)
+	mustExec(t, db, `INSERT INTO sessions (id, project, directory) VALUES ('r1', 'enrolled_src', '/tmp')`)
+	mustExec(t, db, `INSERT INTO sync_enrolled_projects (project) VALUES ('enrolled_src')`)
 	_, err := services.RenameProject(context.Background(), db, services.RenameProjectParams{
 		Source: "enrolled_src", Target: "other", Mode: "rename",
 	})
@@ -417,8 +432,8 @@ func TestRenameProject_ENROLLED_SOURCE_UNSUPPORTED(t *testing.T) {
 
 func TestRenameProject_TARGET_EXISTS(t *testing.T) {
 	db, _ := newWriteDB(t)
-	db.Exec(`INSERT INTO sessions (id, project, directory) VALUES ('r2', 'src', '/tmp')`)
-	db.Exec(`INSERT INTO sessions (id, project, directory) VALUES ('r3', 'tgt', '/tmp')`)
+	mustExec(t, db, `INSERT INTO sessions (id, project, directory) VALUES ('r2', 'src', '/tmp')`)
+	mustExec(t, db, `INSERT INTO sessions (id, project, directory) VALUES ('r3', 'tgt', '/tmp')`)
 	_, err := services.RenameProject(context.Background(), db, services.RenameProjectParams{
 		Source: "src", Target: "tgt", Mode: "rename",
 	})
@@ -427,7 +442,7 @@ func TestRenameProject_TARGET_EXISTS(t *testing.T) {
 
 func TestRenameProject_TARGET_NOT_FOUND_merge(t *testing.T) {
 	db, _ := newWriteDB(t)
-	db.Exec(`INSERT INTO sessions (id, project, directory) VALUES ('r4', 'src', '/tmp')`)
+	mustExec(t, db, `INSERT INTO sessions (id, project, directory) VALUES ('r4', 'src', '/tmp')`)
 	_, err := services.RenameProject(context.Background(), db, services.RenameProjectParams{
 		Source: "src", Target: "nosuchmerge", Mode: "merge",
 	})
@@ -436,9 +451,9 @@ func TestRenameProject_TARGET_NOT_FOUND_merge(t *testing.T) {
 
 func TestRenameProject_ENROLLED_TARGET_UNSUPPORTED(t *testing.T) {
 	db, _ := newWriteDB(t)
-	db.Exec(`INSERT INTO sessions (id, project, directory) VALUES ('r5', 'src', '/tmp')`)
-	db.Exec(`INSERT INTO sessions (id, project, directory) VALUES ('r6', 'etgt', '/tmp')`)
-	db.Exec(`INSERT INTO sync_enrolled_projects (project) VALUES ('etgt')`)
+	mustExec(t, db, `INSERT INTO sessions (id, project, directory) VALUES ('r5', 'src', '/tmp')`)
+	mustExec(t, db, `INSERT INTO sessions (id, project, directory) VALUES ('r6', 'etgt', '/tmp')`)
+	mustExec(t, db, `INSERT INTO sync_enrolled_projects (project) VALUES ('etgt')`)
 	_, err := services.RenameProject(context.Background(), db, services.RenameProjectParams{
 		Source: "src", Target: "etgt", Mode: "merge",
 	})
@@ -447,8 +462,8 @@ func TestRenameProject_ENROLLED_TARGET_UNSUPPORTED(t *testing.T) {
 
 func TestRenameProject_Success(t *testing.T) {
 	db, _ := newWriteDB(t)
-	db.Exec(`INSERT INTO sessions (id, project, directory) VALUES ('r7', 'alpha', '/tmp')`)
-	db.Exec(`INSERT INTO observations (session_id, type, title, content, project, scope, created_at, updated_at) VALUES ('r7', 'note', 'T', 'C', 'alpha', 'project', '2026-01-01 10:00:00', '2026-01-01 10:00:00')`)
+	mustExec(t, db, `INSERT INTO sessions (id, project, directory) VALUES ('r7', 'alpha', '/tmp')`)
+	mustExec(t, db, `INSERT INTO observations (session_id, type, title, content, project, scope, created_at, updated_at) VALUES ('r7', 'note', 'T', 'C', 'alpha', 'project', '2026-01-01 10:00:00', '2026-01-01 10:00:00')`)
 
 	result, err := services.RenameProject(context.Background(), db, services.RenameProjectParams{
 		Source: "alpha", Target: "beta", Mode: "rename",
@@ -463,7 +478,9 @@ func TestRenameProject_Success(t *testing.T) {
 		t.Errorf("observations: got %d, want 1", result.Affected.Observations)
 	}
 	var proj string
-	db.QueryRow(`SELECT project FROM sessions WHERE id = 'r7'`).Scan(&proj)
+	if err := db.QueryRow(`SELECT project FROM sessions WHERE id = 'r7'`).Scan(&proj); err != nil {
+		t.Fatalf("read back: %v", err)
+	}
 	if proj != "beta" {
 		t.Errorf("session project: got %q, want beta", proj)
 	}
@@ -484,7 +501,7 @@ func TestRenameProject_ValidationOrder_SameNameBeforeNotFound(t *testing.T) {
 
 func TestExportSnapshot_WritesValidSQLite(t *testing.T) {
 	db, _ := newWriteDB(t)
-	db.Exec(`INSERT INTO sessions (id, project, directory) VALUES ('ex1', 'proj', '/tmp')`)
+	mustExec(t, db, `INSERT INTO sessions (id, project, directory) VALUES ('ex1', 'proj', '/tmp')`)
 
 	exportPath, cleanup, err := services.ExportSnapshot(context.Background(), db)
 	if err != nil {
@@ -509,8 +526,8 @@ func TestExportSnapshot_WritesValidSQLite(t *testing.T) {
 
 func TestImportMerge_RoundTrip(t *testing.T) {
 	db, path := newWriteDB(t)
-	db.Exec(`INSERT INTO sessions (id, project, directory) VALUES ('imp1', 'projA', '/tmp')`)
-	db.Exec(`INSERT INTO observations (session_id, type, title, content, project, scope, created_at, updated_at) VALUES ('imp1', 'note', 'ImportTest', 'content', 'projA', 'project', '2026-01-01 10:00:00', '2026-01-01 10:00:00')`)
+	mustExec(t, db, `INSERT INTO sessions (id, project, directory) VALUES ('imp1', 'projA', '/tmp')`)
+	mustExec(t, db, `INSERT INTO observations (session_id, type, title, content, project, scope, created_at, updated_at) VALUES ('imp1', 'note', 'ImportTest', 'content', 'projA', 'project', '2026-01-01 10:00:00', '2026-01-01 10:00:00')`)
 
 	exportPath, cleanup, err := services.ExportSnapshot(context.Background(), db)
 	if err != nil {
@@ -547,8 +564,8 @@ func TestImportMerge_BadSQLite(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected DatabaseImportError")
 	}
-	die, ok := err.(*services.DatabaseImportError)
-	if !ok {
+	var die *services.DatabaseImportError
+	if !errors.As(err, &die) {
 		t.Fatalf("expected *DatabaseImportError, got %T: %v", err, err)
 	}
 	if die.Code != services.DatabaseImportCodeBadSQLite {
@@ -565,8 +582,8 @@ func assertWriteErrorCode(t *testing.T, err error, code string) {
 	if err == nil {
 		t.Fatalf("expected WriteError %q, got nil", code)
 	}
-	we, ok := err.(*services.WriteError)
-	if !ok {
+	var we *services.WriteError
+	if !errors.As(err, &we) {
 		t.Fatalf("expected *WriteError, got %T: %v", err, err)
 	}
 	if we.Code != code {

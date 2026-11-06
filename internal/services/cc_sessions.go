@@ -514,7 +514,7 @@ func CCSessionsList(reader CCProjectsReader, p CCSessionListParams) (CCSessionLi
 				continue
 			}
 			head, _ := parseSessionHead(f)
-			f.Close()
+			_ = f.Close()
 
 			sessionID := strings.TrimSuffix(name, ".jsonl")
 			display := projectDisplayName(head.cwd)
@@ -587,7 +587,7 @@ func CCSessionsList(reader CCProjectsReader, p CCSessionListParams) (CCSessionLi
 			continue
 		}
 		allItems[i].Usage = computeSessionUsage(f)
-		f.Close()
+		_ = f.Close()
 	}
 
 	// Stable unique project list (sorted).
@@ -628,7 +628,7 @@ func CCSessionGetDetail(reader CCProjectsReader, projectFolder, sessionID string
 	if err != nil {
 		return nil, fmt.Errorf("open session file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	detail := &CCSessionDetail{
 		ID:            sessionID,

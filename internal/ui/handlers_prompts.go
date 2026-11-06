@@ -7,29 +7,6 @@ import (
 	"github.com/AlvaroQ/engram-explorer/internal/services"
 )
 
-// handlePromptsPage serves GET /prompts.
-// If ?q= is present, runs FTS search; otherwise returns the list.
-// Full page on direct GET; partial content when HX-Request: true.
-func handlePromptsPage(d Deps) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		lang := langForRequest(r)
-		theme := themeForRequest(r)
-		q := strings.TrimSpace(r.URL.Query().Get("q"))
-
-		items, searchItems, err := loadPrompts(d, q)
-		if err != nil {
-			RenderError(w, r, "errors.loadPrompts", err)
-			return
-		}
-
-		if IsHTMX(r) {
-			Render(w, r, PromptsPartial(items, searchItems, q, lang))
-		} else {
-			renderDeps(w, r, d, PromptsPage(items, searchItems, q, lang, theme, sidebarStateForRequest(r)))
-		}
-	}
-}
-
 // handlePromptsListPartial serves GET /prompts/list.
 // Always returns the bare list content (HTMX swap target for the search input).
 func handlePromptsListPartial(d Deps) http.HandlerFunc {

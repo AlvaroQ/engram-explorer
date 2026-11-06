@@ -73,7 +73,7 @@ func CCSessionSummaries(reader CCProjectsReader) ([]CCSessionSummary, error) {
 				continue
 			}
 			s := summarizeSession(f)
-			f.Close()
+			_ = f.Close()
 			s.ProjectFolder, s.ID = folder, strings.TrimSuffix(name, ".jsonl")
 			s.EndedAt, s.SizeBytes = fi.ModTime(), fi.Size()
 			if s.StartedAt.IsZero() {

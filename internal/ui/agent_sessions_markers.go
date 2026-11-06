@@ -129,19 +129,6 @@ func asSplitMarkers(agent, s string) []ccsSegment {
 	return out
 }
 
-// ccsAttachment reports whether text is a single wrapped marker block and, if so,
-// returns the tag name for the chip label. Used for the all-or-nothing fast path
-// (e.g. list view first-prompt detection).
-func ccsAttachment(text string) (string, bool) {
-	t := strings.TrimSpace(text)
-	for _, tag := range ccsMarkerTags {
-		if strings.HasPrefix(t, "<"+tag+">") || strings.HasPrefix(t, "<"+tag+" ") {
-			return tag, true
-		}
-	}
-	return "", false
-}
-
 // ccsPlainFromSegments joins plain-text segments into a single normalised string.
 func ccsPlainFromSegments(segs []ccsSegment) string {
 	var parts []string

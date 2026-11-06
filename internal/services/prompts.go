@@ -62,10 +62,14 @@ func scanPromptRow(s scanner) (PromptRow, error) {
 	return r, err
 }
 
-// PromptsSearch runs FTS5 search on the prompts_fts table.
+// PromptsSearch runs FTS5 search on the prompts_fts table, ranked by weighted
+// BM25 (see promptsBM25). It has no OR fallback: its callers have no way to
+// tell the user that results match any word.
 func PromptsSearch(db sqlite.Querier, rawQ string, limit int) ([]PromptWithSnippet, error) {
-	sanitized := fts.SanitizeQuery(rawQ)
-	if sanitized == "" {
+	// Strict filter only: PromptsSearch has no OR fallback (see above). On a
+	// trigram index a query of only short terms becomes a content LIKE.
+	text, _ := newFTSQuery(db, "prompts_fts", rawQ).filters("p.content")
+	if text.none() {
 		return []PromptWithSnippet{}, nil
 	}
 	query := `SELECT p.id, p.session_id, p.content, p.project, p.created_at, p.sync_id,
@@ -73,9 +77,19 @@ func PromptsSearch(db sqlite.Querier, rawQ string, limit int) ([]PromptWithSnipp
 		FROM user_prompts p
 		JOIN prompts_fts ON prompts_fts.rowid = p.id
 		WHERE prompts_fts MATCH ?
-		ORDER BY rank, p.id DESC
+		ORDER BY ` + promptsBM25 + `, p.id DESC
 		LIMIT ?`
-	rows, err := db.Query(query, fts.HighlightStart, fts.HighlightEnd, sanitized, limit)
+	args := []any{fts.HighlightStart, fts.HighlightEnd, text.match, limit}
+	if text.like != "" {
+		query = `SELECT p.id, p.session_id, p.content, p.project, p.created_at, p.sync_id,
+			COALESCE(p.content, '') AS snippet
+			FROM user_prompts p
+			WHERE ` + text.like + `
+			ORDER BY p.created_at DESC, p.id DESC
+			LIMIT ?`
+		args = append(append([]any{}, text.likeArgs...), limit)
+	}
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		// FTS table may not exist; mirror Node's silent fallback.
 		return []PromptWithSnippet{}, nil
