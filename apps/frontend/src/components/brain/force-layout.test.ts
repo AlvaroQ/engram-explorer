@@ -58,6 +58,85 @@ function clusterSeparation(pos: Float32Array, nodes: LayoutNode[]): number {
   return intra / (inter / pairs);
 }
 
+// Owner-shaped synthetic graph: 5000 nodes in ~50 projects with a skewed
+// size distribution (39% / 10% / 6% / … down to a long tail of small
+// projects), projects interleaved in API (recency) order, topic sub-clusters
+// that change every few nodes, and 900 edges (80% inside a project).
+function makeOwnerShapedGraph(): { nodes: LayoutNode[]; edges: LayoutEdge[] } {
+  const n = 5000;
+  const sizes = [1950, 520, 280, 230, 190, 160, 140, 120, 100, 90];
+  let rest = n - sizes.reduce((a, b) => a + b, 0);
+  for (let s = 80; rest > 0; s *= 0.93) {
+    const take = Math.min(rest, Math.max(5, Math.round(s)));
+    sizes.push(take);
+    rest -= take;
+  }
+  let seed = 12345;
+  const rand = (): number => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+  const remaining = sizes.slice();
+  const topicOf = sizes.map(() => 0);
+  let topic = 1;
+  const nodes: LayoutNode[] = [];
+  while (nodes.length < n) {
+    let pick = rand() * remaining.reduce((a, b) => a + b, 0);
+    let k = 0;
+    while (pick >= (remaining[k] ?? 0)) pick -= remaining[k++] ?? 0;
+    remaining[k] = (remaining[k] ?? 0) - 1;
+    if (topicOf[k] === 0 || rand() < 0.15) topicOf[k] = topic++;
+    nodes.push({ id: nodes.length, cluster: k + 1, subCluster: topicOf[k] ?? 0 });
+  }
+  const byCluster = new Map<number, number[]>();
+  nodes.forEach((nd, i) => byCluster.set(nd.cluster, [...(byCluster.get(nd.cluster) ?? []), i]));
+  const edges: LayoutEdge[] = [];
+  while (edges.length < 900) {
+    const a = Math.floor(rand() * n);
+    const pool = rand() < 0.8 ? byCluster.get(nodes[a]?.cluster ?? 0) : undefined;
+    const b = pool ? (pool[Math.floor(rand() * pool.length)] ?? 0) : Math.floor(rand() * n);
+    if (a !== b) edges.push({ source: a, target: b });
+  }
+  return { nodes, edges };
+}
+
+// Mean distance between the centroids of the `top` largest projects divided by
+// the mean distance of their nodes to their own centroid. Higher = more
+// visible galaxies; a uniform cube scores well below 1.
+function topProjectSeparation(pos: Float32Array, nodes: LayoutNode[], top: number): number {
+  const groups = new Map<number, number[]>();
+  nodes.forEach((nd, i) => groups.set(nd.cluster, [...(groups.get(nd.cluster) ?? []), i]));
+  const largest = [...groups.values()].sort((a, b) => b.length - a.length).slice(0, top);
+  const at = (i: number, axis: number): number => pos[i * 3 + axis] ?? 0;
+  const cents = largest.map((ids) =>
+    [0, 1, 2].map((axis) => ids.reduce((sum, i) => sum + at(i, axis), 0) / ids.length),
+  );
+  let intra = 0;
+  let members = 0;
+  largest.forEach((ids, k) => {
+    const c = cents[k] ?? [0, 0, 0];
+    for (const i of ids) {
+      intra += Math.hypot(at(i, 0) - (c[0] ?? 0), at(i, 1) - (c[1] ?? 0), at(i, 2) - (c[2] ?? 0));
+      members++;
+    }
+  });
+  let inter = 0;
+  let pairs = 0;
+  for (let a = 0; a < cents.length; a++) {
+    for (let b = a + 1; b < cents.length; b++) {
+      const p = cents[a] ?? [0, 0, 0];
+      const q = cents[b] ?? [0, 0, 0];
+      inter += Math.hypot(
+        (p[0] ?? 0) - (q[0] ?? 0),
+        (p[1] ?? 0) - (q[1] ?? 0),
+        (p[2] ?? 0) - (q[2] ?? 0),
+      );
+      pairs++;
+    }
+  }
+  return inter / pairs / (intra / members);
+}
+
 function expectFiniteAndBounded(pos: Float32Array, n: number): void {
   expect(pos.length).toBe(n * 3);
   for (const v of pos) {
@@ -91,6 +170,17 @@ describe('computeLayout', () => {
     expect(clusterSeparation(pos, nodes)).toBeLessThan(0.75);
   });
 
+  it('keeps project galaxies separated on an owner-shaped 5000-node graph', () => {
+    // Regression: cutting the schedule to 80 iterations at 5000 nodes left
+    // the graph as a uniform cube (separation 0.33 here). The pre-Barnes–Hut
+    // exact O(n²) layout with 200 iterations scores 3.61 on this fixture;
+    // the threshold is 85% of that.
+    const { nodes, edges } = makeOwnerShapedGraph();
+    const pos = computeLayout(nodes, edges);
+    expectFiniteAndBounded(pos, nodes.length);
+    expect(topProjectSeparation(pos, nodes, 10)).toBeGreaterThan(3.07);
+  });
+
   it('handles empty and single-node graphs', () => {
     expect(computeLayout([], []).length).toBe(0);
     const one = computeLayout([{ id: 0, cluster: 1, subCluster: 1 }], []);
@@ -104,8 +194,10 @@ describe('computeLayout', () => {
     const ms = performance.now() - t0;
     expectFiniteAndBounded(pos, 5000);
     // The old exact O(n²) × 200 iterations took ~8.7 s here on a fast dev
-    // machine; Barnes–Hut + the scaled budget take well under a second.
-    expect(ms).toBeLessThan(3000);
+    // machine; Barnes–Hut with the same 200 iterations takes ~2.3 s. The bound
+    // leaves headroom for slower CI runners while still catching a return to
+    // the exact O(n²) path.
+    expect(ms).toBeLessThan(5000);
   });
 
   it('still returns a full, finite buffer above the simulation cap', () => {
@@ -116,15 +208,12 @@ describe('computeLayout', () => {
 });
 
 describe('layoutIterations', () => {
-  it('keeps the full 200 iterations for typical graphs', () => {
+  it('keeps the full 200 iterations at every graph size', () => {
+    // Project clusters only separate late in the schedule: a 5000-node graph
+    // cut to 80 iterations stayed a uniform cube (see the owner-shaped test).
     expect(layoutIterations(50)).toBe(200);
     expect(layoutIterations(1000)).toBe(200);
-  });
-
-  it('scales the budget down for large graphs but never below the floor', () => {
-    expect(layoutIterations(5000)).toBeLessThan(200);
-    expect(layoutIterations(5000)).toBeGreaterThanOrEqual(80);
-    expect(layoutIterations(2000)).toBeGreaterThan(layoutIterations(5000));
+    expect(layoutIterations(MAX_LAYOUT_NODES)).toBe(200);
   });
 
   it('honours an explicit lower request', () => {
