@@ -11,6 +11,7 @@ import { OrbitControls, Stats } from '@react-three/drei';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
 import type { GraphNode, GraphEdge } from '../../lib/api.ts';
+import { CANVAS_RESIZE } from '../../lib/canvas-resize.ts';
 import { GraphNodes } from './graph-nodes.tsx';
 import { ProjectTitleOverlay } from './project-title-overlay.tsx';
 import { TunnelFlow } from './tunnel-flow.tsx';
@@ -499,6 +500,7 @@ export function GraphScene({
       camera={{ position: [0, 0, 60], far: 5000 }}
       dpr={[1, 2]}
       gl={{ antialias: true }}
+      resize={CANVAS_RESIZE}
     >
       <SceneContents
         nodes={nodes}
