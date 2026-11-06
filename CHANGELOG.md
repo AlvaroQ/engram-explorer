@@ -191,6 +191,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Faster knowledge-graph layout** — large graphs (up to the 5000-node cap) lay out about 4× faster: repulsion
+  above 255 nodes uses a Barnes–Hut approximation instead of comparing every pair. Every graph size keeps the full
+  200 simulation steps, so project clusters stay as clearly separated as before.
 - **Icon rail shell** — the sidebar starts as a 64px icon rail (labels show as chips on hover and keyboard
   focus) and expands to 236px; the choice is kept in the `sidebar` cookie, so the first paint is right. Every page
   starts with a "Skip to content" link, the current entry has `aria-current="page"`, and the agent pages are an

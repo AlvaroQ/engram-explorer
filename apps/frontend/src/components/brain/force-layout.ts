@@ -45,30 +45,28 @@ export const TARGET_HALF = 30;
 
 // Scaling (S9). Pairwise repulsion is O(n²) per iteration; from
 // BARNES_HUT_MIN_NODES on it is approximated with a Barnes–Hut octree
-// (O(n log n), opening angle BH_THETA). The iteration budget shrinks for large
-// graphs (see layoutIterations). The server caps /api/graph at 5000 nodes;
-// MAX_LAYOUT_NODES is a hard safety cap on top of that: nodes past it keep
-// their deterministic seed position and are not simulated.
+// (O(n log n), opening angle BH_THETA = 0.8). Every graph size runs the full
+// 200 iterations: project galaxies only separate late in the schedule, so a
+// shortened budget for large graphs leaves them as a uniform cube (an exact
+// layout cut to 80 iterations scores as badly as Barnes–Hut at 80). At the
+// 5000-node cap this takes ~2.3 s in Node versus ~8.7 s for the exact O(n²)
+// path, with the same project separation. The server caps /api/graph at 5000
+// nodes; MAX_LAYOUT_NODES is a hard safety cap on top of that: nodes past it
+// keep their deterministic seed position and are not simulated.
 export const MAX_LAYOUT_NODES = 5000;
 const BARNES_HUT_MIN_NODES = 256;
 const BH_THETA = 0.8;
 const DEFAULT_ITERATIONS = 200;
-const MIN_ITERATIONS = 80;
-// Graphs up to this size get the full iteration budget.
-const FULL_BUDGET_NODES = 1000;
 // Octree depth limit: coincident points share a leaf instead of recursing forever.
 const MAX_TREE_DEPTH = 24;
 
 /**
- * Iteration budget for a graph of n nodes: the full 200 up to 1000 nodes,
- * then scaled by 1000/n with a floor of 80. An explicit lower request wins.
+ * Iteration budget: the full 200 for every graph size (see the scaling note
+ * above). An explicit lower request wins. `_n` is kept so callers pass the
+ * simulated node count and the budget can depend on it again if ever needed.
  */
-export function layoutIterations(n: number, requested = DEFAULT_ITERATIONS): number {
-  const budget =
-    n <= FULL_BUDGET_NODES
-      ? DEFAULT_ITERATIONS
-      : Math.max(MIN_ITERATIONS, Math.round((DEFAULT_ITERATIONS * FULL_BUDGET_NODES) / n));
-  return Math.min(requested, budget);
+export function layoutIterations(_n: number, requested = DEFAULT_ITERATIONS): number {
+  return Math.min(requested, DEFAULT_ITERATIONS);
 }
 
 // Capped inverse-square repulsion magnitude for squared distance d2.

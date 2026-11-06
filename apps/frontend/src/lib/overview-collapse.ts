@@ -4,9 +4,9 @@
  * measures the page, calls these and writes the result as CSS custom
  * properties on .overview; styles.css turns them into transforms/opacities.
  *
- *   --ov-s  px the 500px hero has slid under the scroller top (0..hero-bar)
+ *   --ov-s  px the 420px hero has slid under the scroller top (0..hero-bar)
  *   --ov-p  hero collapse progress 0..1 (= s / (hero - bar)); with a 37px
- *           alert bar above it, scroll 37 → 465px maps to 0 → 1
+ *           alert bar above it, scroll 37 → 385px maps to 0 → 1
  *   --ov-k  KPI strip progress 0..1, over the last `ramp` px before the cards
  *           pin under the bar
  *

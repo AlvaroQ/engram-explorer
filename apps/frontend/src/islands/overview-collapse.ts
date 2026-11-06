@@ -48,7 +48,7 @@ export function mount(el: HTMLElement): void {
   const fades = Array.from(root.querySelectorAll<HTMLElement>('[data-collapse-fade]'));
   let geometry = {
     heroTop: 0,
-    heroH: 500,
+    heroH: 420,
     barH: 72,
     kpiOverlap: -64,
     ramp: KPI_RAMP,
