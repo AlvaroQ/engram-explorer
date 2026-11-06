@@ -78,18 +78,15 @@ export function notPricedHint(template: string, fallback: string, models: string
   return template.replace('{{models}}', shown.join(', '));
 }
 
-/** "586 sessions · 8,060.45M tokens · $6,613.07" from the localized template. */
-export function agentSummaryText(
-  template: string,
-  sessions: number,
-  u: AgentUsageDTO,
-  lang: string,
-  notPriced: string,
-): string {
-  return template
-    .replace('{{sessions}}', new Intl.NumberFormat(lang).format(sessions))
-    .replace('{{tokens}}', formatTokens(agentUsageTotal(u), lang))
-    .replace('{{cost}}', costText(u, lang, notPriced));
+/**
+ * Visible caption under a "Not priced" value: up to three model ids, then
+ * "+N" for the rest; the fallback when no model id is known.
+ */
+export function notPricedCaption(template: string, fallback: string, models: string[]): string {
+  if (models.length === 0) return fallback;
+  let list = models.slice(0, HINT_MODELS).join(', ');
+  if (models.length > HINT_MODELS) list += ` +${String(models.length - HINT_MODELS)}`;
+  return template.replace('{{models}}', list);
 }
 
 function metricValue(u: AgentUsageDTO, metric: UsageMetric): number {

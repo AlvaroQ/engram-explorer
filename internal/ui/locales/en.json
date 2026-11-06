@@ -955,7 +955,8 @@
     "cost": {
       "notPriced": "Not priced",
       "notPricedHint": "No price is known for these models.",
-      "notPricedHintModels": "No price is known for these models ({{models}})."
+      "notPricedHintModels": "No price is known for these models ({{models}}).",
+      "notPricedCaption": "No known price for {{models}}"
     },
     "list": {
       "title": "Sessions",
@@ -1063,8 +1064,7 @@
       "costEstimateNote": "Cost excludes turns on unpriced models — actual spend may be higher.",
       "tokensByProject": "Tokens by project",
       "tokensByAgent": "Tokens by agent",
-      "tokensFallbackNote": "No prices known for these models — showing tokens.",
-      "agentSummary": "{{sessions}} sessions · {{tokens}} tokens · {{cost}}"
+      "tokensFallbackNote": "No prices known for these models — showing tokens."
     }
   },
   "placeholder": {

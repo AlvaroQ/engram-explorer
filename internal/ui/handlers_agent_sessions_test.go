@@ -406,7 +406,8 @@ func TestAgentSessionsList_UnpricedCost(t *testing.T) {
 }
 
 // TestAgentSessionsOverview_UnpricedLabels: the charts island receives the
-// localized "Not priced" text and the token-fallback labels.
+// localized "Not priced" text, its visible caption template and the
+// token-fallback labels; the removed per-agent summary label is gone.
 func TestAgentSessionsOverview_UnpricedLabels(t *testing.T) {
 	mux := agentMux(t, agentSources())
 	req := httptest.NewRequest(http.MethodGet, "/agent-sessions?agent=codex", nil)
@@ -414,9 +415,12 @@ func TestAgentSessionsOverview_UnpricedLabels(t *testing.T) {
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 	body := w.Body.String()
-	for _, want := range []string{"Sin precio", "Tokens por proyecto", "Tokens por agente", "{{sessions}} sesiones", "se muestran tokens"} {
+	for _, want := range []string{"Sin precio", "Tokens por proyecto", "Tokens por agente", "Sin precio conocido para {{models}}", "se muestran tokens"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("es overview island props lack %q", want)
 		}
+	}
+	if strings.Contains(body, "agentSummary") {
+		t.Error("the per-agent summary label must no longer reach the island")
 	}
 }

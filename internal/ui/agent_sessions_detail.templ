@@ -62,6 +62,9 @@ templ asDetailContent(d *agentsessions.Detail, lang string) {
 						>
 							<span class="cc-detail-label">{ T(lang, "agentSessions.fields.cost") }</span>
 							<span class="cc-detail-val">{ asFormatCost(d.Session.Usage, lang) }</span>
+							if c := asCostCaption(d.Session.Usage, d.Session.Models, lang); c != "" {
+								<span class="cc-detail-cap">{ c }</span>
+							}
 						</div>
 					</div>
 				</div>

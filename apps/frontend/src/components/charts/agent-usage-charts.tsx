@@ -24,11 +24,11 @@ import {
   type AgentUsageDTO,
 } from '../../lib/api.ts';
 import {
-  agentSummaryText,
   costText,
   formatCost,
   formatTokens,
   isUnpriced,
+  notPricedCaption,
   notPricedHint,
   overTimeRows,
   projectBars as buildProjectBars,
@@ -72,8 +72,8 @@ export interface AgentUsageLabels {
   tokensByAgent: string;
   /** Shown when the scope has no priced cost and the charts plot tokens. */
   tokensFallbackNote: string;
-  /** Contains {{sessions}}, {{tokens}} and {{cost}} placeholders. */
-  agentSummary: string;
+  /** Visible caption under a "Not priced" total; contains a {{models}} placeholder. */
+  notPricedCaption: string;
 }
 
 const COLORS = [
@@ -140,9 +140,8 @@ export function AgentUsageCharts({
   // cost-shaped charts never draw an empty axis (Codex on unpriced models).
   const metric: UsageMetric = data ? usageMetric(data.totals) : 'cost';
   const fmtMetric = metric === 'cost' ? fmtCost : fmtTokens;
-  const hint = data
-    ? notPricedHint(labels.notPricedHintModels, labels.notPricedHint, unpricedModels(data.by_model))
-    : labels.notPricedHint;
+  const unpriced = data ? unpricedModels(data.by_model) : [];
+  const hint = notPricedHint(labels.notPricedHintModels, labels.notPricedHint, unpriced);
 
   const agentKeys = useMemo(() => (data ? data.by_agent.map((g) => g.key) : []), [data]);
 
@@ -205,6 +204,15 @@ export function AgentUsageCharts({
   }
 
   const costTitle = (u: AgentUsageDTO): string | undefined => (isUnpriced(u) ? hint : undefined);
+  // Visible explanation under the cost total: which models have no price, or
+  // that a "~" total leaves out the turns on unpriced models.
+  const partiallyPriced =
+    data.totals.cost_usd > 0 && (data.totals.unknown_model || data.has_unknown_model);
+  const costCaption = isUnpriced(data.totals)
+    ? notPricedCaption(labels.notPricedCaption, labels.notPricedHint, unpriced)
+    : partiallyPriced
+      ? labels.costEstimateNote
+      : undefined;
   const tokensNote =
     metric === 'tokens' ? (
       <p className="mt-1 text-xs text-fg-muted">{labels.tokensFallbackNote}</p>
@@ -220,21 +228,8 @@ export function AgentUsageCharts({
           label={labels.cost}
           value={costText(data.totals, lang, labels.notPriced)}
           title={costTitle(data.totals)}
+          caption={costCaption}
         />
-        {data.by_agent.map((g) => (
-          <Stat
-            key={g.key}
-            label={agentName(g.key)}
-            value={agentSummaryText(
-              labels.agentSummary,
-              g.sessions,
-              g.usage,
-              lang,
-              labels.notPriced,
-            )}
-            title={costTitle(g.usage)}
-          />
-        ))}
       </div>
 
       {agentBars.length > 1 ? (
@@ -468,9 +463,6 @@ export function AgentUsageCharts({
         </div>
       ) : null}
 
-      {data.has_unknown_model && metric === 'cost' ? (
-        <p className="text-xs text-fg-muted">{labels.costEstimateNote}</p>
-      ) : null}
       <p className="text-xs text-fg-muted">{labels.tokenNote}</p>
     </div>
   );
@@ -480,17 +472,24 @@ function Stat({
   label,
   value,
   title,
+  caption,
 }: {
   label: string;
   value: string;
-  /** Tooltip, also exposed to assistive tech (e.g. why a cost is not priced). */
+  /** Tooltip on the card (e.g. why a cost is not priced). */
   title?: string | undefined;
+  /** Visible note under the value; it also serves assistive tech. */
+  caption?: string | undefined;
 }): JSX.Element {
   return (
-    <div title={title}>
+    <div title={title} className="max-w-xs">
       <div className="text-xs text-fg-muted">{label}</div>
       <div className="text-lg font-semibold text-fg tabular-nums">{value}</div>
-      {title ? <span className="sr-only">{title}</span> : null}
+      {caption ? (
+        <p className="mt-0.5 text-xs text-fg-muted">{caption}</p>
+      ) : title ? (
+        <span className="sr-only">{title}</span>
+      ) : null}
     </div>
   );
 }
