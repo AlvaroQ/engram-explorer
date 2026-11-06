@@ -21,7 +21,22 @@ import {
   agentUsageTotal,
   api,
   type AgentSourceError,
+  type AgentUsageDTO,
 } from '../../lib/api.ts';
+import {
+  agentSummaryText,
+  costText,
+  formatCost,
+  formatTokens,
+  isUnpriced,
+  notPricedHint,
+  overTimeRows,
+  projectBars as buildProjectBars,
+  unpricedModels,
+  usageMetric,
+  type UsageMetric,
+} from '../../lib/agent-usage-format.ts';
+import { detectIslandLang } from '../../lib/island-lang.ts';
 import { friendlyModelName } from '../../lib/model-labels.ts';
 import { BrainLoadingOverlay } from '../brain/brain-loading-overlay.tsx';
 
@@ -48,6 +63,17 @@ export interface AgentUsageLabels {
   tokenNote: string;
   /** Contains {{source}} and {{agent}} placeholders. */
   sourceError: string;
+  /** Cost of usage whose models all lack a known price. */
+  notPriced: string;
+  notPricedHint: string;
+  /** Contains a {{models}} placeholder. */
+  notPricedHintModels: string;
+  tokensByProject: string;
+  tokensByAgent: string;
+  /** Shown when the scope has no priced cost and the charts plot tokens. */
+  tokensFallbackNote: string;
+  /** Contains {{sessions}}, {{tokens}} and {{cost}} placeholders. */
+  agentSummary: string;
 }
 
 const COLORS = [
@@ -83,19 +109,6 @@ function colorAt(i: number): string {
   return COLORS[i % COLORS.length] ?? FALLBACK_COLOR;
 }
 
-function fmtTokens(n: number): string {
-  if (n <= 0) return '0';
-  if (n < 1000) return String(n);
-  if (n < 1_000_000) return `${(n / 1000).toFixed(1)}k`;
-  return `${(n / 1_000_000).toFixed(2)}M`;
-}
-
-function fmtCost(n: number): string {
-  if (n <= 0) return '$0';
-  if (n < 0.01) return '<$0.01';
-  return `$${n.toFixed(2)}`;
-}
-
 function agentColor(agent: string, i: number): string {
   return AGENT_COLORS[agent] ?? colorAt(i);
 }
@@ -120,6 +133,16 @@ export function AgentUsageCharts({
   });
   const data = query.data;
   const agentName = (a: string): string => agents[a] ?? a;
+  const lang = useMemo(() => detectIslandLang(), []);
+  const fmtTokens = (n: number): string => formatTokens(n, lang);
+  const fmtCost = (n: number): string => formatCost(n, lang);
+  // Cost when anything in the scope is priced; tokens otherwise, so the
+  // cost-shaped charts never draw an empty axis (Codex on unpriced models).
+  const metric: UsageMetric = data ? usageMetric(data.totals) : 'cost';
+  const fmtMetric = metric === 'cost' ? fmtCost : fmtTokens;
+  const hint = data
+    ? notPricedHint(labels.notPricedHintModels, labels.notPricedHint, unpricedModels(data.by_model))
+    : labels.notPricedHint;
 
   const agentKeys = useMemo(() => (data ? data.by_agent.map((g) => g.key) : []), [data]);
 
@@ -133,23 +156,10 @@ export function AgentUsageCharts({
     }));
   }, [data, agents]);
 
-  const projectBars = useMemo(() => {
-    if (!data) return [] as Array<{ name: string; cost: number }>;
-    const sorted = [...data.by_project].sort((a, b) => b.usage.cost_usd - a.usage.cost_usd);
-    const top = sorted.slice(0, TOP_N).map((p) => ({
-      name: p.key,
-      cost: Number(p.usage.cost_usd.toFixed(4)),
-    }));
-    const tail = sorted.slice(TOP_N);
-    if (tail.length > 0) {
-      const cost = tail.reduce((s, p) => s + p.usage.cost_usd, 0);
-      top.push({
-        name: `${labels.others} (${String(tail.length)})`,
-        cost: Number(cost.toFixed(4)),
-      });
-    }
-    return top;
-  }, [data, labels.others]);
+  const projectBars = useMemo(
+    () => (data ? buildProjectBars(data.by_project, metric, labels.others, TOP_N) : []),
+    [data, metric, labels.others],
+  );
 
   const modelPie = useMemo(() => {
     if (!data) return [] as Array<{ name: string; value: number }>;
@@ -162,17 +172,12 @@ export function AgentUsageCharts({
     return [...totals].map(([name, value]) => ({ name, value })).filter((m) => m.value > 0);
   }, [data]);
 
-  // One cost series per agent (stacked bars) plus the session count line.
-  const overTime = useMemo(() => {
-    if (!data) return [] as Array<Record<string, string | number>>;
-    return data.over_time.map((d) => {
-      const row: Record<string, string | number> = { day: d.day, sessions: d.sessions };
-      for (const a of agentKeys) {
-        row[a] = Number((d.by_agent[a]?.cost_usd ?? 0).toFixed(4));
-      }
-      return row;
-    });
-  }, [data, agentKeys]);
+  // One series per agent (stacked bars, cost or tokens by the scope metric)
+  // plus the session count line.
+  const overTime = useMemo(
+    () => (data ? overTimeRows(data.over_time, agentKeys, metric) : []),
+    [data, agentKeys, metric],
+  );
 
   // While the heavy stats scan runs, show the Engram elephant loading
   // animation (relative wrapper bounds the overlay's absolute inset-0 to this
@@ -199,7 +204,11 @@ export function AgentUsageCharts({
     );
   }
 
-  const costSuffix = data.has_unknown_model ? '~' : '';
+  const costTitle = (u: AgentUsageDTO): string | undefined => (isUnpriced(u) ? hint : undefined);
+  const tokensNote =
+    metric === 'tokens' ? (
+      <p className="mt-1 text-xs text-fg-muted">{labels.tokensFallbackNote}</p>
+    ) : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -207,19 +216,32 @@ export function AgentUsageCharts({
       <div className="flex flex-wrap gap-8">
         <Stat label={labels.sessions} value={String(data.sessions)} />
         <Stat label={labels.tokens} value={fmtTokens(agentUsageTotal(data.totals))} />
-        <Stat label={labels.cost} value={`${fmtCost(data.totals.cost_usd)}${costSuffix}`} />
+        <Stat
+          label={labels.cost}
+          value={costText(data.totals, lang, labels.notPriced)}
+          title={costTitle(data.totals)}
+        />
         {data.by_agent.map((g) => (
           <Stat
             key={g.key}
             label={agentName(g.key)}
-            value={`${String(g.sessions)} · ${fmtTokens(agentUsageTotal(g.usage))} · ${fmtCost(g.usage.cost_usd)}${g.usage.unknown_model ? '~' : ''}`}
+            value={agentSummaryText(
+              labels.agentSummary,
+              g.sessions,
+              g.usage,
+              lang,
+              labels.notPriced,
+            )}
+            title={costTitle(g.usage)}
           />
         ))}
       </div>
 
       {agentBars.length > 1 ? (
         <div>
-          <p className="mb-2 text-xs font-medium text-fg-muted">{labels.costByAgent}</p>
+          <p className="mb-2 text-xs font-medium text-fg-muted">
+            {metric === 'cost' ? labels.costByAgent : labels.tokensByAgent}
+          </p>
           <div style={{ height: 40 + agentBars.length * 36 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -236,7 +258,7 @@ export function AgentUsageCharts({
                   type="number"
                   stroke="hsl(var(--fg-muted))"
                   tick={{ fill: 'hsl(var(--fg-muted))', fontSize: 11 }}
-                  tickFormatter={(v) => fmtCost(Number(v))}
+                  tickFormatter={(v) => fmtMetric(Number(v))}
                 />
                 <YAxis
                   type="category"
@@ -250,9 +272,9 @@ export function AgentUsageCharts({
                   itemStyle={tooltipItemStyle}
                   labelStyle={tooltipLabelStyle}
                   cursor={{ fill: 'hsl(var(--surface-2))', opacity: 0.4 }}
-                  formatter={(v) => fmtCost(Number(v))}
+                  formatter={(v) => fmtMetric(Number(v))}
                 />
-                <Bar dataKey="cost" radius={[0, 2, 2, 0]}>
+                <Bar dataKey={metric} radius={[0, 2, 2, 0]}>
                   {agentBars.map((entry, i) => (
                     <Cell key={entry.key} fill={agentColor(entry.key, i)} />
                   ))}
@@ -265,7 +287,9 @@ export function AgentUsageCharts({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div>
-          <p className="mb-2 text-xs font-medium text-fg-muted">{labels.costByProject}</p>
+          <p className="mb-2 text-xs font-medium text-fg-muted">
+            {metric === 'cost' ? labels.costByProject : labels.tokensByProject}
+          </p>
           <div style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -282,7 +306,7 @@ export function AgentUsageCharts({
                   type="number"
                   stroke="hsl(var(--fg-muted))"
                   tick={{ fill: 'hsl(var(--fg-muted))', fontSize: 11 }}
-                  tickFormatter={(v) => fmtCost(Number(v))}
+                  tickFormatter={(v) => fmtMetric(Number(v))}
                 />
                 <YAxis
                   type="category"
@@ -296,9 +320,9 @@ export function AgentUsageCharts({
                   itemStyle={tooltipItemStyle}
                   labelStyle={tooltipLabelStyle}
                   cursor={{ fill: 'hsl(var(--surface-2))', opacity: 0.4 }}
-                  formatter={(v) => fmtCost(Number(v))}
+                  formatter={(v) => fmtMetric(Number(v))}
                 />
-                <Bar dataKey="cost" radius={[0, 2, 2, 0]}>
+                <Bar dataKey="value" radius={[0, 2, 2, 0]}>
                   {projectBars.map((entry, i) => (
                     <Cell key={entry.name} fill={colorAt(i)} />
                   ))}
@@ -306,6 +330,7 @@ export function AgentUsageCharts({
               </BarChart>
             </ResponsiveContainer>
           </div>
+          {tokensNote}
         </div>
 
         <div>
@@ -366,8 +391,8 @@ export function AgentUsageCharts({
                   orientation="right"
                   stroke="hsl(var(--fg-muted))"
                   tick={{ fill: 'hsl(var(--fg-muted))', fontSize: 11 }}
-                  tickFormatter={(v) => fmtCost(Number(v))}
-                  width={48}
+                  tickFormatter={(v) => fmtMetric(Number(v))}
+                  width={56}
                 />
                 <Tooltip
                   contentStyle={tooltipStyle}
@@ -375,7 +400,7 @@ export function AgentUsageCharts({
                   labelStyle={tooltipLabelStyle}
                   cursor={{ fill: 'hsl(var(--surface-2))', opacity: 0.4 }}
                   formatter={(value, name) =>
-                    name === labels.sessions ? String(value) : fmtCost(Number(value))
+                    name === labels.sessions ? String(value) : fmtMetric(Number(value))
                   }
                 />
                 <Legend
@@ -389,7 +414,7 @@ export function AgentUsageCharts({
                     yAxisId="right"
                     dataKey={a}
                     name={agentName(a)}
-                    stackId="cost"
+                    stackId={metric}
                     fill={agentColor(a, i)}
                   />
                 ))}
@@ -405,6 +430,7 @@ export function AgentUsageCharts({
               </ComposedChart>
             </ResponsiveContainer>
           </div>
+          {tokensNote}
         </div>
       ) : null}
 
@@ -417,8 +443,11 @@ export function AgentUsageCharts({
                 <span className="w-5 shrink-0 text-right text-xs text-fg-muted tabular-nums">
                   {i + 1}
                 </span>
-                <span className="w-16 shrink-0 text-right font-mono text-xs text-fg tabular-nums">
-                  {fmtCost(s.usage.cost_usd)}
+                <span
+                  className="w-20 shrink-0 whitespace-nowrap text-right font-mono text-xs text-fg tabular-nums"
+                  title={costTitle(s.usage)}
+                >
+                  {costText(s.usage, lang, labels.notPriced)}
                 </span>
                 <span className="shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-xs text-fg-muted">
                   {agentName(s.agent)}
@@ -439,7 +468,7 @@ export function AgentUsageCharts({
         </div>
       ) : null}
 
-      {data.has_unknown_model ? (
+      {data.has_unknown_model && metric === 'cost' ? (
         <p className="text-xs text-fg-muted">{labels.costEstimateNote}</p>
       ) : null}
       <p className="text-xs text-fg-muted">{labels.tokenNote}</p>
@@ -447,11 +476,21 @@ export function AgentUsageCharts({
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }): JSX.Element {
+function Stat({
+  label,
+  value,
+  title,
+}: {
+  label: string;
+  value: string;
+  /** Tooltip, also exposed to assistive tech (e.g. why a cost is not priced). */
+  title?: string | undefined;
+}): JSX.Element {
   return (
-    <div>
+    <div title={title}>
       <div className="text-xs text-fg-muted">{label}</div>
       <div className="text-lg font-semibold text-fg tabular-nums">{value}</div>
+      {title ? <span className="sr-only">{title}</span> : null}
     </div>
   );
 }
